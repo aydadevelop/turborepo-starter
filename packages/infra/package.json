@@ -1,0 +1,19 @@
+{
+  "name": "@my-better-t-app/infra",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "alchemy dev",
+    "deploy": "alchemy deploy",
+    "destroy": "alchemy destroy"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@my-better-t-app/config": "*",
+    "alchemy": "^0.82.1",
+    "typescript": "^5"
+  }
+}
