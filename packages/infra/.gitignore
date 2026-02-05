@@ -1,0 +1,10 @@
+# Alchemy state
+.alchemy/
+
+# Environment variables (contains secrets)
+.env
+.dev.vars
+!.env.example
+
+# Node modules (use root)
+node_modules/

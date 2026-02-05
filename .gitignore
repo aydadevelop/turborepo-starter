@@ -10,7 +10,9 @@ build
 
 # Environment variables
 .env
-.env*.local
+.env.*
+!.env.example
+.dev.vars
 
 # IDEs and editors
 .vscode/*
@@ -50,8 +52,6 @@ tmp
 temp
 
 # START Ruler Generated Files
-/.codex/config.json
-/.codex/config.json.bak
 /.codex/config.toml
 /.codex/config.toml.bak
 /.vscode/mcp.json
@@ -59,3 +59,4 @@ temp
 /AGENTS.md
 /AGENTS.md.bak
 # END Ruler Generated Files
+/.playwright-mcp/*

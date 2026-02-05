@@ -1,27 +1,26 @@
-import type { AppRouterClient } from "@my-better-t-app/api/routers/index";
-
-import { PUBLIC_SERVER_URL } from "$env/static/public";
+import type { AppRouterClient } from "@full-stack-cf-app/api/routers/index";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { QueryCache, QueryClient } from "@tanstack/svelte-query";
+import { PUBLIC_SERVER_URL } from "$env/static/public";
 
 export const queryClient = new QueryClient({
-  queryCache: new QueryCache({
-    onError: (error) => {
-      console.error(`Error: ${error.message}`);
-    },
-  }),
+	queryCache: new QueryCache({
+		onError: (error) => {
+			console.error(`Error: ${error.message}`);
+		},
+	}),
 });
 
 export const link = new RPCLink({
-  url: `${PUBLIC_SERVER_URL}/rpc`,
-  fetch(url, options) {
-    return fetch(url, {
-      ...options,
-      credentials: "include",
-    });
-  },
+	url: `${PUBLIC_SERVER_URL}/rpc`,
+	fetch(url, options) {
+		return fetch(url, {
+			...options,
+			credentials: "include",
+		});
+	},
 });
 
 export const client: AppRouterClient = createORPCClient(link);

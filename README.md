@@ -1,4 +1,4 @@
-# my-better-t-app
+# full-stack-cf-app
 
 This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines SvelteKit, Hono, ORPC, and more.
 
@@ -64,7 +64,7 @@ For more details, see the guide on [Deploying to Cloudflare with Alchemy](https:
 ## Project Structure
 
 ```
-my-better-t-app/
+full-stack-cf-app/
 ├── apps/
 │   ├── web/         # Frontend application (SvelteKit)
 │   └── server/      # Backend API (Hono, ORPC)

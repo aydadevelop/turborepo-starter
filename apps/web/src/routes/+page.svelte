@@ -1,42 +1,104 @@
 <script lang="ts">
-import { orpc } from "$lib/orpc";
-import { createQuery } from "@tanstack/svelte-query";
-const healthCheck = createQuery(orpc.healthCheck.queryOptions());
-
-const TITLE_TEXT = `
-   ██████╗ ███████╗████████╗████████╗███████╗██████╗
-   ██╔══██╗██╔════╝╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗
-   ██████╔╝█████╗     ██║      ██║   █████╗  ██████╔╝
-   ██╔══██╗██╔══╝     ██║      ██║   ██╔══╝  ██╔══██╗
-   ██████╔╝███████╗   ██║      ██║   ███████╗██║  ██║
-   ╚═════╝ ╚══════╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝
-
-   ████████╗    ███████╗████████╗ █████╗  ██████╗██╗  ██╗
-   ╚══██╔══╝    ██╔════╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
-      ██║       ███████╗   ██║   ███████║██║     █████╔╝
-      ██║       ╚════██║   ██║   ██╔══██║██║     ██╔═██╗
-      ██║       ███████║   ██║   ██║  ██║╚██████╗██║  ██╗
-      ╚═╝       ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
-   `;
+	import { Button } from "@full-stack-cf-app/ui/components/button";
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardFooter,
+		CardHeader,
+		CardTitle,
+	} from "@full-stack-cf-app/ui/components/card";
 </script>
 
-<div class="container mx-auto max-w-3xl px-4 py-2">
-	<pre class="overflow-x-auto font-mono text-sm">{TITLE_TEXT}</pre>
-	<div class="grid gap-6">
-		<section class="rounded-lg border p-4">
-			<h2 class="mb-2 font-medium">API Status</h2>
-			<div class="flex items-center gap-2">
-				<div
-					class={`h-2 w-2 rounded-full ${$healthCheck.data ? "bg-green-500" : "bg-red-500"}`}
-				></div>
-				<span class="text-muted-foreground text-sm">
-					{$healthCheck.isLoading
-						? "Checking..."
-						: $healthCheck.data
-							? "Connected"
-							: "Disconnected"}
-				</span>
-			</div>
-		</section>
+<div
+	class="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-background via-background to-muted/40"
+>
+	<div class="mx-auto max-w-5xl px-6 py-16">
+		<div class="text-center">
+			<h1 class="text-4xl font-bold tracking-tight text-balance">
+				Full Stack Cloudflare App
+			</h1>
+			<p class="mt-4 text-lg text-muted-foreground text-balance">
+				A minimal monorepo starter with Better Auth, oRPC, Drizzle, and
+				shadcn-svelte.
+			</p>
+		</div>
+
+		<div class="mt-12 grid gap-6 md:grid-cols-2">
+			<Card class="transition-shadow hover:shadow-md">
+				<CardHeader>
+					<CardTitle>Authentication</CardTitle>
+					<CardDescription>Secure login with Better Auth</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<p class="text-sm text-muted-foreground">
+						Email/password auth with session management, protected routes, and
+						Polar integration for payments.
+					</p>
+				</CardContent>
+				<CardFooter>
+					<Button href="/login" variant="default">Sign In</Button>
+				</CardFooter>
+			</Card>
+
+			<Card class="transition-shadow hover:shadow-md">
+				<CardHeader>
+					<CardTitle>Dashboard</CardTitle>
+					<CardDescription>Protected user area</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<p class="text-sm text-muted-foreground">
+						Access the dashboard to see your session data and subscription
+						status.
+					</p>
+				</CardContent>
+				<CardFooter>
+					<Button href="/dashboard" variant="outline">Go to Dashboard</Button>
+				</CardFooter>
+			</Card>
+
+			<Card class="transition-shadow hover:shadow-md">
+				<CardHeader>
+					<CardTitle>Todos (oRPC)</CardTitle>
+					<CardDescription>Database + API example</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<p class="text-sm text-muted-foreground">
+						Full CRUD operations using oRPC, TanStack Query, and Drizzle with D1
+						database.
+					</p>
+				</CardContent>
+				<CardFooter>
+					<Button href="/todos" variant="secondary">Manage Todos</Button>
+				</CardFooter>
+			</Card>
+
+			<Card class="transition-shadow hover:shadow-md">
+				<CardHeader>
+					<CardTitle>UI Components</CardTitle>
+					<CardDescription>shadcn-svelte in monorepo</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<p class="text-sm text-muted-foreground">
+						Shared UI components from
+						<code class="rounded bg-muted px-1">@full-stack-cf-app/ui</code>
+						package.
+					</p>
+				</CardContent>
+				<CardFooter>
+					<div class="flex gap-2">
+						<Button size="sm">Default</Button>
+						<Button size="sm" variant="outline">Outline</Button>
+						<Button size="sm" variant="ghost">Ghost</Button>
+					</div>
+				</CardFooter>
+			</Card>
+		</div>
+
+		<div class="mt-12 text-center">
+			<p class="text-sm text-muted-foreground">
+				Built with SvelteKit, Hono, Cloudflare Workers, and D1.
+			</p>
+		</div>
 	</div>
 </div>

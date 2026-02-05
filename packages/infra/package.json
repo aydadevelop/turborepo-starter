@@ -1,9 +1,9 @@
 {
-  "name": "@my-better-t-app/infra",
+  "name": "@full-stack-cf-app/infra",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "alchemy dev",
+    "dev": "alchemy dev --stage dev",
     "deploy": "alchemy deploy",
     "destroy": "alchemy destroy"
   },
@@ -12,7 +12,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@my-better-t-app/config": "*",
+    "@full-stack-cf-app/config": "*",
     "alchemy": "^0.82.1",
     "typescript": "^5"
   }

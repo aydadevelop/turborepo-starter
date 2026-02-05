@@ -1,5 +1,5 @@
 @import "tailwindcss";
+@import "@full-stack-cf-app/tailwind-config";
 
-body {
-  @apply bg-neutral-950 text-neutral-100;
-}
+/* Scan monorepo UI package for Tailwind classes */
+@source "../../../packages/ui/src/**/*.{svelte,ts}";

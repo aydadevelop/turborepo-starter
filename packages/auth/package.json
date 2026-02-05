@@ -1,5 +1,5 @@
 {
-  "name": "@my-better-t-app/auth",
+  "name": "@full-stack-cf-app/auth",
   "type": "module",
   "exports": {
     ".": {
@@ -7,12 +7,18 @@
     },
     "./*": {
       "default": "./src/*.ts"
+    },
+    "./test": {
+      "default": "./src/test/index.ts"
     }
   },
-  "scripts": {},
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest --watch"
+  },
   "dependencies": {
-    "@my-better-t-app/db": "*",
-    "@my-better-t-app/env": "*",
+    "@full-stack-cf-app/db": "*",
+    "@full-stack-cf-app/env": "*",
     "@polar-sh/better-auth": "^1.6.4",
     "@polar-sh/sdk": "^0.42.2",
     "better-auth": "^1.4.18",
@@ -20,7 +26,11 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@my-better-t-app/config": "*",
-    "typescript": "^5"
+    "@full-stack-cf-app/config": "*",
+    "@full-stack-cf-app/vitest-config": "*",
+    "better-sqlite3": "^11.10.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

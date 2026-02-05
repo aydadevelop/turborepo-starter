@@ -13,6 +13,17 @@
     "check-types": {
       "dependsOn": ["^check-types"]
     },
+    "test": {
+      "dependsOn": ["^test"]
+    },
+    "test:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "test:e2e": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
     "dev": {
       "cache": false,
       "persistent": true
@@ -32,6 +43,7 @@
       "cache": false
     },
     "deploy": {
+      "dependsOn": ["^build"],
       "cache": false
     },
     "destroy": {

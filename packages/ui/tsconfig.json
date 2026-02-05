@@ -1,0 +1,20 @@
+{
+  "extends": "@full-stack-cf-app/config/tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@full-stack-cf-app/ui/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}

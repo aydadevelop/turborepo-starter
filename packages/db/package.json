@@ -1,5 +1,5 @@
 {
-  "name": "@my-better-t-app/db",
+  "name": "@full-stack-cf-app/db",
   "type": "module",
   "exports": {
     ".": {
@@ -7,23 +7,33 @@
     },
     "./*": {
       "default": "./src/*.ts"
+    },
+    "./test": {
+      "default": "./src/test/index.ts"
     }
   },
   "scripts": {
     "db:push": "drizzle-kit push",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio --config drizzle.config.dev.ts",
+    "test": "vitest run",
+    "test:watch": "vitest --watch"
   },
   "dependencies": {
     "@libsql/client": "0.15.15",
-    "@my-better-t-app/env": "*",
+    "@full-stack-cf-app/env": "*",
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.45.1",
     "libsql": "0.5.22",
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@my-better-t-app/config": "*",
+    "@full-stack-cf-app/config": "*",
+    "@full-stack-cf-app/vitest-config": "*",
+    "better-sqlite3": "^11.10.0",
+    "@types/better-sqlite3": "^7.6.13",
     "drizzle-kit": "^0.31.8",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

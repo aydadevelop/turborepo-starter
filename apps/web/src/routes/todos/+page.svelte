@@ -1,8 +1,11 @@
 <script lang="ts">
-	import { orpc } from '$lib/orpc';
-	import { createQuery, createMutation } from '@tanstack/svelte-query';
+	import { Button } from "@full-stack-cf-app/ui/components/button";
+	import * as Card from "@full-stack-cf-app/ui/components/card";
+	import { Input } from "@full-stack-cf-app/ui/components/input";
+	import { createMutation, createQuery } from "@tanstack/svelte-query";
+	import { orpc } from "$lib/orpc";
 
-	let newTodoText = $state('');
+	let newTodoText = $state("");
 
 	const todosQuery = createQuery(orpc.todo.getAll.queryOptions());
 
@@ -10,10 +13,10 @@
 		orpc.todo.create.mutationOptions({
 			onSuccess: () => {
 				$todosQuery.refetch();
-				newTodoText = '';
+				newTodoText = "";
 			},
 			onError: (error) => {
-				console.error('Failed to create todo:', error?.message ?? error);
+				console.error("Failed to create todo:", error?.message ?? error);
 			},
 		})
 	);
@@ -24,7 +27,7 @@
 				$todosQuery.refetch();
 			},
 			onError: (error) => {
-				console.error('Failed to toggle todo:', error?.message ?? error);
+				console.error("Failed to toggle todo:", error?.message ?? error);
 			},
 		})
 	);
@@ -35,7 +38,7 @@
 				$todosQuery.refetch();
 			},
 			onError: (error) => {
-				console.error('Failed to delete todo:', error?.message ?? error);
+				console.error("Failed to delete todo:", error?.message ?? error);
 			},
 		})
 	);
@@ -61,90 +64,108 @@
 	const isLoadingTodos = $derived($todosQuery.isLoading);
 	const todos = $derived($todosQuery.data ?? []);
 	const hasTodos = $derived(todos.length > 0);
-
 </script>
 
-<div class="p-4">
-	<h1 class="text-xl mb-4">Todos (oRPC)</h1>
+<div class="max-w-2xl mx-auto p-6 space-y-6">
+	<h1 class="text-3xl font-bold">Todos</h1>
 
-	<form onsubmit={handleAddTodo} class="flex gap-2 mb-4">
-		<input
-			type="text"
-			bind:value={newTodoText}
-			placeholder="New task..."
-			disabled={isAdding}
-			class=" p-1 flex-grow"
-		/>
-		<button
-			type="submit"
-			disabled={!canAdd}
-			class="bg-blue-500 text-white px-3 py-1 rounded disabled:opacity-50"
-		>
-			{#if isAdding}Adding...{:else}Add{/if}
-		</button>
-	</form>
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Add Todo</Card.Title>
+			<Card.Description>Create a new task using the oRPC API</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<form onsubmit={handleAddTodo} class="flex gap-2">
+				<Input
+					type="text"
+					bind:value={newTodoText}
+					placeholder="New task..."
+					disabled={isAdding}
+					class="flex-grow"
+				/>
+				<Button type="submit" disabled={!canAdd}>
+					{isAdding ? "Adding..." : "Add"}
+				</Button>
+			</form>
+		</Card.Content>
+	</Card.Root>
 
-	{#if isLoadingTodos}
-		<p>Loading...</p>
-	{:else if !hasTodos}
-		<p>No todos yet.</p>
-	{:else}
-		<ul class="space-y-1">
-			{#each todos as todo (todo.id)}
-				{@const isToggling = $toggleMutation.isPending && $toggleMutation.variables?.id === todo.id}
-				{@const isDeleting = $deleteMutation.isPending && $deleteMutation.variables?.id === todo.id}
-				{@const isDisabled = isToggling || isDeleting}
-				<li
-					class="flex items-center justify-between p-2 "
-					class:opacity-50={isDisabled}
-				>
-					<div class="flex items-center gap-2">
-						<input
-							type="checkbox"
-							id={`todo-${todo.id}`}
-							checked={todo.completed}
-							onchange={() => handleToggleTodo(todo.id, todo.completed)}
-							disabled={isDisabled}
-						/>
-						<label
-							for={`todo-${todo.id}`}
-							class:line-through={todo.completed}
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Your Tasks</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			{#if isLoadingTodos}
+				<p class="text-muted-foreground">Loading...</p>
+			{:else if !hasTodos}
+				<p class="text-muted-foreground">No todos yet.</p>
+			{:else}
+				<ul class="space-y-2">
+					{#each todos as todo (todo.id)}
+						{@const isToggling = $toggleMutation.isPending && $toggleMutation.variables?.id === todo.id}
+						{@const isDeleting = $deleteMutation.isPending && $deleteMutation.variables?.id === todo.id}
+						{@const isDisabled = isToggling || isDeleting}
+						<li
+							class="flex items-center justify-between p-3 rounded-md border"
+							class:opacity-50={isDisabled}
 						>
-							{todo.text}
-						</label>
-					</div>
-					<button
-						type="button"
-						onclick={() => handleDeleteTodo(todo.id)}
-						disabled={isDisabled}
-						aria-label="Delete todo"
-						class="text-red-500 px-1 disabled:opacity-50"
-					>
-						{#if isDeleting}Deleting...{:else}X{/if}
-					</button>
-				</li>
-			{/each}
-		</ul>
-	{/if}
+							<div class="flex items-center gap-3">
+								<input
+									type="checkbox"
+									id={`todo-${todo.id}`}
+									checked={todo.completed}
+									onchange={() => handleToggleTodo(todo.id, todo.completed)}
+									disabled={isDisabled}
+									class="h-4 w-4 rounded border-input"
+								>
+								<label
+									for={`todo-${todo.id}`}
+									class:line-through={todo.completed}
+									class:text-muted-foreground={todo.completed}
+								>
+									{todo.text}
+								</label>
+							</div>
+							<Button
+								variant="ghost"
+								size="sm"
+								onclick={() => handleDeleteTodo(todo.id)}
+								disabled={isDisabled}
+								class="text-destructive hover:text-destructive"
+							>
+								{isDeleting ? "..." : "Delete"}
+							</Button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</Card.Content>
+	</Card.Root>
 
-	{#if $todosQuery.isError}
-		<p class="mt-4 text-red-500">
-			Error loading: {$todosQuery.error?.message ?? 'Unknown error'}
-		</p>
-	{/if}
-	{#if $addMutation.isError}
-		<p class="mt-4 text-red-500">
-			Error adding: {$addMutation.error?.message ?? 'Unknown error'}
-		</p>
-	{/if}
-	{#if $toggleMutation.isError}
-		<p class="mt-4 text-red-500">
-			Error updating: {$toggleMutation.error?.message ?? 'Unknown error'}
-		</p>
-	{/if}
-	{#if $deleteMutation.isError}
-		<p class="mt-4 text-red-500">
-			Error deleting: {$deleteMutation.error?.message ?? 'Unknown error'}
-		</p>
+	{#if $todosQuery.isError || $addMutation.isError || $toggleMutation.isError || $deleteMutation.isError}
+		<Card.Root class="border-destructive">
+			<Card.Content class="pt-6">
+				{#if $todosQuery.isError}
+					<p class="text-destructive">
+						Error loading: {$todosQuery.error?.message ?? 'Unknown error'}
+					</p>
+				{/if}
+				{#if $addMutation.isError}
+					<p class="text-destructive">
+						Error adding: {$addMutation.error?.message ?? 'Unknown error'}
+					</p>
+				{/if}
+				{#if $toggleMutation.isError}
+					<p class="text-destructive">
+						Error updating: {$toggleMutation.error?.message ?? 'Unknown error'}
+					</p>
+				{/if}
+				{#if $deleteMutation.isError}
+					<p class="text-destructive">
+						Error deleting: {$deleteMutation.error?.message ?? 'Unknown error'}
+					</p>
+				{/if}
+			</Card.Content>
+		</Card.Root>
 	{/if}
 </div>

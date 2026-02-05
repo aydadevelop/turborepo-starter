@@ -1,0 +1,12 @@
+{
+  "name": "@full-stack-cf-app/tailwind-config",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./shared-styles.css"
+  },
+  "devDependencies": {
+    "tailwindcss": "^4.1.12"
+  }
+}
