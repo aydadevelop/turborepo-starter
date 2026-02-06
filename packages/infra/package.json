@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "alchemy dev --stage dev",
     "deploy": "alchemy deploy",
-    "destroy": "alchemy destroy"
+    "destroy": "alchemy destroy",
+    "check-types": "tsc --noEmit -p tsconfig.json",
+    "lint": "cd ../.. && biome check --config-path biome.json packages/infra",
+    "lint:fix": "cd ../.. && biome check --config-path biome.json packages/infra --write"
   },
   "dependencies": {
     "dotenv": "^17.2.2",

@@ -29,6 +29,11 @@
       "default": "./src/styles/*"
     }
   },
+  "scripts": {
+    "check-types": "svelte-check --tsconfig ./tsconfig.json",
+    "lint": "cd ../.. && biome check --config-path biome.json packages/ui",
+    "lint:fix": "cd ../.. && biome check --config-path biome.json packages/ui --write"
+  },
   "dependencies": {
     "@full-stack-cf-app/tailwind-config": "*",
     "bits-ui": "^2.15.5",
@@ -43,6 +48,7 @@
   "devDependencies": {
     "@internationalized/date": "^3.11.0",
     "@full-stack-cf-app/config": "*",
+    "svelte-check": "^4.3.1",
     "svelte": "^5.38.1",
     "typescript": "^5"
   }

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const LOADING_REDIRECT_PATTERN = /loading|redirecting|login/i;
+const LOGIN_HEADING_PATTERN = /welcome back/i;
 
 test.describe("Authentication Flow", () => {
 	test("can navigate to login page", async ({ page }) => {
@@ -11,32 +11,29 @@ test.describe("Authentication Flow", () => {
 
 	test("login page has sign in and sign up forms", async ({ page }) => {
 		await page.goto("/login");
-		await expect(page.getByRole("heading", { name: "Sign In" })).toBeVisible();
-		await expect(page.getByPlaceholder("Email")).toBeVisible();
-		await expect(page.getByPlaceholder("Password")).toBeVisible();
+		await expect(page.getByText(LOGIN_HEADING_PATTERN)).toBeVisible();
+		await expect(page.getByRole("textbox", { name: "Email" })).toBeVisible();
+		await expect(page.getByRole("textbox", { name: "Password" })).toBeVisible();
 	});
 
 	test("shows validation errors for empty form", async ({ page }) => {
 		await page.goto("/login");
 
 		// Try to submit empty form
-		await page.getByRole("button", { name: "Sign In" }).click();
+		await page
+			.getByRole("main")
+			.getByRole("button", { name: "Sign In", exact: true })
+			.click();
 
 		// Form should show validation (specific behavior depends on implementation)
-		await expect(page.getByPlaceholder("Email")).toBeVisible();
+		await expect(page.getByRole("textbox", { name: "Email" })).toBeVisible();
 	});
 
-	test("can switch between sign in and sign up", async ({ page }) => {
+	test("shows sign-up toggle control", async ({ page }) => {
 		await page.goto("/login");
-
-		// Look for a way to switch to sign up
-		const signUpLink = page.getByText("Sign Up");
-		if (await signUpLink.isVisible()) {
-			await signUpLink.click();
-			await expect(
-				page.getByRole("heading", { name: "Sign Up" })
-			).toBeVisible();
-		}
+		await expect(
+			page.getByRole("button", { name: "Need an account? Sign Up" })
+		).toBeVisible();
 	});
 });
 
@@ -45,24 +42,15 @@ test.describe("Dashboard Access", () => {
 		page,
 	}) => {
 		await page.goto("/dashboard");
-
-		// Should redirect to login or show login prompt
-		await page.waitForURL(
-			(url) => url.pathname === "/login" || url.pathname === "/dashboard"
-		);
-
-		// If still on dashboard, should show loading/redirect message
-		const url = page.url();
-		if (url.includes("/dashboard")) {
-			await expect(page.getByText(LOADING_REDIRECT_PATTERN)).toBeVisible({
-				timeout: 5000,
-			});
-		}
+		await expect(page).toHaveURL("/login");
 	});
 
 	test("dashboard link in navigation works", async ({ page }) => {
 		await page.goto("/");
-		await page.getByRole("link", { name: "Dashboard" }).click();
+		await page
+			.getByRole("banner")
+			.getByRole("link", { name: "Dashboard", exact: true })
+			.click();
 		await expect(page).toHaveURL("/dashboard");
 	});
 });

@@ -19,6 +19,10 @@ export default defineConfig({
 			use: { ...devices["Desktop Chrome"] },
 		},
 	],
-	// For CI, you would configure webServer to start the full app
-	// For local development, run `npm run dev` separately
+	webServer: {
+		command: "npm run dev",
+		url: baseURL,
+		reuseExistingServer: !process.env.CI,
+		timeout: 120_000,
+	},
 });

@@ -22,6 +22,8 @@
       "!**/.wrangler",
       "!**/.alchemy",
       "!**/.svelte-kit",
+      "!**/playwright-report",
+      "!**/test-results",
       "!**/wrangler.jsonc",
       "!**/.source",
       "!**/convex/_generated"

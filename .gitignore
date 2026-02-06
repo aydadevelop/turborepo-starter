@@ -50,6 +50,7 @@ coverage
 .cache
 tmp
 temp
+backups
 
 # START Ruler Generated Files
 /.codex/config.toml
@@ -60,3 +61,4 @@ temp
 /AGENTS.md.bak
 # END Ruler Generated Files
 /.playwright-mcp/*
+/legacy/*

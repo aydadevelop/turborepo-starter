@@ -9,6 +9,9 @@
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "check-types": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "lint": "cd ../.. && biome check --config-path biome.json apps/web",
+    "lint:fix": "cd ../.. && biome check --config-path biome.json apps/web --write",
     "dev": "vite dev",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"

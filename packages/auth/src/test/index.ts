@@ -88,7 +88,6 @@ export const createTestAuth = () => {
 
 	return {
 		auth,
-		db,
 		close: () => sqlite.close(),
 	};
 };

@@ -1,7 +1,4 @@
-import Root from "./label.svelte";
-
 export {
-	Root,
-	//
-	Root as Label,
-};
+	default as Root,
+	default as Label,
+} from "./label.svelte";

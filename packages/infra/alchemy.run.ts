@@ -1,5 +1,11 @@
 import alchemy from "alchemy";
-import { D1Database, SvelteKit, Worker } from "alchemy/cloudflare";
+import {
+	createCloudflareApi,
+	D1Database,
+	disableWorkerSubdomain,
+	SvelteKit,
+	Worker,
+} from "alchemy/cloudflare";
 import { CloudflareStateStore } from "alchemy/state";
 import { config } from "dotenv";
 
@@ -9,40 +15,74 @@ const stage =
 	(stageIndex !== -1 ? process.argv[stageIndex + 1] : undefined) ??
 	process.env.STAGE ??
 	"dev";
-const isLocal = stage === "dev";
+const appName = "full-stack-cf-app";
+const lifecycleEvent = process.env.npm_lifecycle_event ?? "";
+const isDeployCommand =
+	lifecycleEvent === "deploy" || process.argv.includes("deploy");
+const isDestroyCommand =
+	lifecycleEvent === "destroy" || process.argv.includes("destroy");
 
-// Load environment files (later files don't override earlier ones)
-const envPath = isLocal ? "" : ".production";
+// Only deploy/destroy commands (or CI) use production server env.
+const isDeploying =
+	isDeployCommand || isDestroyCommand || Boolean(process.env.CI);
+const envPath = isDeploying ? ".production" : "";
 config({ path: `../../apps/server/.env${envPath}` });
 config({ path: "./.env" });
-config({ path: "../../.env" }); // Root .env as fallback
 
-const app = await alchemy("full-stack-cf-app", {
+if (isDeployCommand) {
+	// Cloudflare rejects script uploads with DO migration metadata when previews are enabled.
+	// Disable previews before upload; Alchemy will re-enable the stage URL after deploy.
+	const api = await createCloudflareApi();
+	await Promise.all([
+		disableWorkerSubdomain(api, `${appName}-server-${stage}`),
+		disableWorkerSubdomain(api, `${appName}-web-${stage}`),
+	]);
+}
+
+const app = await alchemy(appName, {
 	stage,
 	stateStore: process.env.ALCHEMY_STATE_TOKEN
 		? (scope) => new CloudflareStateStore(scope)
 		: undefined,
 });
 
-const db = await D1Database(`database-${stage}`, {
+const db = await D1Database("database", {
 	migrationsDir: "../../packages/db/src/migrations",
+	adopt: true, // Reuse existing database if it exists
 });
 
-// Local dev uses default localhost ports, otherwise use env value
+// Local dev uses localhost ports, deployed stages use their web URL
 const devCorsOrigin =
 	"http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176";
 
 const getCorsOrigin = (): string => {
-	if (isLocal) {
+	// Local development - use localhost origins
+	if (!isDeploying) {
 		return process.env.CORS_ORIGIN ?? devCorsOrigin;
 	}
+	// PR previews - allow all origins
 	if (stage.startsWith("pr-")) {
 		return "*";
 	}
-	return process.env.CORS_ORIGIN ?? "*";
+	// Deployed stages - use env or construct from stage name
+	return (
+		process.env.CORS_ORIGIN ??
+		`https://full-stack-cf-app-web-${stage}.smartcache.workers.dev`
+	);
 };
 
-export const server = await Worker(`server-${stage}`, {
+// Construct auth URL for deployed stages if not set
+const getAuthUrl = (): string => {
+	if (!isDeploying) {
+		return process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+	}
+	return (
+		process.env.BETTER_AUTH_URL ??
+		`https://full-stack-cf-app-server-${stage}.smartcache.workers.dev`
+	);
+};
+
+export const server = await Worker("server", {
 	cwd: "../../apps/server",
 	entrypoint: "src/index.ts",
 	compatibility: "node",
@@ -50,7 +90,7 @@ export const server = await Worker(`server-${stage}`, {
 		DB: db,
 		CORS_ORIGIN: getCorsOrigin(),
 		BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
-		BETTER_AUTH_URL: alchemy.env("BETTER_AUTH_URL"),
+		BETTER_AUTH_URL: getAuthUrl(),
 		OPEN_ROUTER_API_KEY: alchemy.secret.env.OPEN_ROUTER_API_KEY ?? "",
 		POLAR_ACCESS_TOKEN: alchemy.secret.env.POLAR_ACCESS_TOKEN ?? "",
 		POLAR_SUCCESS_URL: alchemy.env("POLAR_SUCCESS_URL") ?? "",
@@ -59,7 +99,7 @@ export const server = await Worker(`server-${stage}`, {
 	dev: { port: 3000 },
 });
 
-export const web = await SvelteKit(`web-${stage}`, {
+export const web = await SvelteKit("web", {
 	cwd: "../../apps/web",
 	bindings: { PUBLIC_SERVER_URL: server.url! },
 });

@@ -191,8 +191,7 @@ app.post("/ai", async (c) => {
 	if (!model) {
 		return c.json(
 			{
-				error:
-					"AI features disabled. Set OPEN_ROUTER_API_KEY to enable.",
+				error: "AI features disabled. Set OPEN_ROUTER_API_KEY to enable.",
 			},
 			503
 		);
@@ -214,8 +213,7 @@ app.post("/ai/prepare", async (c) => {
 		if (!model) {
 			return c.json(
 				{
-					error:
-						"AI features disabled. Set OPEN_ROUTER_API_KEY to enable.",
+					error: "AI features disabled. Set OPEN_ROUTER_API_KEY to enable.",
 				},
 				503
 			);
@@ -260,8 +258,7 @@ app.post("/ai/exercise", async (c) => {
 		if (!model) {
 			return c.json(
 				{
-					error:
-						"AI features disabled. Set OPEN_ROUTER_API_KEY to enable.",
+					error: "AI features disabled. Set OPEN_ROUTER_API_KEY to enable.",
 				},
 				503
 			);
@@ -304,8 +301,7 @@ app.post("/ai/grade", async (c) => {
 		if (!model) {
 			return c.json(
 				{
-					error:
-						"AI features disabled. Set OPEN_ROUTER_API_KEY to enable.",
+					error: "AI features disabled. Set OPEN_ROUTER_API_KEY to enable.",
 				},
 				503
 			);

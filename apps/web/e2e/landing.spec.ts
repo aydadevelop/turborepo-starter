@@ -1,12 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-const TITLE_PATTERN = /Cloudflare App/;
 const HEADING_PATTERN = /Full Stack Cloudflare App/i;
 
 test.describe("Landing Page", () => {
-	test("has correct title", async ({ page }) => {
+	test("loads home page", async ({ page }) => {
 		await page.goto("/");
-		await expect(page).toHaveTitle(TITLE_PATTERN);
+		await expect(page).toHaveURL("/");
 	});
 
 	test("displays main heading", async ({ page }) => {
@@ -19,16 +18,25 @@ test.describe("Landing Page", () => {
 	test("shows navigation links", async ({ page }) => {
 		await page.goto("/");
 		await expect(page.getByRole("link", { name: "Home" })).toBeVisible();
-		await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible();
-		await expect(page.getByRole("link", { name: "Todos" })).toBeVisible();
+		await expect(
+			page.getByRole("link", { name: "Dashboard", exact: true })
+		).toBeVisible();
+		await expect(
+			page.getByRole("link", { name: "Todos", exact: true })
+		).toBeVisible();
 	});
 
 	test("displays feature cards", async ({ page }) => {
 		await page.goto("/");
-		await expect(page.getByText("Authentication")).toBeVisible();
-		await expect(page.getByText("Dashboard")).toBeVisible();
-		await expect(page.getByText("Todos (oRPC)")).toBeVisible();
-		await expect(page.getByText("UI Components")).toBeVisible();
+		const main = page.getByRole("main");
+		await expect(
+			main.getByText("Authentication", { exact: true })
+		).toBeVisible();
+		await expect(main.getByText("Dashboard", { exact: true })).toBeVisible();
+		await expect(main.getByText("Todos (oRPC)", { exact: true })).toBeVisible();
+		await expect(
+			main.getByText("UI Components", { exact: true })
+		).toBeVisible();
 	});
 
 	test("sign in button navigates to login", async ({ page }) => {

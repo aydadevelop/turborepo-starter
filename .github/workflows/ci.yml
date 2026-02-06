@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, closed]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,9 +18,17 @@ jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -31,29 +40,72 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npx turbo run build --affected
+          else
+            npm run build
+          fi
 
       - name: Lint
-        run: npm run check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npx turbo run lint --affected
+          else
+            npm run lint
+          fi
 
       - name: Type check
-        run: npm run check-types
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npx turbo run check-types --affected
+          else
+            npm run check-types
+          fi
 
       - name: Test
-        run: npm run test
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npx turbo run test --affected
+          else
+            npm run test
+          fi
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E test
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npx turbo run test:e2e --affected
+          else
+            npm run test:e2e
+          fi
+        env:
+          PUBLIC_SERVER_URL: http://localhost:3000
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
 
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
     needs: build
     # Only deploy on push to main or PR events
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     environment:
       name: ${{ github.event_name == 'push' && 'production' || format('pr-{0}', github.event.number) }}
       url: ${{ steps.deploy.outputs.web_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

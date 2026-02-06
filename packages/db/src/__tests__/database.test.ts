@@ -37,7 +37,8 @@ describe("Test Database Setup", () => {
 
 			const users = await db.select().from(user);
 			expect(users).toHaveLength(1);
-			expect(users[0].email).toBe("john@example.com");
+			expect(users[0]).toBeDefined();
+			expect(users[0]?.email).toBe("john@example.com");
 		});
 
 		it("enforces unique email constraint", async () => {
@@ -64,8 +65,9 @@ describe("Test Database Setup", () => {
 
 			const todos = await db.select().from(todo);
 			expect(todos).toHaveLength(1);
-			expect(todos[0].text).toBe("Buy milk");
-			expect(todos[0].completed).toBe(false);
+			expect(todos[0]).toBeDefined();
+			expect(todos[0]?.text).toBe("Buy milk");
+			expect(todos[0]?.completed).toBe(false);
 		});
 
 		it("can toggle todo completion", async () => {
@@ -73,6 +75,10 @@ describe("Test Database Setup", () => {
 				.insert(todo)
 				.values({ text: "Buy milk" })
 				.returning();
+			expect(inserted).toBeDefined();
+			if (!inserted) {
+				throw new Error("Insert returned no row");
+			}
 
 			await db
 				.update(todo)
@@ -83,7 +89,8 @@ describe("Test Database Setup", () => {
 				.select()
 				.from(todo)
 				.where(eq(todo.id, inserted.id));
-			expect(updated.completed).toBe(true);
+			expect(updated).toBeDefined();
+			expect(updated?.completed).toBe(true);
 		});
 
 		it("can delete a todo", async () => {
@@ -91,6 +98,10 @@ describe("Test Database Setup", () => {
 				.insert(todo)
 				.values({ text: "Buy milk" })
 				.returning();
+			expect(inserted).toBeDefined();
+			if (!inserted) {
+				throw new Error("Insert returned no row");
+			}
 
 			await db.delete(todo).where(eq(todo.id, inserted.id));
 
