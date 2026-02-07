@@ -150,6 +150,12 @@ Safety behavior:
 - `db:copy:remote` exports source and creates a pre-copy backup of the target before restore.
 - Backup files are written to `backups/d1/` by default.
 
+## Legacy Migration
+
+- Legacy audit and migration plan: `/Users/d/Documents/Projects/full-stack-cf-app/docs/legacy-migration-audit.md`
+- Scope covered: `legacy/cf-boat-api` and `legacy/boat-app-main`
+- Priority: Better Auth migration first, then domain extraction, then calendar webhook migration.
+
 ## Audit Snapshot (2026-02-05)
 
 Commands run from repo root:

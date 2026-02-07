@@ -5,8 +5,13 @@ import { checkout, polar, portal } from "@polar-sh/better-auth";
 import type { BetterAuthPlugin } from "better-auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { organization } from "better-auth/plugins/organization";
 
 import { polarClient } from "./lib/payments";
+import {
+	organizationAccessControl,
+	organizationRoles,
+} from "./organization-access";
 
 const parseCorsOrigins = (value: string | undefined) =>
 	(value ?? "")
@@ -17,7 +22,40 @@ const parseCorsOrigins = (value: string | undefined) =>
 const corsOrigins = parseCorsOrigins(env.CORS_ORIGIN);
 
 // Only enable Polar plugin if access token is configured
-const plugins: BetterAuthPlugin[] = [];
+const plugins: BetterAuthPlugin[] = [
+	organization({
+		ac: organizationAccessControl,
+		creatorRole: "org_owner",
+		roles: organizationRoles,
+		schema: {
+			session: {
+				fields: {
+					activeOrganizationId: "active_organization_id",
+				},
+			},
+			organization: {
+				fields: {
+					createdAt: "created_at",
+				},
+			},
+			member: {
+				fields: {
+					organizationId: "organization_id",
+					userId: "user_id",
+					createdAt: "created_at",
+				},
+			},
+			invitation: {
+				fields: {
+					organizationId: "organization_id",
+					inviterId: "inviter_id",
+					expiresAt: "expires_at",
+					createdAt: "created_at",
+				},
+			},
+		},
+	}),
+];
 
 if (env.POLAR_ACCESS_TOKEN) {
 	plugins.push(

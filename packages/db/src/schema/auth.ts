@@ -1,5 +1,11 @@
 import { relations, sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+	index,
+	integer,
+	sqliteTable,
+	text,
+	uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
 	id: text("id").primaryKey(),
@@ -32,6 +38,7 @@ export const session = sqliteTable(
 			.notNull(),
 		ipAddress: text("ip_address"),
 		userAgent: text("user_agent"),
+		activeOrganizationId: text("active_organization_id"),
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
@@ -87,9 +94,77 @@ export const verification = sqliteTable(
 	(table) => [index("verification_identifier_idx").on(table.identifier)]
 );
 
+export const organization = sqliteTable(
+	"organization",
+	{
+		id: text("id").primaryKey(),
+		name: text("name").notNull(),
+		slug: text("slug").notNull(),
+		logo: text("logo"),
+		metadata: text("metadata"),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [uniqueIndex("organization_slug_unique").on(table.slug)]
+);
+
+export const member = sqliteTable(
+	"member",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		role: text("role").notNull().default("member"),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		index("member_organizationId_idx").on(table.organizationId),
+		index("member_userId_idx").on(table.userId),
+		uniqueIndex("member_org_user_unique").on(
+			table.organizationId,
+			table.userId
+		),
+	]
+);
+
+export const invitation = sqliteTable(
+	"invitation",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		email: text("email").notNull(),
+		role: text("role"),
+		status: text("status").notNull().default("pending"),
+		expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+		inviterId: text("inviter_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		index("invitation_organizationId_idx").on(table.organizationId),
+		index("invitation_email_idx").on(table.email),
+		index("invitation_status_idx").on(table.status),
+		index("invitation_inviterId_idx").on(table.inviterId),
+	]
+);
+
 export const userRelations = relations(user, ({ many }) => ({
 	sessions: many(session),
 	accounts: many(account),
+	memberships: many(member),
+	sentInvitations: many(invitation),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -102,6 +177,33 @@ export const sessionRelations = relations(session, ({ one }) => ({
 export const accountRelations = relations(account, ({ one }) => ({
 	user: one(user, {
 		fields: [account.userId],
+		references: [user.id],
+	}),
+}));
+
+export const organizationRelations = relations(organization, ({ many }) => ({
+	members: many(member),
+	invitations: many(invitation),
+}));
+
+export const memberRelations = relations(member, ({ one }) => ({
+	organization: one(organization, {
+		fields: [member.organizationId],
+		references: [organization.id],
+	}),
+	user: one(user, {
+		fields: [member.userId],
+		references: [user.id],
+	}),
+}));
+
+export const invitationRelations = relations(invitation, ({ one }) => ({
+	organization: one(organization, {
+		fields: [invitation.organizationId],
+		references: [organization.id],
+	}),
+	inviter: one(user, {
+		fields: [invitation.inviterId],
 		references: [user.id],
 	}),
 }));
