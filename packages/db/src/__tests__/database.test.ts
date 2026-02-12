@@ -4,16 +4,38 @@ import { member, organization, user } from "../schema/auth";
 import {
 	boat,
 	boatAmenity,
+	boatCalendarConnection,
 	boatDock,
 	boatPricingProfile,
 	boatPricingRule,
+	calendarWebhookEvent,
 } from "../schema/boat";
+import {
+	booking,
+	bookingCalendarLink,
+	bookingCancellationRequest,
+	bookingDiscountApplication,
+	bookingDiscountCode,
+	bookingDispute,
+	bookingPaymentAttempt,
+	bookingRefund,
+} from "../schema/booking";
+import {
+	inboundMessage,
+	supportTicket,
+	supportTicketMessage,
+	telegramNotification,
+	telegramWebhookEvent,
+} from "../schema/support";
 import { todo } from "../schema/todo";
 import {
 	clearTestDatabase,
 	createTestDatabase,
 	type TestDatabase,
 } from "../test";
+
+const BOOKING_OVERLAP_REGEX = /BOOKING_OVERLAP/;
+const BOOKING_INVALID_RANGE_REGEX = /BOOKING_INVALID_RANGE/;
 
 describe("Test Database Setup", () => {
 	let db: TestDatabase;
@@ -368,6 +390,864 @@ describe("Test Database Setup", () => {
 			const rules = await db.select().from(boatPricingRule);
 			expect(rules).toHaveLength(1);
 			expect(rules[0]?.pricingProfileId).toBe("profile-1");
+		});
+	});
+
+	describe("Booking table", () => {
+		it("can create booking with applied discount code", async () => {
+			await db.insert(organization).values({
+				id: "org-booking-1",
+				name: "Booking Org",
+				slug: "booking-org",
+				createdAt: new Date(),
+			});
+
+			await db.insert(user).values({
+				id: "user-booking-1",
+				name: "Booking Agent",
+				email: "booking-agent@example.com",
+				emailVerified: false,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(boat).values({
+				id: "boat-booking-1",
+				organizationId: "org-booking-1",
+				name: "North Star",
+				slug: "north-star",
+				type: "motor",
+				passengerCapacity: 8,
+				status: "active",
+				isActive: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(bookingDiscountCode).values({
+				id: "discount-1",
+				organizationId: "org-booking-1",
+				code: "WELCOME10",
+				name: "Welcome 10",
+				discountType: "percentage",
+				discountValue: 10,
+				minimumSubtotalCents: 0,
+				usageCount: 0,
+				isActive: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(booking).values({
+				id: "booking-1",
+				organizationId: "org-booking-1",
+				boatId: "boat-booking-1",
+				customerUserId: "user-booking-1",
+				createdByUserId: "user-booking-1",
+				source: "manual",
+				status: "pending",
+				paymentStatus: "unpaid",
+				calendarSyncStatus: "linked",
+				startsAt: new Date("2026-03-01T10:00:00.000Z"),
+				endsAt: new Date("2026-03-01T13:00:00.000Z"),
+				passengers: 4,
+				basePriceCents: 100_000,
+				discountAmountCents: 10_000,
+				totalPriceCents: 90_000,
+				currency: "RUB",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(bookingCalendarLink).values({
+				id: "calendar-link-1",
+				bookingId: "booking-1",
+				provider: "google",
+				externalCalendarId: "primary",
+				externalEventId: "event-1",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(bookingDiscountApplication).values({
+				id: "discount-app-1",
+				bookingId: "booking-1",
+				discountCodeId: "discount-1",
+				code: "WELCOME10",
+				discountType: "percentage",
+				discountValue: 10,
+				appliedAmountCents: 10_000,
+				appliedAt: new Date(),
+			});
+
+			const bookings = await db.select().from(booking);
+			const discountApplications = await db
+				.select()
+				.from(bookingDiscountApplication);
+			const calendarLinks = await db.select().from(bookingCalendarLink);
+
+			expect(bookings).toHaveLength(1);
+			expect(discountApplications).toHaveLength(1);
+			expect(calendarLinks).toHaveLength(1);
+			expect(bookings[0]?.totalPriceCents).toBe(90_000);
+			expect(discountApplications[0]?.code).toBe("WELCOME10");
+			expect(bookings[0]?.calendarSyncStatus).toBe("linked");
+		});
+
+		it("enforces unique discount code in an organization", async () => {
+			await db.insert(organization).values({
+				id: "org-booking-2",
+				name: "Booking Org 2",
+				slug: "booking-org-2",
+				createdAt: new Date(),
+			});
+
+			await db.insert(bookingDiscountCode).values({
+				id: "discount-2",
+				organizationId: "org-booking-2",
+				code: "SPRING25",
+				name: "Spring",
+				discountType: "percentage",
+				discountValue: 25,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await expect(
+				db.insert(bookingDiscountCode).values({
+					id: "discount-3",
+					organizationId: "org-booking-2",
+					code: "SPRING25",
+					name: "Spring duplicate",
+					discountType: "fixed_cents",
+					discountValue: 5000,
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+			).rejects.toThrow();
+		});
+
+		it("enforces no-overlap for blocking booking statuses", async () => {
+			await db.insert(organization).values({
+				id: "org-booking-overlap-1",
+				name: "Booking Overlap Org",
+				slug: "booking-overlap-org",
+				createdAt: new Date(),
+			});
+
+			await db.insert(boat).values({
+				id: "boat-booking-overlap-1",
+				organizationId: "org-booking-overlap-1",
+				name: "Overlap Boat",
+				slug: "overlap-boat",
+				type: "motor",
+				passengerCapacity: 8,
+				status: "active",
+				isActive: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(booking).values({
+				id: "booking-overlap-1",
+				organizationId: "org-booking-overlap-1",
+				boatId: "boat-booking-overlap-1",
+				source: "manual",
+				status: "confirmed",
+				paymentStatus: "paid",
+				calendarSyncStatus: "linked",
+				startsAt: new Date("2026-03-10T10:00:00.000Z"),
+				endsAt: new Date("2026-03-10T12:00:00.000Z"),
+				passengers: 4,
+				basePriceCents: 100_000,
+				discountAmountCents: 0,
+				totalPriceCents: 100_000,
+				currency: "RUB",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await expect(
+				db.insert(booking).values({
+					id: "booking-overlap-2",
+					organizationId: "org-booking-overlap-1",
+					boatId: "boat-booking-overlap-1",
+					source: "manual",
+					status: "pending",
+					paymentStatus: "unpaid",
+					calendarSyncStatus: "pending",
+					startsAt: new Date("2026-03-10T11:00:00.000Z"),
+					endsAt: new Date("2026-03-10T13:00:00.000Z"),
+					passengers: 2,
+					basePriceCents: 80_000,
+					discountAmountCents: 0,
+					totalPriceCents: 80_000,
+					currency: "RUB",
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+			).rejects.toThrow(BOOKING_OVERLAP_REGEX);
+		});
+
+		it("allows overlap when existing booking status is non-blocking", async () => {
+			await db.insert(organization).values({
+				id: "org-booking-overlap-2",
+				name: "Booking Overlap Org 2",
+				slug: "booking-overlap-org-2",
+				createdAt: new Date(),
+			});
+
+			await db.insert(boat).values({
+				id: "boat-booking-overlap-2",
+				organizationId: "org-booking-overlap-2",
+				name: "Overlap Boat 2",
+				slug: "overlap-boat-2",
+				type: "motor",
+				passengerCapacity: 8,
+				status: "active",
+				isActive: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(booking).values({
+				id: "booking-overlap-3",
+				organizationId: "org-booking-overlap-2",
+				boatId: "boat-booking-overlap-2",
+				source: "manual",
+				status: "cancelled",
+				paymentStatus: "refunded",
+				calendarSyncStatus: "failed",
+				startsAt: new Date("2026-03-11T10:00:00.000Z"),
+				endsAt: new Date("2026-03-11T12:00:00.000Z"),
+				passengers: 3,
+				basePriceCents: 60_000,
+				discountAmountCents: 0,
+				totalPriceCents: 60_000,
+				currency: "RUB",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await expect(
+				db.insert(booking).values({
+					id: "booking-overlap-4",
+					organizationId: "org-booking-overlap-2",
+					boatId: "boat-booking-overlap-2",
+					source: "manual",
+					status: "confirmed",
+					paymentStatus: "paid",
+					calendarSyncStatus: "linked",
+					startsAt: new Date("2026-03-11T11:00:00.000Z"),
+					endsAt: new Date("2026-03-11T13:00:00.000Z"),
+					passengers: 3,
+					basePriceCents: 70_000,
+					discountAmountCents: 0,
+					totalPriceCents: 70_000,
+					currency: "RUB",
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+			).resolves.toBeDefined();
+		});
+
+		it("rejects booking intervals where start is not before end", async () => {
+			await db.insert(organization).values({
+				id: "org-booking-range-1",
+				name: "Booking Range Org",
+				slug: "booking-range-org",
+				createdAt: new Date(),
+			});
+
+			await db.insert(boat).values({
+				id: "boat-booking-range-1",
+				organizationId: "org-booking-range-1",
+				name: "Range Boat",
+				slug: "range-boat",
+				type: "motor",
+				passengerCapacity: 6,
+				status: "active",
+				isActive: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await expect(
+				db.insert(booking).values({
+					id: "booking-range-1",
+					organizationId: "org-booking-range-1",
+					boatId: "boat-booking-range-1",
+					source: "manual",
+					status: "pending",
+					paymentStatus: "unpaid",
+					calendarSyncStatus: "pending",
+					startsAt: new Date("2026-03-12T10:00:00.000Z"),
+					endsAt: new Date("2026-03-12T10:00:00.000Z"),
+					passengers: 2,
+					basePriceCents: 50_000,
+					discountAmountCents: 0,
+					totalPriceCents: 50_000,
+					currency: "RUB",
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+			).rejects.toThrow(BOOKING_INVALID_RANGE_REGEX);
+		});
+
+		it("allows only one discount application per booking", async () => {
+			await db.insert(organization).values({
+				id: "org-booking-3",
+				name: "Booking Org 3",
+				slug: "booking-org-3",
+				createdAt: new Date(),
+			});
+
+			await db.insert(boat).values({
+				id: "boat-booking-3",
+				organizationId: "org-booking-3",
+				name: "Blue Wave",
+				slug: "blue-wave",
+				type: "motor",
+				passengerCapacity: 6,
+				status: "active",
+				isActive: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(booking).values({
+				id: "booking-3",
+				organizationId: "org-booking-3",
+				boatId: "boat-booking-3",
+				source: "manual",
+				status: "pending",
+				paymentStatus: "unpaid",
+				calendarSyncStatus: "linked",
+				startsAt: new Date("2026-03-05T08:00:00.000Z"),
+				endsAt: new Date("2026-03-05T11:00:00.000Z"),
+				passengers: 2,
+				basePriceCents: 60_000,
+				discountAmountCents: 6000,
+				totalPriceCents: 54_000,
+				currency: "RUB",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(bookingDiscountApplication).values({
+				id: "discount-app-3",
+				bookingId: "booking-3",
+				code: "TRY10",
+				discountType: "percentage",
+				discountValue: 10,
+				appliedAmountCents: 6000,
+				appliedAt: new Date(),
+			});
+
+			await expect(
+				db.insert(bookingDiscountApplication).values({
+					id: "discount-app-4",
+					bookingId: "booking-3",
+					code: "EXTRA",
+					discountType: "fixed_cents",
+					discountValue: 1000,
+					appliedAmountCents: 1000,
+					appliedAt: new Date(),
+				})
+			).rejects.toThrow();
+		});
+
+		it("allows only one calendar link per booking", async () => {
+			await db.insert(organization).values({
+				id: "org-booking-4",
+				name: "Booking Org 4",
+				slug: "booking-org-4",
+				createdAt: new Date(),
+			});
+
+			await db.insert(boat).values({
+				id: "boat-booking-4",
+				organizationId: "org-booking-4",
+				name: "Night Owl",
+				slug: "night-owl",
+				type: "motor",
+				passengerCapacity: 6,
+				status: "active",
+				isActive: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(booking).values({
+				id: "booking-4",
+				organizationId: "org-booking-4",
+				boatId: "boat-booking-4",
+				source: "manual",
+				status: "pending",
+				paymentStatus: "unpaid",
+				calendarSyncStatus: "linked",
+				startsAt: new Date("2026-03-06T08:00:00.000Z"),
+				endsAt: new Date("2026-03-06T11:00:00.000Z"),
+				passengers: 2,
+				basePriceCents: 50_000,
+				discountAmountCents: 0,
+				totalPriceCents: 50_000,
+				currency: "RUB",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(bookingCalendarLink).values({
+				id: "calendar-link-4",
+				bookingId: "booking-4",
+				provider: "google",
+				externalCalendarId: "primary",
+				externalEventId: "event-4",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await expect(
+				db.insert(bookingCalendarLink).values({
+					id: "calendar-link-5",
+					bookingId: "booking-4",
+					provider: "google",
+					externalCalendarId: "primary",
+					externalEventId: "event-5",
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+			).rejects.toThrow();
+		});
+	});
+
+	describe("Booking lifecycle tables", () => {
+		it("tracks cancellation request, dispute, and refund records", async () => {
+			await db.insert(organization).values({
+				id: "org-booking-lifecycle-1",
+				name: "Lifecycle Org",
+				slug: "lifecycle-org",
+				createdAt: new Date(),
+			});
+
+			await db.insert(user).values({
+				id: "user-booking-lifecycle-1",
+				name: "Lifecycle User",
+				email: "lifecycle@example.com",
+				emailVerified: false,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(boat).values({
+				id: "boat-booking-lifecycle-1",
+				organizationId: "org-booking-lifecycle-1",
+				name: "Lifecycle Boat",
+				slug: "lifecycle-boat",
+				type: "motor",
+				passengerCapacity: 6,
+				status: "active",
+				isActive: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(booking).values({
+				id: "booking-lifecycle-1",
+				organizationId: "org-booking-lifecycle-1",
+				boatId: "boat-booking-lifecycle-1",
+				customerUserId: "user-booking-lifecycle-1",
+				createdByUserId: "user-booking-lifecycle-1",
+				source: "web",
+				status: "confirmed",
+				paymentStatus: "paid",
+				calendarSyncStatus: "linked",
+				startsAt: new Date("2026-04-01T10:00:00.000Z"),
+				endsAt: new Date("2026-04-01T13:00:00.000Z"),
+				passengers: 4,
+				basePriceCents: 120_000,
+				discountAmountCents: 0,
+				totalPriceCents: 120_000,
+				currency: "RUB",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(bookingCancellationRequest).values({
+				id: "cancel-request-1",
+				bookingId: "booking-lifecycle-1",
+				organizationId: "org-booking-lifecycle-1",
+				requestedByUserId: "user-booking-lifecycle-1",
+				reason: "Weather conditions",
+				status: "requested",
+				requestedAt: new Date(),
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(bookingDispute).values({
+				id: "booking-dispute-1",
+				bookingId: "booking-lifecycle-1",
+				organizationId: "org-booking-lifecycle-1",
+				raisedByUserId: "user-booking-lifecycle-1",
+				status: "open",
+				reasonCode: "service_quality",
+				details: "Boat condition did not match description",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(bookingRefund).values({
+				id: "booking-refund-1",
+				bookingId: "booking-lifecycle-1",
+				organizationId: "org-booking-lifecycle-1",
+				requestedByUserId: "user-booking-lifecycle-1",
+				status: "requested",
+				amountCents: 30_000,
+				currency: "RUB",
+				reason: "Partial compensation",
+				requestedAt: new Date(),
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			const cancellationRequests = await db
+				.select()
+				.from(bookingCancellationRequest);
+			const disputes = await db.select().from(bookingDispute);
+			const refunds = await db.select().from(bookingRefund);
+
+			expect(cancellationRequests).toHaveLength(1);
+			expect(disputes).toHaveLength(1);
+			expect(refunds).toHaveLength(1);
+			expect(cancellationRequests[0]?.status).toBe("requested");
+			expect(disputes[0]?.status).toBe("open");
+			expect(refunds[0]?.status).toBe("requested");
+		});
+
+		it("enforces one cancellation request per booking", async () => {
+			await db.insert(organization).values({
+				id: "org-booking-lifecycle-2",
+				name: "Lifecycle Org 2",
+				slug: "lifecycle-org-2",
+				createdAt: new Date(),
+			});
+
+			await db.insert(boat).values({
+				id: "boat-booking-lifecycle-2",
+				organizationId: "org-booking-lifecycle-2",
+				name: "Lifecycle Boat 2",
+				slug: "lifecycle-boat-2",
+				type: "motor",
+				passengerCapacity: 6,
+				status: "active",
+				isActive: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(booking).values({
+				id: "booking-lifecycle-2",
+				organizationId: "org-booking-lifecycle-2",
+				boatId: "boat-booking-lifecycle-2",
+				source: "web",
+				status: "confirmed",
+				paymentStatus: "paid",
+				calendarSyncStatus: "linked",
+				startsAt: new Date("2026-04-02T10:00:00.000Z"),
+				endsAt: new Date("2026-04-02T13:00:00.000Z"),
+				passengers: 4,
+				basePriceCents: 120_000,
+				discountAmountCents: 0,
+				totalPriceCents: 120_000,
+				currency: "RUB",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(bookingCancellationRequest).values({
+				id: "cancel-request-2",
+				bookingId: "booking-lifecycle-2",
+				organizationId: "org-booking-lifecycle-2",
+				status: "requested",
+				requestedAt: new Date(),
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await expect(
+				db.insert(bookingCancellationRequest).values({
+					id: "cancel-request-3",
+					bookingId: "booking-lifecycle-2",
+					organizationId: "org-booking-lifecycle-2",
+					status: "requested",
+					requestedAt: new Date(),
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+			).rejects.toThrow();
+		});
+	});
+
+	describe("Booking payment attempt table", () => {
+		it("enforces booking-level idempotency keys", async () => {
+			await db.insert(organization).values({
+				id: "org-booking-payment-1",
+				name: "Payment Org",
+				slug: "payment-org",
+				createdAt: new Date(),
+			});
+
+			await db.insert(boat).values({
+				id: "boat-booking-payment-1",
+				organizationId: "org-booking-payment-1",
+				name: "Payment Boat",
+				slug: "payment-boat",
+				type: "motor",
+				passengerCapacity: 8,
+				status: "active",
+				isActive: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(booking).values({
+				id: "booking-payment-1",
+				organizationId: "org-booking-payment-1",
+				boatId: "boat-booking-payment-1",
+				source: "web",
+				status: "pending",
+				paymentStatus: "unpaid",
+				calendarSyncStatus: "pending",
+				startsAt: new Date("2026-04-03T10:00:00.000Z"),
+				endsAt: new Date("2026-04-03T12:00:00.000Z"),
+				passengers: 2,
+				basePriceCents: 90_000,
+				discountAmountCents: 0,
+				totalPriceCents: 90_000,
+				currency: "RUB",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(bookingPaymentAttempt).values({
+				id: "payment-attempt-1",
+				bookingId: "booking-payment-1",
+				organizationId: "org-booking-payment-1",
+				provider: "manual",
+				idempotencyKey: "idem-1",
+				status: "initiated",
+				amountCents: 90_000,
+				currency: "RUB",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await expect(
+				db.insert(bookingPaymentAttempt).values({
+					id: "payment-attempt-2",
+					bookingId: "booking-payment-1",
+					organizationId: "org-booking-payment-1",
+					provider: "manual",
+					idempotencyKey: "idem-1",
+					status: "initiated",
+					amountCents: 90_000,
+					currency: "RUB",
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+			).rejects.toThrow();
+		});
+	});
+
+	describe("Calendar webhook event table", () => {
+		it("supports idempotency by provider/channel/message_number", async () => {
+			await db.insert(organization).values({
+				id: "org-calendar-webhook-1",
+				name: "Calendar Org",
+				slug: "calendar-org",
+				createdAt: new Date(),
+			});
+
+			await db.insert(boat).values({
+				id: "boat-calendar-webhook-1",
+				organizationId: "org-calendar-webhook-1",
+				name: "Calendar Boat",
+				slug: "calendar-boat",
+				type: "motor",
+				passengerCapacity: 8,
+				status: "active",
+				isActive: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(boatCalendarConnection).values({
+				id: "connection-calendar-webhook-1",
+				boatId: "boat-calendar-webhook-1",
+				provider: "google",
+				externalCalendarId: "calendar-1",
+				syncStatus: "idle",
+				isPrimary: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(calendarWebhookEvent).values({
+				id: "webhook-event-1",
+				provider: "google",
+				channelId: "channel-1",
+				resourceId: "resource-1",
+				messageNumber: 1,
+				resourceState: "exists",
+				calendarConnectionId: "connection-calendar-webhook-1",
+				status: "processed",
+				receivedAt: new Date(),
+				processedAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await expect(
+				db.insert(calendarWebhookEvent).values({
+					id: "webhook-event-2",
+					provider: "google",
+					channelId: "channel-1",
+					resourceId: "resource-1",
+					messageNumber: 1,
+					resourceState: "exists",
+					status: "processed",
+					receivedAt: new Date(),
+					updatedAt: new Date(),
+				})
+			).rejects.toThrow();
+		});
+	});
+
+	describe("Support and messaging tables", () => {
+		it("creates support ticket with message thread", async () => {
+			await db.insert(organization).values({
+				id: "org-support-1",
+				name: "Support Org",
+				slug: "support-org",
+				createdAt: new Date(),
+			});
+
+			await db.insert(supportTicket).values({
+				id: "ticket-1",
+				organizationId: "org-support-1",
+				source: "manual",
+				status: "open",
+				priority: "normal",
+				subject: "Customer requested availability details",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await db.insert(supportTicketMessage).values({
+				id: "ticket-msg-1",
+				ticketId: "ticket-1",
+				organizationId: "org-support-1",
+				channel: "internal",
+				body: "Initial ticket note",
+				isInternal: true,
+				createdAt: new Date(),
+			});
+
+			const tickets = await db.select().from(supportTicket);
+			const messages = await db.select().from(supportTicketMessage);
+
+			expect(tickets).toHaveLength(1);
+			expect(messages).toHaveLength(1);
+			expect(messages[0]?.ticketId).toBe("ticket-1");
+		});
+
+		it("enforces inbound message dedupe by channel and dedupe key", async () => {
+			await db.insert(inboundMessage).values({
+				id: "inbound-1",
+				channel: "telegram",
+				externalMessageId: "ext-1",
+				dedupeKey: "telegram:ext-1",
+				payload: JSON.stringify({ text: "hello" }),
+				status: "received",
+				receivedAt: new Date(),
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await expect(
+				db.insert(inboundMessage).values({
+					id: "inbound-2",
+					channel: "telegram",
+					externalMessageId: "ext-2",
+					dedupeKey: "telegram:ext-1",
+					payload: JSON.stringify({ text: "duplicate" }),
+					status: "received",
+					receivedAt: new Date(),
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+			).rejects.toThrow();
+		});
+
+		it("enforces telegram notification idempotency per organization", async () => {
+			await db.insert(organization).values({
+				id: "org-telegram-notify-1",
+				name: "Telegram Org",
+				slug: "telegram-org",
+				createdAt: new Date(),
+			});
+
+			await db.insert(telegramNotification).values({
+				id: "notify-1",
+				organizationId: "org-telegram-notify-1",
+				templateKey: "booking.confirmed",
+				recipientChatId: "123",
+				idempotencyKey: "idem-notify-1",
+				status: "queued",
+				attemptCount: 0,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await expect(
+				db.insert(telegramNotification).values({
+					id: "notify-2",
+					organizationId: "org-telegram-notify-1",
+					templateKey: "booking.confirmed",
+					recipientChatId: "123",
+					idempotencyKey: "idem-notify-1",
+					status: "queued",
+					attemptCount: 0,
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+			).rejects.toThrow();
+		});
+
+		it("enforces telegram webhook event update_id uniqueness", async () => {
+			await db.insert(telegramWebhookEvent).values({
+				id: "tg-webhook-1",
+				updateId: 1001,
+				eventType: "message",
+				payload: JSON.stringify({ message: { text: "hello" } }),
+				status: "received",
+				receivedAt: new Date(),
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await expect(
+				db.insert(telegramWebhookEvent).values({
+					id: "tg-webhook-2",
+					updateId: 1001,
+					eventType: "message",
+					payload: JSON.stringify({ message: { text: "dupe" } }),
+					status: "received",
+					receivedAt: new Date(),
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+			).rejects.toThrow();
 		});
 	});
 

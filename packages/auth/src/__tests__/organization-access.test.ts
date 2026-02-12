@@ -42,4 +42,36 @@ describe("organization access roles", () => {
 
 		expect(result.success).toBe(false);
 	});
+
+	it("allows agent to create bookings", () => {
+		const result = organizationRoles.agent.authorize({
+			booking: ["create"],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("does not allow member to delete bookings", () => {
+		const result = organizationRoles.member.authorize({
+			booking: ["delete"],
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("allows manager to update support tickets", () => {
+		const result = organizationRoles.manager.authorize({
+			support: ["update"],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("does not allow customer to create notifications", () => {
+		const result = organizationRoles.customer.authorize({
+			notification: ["create"],
+		});
+
+		expect(result.success).toBe(false);
+	});
 });

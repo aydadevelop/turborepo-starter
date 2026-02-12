@@ -27,6 +27,29 @@
       "dependsOn": ["build"],
       "cache": false
     },
+    "test:integration:calendar": {
+      "env": [
+        "RUN_NETWORK_TESTS",
+        "GOOGLE_CALENDAR_CREDENTIALS_PATH",
+        "GOOGLE_CALENDAR_TEST_FULL_ACCESS_ID",
+        "GOOGLE_CALENDAR_TEST_READ_ONLY_ID",
+        "GOOGLE_CALENDAR_TEST_NO_ACCESS_ID"
+      ],
+      "cache": false
+    },
+    "test:integration:calendar:webhook": {
+      "env": [
+        "RUN_NETWORK_TESTS",
+        "RUN_WEBHOOK_NETWORK_TESTS",
+        "GOOGLE_CALENDAR_CREDENTIALS_PATH",
+        "GOOGLE_CALENDAR_TEST_FULL_ACCESS_ID",
+        "GOOGLE_CALENDAR_TEST_READ_ONLY_ID",
+        "GOOGLE_CALENDAR_TEST_NO_ACCESS_ID",
+        "GOOGLE_CALENDAR_TEST_WEBHOOK_URL",
+        "GOOGLE_CALENDAR_WEBHOOK_TEST_TOKEN"
+      ],
+      "cache": false
+    },
     "dev": {
       "cache": false,
       "persistent": true
@@ -42,6 +65,12 @@
       "cache": false
     },
     "db:generate": {
+      "cache": false
+    },
+    "db:reset:local": {
+      "cache": false
+    },
+    "db:seed": {
       "cache": false
     },
     "deploy": {

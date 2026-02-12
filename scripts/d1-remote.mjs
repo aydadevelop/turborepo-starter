@@ -42,7 +42,7 @@ function defaultBackupPath(stage, label) {
 		process.cwd(),
 		"backups",
 		"d1",
-		`${getStageDbName(stage)}-${label}-${timestamp()}.sql`,
+		`${getStageDbName(stage)}-${label}-${timestamp()}.sql`
 	);
 }
 
@@ -57,7 +57,7 @@ function runWrangler(args) {
 		{
 			stdio: "inherit",
 			env: process.env,
-		},
+		}
 	);
 
 	if (result.error) {
@@ -79,7 +79,15 @@ function backupStage(stage, outPath, reasonLabel) {
 function restoreFromFile(stage, sourcePath) {
 	const dbName = getStageDbName(stage);
 	console.log(`[d1] Restoring ${sourcePath} -> ${dbName}`);
-	runWrangler(["d1", "execute", dbName, "--remote", "--file", sourcePath, "--yes"]);
+	runWrangler([
+		"d1",
+		"execute",
+		dbName,
+		"--remote",
+		"--file",
+		sourcePath,
+		"--yes",
+	]);
 	console.log(`[d1] Restore complete: ${dbName}`);
 }
 
@@ -130,7 +138,9 @@ if (command === "backup") {
 	const stage = required(flags, "stage");
 	const outPath = resolve(
 		process.cwd(),
-		typeof flags.out === "string" ? flags.out : defaultBackupPath(stage, "backup"),
+		typeof flags.out === "string"
+			? flags.out
+			: defaultBackupPath(stage, "backup")
 	);
 	backupStage(stage, outPath, "backup");
 	process.exit(0);
@@ -152,7 +162,7 @@ if (command === "copy") {
 		process.cwd(),
 		typeof flags.out === "string"
 			? flags.out
-			: defaultBackupPath(fromStage, `copy-to-${toStage}`),
+			: defaultBackupPath(fromStage, `copy-to-${toStage}`)
 	);
 
 	backupStage(fromStage, exportPath, `copy-source-${fromStage}`);

@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
 	index,
 	integer,
@@ -6,6 +6,8 @@ import {
 	text,
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+
+import { timestamps } from "./columns";
 
 export const user = sqliteTable("user", {
 	id: text("id").primaryKey(),
@@ -15,13 +17,7 @@ export const user = sqliteTable("user", {
 		.default(false)
 		.notNull(),
 	image: text("image"),
-	createdAt: integer("created_at", { mode: "timestamp_ms" })
-		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-		.notNull(),
-	updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-		.$onUpdate(() => /* @__PURE__ */ new Date())
-		.notNull(),
+	...timestamps,
 });
 
 export const session = sqliteTable(
@@ -30,12 +26,7 @@ export const session = sqliteTable(
 		id: text("id").primaryKey(),
 		expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
 		token: text("token").notNull().unique(),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
+		...timestamps,
 		ipAddress: text("ip_address"),
 		userAgent: text("user_agent"),
 		activeOrganizationId: text("active_organization_id"),
@@ -66,14 +57,36 @@ export const account = sqliteTable(
 		}),
 		scope: text("scope"),
 		password: text("password"),
+		...timestamps,
+	},
+	(table) => [index("account_userId_idx").on(table.userId)]
+);
+
+export const passkey = sqliteTable(
+	"passkey",
+	{
+		id: text("id").primaryKey(),
+		name: text("name"),
+		publicKey: text("public_key").notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		credentialID: text("credential_id").notNull(),
+		counter: integer("counter").notNull(),
+		deviceType: text("device_type").notNull(),
+		backedUp: integer("backed_up", { mode: "boolean" })
+			.default(false)
+			.notNull(),
+		transports: text("transports"),
+		aaguid: text("aaguid"),
 		createdAt: integer("created_at", { mode: "timestamp_ms" })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
 	},
-	(table) => [index("account_userId_idx").on(table.userId)]
+	(table) => [
+		index("passkey_userId_idx").on(table.userId),
+		uniqueIndex("passkey_credential_id_unique").on(table.credentialID),
+	]
 );
 
 export const verification = sqliteTable(
@@ -83,13 +96,7 @@ export const verification = sqliteTable(
 		identifier: text("identifier").notNull(),
 		value: text("value").notNull(),
 		expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
+		...timestamps,
 	},
 	(table) => [index("verification_identifier_idx").on(table.identifier)]
 );
@@ -159,51 +166,3 @@ export const invitation = sqliteTable(
 		index("invitation_inviterId_idx").on(table.inviterId),
 	]
 );
-
-export const userRelations = relations(user, ({ many }) => ({
-	sessions: many(session),
-	accounts: many(account),
-	memberships: many(member),
-	sentInvitations: many(invitation),
-}));
-
-export const sessionRelations = relations(session, ({ one }) => ({
-	user: one(user, {
-		fields: [session.userId],
-		references: [user.id],
-	}),
-}));
-
-export const accountRelations = relations(account, ({ one }) => ({
-	user: one(user, {
-		fields: [account.userId],
-		references: [user.id],
-	}),
-}));
-
-export const organizationRelations = relations(organization, ({ many }) => ({
-	members: many(member),
-	invitations: many(invitation),
-}));
-
-export const memberRelations = relations(member, ({ one }) => ({
-	organization: one(organization, {
-		fields: [member.organizationId],
-		references: [organization.id],
-	}),
-	user: one(user, {
-		fields: [member.userId],
-		references: [user.id],
-	}),
-}));
-
-export const invitationRelations = relations(invitation, ({ one }) => ({
-	organization: one(organization, {
-		fields: [invitation.organizationId],
-		references: [organization.id],
-	}),
-	inviter: one(user, {
-		fields: [invitation.inviterId],
-		references: [user.id],
-	}),
-}));

@@ -1,24 +1,27 @@
 import {
 	availabilityBlockSourceValues,
+	boat,
+	boatAmenity,
+	boatAsset,
 	boatAssetPurposeValues,
 	boatAssetTypeValues,
+	boatAvailabilityBlock,
+	boatAvailabilityRule,
+	boatCalendarConnection,
+	boatDock,
+	boatPricingProfile,
+	boatPricingRule,
 	boatStatusValues,
 	boatTypeValues,
 	calendarProviderValues,
 	pricingAdjustmentTypeValues,
 	pricingRuleTypeValues,
 } from "@full-stack-cf-app/db/schema/boat";
+import { createSelectSchema } from "drizzle-orm/zod";
 import z from "zod";
+import { optionalTrimmedString } from "./shared/schema-utils";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-const optionalTrimmedString = (max: number) =>
-	z
-		.string()
-		.trim()
-		.max(max)
-		.optional()
-		.transform((value) => (value && value.length > 0 ? value : undefined));
 
 export const normalizeBoatSlug = (value: string) =>
 	value
@@ -263,17 +266,164 @@ export const listBoatPricingRulesInputSchema = boatIdInputSchema.extend({
 	pricingProfileId: z.string().trim().optional(),
 });
 
-export const createBoatPricingRuleInputSchema = boatIdInputSchema.extend({
-	pricingProfileId: z.string().trim().optional(),
-	name: z.string().trim().min(2).max(120),
-	ruleType: z.enum(pricingRuleTypeValues),
-	conditionJson: z.string().trim().min(2).max(5000).default("{}"),
-	adjustmentType: z.enum(pricingAdjustmentTypeValues),
-	adjustmentValue: z.number().int(),
-	priority: z.number().int().min(-1000).max(1000).default(0),
-	isActive: z.boolean().default(true),
-});
+const parseJsonObject = (raw: string): Record<string, unknown> | null => {
+	try {
+		const parsed = JSON.parse(raw) as unknown;
+		if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+			return parsed as Record<string, unknown>;
+		}
+		return null;
+	} catch {
+		return null;
+	}
+};
+
+const isHalfHourMinute = (value: unknown): value is number =>
+	typeof value === "number" &&
+	Number.isInteger(value) &&
+	(value === 0 || value === 30);
+
+export const createBoatPricingRuleInputSchema = boatIdInputSchema
+	.extend({
+		pricingProfileId: z.string().trim().optional(),
+		name: z.string().trim().min(2).max(120),
+		ruleType: z.enum(pricingRuleTypeValues),
+		conditionJson: z.string().trim().min(2).max(5000).default("{}"),
+		adjustmentType: z.enum(pricingAdjustmentTypeValues),
+		adjustmentValue: z.number().int(),
+		priority: z.number().int().min(-1000).max(1000).default(0),
+		isActive: z.boolean().default(true),
+	})
+	.superRefine((value, ctx) => {
+		const parsedCondition = parseJsonObject(value.conditionJson);
+		if (!parsedCondition) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "conditionJson must be valid JSON object",
+				path: ["conditionJson"],
+			});
+			return;
+		}
+
+		if (value.ruleType !== "time_window") {
+			return;
+		}
+
+		const startHour = parsedCondition.startHour;
+		const endHour = parsedCondition.endHour;
+		if (
+			typeof startHour !== "number" ||
+			!Number.isInteger(startHour) ||
+			startHour < 0 ||
+			startHour > 23
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "time_window requires integer startHour in range 0..23",
+				path: ["conditionJson"],
+			});
+		}
+		if (
+			typeof endHour !== "number" ||
+			!Number.isInteger(endHour) ||
+			endHour < 0 ||
+			endHour > 24
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "time_window requires integer endHour in range 0..24",
+				path: ["conditionJson"],
+			});
+		}
+
+		const startMinute = parsedCondition.startMinute ?? 0;
+		const endMinute = parsedCondition.endMinute ?? 0;
+		if (!isHalfHourMinute(startMinute)) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "time_window startMinute must be 0 or 30",
+				path: ["conditionJson"],
+			});
+		}
+		if (!isHalfHourMinute(endMinute)) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "time_window endMinute must be 0 or 30",
+				path: ["conditionJson"],
+			});
+		}
+		if (
+			typeof endHour === "number" &&
+			endHour === 24 &&
+			typeof endMinute === "number" &&
+			endMinute !== 0
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "time_window endHour=24 only supports endMinute=0",
+				path: ["conditionJson"],
+			});
+		}
+
+		const daysOfWeek = parsedCondition.daysOfWeek;
+		if (daysOfWeek !== undefined) {
+			const isValidDaysArray =
+				Array.isArray(daysOfWeek) &&
+				daysOfWeek.every(
+					(day) =>
+						typeof day === "number" &&
+						Number.isInteger(day) &&
+						day >= 0 &&
+						day <= 6
+				);
+			if (!isValidDaysArray) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message:
+						"time_window daysOfWeek must be an array of integers in range 0..6",
+					path: ["conditionJson"],
+				});
+			}
+		}
+	});
 
 export const deleteBoatPricingRuleInputSchema = boatIdInputSchema.extend({
 	ruleId: z.string().trim().min(1),
+});
+
+// ── Output schemas ──────────────────────────────────────────────────────
+
+export const boatOutputSchema = createSelectSchema(boat);
+
+export const boatDockOutputSchema = createSelectSchema(boatDock);
+
+export const boatAmenityOutputSchema = createSelectSchema(boatAmenity);
+
+export const boatAssetOutputSchema = createSelectSchema(boatAsset);
+
+export const boatCalendarConnectionOutputSchema = createSelectSchema(
+	boatCalendarConnection
+);
+
+export const boatAvailabilityRuleOutputSchema =
+	createSelectSchema(boatAvailabilityRule);
+
+export const boatAvailabilityBlockOutputSchema = createSelectSchema(
+	boatAvailabilityBlock
+);
+
+export const boatPricingProfileOutputSchema =
+	createSelectSchema(boatPricingProfile);
+
+export const boatPricingRuleOutputSchema = createSelectSchema(boatPricingRule);
+
+export const getManagedBoatOutputSchema = z.object({
+	boat: boatOutputSchema,
+	amenities: z.array(boatAmenityOutputSchema).optional(),
+	assets: z.array(boatAssetOutputSchema).optional(),
+	calendarConnections: z.array(boatCalendarConnectionOutputSchema).optional(),
+	availabilityRules: z.array(boatAvailabilityRuleOutputSchema).optional(),
+	availabilityBlocks: z.array(boatAvailabilityBlockOutputSchema).optional(),
+	pricingProfiles: z.array(boatPricingProfileOutputSchema).optional(),
+	pricingRules: z.array(boatPricingRuleOutputSchema).optional(),
 });

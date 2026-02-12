@@ -1,7 +1,8 @@
 import { auth } from "@full-stack-cf-app/auth";
 import { db } from "@full-stack-cf-app/db";
 import { member } from "@full-stack-cf-app/db/schema/auth";
-import { and, eq } from "drizzle-orm";
+import { notificationQueueMessageSchema } from "@full-stack-cf-app/notifications/contracts";
+import { and, asc, eq } from "drizzle-orm";
 import type { Context as HonoContext } from "hono";
 
 export interface CreateContextOptions {
@@ -15,31 +16,160 @@ export interface ActiveOrganizationMembership {
 	role: string;
 }
 
+export interface NotificationQueueProducer {
+	send(
+		message: unknown,
+		options?: {
+			contentType?: "text" | "bytes" | "json" | "v8";
+			delaySeconds?: number;
+		}
+	): Promise<void>;
+}
+
+interface NotificationInlineProcessorResult {
+	status: "processed" | "already_processed" | "failed" | "not_found";
+	reason?: string;
+}
+
+interface NotificationInlineProcessor {
+	processEventById(eventId: string): Promise<NotificationInlineProcessorResult>;
+}
+
+const isNotificationQueueProducer = (
+	value: unknown
+): value is NotificationQueueProducer => {
+	if (typeof value !== "object" || value === null) {
+		return false;
+	}
+
+	return typeof (value as { send?: unknown }).send === "function";
+};
+
+const LOCAL_REQUEST_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
+
+let inlineNotificationProcessorPromise:
+	| Promise<NotificationInlineProcessor | null>
+	| undefined;
+
+const getInlineNotificationProcessor = () => {
+	if (!inlineNotificationProcessorPromise) {
+		inlineNotificationProcessorPromise = (async () => {
+			try {
+				const notificationsProcessorModule = (await import(
+					"@full-stack-cf-app/notifications/processor"
+				)) as {
+					NotificationProcessorService?: new () => NotificationInlineProcessor;
+				};
+				const ProcessorCtor =
+					notificationsProcessorModule.NotificationProcessorService;
+				if (!ProcessorCtor) {
+					return null;
+				}
+
+				return new ProcessorCtor();
+			} catch (error) {
+				console.error("Inline notification processor is unavailable", error);
+				return null;
+			}
+		})();
+	}
+
+	return inlineNotificationProcessorPromise;
+};
+
+const inlineNotificationQueueProducer: NotificationQueueProducer = {
+	send: async (message) => {
+		const parsedMessage = notificationQueueMessageSchema.safeParse(message);
+		if (!parsedMessage.success) {
+			throw new Error(
+				"Inline notification queue supports only notification.event.v1 messages"
+			);
+		}
+
+		const processor = await getInlineNotificationProcessor();
+		if (!processor) {
+			throw new Error("Inline notification processor is unavailable");
+		}
+
+		const result = await processor.processEventById(parsedMessage.data.eventId);
+		if (
+			result.status === "processed" ||
+			result.status === "already_processed"
+		) {
+			return;
+		}
+
+		if (result.status === "not_found") {
+			throw new Error(
+				`Inline notification event not found: ${parsedMessage.data.eventId}`
+			);
+		}
+
+		const reason =
+			typeof result.reason === "string" && result.reason.trim().length > 0
+				? ` (${result.reason.trim()})`
+				: "";
+		throw new Error(
+			`Inline notification processing failed: ${result.status}${reason}`
+		);
+	},
+};
+
+export interface Context {
+	session: AuthSession;
+	activeMembership: ActiveOrganizationMembership | null;
+	requestUrl: string;
+	requestHostname: string;
+	notificationQueue?: NotificationQueueProducer;
+}
+
 const getActiveOrganizationMembership = async (
 	session: AuthSession
 ): Promise<ActiveOrganizationMembership | null> => {
-	const activeOrganizationId = getActiveOrganizationId(session);
 	const userId = session?.user?.id;
+	const activeOrganizationId = getActiveOrganizationId(session);
 
-	if (!(activeOrganizationId && userId)) {
+	if (!userId) {
 		return null;
 	}
 
-	const [activeMembership] = await db
+	if (activeOrganizationId) {
+		const [activeMembership] = await db
+			.select({
+				organizationId: member.organizationId,
+				role: member.role,
+			})
+			.from(member)
+			.where(
+				and(
+					eq(member.organizationId, activeOrganizationId),
+					eq(member.userId, userId)
+				)
+			)
+			.limit(1);
+
+		if (activeMembership) {
+			return activeMembership;
+		}
+
+		return null;
+	}
+
+	const memberships = await db
 		.select({
 			organizationId: member.organizationId,
 			role: member.role,
 		})
 		.from(member)
-		.where(
-			and(
-				eq(member.organizationId, activeOrganizationId),
-				eq(member.userId, userId)
-			)
-		)
-		.limit(1);
+		.where(eq(member.userId, userId))
+		.orderBy(asc(member.createdAt))
+		.limit(2);
 
-	return activeMembership ?? null;
+	if (memberships.length === 1) {
+		return memberships[0] ?? null;
+	}
+
+	return null;
 };
 
 const getActiveOrganizationId = (session: AuthSession) => {
@@ -49,22 +179,54 @@ const getActiveOrganizationId = (session: AuthSession) => {
 
 	const authSession = session.session as typeof session.session & {
 		activeOrganizationId?: string | null;
+		active_organization_id?: string | null;
 	};
 
-	return authSession.activeOrganizationId ?? null;
+	return (
+		authSession.activeOrganizationId ??
+		authSession.active_organization_id ??
+		null
+	);
 };
 
-export async function createContext({ context }: CreateContextOptions) {
+export async function createContext({
+	context,
+}: CreateContextOptions): Promise<Context> {
 	const session = await auth.api.getSession({
 		headers: context.req.raw.headers,
 	});
+	const requestUrl = context.req.raw.url;
+	let requestHostname = "";
+	try {
+		requestHostname = new URL(requestUrl).hostname.toLowerCase();
+	} catch {
+		requestHostname = "";
+	}
 
 	const activeMembership = await getActiveOrganizationMembership(session);
+	const notificationQueueCandidate = (
+		context as HonoContext & {
+			env?: {
+				NOTIFICATION_QUEUE?: unknown;
+			};
+		}
+	).env?.NOTIFICATION_QUEUE;
+	const notificationQueue = isNotificationQueueProducer(
+		notificationQueueCandidate
+	)
+		? notificationQueueCandidate
+		: undefined;
+	const resolvedNotificationQueue =
+		notificationQueue ??
+		(LOCAL_REQUEST_HOSTNAMES.has(requestHostname)
+			? inlineNotificationQueueProducer
+			: undefined);
 
 	return {
 		session,
 		activeMembership,
+		requestUrl,
+		requestHostname,
+		notificationQueue: resolvedNotificationQueue,
 	};
 }
-
-export type Context = Awaited<ReturnType<typeof createContext>>;

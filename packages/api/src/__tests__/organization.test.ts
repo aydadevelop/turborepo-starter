@@ -34,4 +34,20 @@ describe("organization permissions", () => {
 
 		expect(isAllowed).toBe(true);
 	});
+
+	it("allows manager to update bookings", () => {
+		const isAllowed = hasOrganizationPermission("manager", {
+			booking: ["update"],
+		});
+
+		expect(isAllowed).toBe(true);
+	});
+
+	it("allows manager to update support tickets", () => {
+		const isAllowed = hasOrganizationPermission("manager", {
+			support: ["update"],
+		});
+
+		expect(isAllowed).toBe(true);
+	});
 });

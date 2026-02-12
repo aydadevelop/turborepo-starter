@@ -2,7 +2,7 @@ import alchemy from "alchemy";
 import {
 	createCloudflareApi,
 	D1Database,
-	disableWorkerSubdomain,
+	Queue,
 	SvelteKit,
 	Worker,
 } from "alchemy/cloudflare";
@@ -30,12 +30,34 @@ config({ path: `../../apps/server/.env${envPath}` });
 config({ path: "./.env" });
 
 if (isDeployCommand) {
-	// Cloudflare rejects script uploads with DO migration metadata when previews are enabled.
-	// Disable previews before upload; Alchemy will re-enable the stage URL after deploy.
 	const api = await createCloudflareApi();
+	const disableWorkerPreviewUrls = async (scriptName: string) => {
+		// Cloudflare rejects script uploads with DO migration metadata when Preview URLs are enabled.
+		// This is controlled by the workers.dev subdomain setting `previews_enabled`.
+		await api
+			.post(
+				`/accounts/${api.accountId}/workers/scripts/${scriptName}/subdomain`,
+				{
+					enabled: true,
+					previews_enabled: false,
+				}
+			)
+			.catch((error: unknown) => {
+				// Script may not exist yet on first deploy; ignore 404.
+				if (typeof error === "object" && error && "status" in error) {
+					const status = (error as { status?: number }).status;
+					if (status === 404) {
+						return;
+					}
+				}
+				throw error;
+			});
+	};
+
 	await Promise.all([
-		disableWorkerSubdomain(api, `${appName}-server-${stage}`),
-		disableWorkerSubdomain(api, `${appName}-web-${stage}`),
+		disableWorkerPreviewUrls(`${appName}-server-${stage}`),
+		disableWorkerPreviewUrls(`${appName}-notifications-${stage}`),
+		disableWorkerPreviewUrls(`${appName}-web-${stage}`),
 	]);
 }
 
@@ -49,6 +71,21 @@ const app = await alchemy(appName, {
 const db = await D1Database("database", {
 	migrationsDir: "../../packages/db/src/migrations",
 	adopt: true, // Reuse existing database if it exists
+});
+
+const notificationDeadLetterQueue = await Queue("notificationDeadLetterQueue", {
+	adopt: true,
+	settings: {
+		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
+	},
+});
+
+const notificationQueue = await Queue("notificationQueue", {
+	adopt: true,
+	dlq: notificationDeadLetterQueue,
+	settings: {
+		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
+	},
 });
 
 // Local dev uses localhost ports, deployed stages use their web URL
@@ -88,23 +125,102 @@ export const server = await Worker("server", {
 	compatibility: "node",
 	bindings: {
 		DB: db,
+		NOTIFICATION_QUEUE: notificationQueue,
 		CORS_ORIGIN: getCorsOrigin(),
 		BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
 		BETTER_AUTH_URL: getAuthUrl(),
-		OPEN_ROUTER_API_KEY: alchemy.secret.env.OPEN_ROUTER_API_KEY ?? "",
-		POLAR_ACCESS_TOKEN: alchemy.secret.env.POLAR_ACCESS_TOKEN ?? "",
-		POLAR_SUCCESS_URL: alchemy.env("POLAR_SUCCESS_URL") ?? "",
-		POLAR_PRODUCT_ID: alchemy.env("POLAR_PRODUCT_ID") ?? "",
+		POLAR_ACCESS_TOKEN: alchemy.secret.env("POLAR_ACCESS_TOKEN", ""),
+		POLAR_SUCCESS_URL: alchemy.env("POLAR_SUCCESS_URL", ""),
+		POLAR_PRODUCT_ID: alchemy.env("POLAR_PRODUCT_ID", ""),
+		TELEGRAM_BOT_TOKEN: alchemy.secret.env("TELEGRAM_BOT_TOKEN", ""),
+		TELEGRAM_BOT_API_BASE_URL: alchemy.env("TELEGRAM_BOT_API_BASE_URL", ""),
+		GOOGLE_CALENDAR_CREDENTIALS_JSON: alchemy.secret.env(
+			"GOOGLE_CALENDAR_CREDENTIALS_JSON",
+			""
+		),
+		GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN: alchemy.secret.env(
+			"GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN",
+			""
+		),
+		CALENDAR_SYNC_TASK_TOKEN: alchemy.secret.env(
+			"CALENDAR_SYNC_TASK_TOKEN",
+			""
+		),
 	},
 	dev: { port: 3000 },
 });
 
-export const web = await SvelteKit("web", {
-	cwd: "../../apps/web",
-	bindings: { PUBLIC_SERVER_URL: server.url! },
+export const notifications = await Worker("notifications", {
+	cwd: "../../apps/notifications",
+	entrypoint: "src/index.ts",
+	compatibility: "node",
+	bindings: {
+		DB: db,
+		CORS_ORIGIN: getCorsOrigin(),
+		BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
+		BETTER_AUTH_URL: getAuthUrl(),
+		TELEGRAM_BOT_TOKEN: alchemy.secret.env("TELEGRAM_BOT_TOKEN", ""),
+		TELEGRAM_BOT_API_BASE_URL: alchemy.env("TELEGRAM_BOT_API_BASE_URL", ""),
+	},
+	eventSources: [
+		{
+			queue: notificationQueue,
+			settings: {
+				batchSize: 10,
+				maxConcurrency: 2,
+				maxRetries: 4,
+				maxWaitTimeMs: 1500,
+				retryDelay: 30,
+				deadLetterQueue: notificationDeadLetterQueue,
+			},
+		},
+	],
+	dev: { port: 3001 },
 });
 
-console.log(`Web    -> ${web.url}`);
+const shouldStartWeb = process.env.ALCHEMY_SKIP_WEB !== "1";
+
+export const web = shouldStartWeb
+	? await SvelteKit("web", {
+			cwd: "../../apps/web",
+			bindings: {
+				PUBLIC_SERVER_URL: server.url!,
+			},
+		})
+	: undefined;
+
+if (web) {
+	console.log(`Web    -> ${web.url}`);
+}
 console.log(`Server -> ${server.url}`);
+console.log(`Notify -> ${notifications.url}`);
 
 await app.finalize();
+
+if (isDeployCommand) {
+	// Ensure previews stay disabled after Alchemy finishes applying resources.
+	const api = await createCloudflareApi();
+	await Promise.all([
+		api.post(
+			`/accounts/${api.accountId}/workers/scripts/${appName}-server-${stage}/subdomain`,
+			{
+				enabled: true,
+				previews_enabled: false,
+			}
+		),
+		api.post(
+			`/accounts/${api.accountId}/workers/scripts/${appName}-notifications-${stage}/subdomain`,
+			{
+				enabled: true,
+				previews_enabled: false,
+			}
+		),
+		api.post(
+			`/accounts/${api.accountId}/workers/scripts/${appName}-web-${stage}/subdomain`,
+			{
+				enabled: true,
+				previews_enabled: false,
+			}
+		),
+	]);
+}

@@ -43,6 +43,22 @@
 
 			<Card class="transition-shadow hover:shadow-md">
 				<CardHeader>
+					<CardTitle>Boat Pages</CardTitle>
+					<CardDescription>Public page generation</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<p class="text-sm text-muted-foreground">
+						Generate shareable boat pages from real-time availability, pricing,
+						and slot data.
+					</p>
+				</CardContent>
+				<CardFooter>
+					<Button href="/boats" variant="outline">Browse Boats</Button>
+				</CardFooter>
+			</Card>
+
+			<Card class="transition-shadow hover:shadow-md">
+				<CardHeader>
 					<CardTitle>Dashboard</CardTitle>
 					<CardDescription>Protected user area</CardDescription>
 				</CardHeader>

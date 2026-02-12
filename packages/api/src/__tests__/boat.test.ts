@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	createBoatAvailabilityBlockInputSchema,
 	createBoatPricingProfileInputSchema,
+	createBoatPricingRuleInputSchema,
 	createManagedBoatInputSchema,
 	isValidBoatSlug,
 	normalizeBoatSlug,
@@ -86,5 +87,41 @@ describe("boat router schemas", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("accepts time_window pricing rule with half-hour minutes", () => {
+		const result = createBoatPricingRuleInputSchema.safeParse({
+			boatId: "boat-1",
+			name: "Night surcharge",
+			ruleType: "time_window",
+			conditionJson: JSON.stringify({
+				startHour: 20,
+				startMinute: 30,
+				endHour: 23,
+				endMinute: 0,
+			}),
+			adjustmentType: "percentage",
+			adjustmentValue: 15,
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects time_window pricing rule with non-half-hour minutes", () => {
+		const result = createBoatPricingRuleInputSchema.safeParse({
+			boatId: "boat-1",
+			name: "Invalid minute rule",
+			ruleType: "time_window",
+			conditionJson: JSON.stringify({
+				startHour: 20,
+				startMinute: 15,
+				endHour: 23,
+				endMinute: 45,
+			}),
+			adjustmentType: "percentage",
+			adjustmentValue: 15,
+		});
+
+		expect(result.success).toBe(false);
 	});
 });

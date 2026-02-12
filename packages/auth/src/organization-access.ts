@@ -4,6 +4,10 @@ import { defaultStatements } from "better-auth/plugins/organization/access";
 export const organizationStatements = {
 	...defaultStatements,
 	boat: ["create", "read", "update", "delete"],
+	booking: ["create", "read", "update", "delete"],
+	support: ["create", "read", "update", "delete"],
+	intake: ["create", "read", "update", "delete"],
+	notification: ["create", "read", "update", "delete"],
 } as const;
 
 export const organizationAccessControl = createAccessControl(
@@ -17,6 +21,10 @@ export const orgOwnerAc = organizationAccessControl.newRole({
 	team: ["create", "update", "delete"],
 	ac: ["create", "read", "update", "delete"],
 	boat: ["create", "read", "update", "delete"],
+	booking: ["create", "read", "update", "delete"],
+	support: ["create", "read", "update", "delete"],
+	intake: ["create", "read", "update", "delete"],
+	notification: ["create", "read", "update", "delete"],
 });
 
 export const orgAdminAc = organizationAccessControl.newRole({
@@ -26,6 +34,10 @@ export const orgAdminAc = organizationAccessControl.newRole({
 	team: ["create", "update", "delete"],
 	ac: ["read"],
 	boat: ["create", "read", "update", "delete"],
+	booking: ["create", "read", "update", "delete"],
+	support: ["create", "read", "update", "delete"],
+	intake: ["create", "read", "update", "delete"],
+	notification: ["create", "read", "update", "delete"],
 });
 
 export const managerAc = organizationAccessControl.newRole({
@@ -35,6 +47,10 @@ export const managerAc = organizationAccessControl.newRole({
 	team: ["create", "update"],
 	ac: ["read"],
 	boat: ["create", "read", "update"],
+	booking: ["create", "read", "update"],
+	support: ["create", "read", "update"],
+	intake: ["create", "read", "update"],
+	notification: ["create", "read", "update"],
 });
 
 export const agentAc = organizationAccessControl.newRole({
@@ -44,6 +60,10 @@ export const agentAc = organizationAccessControl.newRole({
 	team: [],
 	ac: ["read"],
 	boat: ["read"],
+	booking: ["create", "read", "update"],
+	support: ["create", "read", "update"],
+	intake: ["create", "read"],
+	notification: ["create", "read"],
 });
 
 export const memberAc = organizationAccessControl.newRole({
@@ -53,6 +73,10 @@ export const memberAc = organizationAccessControl.newRole({
 	team: [],
 	ac: ["read"],
 	boat: ["read"],
+	booking: ["read"],
+	support: ["read"],
+	intake: ["read"],
+	notification: ["read"],
 });
 
 export const customerAc = organizationAccessControl.newRole({
@@ -62,6 +86,10 @@ export const customerAc = organizationAccessControl.newRole({
 	team: [],
 	ac: ["read"],
 	boat: ["read"],
+	booking: ["read"],
+	support: ["read"],
+	intake: [],
+	notification: [],
 });
 
 export const organizationRoles = {

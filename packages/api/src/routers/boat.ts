@@ -11,12 +11,22 @@ import {
 	boatPricingRule,
 } from "@full-stack-cf-app/db/schema/boat";
 import { ORPCError } from "@orpc/server";
-import { and, desc, eq, isNull, type SQL, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
+import z from "zod";
 
 import { organizationPermissionProcedure } from "../index";
 import {
 	archiveManagedBoatInputSchema,
+	boatAmenityOutputSchema,
+	boatAssetOutputSchema,
+	boatAvailabilityBlockOutputSchema,
+	boatAvailabilityRuleOutputSchema,
+	boatCalendarConnectionOutputSchema,
+	boatDockOutputSchema,
 	boatIdInputSchema,
+	boatOutputSchema,
+	boatPricingProfileOutputSchema,
+	boatPricingRuleOutputSchema,
 	createBoatAssetInputSchema,
 	createBoatAvailabilityBlockInputSchema,
 	createBoatPricingProfileInputSchema,
@@ -25,6 +35,7 @@ import {
 	deleteBoatAvailabilityBlockInputSchema,
 	deleteBoatPricingRuleInputSchema,
 	getManagedBoatInputSchema,
+	getManagedBoatOutputSchema,
 	isValidBoatSlug,
 	listBoatAssetsInputSchema,
 	listBoatAvailabilityBlocksInputSchema,
@@ -42,116 +53,41 @@ import {
 	upsertBoatCalendarConnectionInputSchema,
 	upsertBoatDockInputSchema,
 } from "./boat.schemas";
-
-const buildWhere = (conditions: Array<SQL | undefined>) => {
-	const filtered = conditions.filter(
-		(condition): condition is SQL => !!condition
-	);
-	if (filtered.length === 0) {
-		return undefined;
-	}
-	if (filtered.length === 1) {
-		return filtered[0];
-	}
-	return and(...filtered);
-};
-
-const requireActiveMembership = (context: {
-	activeMembership: { organizationId: string; role: string } | null;
-}) => {
-	if (!context.activeMembership) {
-		throw new ORPCError("FORBIDDEN");
-	}
-	return context.activeMembership;
-};
-
-const requireSessionUserId = (context: {
-	session: {
-		user: {
-			id: string;
-		};
-	} | null;
-}) => {
-	const userId = context.session?.user.id;
-	if (!userId) {
-		throw new ORPCError("UNAUTHORIZED");
-	}
-	return userId;
-};
-
-const requireManagedBoat = async (boatId: string, organizationId: string) => {
-	const [managedBoat] = await db
-		.select()
-		.from(boat)
-		.where(and(eq(boat.id, boatId), eq(boat.organizationId, organizationId)))
-		.limit(1);
-
-	if (!managedBoat) {
-		throw new ORPCError("NOT_FOUND");
-	}
-
-	return managedBoat;
-};
-
-const requireManagedDock = async (dockId: string, organizationId: string) => {
-	const [managedDock] = await db
-		.select()
-		.from(boatDock)
-		.where(
-			and(eq(boatDock.id, dockId), eq(boatDock.organizationId, organizationId))
-		)
-		.limit(1);
-
-	if (!managedDock) {
-		throw new ORPCError("BAD_REQUEST", {
-			message: "Dock does not belong to the active organization",
-		});
-	}
-
-	return managedDock;
-};
-
-const requireCalendarConnectionForBoat = async (
-	calendarConnectionId: string,
-	boatId: string
-) => {
-	const [connection] = await db
-		.select()
-		.from(boatCalendarConnection)
-		.where(
-			and(
-				eq(boatCalendarConnection.id, calendarConnectionId),
-				eq(boatCalendarConnection.boatId, boatId)
-			)
-		)
-		.limit(1);
-
-	if (!connection) {
-		throw new ORPCError("BAD_REQUEST", {
-			message: "Calendar connection does not belong to this boat",
-		});
-	}
-
-	return connection;
-};
+import {
+	requireActiveMembership,
+	requireSessionUserId,
+} from "./shared/auth-utils";
+import {
+	requireCalendarConnectionForBoat,
+	requireManagedBoat,
+	requireManagedDock,
+} from "./shared/boat-access";
+import { successOutputSchema } from "./shared/schema-utils";
 
 export const boatRouter = {
 	listManaged: organizationPermissionProcedure({
 		boat: ["read"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "List managed boats",
+			description:
+				"List boats belonging to the active organization with optional filters.",
+		})
 		.input(listManagedBoatsInputSchema)
+		.output(z.array(boatOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 
-			const where = buildWhere([
+			const where = and(
 				eq(boat.organizationId, activeMembership.organizationId),
 				input.status ? eq(boat.status, input.status) : undefined,
 				input.dockId ? eq(boat.dockId, input.dockId) : undefined,
 				input.includeArchived ? undefined : isNull(boat.archivedAt),
 				input.search
 					? sql`(lower(${boat.name}) like ${`%${input.search.toLowerCase()}%`} or lower(${boat.slug}) like ${`%${input.search.toLowerCase()}%`})`
-					: undefined,
-			]);
+					: undefined
+			);
 
 			if (!where) {
 				throw new ORPCError("INTERNAL_SERVER_ERROR");
@@ -168,7 +104,14 @@ export const boatRouter = {
 	getManaged: organizationPermissionProcedure({
 		boat: ["read"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Get managed boat details",
+			description:
+				"Get a boat with optional related data: amenities, assets, calendar connections, availability, and pricing.",
+		})
 		.input(getManagedBoatInputSchema)
+		.output(getManagedBoatOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			const managedBoat = await requireManagedBoat(
@@ -248,7 +191,12 @@ export const boatRouter = {
 	createManaged: organizationPermissionProcedure({
 		boat: ["create"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Create a managed boat",
+		})
 		.input(createManagedBoatInputSchema)
+		.output(boatOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			if (input.dockId) {
@@ -301,7 +249,12 @@ export const boatRouter = {
 	updateManaged: organizationPermissionProcedure({
 		boat: ["update"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Update a managed boat",
+		})
 		.input(updateManagedBoatInputSchema)
+		.output(boatOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
@@ -374,7 +327,14 @@ export const boatRouter = {
 	archiveManaged: organizationPermissionProcedure({
 		boat: ["delete"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Archive a managed boat",
+			description:
+				"Soft-deletes a boat by setting it to inactive and recording archive timestamp.",
+		})
 		.input(archiveManagedBoatInputSchema)
+		.output(successOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
@@ -400,15 +360,20 @@ export const boatRouter = {
 	dockListManaged: organizationPermissionProcedure({
 		boat: ["read"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "List managed docks",
+		})
 		.input(listBoatDocksInputSchema)
+		.output(z.array(boatDockOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
-			const where = buildWhere([
+			const where = and(
 				eq(boatDock.organizationId, activeMembership.organizationId),
 				input.search
 					? sql`(lower(${boatDock.name}) like ${`%${input.search.toLowerCase()}%`} or lower(${boatDock.slug}) like ${`%${input.search.toLowerCase()}%`})`
-					: undefined,
-			]);
+					: undefined
+			);
 
 			if (!where) {
 				throw new ORPCError("INTERNAL_SERVER_ERROR");
@@ -425,7 +390,12 @@ export const boatRouter = {
 	dockUpsertManaged: organizationPermissionProcedure({
 		boat: ["update"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Create or update a dock",
+		})
 		.input(upsertBoatDockInputSchema)
+		.output(boatDockOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			const normalizedSlug = normalizeBoatSlug(input.slug ?? input.name);
@@ -490,7 +460,12 @@ export const boatRouter = {
 	amenityListManaged: organizationPermissionProcedure({
 		boat: ["read"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "List boat amenities",
+		})
 		.input(boatIdInputSchema)
+		.output(z.array(boatAmenityOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
@@ -503,7 +478,13 @@ export const boatRouter = {
 	amenityReplaceManaged: organizationPermissionProcedure({
 		boat: ["update"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Replace boat amenities",
+			description: "Atomically replaces all amenities for a boat.",
+		})
 		.input(replaceBoatAmenitiesInputSchema)
+		.output(z.array(boatAmenityOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
@@ -544,16 +525,21 @@ export const boatRouter = {
 	assetListManaged: organizationPermissionProcedure({
 		boat: ["read"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "List boat assets",
+		})
 		.input(listBoatAssetsInputSchema)
+		.output(z.array(boatAssetOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
 
-			const where = buildWhere([
+			const where = and(
 				eq(boatAsset.boatId, input.boatId),
 				input.assetType ? eq(boatAsset.assetType, input.assetType) : undefined,
-				input.purpose ? eq(boatAsset.purpose, input.purpose) : undefined,
-			]);
+				input.purpose ? eq(boatAsset.purpose, input.purpose) : undefined
+			);
 
 			if (!where) {
 				throw new ORPCError("INTERNAL_SERVER_ERROR");
@@ -569,7 +555,12 @@ export const boatRouter = {
 	assetCreateManaged: organizationPermissionProcedure({
 		boat: ["update"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Create a boat asset",
+		})
 		.input(createBoatAssetInputSchema)
+		.output(boatAssetOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			const sessionUserId = requireSessionUserId(context);
@@ -624,7 +615,12 @@ export const boatRouter = {
 	calendarListManaged: organizationPermissionProcedure({
 		boat: ["read"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "List boat calendar connections",
+		})
 		.input(listBoatCalendarConnectionsInputSchema)
+		.output(z.array(boatCalendarConnectionOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
@@ -637,7 +633,12 @@ export const boatRouter = {
 	calendarUpsertManaged: organizationPermissionProcedure({
 		boat: ["update"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Create or update a calendar connection",
+		})
 		.input(upsertBoatCalendarConnectionInputSchema)
+		.output(boatCalendarConnectionOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
@@ -708,7 +709,12 @@ export const boatRouter = {
 	availabilityRuleListManaged: organizationPermissionProcedure({
 		boat: ["read"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "List boat availability rules",
+		})
 		.input(listBoatAvailabilityRulesInputSchema)
+		.output(z.array(boatAvailabilityRuleOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
@@ -721,7 +727,14 @@ export const boatRouter = {
 	availabilityRuleReplaceManaged: organizationPermissionProcedure({
 		boat: ["update"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Replace boat availability rules",
+			description:
+				"Atomically replaces all weekly availability rules for a boat.",
+		})
 		.input(replaceBoatAvailabilityRulesInputSchema)
+		.output(z.array(boatAvailabilityRuleOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
@@ -754,23 +767,24 @@ export const boatRouter = {
 	availabilityBlockListManaged: organizationPermissionProcedure({
 		boat: ["read"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "List boat availability blocks",
+		})
 		.input(listBoatAvailabilityBlocksInputSchema)
+		.output(z.array(boatAvailabilityBlockOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
 
-			const where = buildWhere([
+			const where = and(
 				eq(boatAvailabilityBlock.boatId, input.boatId),
 				input.source
 					? eq(boatAvailabilityBlock.source, input.source)
 					: undefined,
-				input.from
-					? sql`${boatAvailabilityBlock.endsAt} > ${input.from}`
-					: undefined,
-				input.to
-					? sql`${boatAvailabilityBlock.startsAt} < ${input.to}`
-					: undefined,
-			]);
+				input.from ? gt(boatAvailabilityBlock.endsAt, input.from) : undefined,
+				input.to ? lt(boatAvailabilityBlock.startsAt, input.to) : undefined
+			);
 
 			if (!where) {
 				throw new ORPCError("INTERNAL_SERVER_ERROR");
@@ -786,7 +800,13 @@ export const boatRouter = {
 	availabilityBlockCreateManaged: organizationPermissionProcedure({
 		boat: ["update"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Create an availability block",
+			description: "Block a time range to prevent bookings.",
+		})
 		.input(createBoatAvailabilityBlockInputSchema)
+		.output(boatAvailabilityBlockOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			const sessionUserId = requireSessionUserId(context);
@@ -831,7 +851,12 @@ export const boatRouter = {
 	availabilityBlockDeleteManaged: organizationPermissionProcedure({
 		boat: ["update"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Delete an availability block",
+		})
 		.input(deleteBoatAvailabilityBlockInputSchema)
+		.output(successOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
@@ -866,17 +891,22 @@ export const boatRouter = {
 	pricingProfileListManaged: organizationPermissionProcedure({
 		boat: ["read"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "List pricing profiles",
+		})
 		.input(listBoatPricingProfilesInputSchema)
+		.output(z.array(boatPricingProfileOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
 
-			const where = buildWhere([
+			const where = and(
 				eq(boatPricingProfile.boatId, input.boatId),
 				input.includeArchived
 					? undefined
-					: isNull(boatPricingProfile.archivedAt),
-			]);
+					: isNull(boatPricingProfile.archivedAt)
+			);
 
 			if (!where) {
 				throw new ORPCError("INTERNAL_SERVER_ERROR");
@@ -892,7 +922,12 @@ export const boatRouter = {
 	pricingProfileCreateManaged: organizationPermissionProcedure({
 		boat: ["update"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Create a pricing profile",
+		})
 		.input(createBoatPricingProfileInputSchema)
+		.output(boatPricingProfileOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			const sessionUserId = requireSessionUserId(context);
@@ -955,7 +990,12 @@ export const boatRouter = {
 	pricingProfileSetDefaultManaged: organizationPermissionProcedure({
 		boat: ["update"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Set default pricing profile",
+		})
 		.input(setDefaultBoatPricingProfileInputSchema)
+		.output(successOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
@@ -997,17 +1037,22 @@ export const boatRouter = {
 	pricingRuleListManaged: organizationPermissionProcedure({
 		boat: ["read"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "List pricing rules",
+		})
 		.input(listBoatPricingRulesInputSchema)
+		.output(z.array(boatPricingRuleOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
 
-			const where = buildWhere([
+			const where = and(
 				eq(boatPricingRule.boatId, input.boatId),
 				input.pricingProfileId
 					? eq(boatPricingRule.pricingProfileId, input.pricingProfileId)
-					: undefined,
-			]);
+					: undefined
+			);
 
 			if (!where) {
 				throw new ORPCError("INTERNAL_SERVER_ERROR");
@@ -1023,7 +1068,12 @@ export const boatRouter = {
 	pricingRuleCreateManaged: organizationPermissionProcedure({
 		boat: ["update"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Create a pricing rule",
+		})
 		.input(createBoatPricingRuleInputSchema)
+		.output(boatPricingRuleOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);
@@ -1087,7 +1137,12 @@ export const boatRouter = {
 	pricingRuleDeleteManaged: organizationPermissionProcedure({
 		boat: ["update"],
 	})
+		.route({
+			tags: ["Boat"],
+			summary: "Delete a pricing rule",
+		})
 		.input(deleteBoatPricingRuleInputSchema)
+		.output(successOutputSchema)
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			await requireManagedBoat(input.boatId, activeMembership.organizationId);

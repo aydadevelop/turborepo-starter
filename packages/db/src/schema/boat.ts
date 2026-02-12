@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
 	index,
 	integer,
@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { organization, user } from "./auth";
+import { timestamps } from "./columns";
 
 export const boatStatusValues = [
 	"draft",
@@ -54,6 +55,11 @@ export const calendarSyncStatusValues = [
 	"error",
 	"disabled",
 ] as const;
+export const calendarWebhookEventStatusValues = [
+	"processed",
+	"skipped",
+	"failed",
+] as const;
 
 export const availabilityBlockSourceValues = [
 	"manual",
@@ -84,6 +90,8 @@ export type BoatAssetReviewStatus =
 	(typeof boatAssetReviewStatusValues)[number];
 export type CalendarProvider = (typeof calendarProviderValues)[number];
 export type CalendarSyncStatus = (typeof calendarSyncStatusValues)[number];
+export type CalendarWebhookEventStatus =
+	(typeof calendarWebhookEventStatusValues)[number];
 export type AvailabilityBlockSource =
 	(typeof availabilityBlockSourceValues)[number];
 export type PricingRuleType = (typeof pricingRuleTypeValues)[number];
@@ -104,13 +112,7 @@ export const boatDock = sqliteTable(
 		latitude: real("latitude"),
 		longitude: real("longitude"),
 		isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
+		...timestamps,
 	},
 	(table) => [
 		index("boat_dock_organizationId_idx").on(table.organizationId),
@@ -151,13 +153,7 @@ export const boat = sqliteTable(
 		approvedAt: integer("approved_at", { mode: "timestamp_ms" }),
 		archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
 		metadata: text("metadata"),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
+		...timestamps,
 	},
 	(table) => [
 		index("boat_organizationId_idx").on(table.organizationId),
@@ -180,13 +176,7 @@ export const boatAmenity = sqliteTable(
 			.notNull()
 			.default(true),
 		value: text("value"),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
+		...timestamps,
 	},
 	(table) => [
 		index("boat_amenity_boatId_idx").on(table.boatId),
@@ -222,13 +212,7 @@ export const boatAsset = sqliteTable(
 			.notNull()
 			.default("pending"),
 		reviewNote: text("review_note"),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
+		...timestamps,
 	},
 	(table) => [
 		index("boat_asset_boatId_idx").on(table.boatId),
@@ -264,13 +248,7 @@ export const boatCalendarConnection = sqliteTable(
 		isPrimary: integer("is_primary", { mode: "boolean" })
 			.notNull()
 			.default(false),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
+		...timestamps,
 	},
 	(table) => [
 		index("boat_calendar_connection_boatId_idx").on(table.boatId),
@@ -279,6 +257,49 @@ export const boatCalendarConnection = sqliteTable(
 			table.boatId,
 			table.provider,
 			table.externalCalendarId
+		),
+	]
+);
+
+export const calendarWebhookEvent = sqliteTable(
+	"calendar_webhook_event",
+	{
+		id: text("id").primaryKey(),
+		provider: text("provider", { enum: calendarProviderValues }).notNull(),
+		channelId: text("channel_id").notNull(),
+		resourceId: text("resource_id").notNull(),
+		messageNumber: integer("message_number"),
+		resourceState: text("resource_state").notNull(),
+		channelToken: text("channel_token"),
+		resourceUri: text("resource_uri"),
+		calendarConnectionId: text("calendar_connection_id").references(
+			() => boatCalendarConnection.id,
+			{ onDelete: "set null" }
+		),
+		status: text("status", { enum: calendarWebhookEventStatusValues })
+			.notNull()
+			.default("processed"),
+		errorMessage: text("error_message"),
+		receivedAt: integer("received_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		processedAt: integer("processed_at", { mode: "timestamp_ms" }),
+		...timestamps,
+	},
+	(table) => [
+		index("calendar_webhook_event_provider_channel_idx").on(
+			table.provider,
+			table.channelId
+		),
+		index("calendar_webhook_event_status_idx").on(table.status),
+		index("calendar_webhook_event_connectionId_idx").on(
+			table.calendarConnectionId
+		),
+		index("calendar_webhook_event_receivedAt_idx").on(table.receivedAt),
+		uniqueIndex("calendar_webhook_event_provider_channel_message_unique").on(
+			table.provider,
+			table.channelId,
+			table.messageNumber
 		),
 	]
 );
@@ -294,13 +315,7 @@ export const boatAvailabilityRule = sqliteTable(
 		startMinute: integer("start_minute").notNull(),
 		endMinute: integer("end_minute").notNull(),
 		isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
+		...timestamps,
 	},
 	(table) => [
 		index("boat_availability_rule_boatId_idx").on(table.boatId),
@@ -338,13 +353,7 @@ export const boatAvailabilityBlock = sqliteTable(
 			onDelete: "set null",
 		}),
 		isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
+		...timestamps,
 	},
 	(table) => [
 		index("boat_availability_block_boatId_idx").on(table.boatId),
@@ -394,13 +403,7 @@ export const boatPricingProfile = sqliteTable(
 			onDelete: "set null",
 		}),
 		archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
+		...timestamps,
 	},
 	(table) => [
 		index("boat_pricing_profile_boatId_idx").on(table.boatId),
@@ -431,129 +434,11 @@ export const boatPricingRule = sqliteTable(
 		adjustmentValue: integer("adjustment_value").notNull(),
 		priority: integer("priority").notNull().default(0),
 		isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-		createdAt: integer("created_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-			.$onUpdate(() => /* @__PURE__ */ new Date())
-			.notNull(),
+		...timestamps,
 	},
 	(table) => [
 		index("boat_pricing_rule_boatId_idx").on(table.boatId),
 		index("boat_pricing_rule_pricingProfileId_idx").on(table.pricingProfileId),
 		index("boat_pricing_rule_priority_idx").on(table.priority),
 	]
-);
-
-export const boatDockRelations = relations(boatDock, ({ one, many }) => ({
-	organization: one(organization, {
-		fields: [boatDock.organizationId],
-		references: [organization.id],
-	}),
-	boats: many(boat),
-}));
-
-export const boatRelations = relations(boat, ({ one, many }) => ({
-	organization: one(organization, {
-		fields: [boat.organizationId],
-		references: [organization.id],
-	}),
-	dock: one(boatDock, {
-		fields: [boat.dockId],
-		references: [boatDock.id],
-	}),
-	amenities: many(boatAmenity),
-	assets: many(boatAsset),
-	calendarConnections: many(boatCalendarConnection),
-	availabilityRules: many(boatAvailabilityRule),
-	availabilityBlocks: many(boatAvailabilityBlock),
-	pricingProfiles: many(boatPricingProfile),
-	pricingRules: many(boatPricingRule),
-}));
-
-export const boatAmenityRelations = relations(boatAmenity, ({ one }) => ({
-	boat: one(boat, {
-		fields: [boatAmenity.boatId],
-		references: [boat.id],
-	}),
-}));
-
-export const boatAssetRelations = relations(boatAsset, ({ one }) => ({
-	boat: one(boat, {
-		fields: [boatAsset.boatId],
-		references: [boat.id],
-	}),
-	uploadedByUser: one(user, {
-		fields: [boatAsset.uploadedByUserId],
-		references: [user.id],
-	}),
-}));
-
-export const boatCalendarConnectionRelations = relations(
-	boatCalendarConnection,
-	({ one, many }) => ({
-		boat: one(boat, {
-			fields: [boatCalendarConnection.boatId],
-			references: [boat.id],
-		}),
-		availabilityBlocks: many(boatAvailabilityBlock),
-	})
-);
-
-export const boatAvailabilityRuleRelations = relations(
-	boatAvailabilityRule,
-	({ one }) => ({
-		boat: one(boat, {
-			fields: [boatAvailabilityRule.boatId],
-			references: [boat.id],
-		}),
-	})
-);
-
-export const boatAvailabilityBlockRelations = relations(
-	boatAvailabilityBlock,
-	({ one }) => ({
-		boat: one(boat, {
-			fields: [boatAvailabilityBlock.boatId],
-			references: [boat.id],
-		}),
-		calendarConnection: one(boatCalendarConnection, {
-			fields: [boatAvailabilityBlock.calendarConnectionId],
-			references: [boatCalendarConnection.id],
-		}),
-		createdByUser: one(user, {
-			fields: [boatAvailabilityBlock.createdByUserId],
-			references: [user.id],
-		}),
-	})
-);
-
-export const boatPricingProfileRelations = relations(
-	boatPricingProfile,
-	({ one, many }) => ({
-		boat: one(boat, {
-			fields: [boatPricingProfile.boatId],
-			references: [boat.id],
-		}),
-		createdByUser: one(user, {
-			fields: [boatPricingProfile.createdByUserId],
-			references: [user.id],
-		}),
-		rules: many(boatPricingRule),
-	})
-);
-
-export const boatPricingRuleRelations = relations(
-	boatPricingRule,
-	({ one }) => ({
-		boat: one(boat, {
-			fields: [boatPricingRule.boatId],
-			references: [boat.id],
-		}),
-		pricingProfile: one(boatPricingProfile, {
-			fields: [boatPricingRule.pricingProfileId],
-			references: [boatPricingProfile.id],
-		}),
-	})
 );

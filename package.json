@@ -7,7 +7,7 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "turbo run dev db:studio --filter=@full-stack-cf-app/infra --filter=@full-stack-cf-app/db",
+    "dev": "turbo run dev --filter=@full-stack-cf-app/infra",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
@@ -17,12 +17,18 @@
     "test": "turbo run test",
     "test:watch": "turbo run test:watch",
     "test:e2e": "turbo run test:e2e",
+    "test:integration:calendar": "turbo run test:integration:calendar --filter=@full-stack-cf-app/api",
+    "test:integration:calendar:webhook": "turbo run test:integration:calendar:webhook --filter=@full-stack-cf-app/api",
+    "test:integration:calendar:webhook:tunnel": "node ./scripts/calendar-webhook-e2e.mjs",
     "dev:native": "turbo run dev --filter=native",
     "dev:web": "turbo run dev --filter=web",
     "dev:server": "turbo run dev --filter=@full-stack-cf-app/infra",
+    "dev:server:clean": "npm run db:reset:local && npm run dev:server",
     "db:push": "turbo run db:push --filter=@full-stack-cf-app/db",
     "db:migrate": "turbo run db:migrate --filter=@full-stack-cf-app/db",
     "db:generate": "turbo run db:generate --filter=@full-stack-cf-app/db",
+    "db:reset:local": "turbo run db:reset:local --filter=@full-stack-cf-app/db",
+    "db:seed": "turbo run db:seed --filter=@full-stack-cf-app/db --",
     "db:studio": "turbo run db:studio --filter=@full-stack-cf-app/db",
     "db:backup:remote": "node ./scripts/d1-remote.mjs backup",
     "db:copy:remote": "node ./scripts/d1-remote.mjs copy",
@@ -52,5 +58,8 @@
     "typescript": "^5",
     "ultracite": "7.1.3"
   },
-  "packageManager": "npm@11.7.0"
+  "packageManager": "npm@11.7.0",
+  "overrides": {
+    "drizzle-orm": "1.0.0-beta.15-859cf75"
+  }
 }

@@ -1,0 +1,31 @@
+{
+  "name": "notifications",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsdown",
+    "check-types": "tsc -b",
+    "lint": "cd ../.. && biome check --config-path biome.json apps/notifications",
+    "lint:fix": "cd ../.. && biome check --config-path biome.json apps/notifications --write",
+    "test": "vitest run",
+    "test:watch": "vitest --watch"
+  },
+  "dependencies": {
+    "@full-stack-cf-app/db": "*",
+    "@full-stack-cf-app/env": "*",
+    "@full-stack-cf-app/notifications": "*",
+    "drizzle-orm": "1.0.0-beta.15-859cf75",
+    "hono": "^4.8.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251213.0",
+    "@full-stack-cf-app/config": "*",
+    "@full-stack-cf-app/vitest-config": "*",
+    "@types/node": "^22.13.14",
+    "alchemy": "^0.82.1",
+    "tsdown": "^0.16.5",
+    "typescript": "^5",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.54.0"
+  }
+}

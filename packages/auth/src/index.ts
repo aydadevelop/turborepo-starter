@@ -1,3 +1,4 @@
+import { passkey } from "@better-auth/passkey";
 import { db } from "@full-stack-cf-app/db";
 import * as schema from "@full-stack-cf-app/db/schema/auth";
 import { env } from "@full-stack-cf-app/env/server";
@@ -5,6 +6,7 @@ import { checkout, polar, portal } from "@polar-sh/better-auth";
 import type { BetterAuthPlugin } from "better-auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { openAPI } from "better-auth/plugins";
 import { organization } from "better-auth/plugins/organization";
 
 import { polarClient } from "./lib/payments";
@@ -20,9 +22,18 @@ const parseCorsOrigins = (value: string | undefined) =>
 		.filter(Boolean);
 
 const corsOrigins = parseCorsOrigins(env.CORS_ORIGIN);
+const authBaseUrl = env.BETTER_AUTH_URL.replace(/\/+$/, "");
+const authUrl = new URL(authBaseUrl);
+const passkeyRpId =
+	authUrl.hostname === "localhost" ? "localhost" : authUrl.hostname;
 
 // Only enable Polar plugin if access token is configured
 const plugins: BetterAuthPlugin[] = [
+	openAPI({ disableDefaultReference: true }),
+	passkey({
+		rpID: passkeyRpId,
+		rpName: "Cloudflare App",
+	}),
 	organization({
 		ac: organizationAccessControl,
 		creatorRole: "org_owner",

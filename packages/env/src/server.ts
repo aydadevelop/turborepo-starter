@@ -9,10 +9,15 @@ const stringEnvVars = {
 	CORS_ORIGIN: cfEnv.CORS_ORIGIN,
 	BETTER_AUTH_SECRET: cfEnv.BETTER_AUTH_SECRET,
 	BETTER_AUTH_URL: cfEnv.BETTER_AUTH_URL,
-	OPEN_ROUTER_API_KEY: cfEnv.OPEN_ROUTER_API_KEY,
 	POLAR_ACCESS_TOKEN: cfEnv.POLAR_ACCESS_TOKEN,
 	POLAR_SUCCESS_URL: cfEnv.POLAR_SUCCESS_URL,
 	POLAR_PRODUCT_ID: cfEnv.POLAR_PRODUCT_ID,
+	TELEGRAM_BOT_TOKEN: cfEnv.TELEGRAM_BOT_TOKEN,
+	TELEGRAM_BOT_API_BASE_URL: cfEnv.TELEGRAM_BOT_API_BASE_URL,
+	GOOGLE_CALENDAR_CREDENTIALS_JSON: cfEnv.GOOGLE_CALENDAR_CREDENTIALS_JSON,
+	GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN:
+		cfEnv.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN,
+	CALENDAR_SYNC_TASK_TOKEN: cfEnv.CALENDAR_SYNC_TASK_TOKEN,
 };
 
 // Validate and export typed environment variables
@@ -26,10 +31,14 @@ export const env = {
 				.min(16, "BETTER_AUTH_SECRET must be at least 16 characters"),
 			BETTER_AUTH_URL: z.url("BETTER_AUTH_URL must be a valid URL"),
 			// Optional - empty string means disabled
-			OPEN_ROUTER_API_KEY: z.string().default(""),
 			POLAR_ACCESS_TOKEN: z.string().default(""),
 			POLAR_SUCCESS_URL: z.string().default(""),
 			POLAR_PRODUCT_ID: z.string().default(""),
+			TELEGRAM_BOT_TOKEN: z.string().default(""),
+			TELEGRAM_BOT_API_BASE_URL: z.string().default(""),
+			GOOGLE_CALENDAR_CREDENTIALS_JSON: z.string().default(""),
+			GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN: z.string().default(""),
+			CALENDAR_SYNC_TASK_TOKEN: z.string().default(""),
 		},
 		runtimeEnv: stringEnvVars,
 		emptyStringAsUndefined: false, // Keep empty strings for optional vars

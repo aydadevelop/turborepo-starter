@@ -11,11 +11,82 @@
 	import { Input } from "@full-stack-cf-app/ui/components/input";
 	import { Label } from "@full-stack-cf-app/ui/components/label";
 	import { createForm } from "@tanstack/svelte-form";
+	import { onMount } from "svelte";
+	import { get } from "svelte/store";
 	import { z } from "zod";
 	import { goto } from "$app/navigation";
+	import { page } from "$app/stores";
 	import { authClient } from "$lib/auth-client";
 
 	let { switchToSignUp } = $props<{ switchToSignUp: () => void }>();
+
+	const resolvePostAuthRedirect = (candidatePath: string | null): string => {
+		if (!candidatePath) {
+			return "/dashboard";
+		}
+		if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
+			return "/dashboard";
+		}
+		return candidatePath;
+	};
+
+	const currentPage = get(page);
+	const postAuthRedirectPath = resolvePostAuthRedirect(
+		currentPage.url.searchParams.get("next")
+	);
+	let passkeyError = $state<string | null>(null);
+	let passkeyPending = $state(false);
+
+	const handlePasskeySignIn = async (autoFill = false) => {
+		if (typeof window === "undefined" || !("PublicKeyCredential" in window)) {
+			passkeyError = "Passkeys are not supported in this browser.";
+			return;
+		}
+
+		passkeyError = null;
+		if (!autoFill) {
+			passkeyPending = true;
+		}
+		try {
+			const { error } = await authClient.signIn.passkey({
+				autoFill,
+				fetchOptions: {
+					onSuccess: () => goto(postAuthRedirectPath),
+				},
+			});
+
+			if (error) {
+				passkeyError = error.message || "Passkey sign in failed.";
+			}
+		} catch (error) {
+			passkeyError =
+				error instanceof Error ? error.message : "Passkey sign in failed.";
+		} finally {
+			passkeyPending = false;
+		}
+	};
+
+	onMount(() => {
+		if (typeof window === "undefined" || !("PublicKeyCredential" in window)) {
+			return;
+		}
+		if (
+			typeof PublicKeyCredential.isConditionalMediationAvailable !== "function"
+		) {
+			return;
+		}
+
+		PublicKeyCredential.isConditionalMediationAvailable()
+			.then((isAvailable) => {
+				if (!isAvailable) {
+					return;
+				}
+				handlePasskeySignIn(true);
+			})
+			.catch(() => {
+				// Ignore conditional UI probing errors and keep manual passkey login.
+			});
+	});
 
 	const validationSchema = z.object({
 		email: z.email("Invalid email address"),
@@ -28,7 +99,7 @@
 			await authClient.signIn.email(
 				{ email: value.email, password: value.password },
 				{
-					onSuccess: () => goto("/dashboard"),
+					onSuccess: () => goto(postAuthRedirectPath),
 					onError: (error) => {
 						console.error(
 							error.error.message || "Sign in failed. Please try again."
@@ -66,6 +137,7 @@
 								id={field.name}
 								name={field.name}
 								type="email"
+								autocomplete="username webauthn"
 								placeholder="you@example.com"
 								onblur={field.handleBlur}
 								value={field.state.value}
@@ -91,6 +163,7 @@
 								id={field.name}
 								name={field.name}
 								type="password"
+								autocomplete="current-password webauthn"
 								placeholder="••••••••"
 								onblur={field.handleBlur}
 								value={field.state.value}
@@ -121,6 +194,28 @@
 						</Button>
 					{/snippet}
 				</form.Subscribe>
+
+				<div class="relative py-1">
+					<div class="absolute inset-x-0 top-1/2 border-t border-border"></div>
+					<span
+						class="relative mx-auto block w-fit bg-card px-2 text-xs text-muted-foreground"
+					>
+						or
+					</span>
+				</div>
+
+				<Button
+					type="button"
+					variant="outline"
+					class="w-full"
+					disabled={passkeyPending}
+					onclick={() => void handlePasskeySignIn(false)}
+				>
+					{passkeyPending ? "Waiting for passkey..." : "Sign In with Passkey"}
+				</Button>
+				{#if passkeyError}
+					<p class="text-sm text-destructive" role="alert">{passkeyError}</p>
+				{/if}
 			</form>
 		</CardContent>
 		<CardFooter class="justify-center">

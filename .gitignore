@@ -13,6 +13,7 @@ build
 .env.*
 !.env.example
 .dev.vars
+apps/server/.secrets/
 
 # IDEs and editors
 .vscode/*

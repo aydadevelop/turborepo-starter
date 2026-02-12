@@ -5,6 +5,8 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { QueryCache, QueryClient } from "@tanstack/svelte-query";
 import { PUBLIC_SERVER_URL } from "$env/static/public";
 
+const serverUrl = PUBLIC_SERVER_URL.replace(/\/+$/, "");
+
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({
 		onError: (error) => {
@@ -14,7 +16,7 @@ export const queryClient = new QueryClient({
 });
 
 export const link = new RPCLink({
-	url: `${PUBLIC_SERVER_URL}/rpc`,
+	url: `${serverUrl}/rpc`,
 	fetch(url, options) {
 		return fetch(url, {
 			...options,

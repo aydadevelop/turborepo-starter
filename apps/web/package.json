@@ -17,11 +17,12 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@libsql/client": "0.15.15",
+    "@better-auth/passkey": "^1.4.18",
     "@full-stack-cf-app/api": "*",
     "@full-stack-cf-app/auth": "*",
     "@full-stack-cf-app/env": "*",
     "@full-stack-cf-app/ui": "*",
+    "@libsql/client": "0.15.15",
     "@orpc/client": "^1.12.2",
     "@orpc/server": "^1.12.2",
     "@orpc/tanstack-query": "^1.12.2",

@@ -1,8 +1,10 @@
 <script lang="ts">
+	import NotificationCenter from "./NotificationCenter.svelte";
 	import UserMenu from "./UserMenu.svelte";
 
 	const links = [
 		{ to: "/", label: "Home" },
+		{ to: "/boats", label: "Boats" },
 		{ to: "/dashboard", label: "Dashboard" },
 		{ to: "/todos", label: "Todos" },
 	];
@@ -34,6 +36,7 @@
 			{/each}
 		</nav>
 		<div class="flex items-center gap-2">
+			<NotificationCenter />
 			<UserMenu />
 		</div>
 	</div>

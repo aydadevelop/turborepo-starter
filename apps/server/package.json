@@ -7,12 +7,11 @@
     "check-types": "tsc -b",
     "lint": "cd ../.. && biome check --config-path biome.json apps/server",
     "lint:fix": "cd ../.. && biome check --config-path biome.json apps/server --write",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server"
   },
   "dependencies": {
-    "@ai-sdk/devtools": "^0.0.2",
-    "@ai-sdk/google": "^3.0.1",
-    "@ai-sdk/openai": "^3.0.25",
     "@full-stack-cf-app/api": "*",
     "@full-stack-cf-app/auth": "*",
     "@full-stack-cf-app/db": "*",
@@ -20,7 +19,6 @@
     "@orpc/openapi": "^1.12.2",
     "@orpc/server": "^1.12.2",
     "@orpc/zod": "^1.12.2",
-    "ai": "^6.0.3",
     "better-auth": "^1.4.18",
     "dotenv": "^17.2.2",
     "hono": "^4.8.2",
@@ -29,10 +27,12 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251213.0",
     "@full-stack-cf-app/config": "*",
+    "@full-stack-cf-app/vitest-config": "*",
     "@types/node": "^22.13.14",
     "alchemy": "^0.82.1",
     "tsdown": "^0.16.5",
     "typescript": "^5",
+    "vitest": "^3.2.4",
     "wrangler": "^4.54.0"
   }
 }

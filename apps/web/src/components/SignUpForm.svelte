@@ -11,11 +11,28 @@
 	import { Input } from "@full-stack-cf-app/ui/components/input";
 	import { Label } from "@full-stack-cf-app/ui/components/label";
 	import { createForm } from "@tanstack/svelte-form";
+	import { get } from "svelte/store";
 	import { z } from "zod";
 	import { goto } from "$app/navigation";
+	import { page } from "$app/stores";
 	import { authClient } from "$lib/auth-client";
 
 	let { switchToSignIn } = $props<{ switchToSignIn: () => void }>();
+
+	const resolvePostAuthRedirect = (candidatePath: string | null): string => {
+		if (!candidatePath) {
+			return "/dashboard";
+		}
+		if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
+			return "/dashboard";
+		}
+		return candidatePath;
+	};
+
+	const currentPage = get(page);
+	const postAuthRedirectPath = resolvePostAuthRedirect(
+		currentPage.url.searchParams.get("next")
+	);
 
 	const validationSchema = z.object({
 		name: z.string().min(2, "Name must be at least 2 characters"),
@@ -34,7 +51,7 @@
 				},
 				{
 					onSuccess: () => {
-						goto("/dashboard");
+						goto(postAuthRedirectPath);
 					},
 					onError: (error) => {
 						console.error(
