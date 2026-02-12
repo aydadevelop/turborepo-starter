@@ -170,11 +170,13 @@ Current status:
 - Discount codes are migrated (with min amount, validity window, usage limits, per-customer limits).
 - Public/customer booking baseline is migrated (public availability search + public quote + public create flow).
 - Cancellation/dispute/refund lifecycle baseline is migrated (request/review/process APIs + DB lifecycle tables).
+- Cancellation service now applies actor/time-based refund policy during cancellation flows (owner/customer), creates processed refund records, updates booking payment/refund state, emits refund notifications, and keeps calendar detach behavior.
 - Slot engine is built and tested (`computeBoatDaySlots`, `enrichSlotsWithPricing`, `filterSlotsAfterMinNotice`, midnight-crossing via `resolveWorkingWindow`).
 - Pricing engine is built and tested (rule matching, cents math, full quote with fee breakdown, pay-now/pay-later split).
 - `availabilityPublic` covers: boat filtering (status/active/approved), amenity key subquery, passenger capacity, boat type, price range, org/dock/search scoping, sorting, pagination, amenity facet counts, `includeUnavailable` flag, optional `withSlots`, and `availableFilters` metadata.
 - `availabilityPublic` supports both range mode (`startsAt` + `endsAt`) and date mode (`date` + `durationHours`) for public search.
 - `quotePublic` covers: single-boat pricing with discount code, before/after breakdown.
+- `checkoutReadModelPublic` baseline is added (line items, payment split, policy summaries, localized labels for web/mini-app checkout UX).
 
 Legacy filter features — parity status:
 
@@ -191,21 +193,21 @@ Legacy filter features — parity status:
 | Booking/block overlap removal | `calculateAvailability` | `mergeBusyIntervals` + `computeFreeGaps` | Done |
 | Show unavailable boats | `showBooked` param | `includeUnavailable` param | Done |
 | Before/after price display | `priceComponents` | `quotePublic` (before/after discount) | Done |
-| Single boat by ID with full details | `GET /api/filter/boats/:id` | `booking.getByIdPublic` (dock, amenities, gallery, pricing, rules, slots) | Partial (direct-link guard behavior differs) |
+| Single boat by ID with full details | `GET /api/filter/boats/:id` | `booking.getByIdPublic` (dock, amenities, gallery, pricing, rules, slots; `includeInactive` for legacy direct-link parity) | Done (opt-in parity) |
 | Time slots in search results | 30-min slots per boat in list | `availabilityPublic` + `withSlots` + `computeBoatDaySlots` | Done |
 | Date+duration input mode | `date` + `duration` params | `availabilityPublic` accepts `date` + `durationHours` | Done |
 | Available filter metadata | `generateAvailableFilters` (dates, times, durations, passengers) | `availableFilters` (`availableStartTimes`, `passengerOptions`, `durationOptions`) | Done (baseline) |
-| 4-band availability sorting | Deterministic hourly rotation by availability bands | Simple sort (newest/price/capacity) | Deferred |
+| 4-band availability sorting | Deterministic hourly rotation by availability bands | `availabilityPublic.sortBy=availability_bands` (slot-weighted deterministic grouping + hourly rotation) | Done |
 
 Missing subtasks:
 
-- [ ] Align `getByIdPublic` direct-link behavior with legacy (remove active-only guard when this is acceptable for public access policy).
+- [x] Align `getByIdPublic` direct-link behavior with legacy via `includeInactive` opt-in flag (default keeps active-only public behavior).
 - [x] Wire slot generation into `availabilityPublic`: add `date` (ISO string) + `duration` (hours) as input alternatives to `startsAt`/`endsAt`; add `withSlots` flag to return per-boat time slots via `computeBoatDaySlots` + `filterSlotsAfterMinNotice`.
 - [x] Add available-filter metadata to `availabilityPublic` output: `availableStartTimes` (union of slot start times), `passengerOptions` (distinct capacities), `durationOptions` (feasible durations from longest gap).
-- [ ] Add production checkout read model for web + mini app (quote breakdown, fee lines, policy summary, localized display fields).
+- [x] Add production checkout read model for web + mini app (quote breakdown, fee lines, policy summary, localized display fields).
 - [ ] Add payment-intent lifecycle integration (reserve/capture/refund provider orchestration, idempotent retry semantics).
-- [ ] Add stronger refund/dispute policy engine (time windows, actor-based permissions, reason taxonomy, evidence attachments).
-- [ ] Add availability-band sorting strategy as a `sortBy` option (port legacy 4-band algorithm when needed for fairness rotation).
+- [ ] Extend refund/dispute policy engine with richer reason taxonomy, explicit actor permission matrix, and evidence attachment workflow.
+- [x] Add availability-band sorting strategy as a `sortBy` option (port legacy 4-band algorithm when needed for fairness rotation).
 
 ### 3) Calendar maintenance (adapter + webhook + fallback polling)
 

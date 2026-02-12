@@ -463,6 +463,145 @@ describe("booking availabilityPublic (integration)", () => {
 		expect(boatItem.pricingQuote.estimatedHours).toBe(2);
 	});
 
+	it("supports legacy availability band sort mode", async () => {
+		vi.useFakeTimers();
+		try {
+			vi.setSystemTime(new Date("2026-03-10T09:00:00.000Z"));
+
+			await testDbState.db.insert(organization).values({
+				id: "org-1",
+				name: "Org",
+				slug: "org",
+			});
+
+			await testDbState.db.insert(boat).values([
+				{
+					id: "boat-evening-weighted",
+					organizationId: "org-1",
+					name: "Evening Boat",
+					slug: "evening-boat",
+					status: "active",
+					passengerCapacity: 8,
+					minimumHours: 1,
+					minimumNoticeMinutes: 0,
+					workingHoursStart: 16,
+					workingHoursEnd: 20,
+					timezone: "Europe/Moscow",
+					createdAt: new Date("2026-03-01T10:00:00.000Z"),
+				},
+				{
+					id: "boat-morning-weighted",
+					organizationId: "org-1",
+					name: "Morning Boat",
+					slug: "morning-boat",
+					status: "active",
+					passengerCapacity: 8,
+					minimumHours: 1,
+					minimumNoticeMinutes: 0,
+					workingHoursStart: 8,
+					workingHoursEnd: 12,
+					timezone: "Europe/Moscow",
+					createdAt: new Date("2026-03-09T10:00:00.000Z"),
+				},
+			]);
+
+			await testDbState.db.insert(boatPricingProfile).values([
+				{
+					id: "profile-evening-weighted",
+					boatId: "boat-evening-weighted",
+					name: "Base",
+					currency: "RUB",
+					baseHourlyPriceCents: 10_000,
+					isDefault: true,
+					validFrom: new Date("2026-01-01T00:00:00.000Z"),
+				},
+				{
+					id: "profile-morning-weighted",
+					boatId: "boat-morning-weighted",
+					name: "Base",
+					currency: "RUB",
+					baseHourlyPriceCents: 10_000,
+					isDefault: true,
+					validFrom: new Date("2026-01-01T00:00:00.000Z"),
+				},
+			]);
+
+			const result = await call(
+				bookingRouter.availabilityPublic,
+				{
+					date: "2026-03-12",
+					durationHours: 1,
+					passengers: 2,
+					sortBy: "availability_bands",
+				},
+				{ context: publicContext }
+			);
+
+			expect(result.items).toHaveLength(2);
+			expect(result.items[0]?.boat.id).toBe("boat-evening-weighted");
+			expect(result.items[1]?.boat.id).toBe("boat-morning-weighted");
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("checkoutReadModelPublic returns line items and policy summaries", async () => {
+		await testDbState.db.insert(organization).values({
+			id: "org-1",
+			name: "Org",
+			slug: "org",
+		});
+
+		await testDbState.db.insert(boat).values({
+			id: "boat-checkout-model",
+			organizationId: "org-1",
+			name: "Checkout Model Boat",
+			slug: "checkout-model-boat",
+			status: "active",
+			passengerCapacity: 8,
+			minimumHours: 1,
+			minimumNoticeMinutes: 120,
+			workingHoursStart: 9,
+			workingHoursEnd: 18,
+			timezone: "UTC",
+		});
+
+		await testDbState.db.insert(boatPricingProfile).values({
+			id: "profile-checkout-model",
+			boatId: "boat-checkout-model",
+			name: "Base",
+			currency: "RUB",
+			baseHourlyPriceCents: 10_000,
+			serviceFeePercentage: 10,
+			affiliateFeePercentage: 5,
+			isDefault: true,
+			validFrom: new Date("2026-01-01T00:00:00.000Z"),
+		});
+
+		const result = await call(
+			bookingRouter.checkoutReadModelPublic,
+			{
+				boatId: "boat-checkout-model",
+				startsAt: new Date("2026-03-10T10:00:00.000Z"),
+				endsAt: new Date("2026-03-10T12:00:00.000Z"),
+				passengers: 2,
+				locale: "en-US",
+			},
+			{ context: publicContext }
+		);
+
+		expect(result.boat.id).toBe("boat-checkout-model");
+		expect(result.lineItems.length).toBeGreaterThan(0);
+		expect(result.lineItems.some((item) => item.key === "pay_now")).toBe(true);
+		expect(result.lineItems.some((item) => item.key === "total")).toBe(true);
+		expect(
+			result.policies.some((policy) => policy.key === "minimum_notice")
+		).toBe(true);
+		expect(result.totals.totalCents).toBe(
+			result.pricingQuoteAfterDiscount.estimatedTotalPriceCents
+		);
+	});
+
 	it("getByIdPublic handles cross-midnight windows and blocks overlapping midnight slots", async () => {
 		await testDbState.db.insert(organization).values({
 			id: "org-1",
@@ -598,5 +737,56 @@ describe("booking availabilityPublic (integration)", () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+
+	it("getByIdPublic can include inactive boats when includeInactive=true", async () => {
+		await testDbState.db.insert(organization).values({
+			id: "org-1",
+			name: "Org",
+			slug: "org",
+		});
+
+		await testDbState.db.insert(boat).values({
+			id: "boat-inactive-legacy",
+			organizationId: "org-1",
+			name: "Inactive Legacy Boat",
+			slug: "inactive-legacy-boat",
+			status: "draft",
+			isActive: false,
+			archivedAt: new Date("2026-01-01T00:00:00.000Z"),
+			passengerCapacity: 6,
+			minimumHours: 1,
+			minimumNoticeMinutes: 0,
+			workingHoursStart: 9,
+			workingHoursEnd: 17,
+			timezone: "UTC",
+		});
+
+		await expect(
+			call(
+				bookingRouter.getByIdPublic,
+				{
+					boatId: "boat-inactive-legacy",
+					date: "2026-03-16",
+					durationHours: 1,
+					passengers: 2,
+				},
+				{ context: publicContext }
+			)
+		).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+		const included = await call(
+			bookingRouter.getByIdPublic,
+			{
+				boatId: "boat-inactive-legacy",
+				date: "2026-03-16",
+				durationHours: 1,
+				passengers: 2,
+				includeInactive: true,
+			},
+			{ context: publicContext }
+		);
+
+		expect(included.boat.id).toBe("boat-inactive-legacy");
 	});
 });

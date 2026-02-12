@@ -66,11 +66,16 @@ import {
 	quotePublicOutputSchema,
 } from "../booking.schemas";
 import { successOutputSchema } from "../shared/schema-utils";
+import { sortByAvailabilityBands } from "./availability-ranking.service";
 import {
 	cancelBookingAndSync,
 	ensureNoExternalCalendarOverlap,
 	syncCalendarLinkOnBookingCreate,
 } from "./calendar-sync";
+import {
+	applyCancellationPolicyAndRefund,
+	assertCancellationPolicyReasonInput,
+} from "./cancellation-policy.service";
 import { resolveBookingDiscount } from "./discount-resolution";
 import {
 	blockingBookingStatuses,
@@ -86,6 +91,7 @@ import {
 import {
 	emitBookingCancelledNotificationEvent,
 	emitBookingCreatedNotificationEvent,
+	emitBookingRefundProcessedNotificationEvent,
 } from "./notification-events";
 
 const getSqliteErrorMessage = (error: unknown): string => {
@@ -431,7 +437,7 @@ const createManagedBookingRecord = async (params: {
 	};
 };
 
-const resolvePublicBookingQuote = async (params: {
+export const resolvePublicBookingQuote = async (params: {
 	context: {
 		session: {
 			user: {
@@ -573,6 +579,13 @@ interface AvailabilityResult {
 	activeRules: BoatPricingRule[];
 }
 
+interface PublicAvailabilityItem {
+	boat: AvailabilityResult["boat"];
+	pricingQuote: AvailabilityResult["pricingQuote"];
+	available: boolean;
+	slots?: ReturnType<typeof enrichSlotsWithPricing>;
+}
+
 interface PublicAvailabilitySearchInput {
 	startsAt?: Date;
 	endsAt?: Date;
@@ -690,9 +703,9 @@ const resolveActivePricingProfileForWindow = (params: {
 			(profile.validTo === null || profile.validTo > params.startsAt)
 	) ?? null;
 
-const fetchSlotsForPagedBoats = async (paged: AvailabilityResult[]) => {
-	const pagedBoatIds = paged.map((r) => r.boat.id);
-	if (pagedBoatIds.length === 0) {
+const fetchBusyIntervalsForBoats = async (items: AvailabilityResult[]) => {
+	const boatIds = items.map((item) => item.boat.id);
+	if (boatIds.length === 0) {
 		return new Map<string, BusyInterval[]>();
 	}
 
@@ -706,7 +719,7 @@ const fetchSlotsForPagedBoats = async (paged: AvailabilityResult[]) => {
 			.from(booking)
 			.where(
 				and(
-					inArray(booking.boatId, pagedBoatIds),
+					inArray(booking.boatId, boatIds),
 					inArray(booking.status, blockingBookingStatuses)
 				)
 			),
@@ -719,7 +732,7 @@ const fetchSlotsForPagedBoats = async (paged: AvailabilityResult[]) => {
 			.from(boatAvailabilityBlock)
 			.where(
 				and(
-					inArray(boatAvailabilityBlock.boatId, pagedBoatIds),
+					inArray(boatAvailabilityBlock.boatId, boatIds),
 					eq(boatAvailabilityBlock.isActive, true)
 				)
 			),
@@ -859,11 +872,213 @@ const scoreCandidate = (
 	};
 };
 
+const buildAmenityCounts = (
+	rows: Array<{ key: string; count: number | string | bigint }>
+) => {
+	const amenityCounts: Record<string, number> = {};
+	for (const row of rows) {
+		amenityCounts[row.key] = Number(row.count);
+	}
+	return amenityCounts;
+};
+
+const scoreCandidateBoats = (params: {
+	candidateBoats: (typeof boat.$inferSelect)[];
+	input: PublicAvailabilitySearchInput;
+	mode: AvailabilitySearchMode;
+	bookingBusyByBoatId: Map<string, BusyInterval[]>;
+	blockBusyByBoatId: Map<string, BusyInterval[]>;
+	pricingProfilesByBoatId: Map<
+		string,
+		(typeof boatPricingProfile.$inferSelect)[]
+	>;
+	pricingRulesByBoatId: Map<string, BoatPricingRule[]>;
+}) => {
+	const resultsWithAvailability: AvailabilityResult[] = [];
+	for (const candidateBoat of params.candidateBoats) {
+		const result = scoreCandidate(
+			candidateBoat,
+			params.input,
+			params.mode,
+			params.bookingBusyByBoatId,
+			params.blockBusyByBoatId,
+			params.pricingProfilesByBoatId,
+			params.pricingRulesByBoatId
+		);
+		if (result) {
+			resultsWithAvailability.push(result);
+		}
+	}
+	return resultsWithAvailability;
+};
+
+const resolveAvailabilityDurationMinutes = (params: {
+	mode: AvailabilitySearchMode;
+	input: PublicAvailabilitySearchInput;
+}) =>
+	params.mode === "range"
+		? Math.max(
+				30,
+				Math.round(
+					((params.input.endsAt as Date).getTime() -
+						(params.input.startsAt as Date).getTime()) /
+						60_000
+				)
+			)
+		: Math.max(30, Math.round((params.input.durationHours as number) * 60));
+
+const prepareAvailabilityBandSortArtifacts = async (params: {
+	resultsWithAvailability: AvailabilityResult[];
+	durationMinutes: number;
+	now: Date;
+	passengers: number;
+}) => {
+	const busyByBoatIdForSlots = await fetchBusyIntervalsForBoats(
+		params.resultsWithAvailability
+	);
+	const slotStartsByBoatId = new Map<string, Date[]>();
+	for (const result of params.resultsWithAvailability) {
+		const busyIntervals = busyByBoatIdForSlots.get(result.boat.id) ?? [];
+		const slots = enrichBoatWithSlots(
+			result,
+			busyIntervals,
+			result.windowStartsAt,
+			params.durationMinutes,
+			params.now,
+			params.passengers
+		);
+		slotStartsByBoatId.set(
+			result.boat.id,
+			slots.map((slot) => slot.startsAt)
+		);
+	}
+
+	return { busyByBoatIdForSlots, slotStartsByBoatId };
+};
+
+const sortAvailabilityResultsForPublicRequest = async (params: {
+	resultsWithAvailability: AvailabilityResult[];
+	sortBy: string | undefined;
+	durationMinutes: number;
+	now: Date;
+	passengers: number;
+}) => {
+	if (params.sortBy !== "availability_bands") {
+		sortAvailabilityResults(params.resultsWithAvailability, params.sortBy);
+		return {
+			busyByBoatIdForSlots: undefined,
+		};
+	}
+
+	const artifacts = await prepareAvailabilityBandSortArtifacts({
+		resultsWithAvailability: params.resultsWithAvailability,
+		durationMinutes: params.durationMinutes,
+		now: params.now,
+		passengers: params.passengers,
+	});
+
+	sortAvailabilityResults(params.resultsWithAvailability, params.sortBy, {
+		slotStartsByBoatId: artifacts.slotStartsByBoatId,
+		now: params.now,
+	});
+
+	return artifacts;
+};
+
+const buildAvailabilityItems = async (params: {
+	paged: AvailabilityResult[];
+	durationMinutes: number;
+	now: Date;
+	passengers: number;
+	withSlots: boolean;
+	preloadedBusyByBoatId?: Map<string, BusyInterval[]>;
+}): Promise<PublicAvailabilityItem[]> => {
+	if (!params.withSlots) {
+		return params.paged.map((result) => ({
+			boat: result.boat,
+			pricingQuote: result.pricingQuote,
+			available: result.available,
+		}));
+	}
+
+	const busyByBoatId =
+		params.preloadedBusyByBoatId ??
+		(await fetchBusyIntervalsForBoats(params.paged));
+
+	return params.paged.map((result) => {
+		const busyIntervals = busyByBoatId.get(result.boat.id) ?? [];
+		const slots = enrichBoatWithSlots(
+			result,
+			busyIntervals,
+			result.windowStartsAt,
+			params.durationMinutes,
+			params.now,
+			params.passengers
+		);
+		return {
+			boat: result.boat,
+			pricingQuote: result.pricingQuote,
+			available: result.available,
+			slots,
+		};
+	});
+};
+
+const buildAvailableFilters = (params: {
+	resultsWithAvailability: AvailabilityResult[];
+	items: PublicAvailabilityItem[];
+	withSlots: boolean;
+}) => {
+	const passengerSet = new Set<number>();
+	for (const result of params.resultsWithAvailability) {
+		passengerSet.add(result.boat.passengerCapacity);
+	}
+	const passengerOptions = [...passengerSet].sort((a, b) => a - b);
+
+	const allStartTimes = new Set<string>();
+	if (params.withSlots) {
+		for (const item of params.items) {
+			if (item.slots) {
+				for (const slot of item.slots) {
+					allStartTimes.add(slot.startsAt.toISOString());
+				}
+			}
+		}
+	}
+
+	return {
+		availableStartTimes: [...allStartTimes].sort(),
+		passengerOptions,
+		durationOptions: [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5],
+	};
+};
+
 const sortAvailabilityResults = (
 	results: AvailabilityResult[],
-	sortBy?: string
+	sortBy?: string,
+	options?: {
+		slotStartsByBoatId?: ReadonlyMap<string, readonly Date[]>;
+		now?: Date;
+	}
 ) => {
 	switch (sortBy) {
+		case "availability_bands": {
+			const slotStartsByBoatId = options?.slotStartsByBoatId;
+			if (!slotStartsByBoatId) {
+				results.sort(
+					(a, b) => b.boat.createdAt.getTime() - a.boat.createdAt.getTime()
+				);
+				break;
+			}
+
+			const ordered = sortByAvailabilityBands({
+				results,
+				slotStartsByBoatId,
+				now: options?.now,
+			});
+			results.splice(0, results.length, ...ordered);
+			break;
+		}
 		case "price_asc":
 			results.sort(
 				(a, b) =>
@@ -1080,10 +1295,7 @@ export const coreBookingRouter = {
 					.groupBy(boatAmenity.key),
 			]);
 
-			const amenityCounts: Record<string, number> = {};
-			for (const row of amenityCountRows) {
-				amenityCounts[row.key] = Number(row.count);
-			}
+			const amenityCounts = buildAmenityCounts(amenityCountRows);
 
 			const bookingBusyByBoatId =
 				buildBusyIntervalsByBoatId(overlappingBookings);
@@ -1091,23 +1303,29 @@ export const coreBookingRouter = {
 			const { pricingProfilesByBoatId, pricingRulesByBoatId } =
 				buildPricingLookups(pricingProfiles, pricingRulesRows);
 
-			const resultsWithAvailability: AvailabilityResult[] = [];
-			for (const candidateBoat of candidateBoats) {
-				const result = scoreCandidate(
-					candidateBoat,
-					input,
-					mode,
-					bookingBusyByBoatId,
-					blockBusyByBoatId,
-					pricingProfilesByBoatId,
-					pricingRulesByBoatId
-				);
-				if (result) {
-					resultsWithAvailability.push(result);
-				}
-			}
+			const resultsWithAvailability = scoreCandidateBoats({
+				candidateBoats,
+				input,
+				mode,
+				bookingBusyByBoatId,
+				blockBusyByBoatId,
+				pricingProfilesByBoatId,
+				pricingRulesByBoatId,
+			});
 
-			sortAvailabilityResults(resultsWithAvailability, input.sortBy);
+			const durationMinutes = resolveAvailabilityDurationMinutes({
+				mode,
+				input,
+			});
+			const now = new Date();
+			const { busyByBoatIdForSlots } =
+				await sortAvailabilityResultsForPublicRequest({
+					resultsWithAvailability,
+					sortBy: input.sortBy,
+					durationMinutes,
+					now,
+					passengers: input.passengers,
+				});
 
 			const total = resultsWithAvailability.length;
 			const paged = resultsWithAvailability.slice(
@@ -1115,77 +1333,20 @@ export const coreBookingRouter = {
 				input.offset + input.limit
 			);
 
-			const durationMinutes =
-				mode === "range"
-					? Math.max(
-							30,
-							Math.round(
-								((input.endsAt as Date).getTime() -
-									(input.startsAt as Date).getTime()) /
-									60_000
-							)
-						)
-					: Math.max(30, Math.round((input.durationHours as number) * 60));
-			const now = new Date();
+			const items = await buildAvailabilityItems({
+				paged,
+				durationMinutes,
+				now,
+				passengers: input.passengers,
+				withSlots: input.withSlots,
+				preloadedBusyByBoatId: busyByBoatIdForSlots,
+			});
 
-			let items: Array<{
-				boat: (typeof candidateBoats)[number];
-				pricingQuote: ReturnType<typeof buildBookingPricingQuote>;
-				available: boolean;
-				slots?: ReturnType<typeof enrichSlotsWithPricing>;
-			}>;
-
-			if (input.withSlots) {
-				const busyByBoatId = await fetchSlotsForPagedBoats(paged);
-
-				items = paged.map((r) => {
-					const busyIntervals = busyByBoatId.get(r.boat.id) ?? [];
-					const slots = enrichBoatWithSlots(
-						r,
-						busyIntervals,
-						r.windowStartsAt,
-						durationMinutes,
-						now,
-						input.passengers
-					);
-					return {
-						boat: r.boat,
-						pricingQuote: r.pricingQuote,
-						available: r.available,
-						slots,
-					};
-				});
-			} else {
-				items = paged.map((r) => ({
-					boat: r.boat,
-					pricingQuote: r.pricingQuote,
-					available: r.available,
-				}));
-			}
-
-			const passengerSet = new Set<number>();
-			for (const r of resultsWithAvailability) {
-				passengerSet.add(r.boat.passengerCapacity);
-			}
-			const passengerOptions = [...passengerSet].sort((a, b) => a - b);
-
-			const allStartTimes = new Set<string>();
-			if (input.withSlots) {
-				for (const item of items) {
-					if (item.slots) {
-						for (const slot of item.slots) {
-							allStartTimes.add(slot.startsAt.toISOString());
-						}
-					}
-				}
-			}
-
-			const durationOptions = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5];
-			const availableFilters = {
-				availableStartTimes: [...allStartTimes].sort(),
-				passengerOptions,
-				durationOptions,
-			};
+			const availableFilters = buildAvailableFilters({
+				resultsWithAvailability,
+				items,
+				withSlots: input.withSlots,
+			});
 
 			return { items, total, amenityCounts, availableFilters };
 		}),
@@ -1206,9 +1367,9 @@ export const coreBookingRouter = {
 				.where(
 					and(
 						eq(boat.id, input.boatId),
-						eq(boat.status, "active"),
-						eq(boat.isActive, true),
-						isNull(boat.archivedAt)
+						input.includeInactive ? undefined : eq(boat.status, "active"),
+						input.includeInactive ? undefined : eq(boat.isActive, true),
+						input.includeInactive ? undefined : isNull(boat.archivedAt)
 					)
 				)
 				.limit(1);
@@ -1719,6 +1880,13 @@ export const coreBookingRouter = {
 				activeMembership.organizationId
 			);
 			const wasAlreadyCancelled = managedBooking.status === "cancelled";
+			if (!wasAlreadyCancelled) {
+				assertCancellationPolicyReasonInput({
+					actor: "owner",
+					reasonCode: input.reasonCode,
+					evidence: input.evidence,
+				});
+			}
 
 			const cancellationResult = await cancelBookingAndSync({
 				managedBooking,
@@ -1727,6 +1895,14 @@ export const coreBookingRouter = {
 			});
 
 			if (!wasAlreadyCancelled) {
+				const cancellationSettlement = await applyCancellationPolicyAndRefund({
+					bookingId: managedBooking.id,
+					actor: "owner",
+					actedByUserId: sessionUserId,
+					reason: input.reason,
+					reasonCode: input.reasonCode,
+					evidence: input.evidence,
+				});
 				const [managedBoat] = await db
 					.select({
 						name: boat.name,
@@ -1750,6 +1926,30 @@ export const coreBookingRouter = {
 					});
 				} catch (error) {
 					console.error("Failed to emit booking.cancelled event", error);
+				}
+
+				if (cancellationSettlement.refund) {
+					try {
+						await emitBookingRefundProcessedNotificationEvent({
+							queue: context.notificationQueue,
+							actorUserId: sessionUserId,
+							booking: managedBooking,
+							boatName: managedBoat?.name ?? "Boat booking",
+							refundId: cancellationSettlement.refund.refundId,
+							refundAmountCents: cancellationSettlement.refund.amountCents,
+							occurredAt: new Date(),
+							recipientUserIds: [
+								managedBooking.customerUserId,
+								managedBooking.createdByUserId,
+								sessionUserId,
+							],
+						});
+					} catch (error) {
+						console.error(
+							"Failed to emit booking.refund.processed event",
+							error
+						);
+					}
 				}
 			}
 

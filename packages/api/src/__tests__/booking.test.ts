@@ -5,6 +5,7 @@ import {
 	createManagedBookingInputSchema,
 	createPublicBookingInputSchema,
 	getPublicBookingQuoteInputSchema,
+	getPublicCheckoutReadModelInputSchema,
 	isValidDiscountCode,
 	listManagedBookingPaymentAttemptsInputSchema,
 	listManagedBookingsInputSchema,
@@ -12,6 +13,7 @@ import {
 	normalizeDiscountCode,
 	processBookingRefundInputSchema,
 	processManagedBookingPaymentAttemptInputSchema,
+	requestBookingCancellationInputSchema,
 	requestBookingRefundInputSchema,
 	reviewBookingCancellationInputSchema,
 	upsertManagedDiscountCodeInputSchema,
@@ -168,6 +170,21 @@ describe("booking router schemas", () => {
 		expect(result.data.withSlots).toBe(true);
 	});
 
+	it("accepts public availability with legacy availability band sort", () => {
+		const result = listPublicBoatAvailabilityInputSchema.safeParse({
+			date: "2026-03-10",
+			durationHours: 2,
+			passengers: 2,
+			sortBy: "availability_bands",
+		});
+
+		expect(result.success).toBe(true);
+		if (!result.success) {
+			throw new Error("Expected availability_bands sort option to validate");
+		}
+		expect(result.data.sortBy).toBe("availability_bands");
+	});
+
 	it("rejects public availability when both range mode and date mode are provided", () => {
 		const result = listPublicBoatAvailabilityInputSchema.safeParse({
 			startsAt: "2026-03-10T10:00:00.000Z",
@@ -261,6 +278,22 @@ describe("booking router schemas", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts public checkout read model request with locale", () => {
+		const result = getPublicCheckoutReadModelInputSchema.safeParse({
+			boatId: "boat-1",
+			startsAt: "2026-03-10T10:00:00.000Z",
+			endsAt: "2026-03-10T12:00:00.000Z",
+			passengers: 2,
+			locale: "de-DE",
+		});
+
+		expect(result.success).toBe(true);
+		if (!result.success) {
+			throw new Error("Expected checkout read model input to validate");
+		}
+		expect(result.data.locale).toBe("de-DE");
+	});
+
 	it("accepts valid cancellation review decision", () => {
 		const result = reviewBookingCancellationInputSchema.safeParse({
 			bookingId: "booking-1",
@@ -269,6 +302,37 @@ describe("booking router schemas", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("accepts cancellation request with structured reason metadata", () => {
+		const result = requestBookingCancellationInputSchema.safeParse({
+			bookingId: "booking-1",
+			reason: "Health issue",
+			reasonCode: "CUSTOMER_HEALTH_ISSUE",
+			evidence: [
+				{
+					type: "document",
+					url: "https://example.test/medical-note.pdf",
+				},
+			],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects cancellation metadata with invalid evidence url", () => {
+		const result = requestBookingCancellationInputSchema.safeParse({
+			bookingId: "booking-1",
+			reasonCode: "CUSTOMER_HEALTH_ISSUE",
+			evidence: [
+				{
+					type: "document",
+					url: "not-a-url",
+				},
+			],
+		});
+
+		expect(result.success).toBe(false);
 	});
 
 	it("validates refund request payload", () => {

@@ -31,6 +31,15 @@ import {
 import { successOutputSchema } from "../shared/schema-utils";
 import { cancelBookingAndSync } from "./calendar-sync";
 import {
+	applyCancellationPolicyAndRefund,
+	assertCancellationPolicyReasonInput,
+} from "./cancellation-policy.service";
+import type { StoredCancellationRequestPayload } from "./cancellation-request-payload";
+import {
+	parseCancellationRequestPayload,
+	serializeCancellationRequestPayload,
+} from "./cancellation-request-payload";
+import {
 	requireActiveMembership,
 	requireCustomerBookingAccess,
 	requireManagedBooking,
@@ -38,7 +47,36 @@ import {
 	requireManagedRefund,
 	requireSessionUserId,
 } from "./helpers";
-import { emitBookingCancelledNotificationEvent } from "./notification-events";
+import {
+	emitBookingCancelledNotificationEvent,
+	emitBookingRefundProcessedNotificationEvent,
+} from "./notification-events";
+
+const toStoredCancellationRequestReason = (
+	params: StoredCancellationRequestPayload
+) => {
+	const hasReasonCode = typeof params.reasonCode === "string";
+	const hasEvidence = (params.evidence?.length ?? 0) > 0;
+	if (!(hasReasonCode || hasEvidence)) {
+		return params.reason ?? null;
+	}
+
+	return serializeCancellationRequestPayload({
+		reason: params.reason,
+		reasonCode: params.reasonCode,
+		evidence: params.evidence,
+	});
+};
+
+const toPublicCancellationRequest = (
+	value: typeof bookingCancellationRequest.$inferSelect
+) => {
+	const payload = parseCancellationRequestPayload(value.reason);
+	return {
+		...value,
+		reason: payload.reason ?? null,
+	};
+};
 
 export const lifecycleBookingRouter = {
 	cancellationRequestCreate: protectedProcedure
@@ -73,7 +111,11 @@ export const lifecycleBookingRouter = {
 					.update(bookingCancellationRequest)
 					.set({
 						status: "requested",
-						reason: input.reason,
+						reason: toStoredCancellationRequestReason({
+							reason: input.reason,
+							reasonCode: input.reasonCode,
+							evidence: input.evidence,
+						}),
 						requestedByUserId: sessionUserId,
 						requestedAt: new Date(),
 						reviewedByUserId: null,
@@ -88,7 +130,11 @@ export const lifecycleBookingRouter = {
 					bookingId: customerBooking.id,
 					organizationId: customerBooking.organizationId,
 					requestedByUserId: sessionUserId,
-					reason: input.reason,
+					reason: toStoredCancellationRequestReason({
+						reason: input.reason,
+						reasonCode: input.reasonCode,
+						evidence: input.evidence,
+					}),
 					status: "requested",
 					requestedAt: new Date(),
 					createdAt: new Date(),
@@ -106,7 +152,7 @@ export const lifecycleBookingRouter = {
 				throw new ORPCError("INTERNAL_SERVER_ERROR");
 			}
 
-			return savedRequest;
+			return toPublicCancellationRequest(savedRequest);
 		}),
 
 	cancellationRequestListManaged: organizationPermissionProcedure({
@@ -137,12 +183,13 @@ export const lifecycleBookingRouter = {
 				throw new ORPCError("INTERNAL_SERVER_ERROR");
 			}
 
-			return await db
+			const requests = await db
 				.select()
 				.from(bookingCancellationRequest)
 				.where(where)
 				.orderBy(desc(bookingCancellationRequest.requestedAt))
 				.limit(input.limit);
+			return requests.map(toPublicCancellationRequest);
 		}),
 
 	cancellationRequestReviewManaged: organizationPermissionProcedure({
@@ -175,11 +222,24 @@ export const lifecycleBookingRouter = {
 				});
 			}
 
+			const requestPayload = parseCancellationRequestPayload(
+				existingRequest.reason
+			);
+			const effectiveReason = requestPayload.reason ?? input.reviewNote;
+			const effectiveReasonCode = input.reasonCode ?? requestPayload.reasonCode;
+			const effectiveEvidence = input.evidence ?? requestPayload.evidence;
+			const storedEffectiveReason = toStoredCancellationRequestReason({
+				reason: effectiveReason,
+				reasonCode: effectiveReasonCode,
+				evidence: effectiveEvidence,
+			});
+
 			if (input.decision === "reject") {
 				await db
 					.update(bookingCancellationRequest)
 					.set({
 						status: "rejected",
+						reason: storedEffectiveReason,
 						reviewedByUserId: sessionUserId,
 						reviewedAt: new Date(),
 						reviewNote: input.reviewNote,
@@ -191,13 +251,28 @@ export const lifecycleBookingRouter = {
 			}
 
 			const wasAlreadyCancelled = managedBooking.status === "cancelled";
+			if (!wasAlreadyCancelled) {
+				assertCancellationPolicyReasonInput({
+					actor: "customer",
+					reasonCode: effectiveReasonCode,
+					evidence: effectiveEvidence,
+				});
+			}
 			await cancelBookingAndSync({
 				managedBooking,
 				cancelledByUserId: sessionUserId,
-				reason: existingRequest.reason ?? input.reviewNote,
+				reason: effectiveReason,
 			});
 
 			if (!wasAlreadyCancelled) {
+				const cancellationSettlement = await applyCancellationPolicyAndRefund({
+					bookingId: managedBooking.id,
+					actor: "customer",
+					actedByUserId: sessionUserId,
+					reason: effectiveReason,
+					reasonCode: effectiveReasonCode,
+					evidence: effectiveEvidence,
+				});
 				const [managedBoat] = await db
 					.select({
 						name: boat.name,
@@ -222,11 +297,36 @@ export const lifecycleBookingRouter = {
 				} catch (error) {
 					console.error("Failed to emit booking.cancelled event", error);
 				}
+
+				if (cancellationSettlement.refund) {
+					try {
+						await emitBookingRefundProcessedNotificationEvent({
+							queue: context.notificationQueue,
+							actorUserId: sessionUserId,
+							booking: managedBooking,
+							boatName: managedBoat?.name ?? "Boat booking",
+							refundId: cancellationSettlement.refund.refundId,
+							refundAmountCents: cancellationSettlement.refund.amountCents,
+							occurredAt: new Date(),
+							recipientUserIds: [
+								managedBooking.customerUserId,
+								managedBooking.createdByUserId,
+								sessionUserId,
+							],
+						});
+					} catch (error) {
+						console.error(
+							"Failed to emit booking.refund.processed event",
+							error
+						);
+					}
+				}
 			}
 			await db
 				.update(bookingCancellationRequest)
 				.set({
 					status: "approved",
+					reason: storedEffectiveReason,
 					reviewedByUserId: sessionUserId,
 					reviewedAt: new Date(),
 					reviewNote: input.reviewNote,

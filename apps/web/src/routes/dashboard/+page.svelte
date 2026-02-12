@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { Button } from "@full-stack-cf-app/ui/components/button";
 	import * as Card from "@full-stack-cf-app/ui/components/card";
-	import { createQuery } from "@tanstack/svelte-query";
+	import { Input } from "@full-stack-cf-app/ui/components/input";
+	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { goto } from "$app/navigation";
 	import { authClient } from "$lib/auth-client";
 	import { orpc } from "$lib/orpc";
@@ -10,10 +11,28 @@
 	let passkeyPending = $state(false);
 	let passkeyMessage = $state<string | null>(null);
 	let passkeyError = $state<string | null>(null);
+	let cancelPendingBookingId = $state<string | null>(null);
+	let cancelDraftBookingId = $state<string | null>(null);
+	let cancelReasonDraft = $state("Cancelled from dashboard");
+	let cancelMessage = $state<string | null>(null);
+	let cancelError = $state<string | null>(null);
 
 	const sessionQuery = authClient.useSession();
 
 	const privateDataQuery = createQuery(orpc.privateData.queryOptions());
+	const managedBookingsQuery = createQuery(
+		orpc.booking.listManaged.queryOptions({
+			input: {
+				limit: 20,
+				offset: 0,
+				sortBy: "startsAt",
+				sortOrder: "desc",
+			},
+		})
+	);
+	const cancelManagedBookingMutation = createMutation(
+		orpc.booking.cancelManaged.mutationOptions()
+	);
 
 	$effect(() => {
 		if (!($sessionQuery.isPending || $sessionQuery.data)) {
@@ -32,6 +51,33 @@
 	const hasPro = $derived(
 		(customerState?.activeSubscriptions?.length ?? 0) > 0
 	);
+
+	const toDate = (value: Date | string): Date => {
+		return value instanceof Date ? value : new Date(value);
+	};
+
+	const formatBookingRange = (
+		startsAt: Date | string,
+		endsAt: Date | string
+	): string => {
+		const start = toDate(startsAt);
+		const end = toDate(endsAt);
+		return `${new Intl.DateTimeFormat("en-US", {
+			dateStyle: "medium",
+			timeStyle: "short",
+		}).format(start)} - ${new Intl.DateTimeFormat("en-US", {
+			dateStyle: "medium",
+			timeStyle: "short",
+		}).format(end)}`;
+	};
+
+	const formatMoney = (amountCents: number, currency: string): string => {
+		return new Intl.NumberFormat("en-US", {
+			style: "currency",
+			currency,
+			maximumFractionDigits: 2,
+		}).format(amountCents / 100);
+	};
 
 	const registerPasskey = async () => {
 		if (typeof window === "undefined" || !("PublicKeyCredential" in window)) {
@@ -66,6 +112,39 @@
 				error instanceof Error ? error.message : "Failed to register passkey.";
 		} finally {
 			passkeyPending = false;
+		}
+	};
+
+	const startCancelBookingFlow = (bookingId: string) => {
+		cancelDraftBookingId = bookingId;
+		cancelReasonDraft = "Cancelled from dashboard";
+		cancelError = null;
+		cancelMessage = null;
+	};
+
+	const cancelCancelBookingFlow = () => {
+		cancelDraftBookingId = null;
+		cancelReasonDraft = "Cancelled from dashboard";
+	};
+
+	const confirmCancelManagedBooking = async (bookingId: string) => {
+		const reason = cancelReasonDraft.trim();
+		cancelPendingBookingId = bookingId;
+		cancelError = null;
+		cancelMessage = null;
+		try {
+			await $cancelManagedBookingMutation.mutateAsync({
+				bookingId,
+				...(reason ? { reason } : {}),
+			});
+			cancelMessage = `Booking ${bookingId.slice(0, 8)} cancelled.`;
+			cancelDraftBookingId = null;
+			await $managedBookingsQuery.refetch();
+		} catch (error) {
+			cancelError =
+				error instanceof Error ? error.message : "Failed to cancel booking.";
+		} finally {
+			cancelPendingBookingId = null;
 		}
 	};
 </script>
@@ -146,6 +225,107 @@
 					{passkeyPending ? "Registering..." : "Register Passkey"}
 				</Button>
 			</Card.Footer>
+		</Card.Root>
+
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Managed Bookings</Card.Title>
+				<Card.Description>
+					Cancel bookings from dashboard. Cancellation policy, refund,
+					notification, and calendar detach are applied server-side.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content class="space-y-3">
+				{#if cancelMessage}
+					<p class="text-sm text-primary">{cancelMessage}</p>
+				{/if}
+				{#if cancelError}
+					<p class="text-sm text-destructive">{cancelError}</p>
+				{/if}
+
+				{#if $managedBookingsQuery.isPending}
+					<p class="text-sm text-muted-foreground">
+						Loading managed bookings...
+					</p>
+				{:else if $managedBookingsQuery.isError}
+					<p class="text-sm text-muted-foreground">
+						Managed bookings are unavailable for this account.
+					</p>
+				{:else if ($managedBookingsQuery.data?.items.length ?? 0) === 0}
+					<p class="text-sm text-muted-foreground">No bookings found.</p>
+				{:else}
+					<ul class="space-y-3">
+						{#each $managedBookingsQuery.data?.items ?? [] as managedBooking (managedBooking.id)}
+							<li
+								class="flex flex-col gap-3 rounded-md border p-3 md:flex-row md:items-center md:justify-between"
+							>
+								<div class="space-y-1 text-sm">
+									<p class="font-medium">
+										#{managedBooking.id.slice(0, 8)} · {managedBooking.status}
+									</p>
+									<p class="text-muted-foreground">
+										{formatBookingRange(
+											managedBooking.startsAt,
+											managedBooking.endsAt
+										)}
+									</p>
+									<p class="text-muted-foreground">
+										Total:
+										{formatMoney(
+											managedBooking.totalPriceCents,
+											managedBooking.currency
+										)}
+										· Refunded:
+										{formatMoney(
+											managedBooking.refundAmountCents ?? 0,
+											managedBooking.currency
+										)}
+									</p>
+								</div>
+								{#if managedBooking.status === "cancelled"}
+									<Button variant="outline" disabled>Cancelled</Button>
+								{:else if cancelDraftBookingId === managedBooking.id}
+									<div class="flex w-full max-w-sm flex-col gap-2">
+										<Input
+											value={cancelReasonDraft}
+											oninput={(event) => {
+												const target = event.target as HTMLInputElement;
+												cancelReasonDraft = target.value;
+											}}
+											placeholder="Cancellation reason"
+										/>
+										<div class="flex gap-2">
+											<Button
+												variant="destructive"
+												onclick={() => void confirmCancelManagedBooking(managedBooking.id)}
+												disabled={cancelPendingBookingId === managedBooking.id}
+											>
+												{cancelPendingBookingId === managedBooking.id
+													? "Cancelling..."
+													: "Confirm cancel"}
+											</Button>
+											<Button
+												variant="outline"
+												onclick={cancelCancelBookingFlow}
+												disabled={cancelPendingBookingId === managedBooking.id}
+											>
+												Dismiss
+											</Button>
+										</div>
+									</div>
+								{:else}
+									<Button
+										variant="outline"
+										onclick={() => startCancelBookingFlow(managedBooking.id)}
+									>
+										Cancel booking
+									</Button>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</Card.Content>
 		</Card.Root>
 	</div>
 {/if}

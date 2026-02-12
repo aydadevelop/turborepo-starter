@@ -9,6 +9,7 @@ type BookingNotificationRecord = Pick<
 	| "organizationId"
 	| "startsAt"
 	| "endsAt"
+	| "currency"
 	| "customerUserId"
 	| "createdByUserId"
 >;
@@ -111,6 +112,72 @@ export const emitBookingCancelledNotificationEvent = async (params: {
 			sourceType: "booking",
 			sourceId: params.booking.id,
 			idempotencyKey: `booking.cancelled:${params.booking.id}:${occurredAt.toISOString()}`,
+			payload: {
+				recipients,
+			},
+		},
+		queue: params.queue,
+	});
+};
+
+const formatMoney = (params: { amountCents: number; currency: string }) => {
+	try {
+		return new Intl.NumberFormat("en-US", {
+			style: "currency",
+			currency: params.currency,
+			currencyDisplay: "narrowSymbol",
+			maximumFractionDigits: 2,
+		}).format(params.amountCents / 100);
+	} catch {
+		return `${(params.amountCents / 100).toFixed(2)} ${params.currency}`;
+	}
+};
+
+export const emitBookingRefundProcessedNotificationEvent = async (params: {
+	queue?: NotificationQueueProducer;
+	actorUserId?: string;
+	booking: BookingNotificationRecord;
+	boatName: string;
+	refundId: string;
+	refundAmountCents: number;
+	occurredAt?: Date;
+	recipientUserIds?: Array<string | null | undefined>;
+}) => {
+	const recipientUserIds = params.recipientUserIds ?? [
+		params.booking.customerUserId,
+		params.booking.createdByUserId,
+		params.actorUserId,
+	];
+	const formattedAmount = formatMoney({
+		amountCents: params.refundAmountCents,
+		currency: params.booking.currency,
+	});
+	const recipients = uniqueUserIds(recipientUserIds).map((userId) => ({
+		userId,
+		title: "Refund processed",
+		body: `${params.boatName}: ${formattedAmount} refunded`,
+		ctaUrl: `/dashboard/bookings/${params.booking.id}`,
+		channels: ["in_app"] as "in_app"[],
+		severity: "success" as const,
+		metadata: {
+			bookingId: params.booking.id,
+			refundId: params.refundId,
+			refundAmountCents: params.refundAmountCents,
+		},
+	}));
+	if (recipients.length === 0) {
+		return;
+	}
+
+	const occurredAt = params.occurredAt ?? new Date();
+	await notificationsPusher({
+		input: {
+			organizationId: params.booking.organizationId,
+			actorUserId: params.actorUserId,
+			eventType: "booking.refund.processed",
+			sourceType: "booking",
+			sourceId: params.booking.id,
+			idempotencyKey: `booking.refund.processed:${params.refundId}:${occurredAt.toISOString()}`,
 			payload: {
 				recipients,
 			},

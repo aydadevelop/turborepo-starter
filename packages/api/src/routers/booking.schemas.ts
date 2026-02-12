@@ -21,6 +21,10 @@ import {
 } from "@full-stack-cf-app/db/schema/booking";
 import { createSelectSchema } from "drizzle-orm/zod";
 import z from "zod";
+import {
+	bookingCancellationEvidenceTypeValues,
+	bookingCancellationReasonCodeValues,
+} from "./booking/cancellation-policy.templates";
 import { optionalTrimmedString } from "./shared/schema-utils";
 
 const discountCodePattern = /^[A-Z0-9][A-Z0-9_-]{2,39}$/;
@@ -94,8 +98,20 @@ export const createManagedBookingInputSchema = z
 		path: ["endsAt"],
 	});
 
+export const cancellationEvidenceInputSchema = z.object({
+	type: z.enum(bookingCancellationEvidenceTypeValues).default("other"),
+	url: z.string().trim().url().max(1500),
+	note: optionalTrimmedString(500),
+});
+
+const cancellationReasonCodeSchema = z.enum(
+	bookingCancellationReasonCodeValues
+);
+
 export const cancelManagedBookingInputSchema = bookingIdInputSchema.extend({
 	reason: optionalTrimmedString(1000),
+	reasonCode: cancellationReasonCodeSchema.optional(),
+	evidence: z.array(cancellationEvidenceInputSchema).max(10).optional(),
 });
 
 export const listPublicBoatAvailabilityInputSchema = z
@@ -119,7 +135,13 @@ export const listPublicBoatAvailabilityInputSchema = z
 		includeUnavailable: z.boolean().optional().default(false),
 		withSlots: z.boolean().optional().default(false),
 		sortBy: z
-			.enum(["newest", "price_asc", "price_desc", "capacity_desc"])
+			.enum([
+				"newest",
+				"price_asc",
+				"price_desc",
+				"capacity_desc",
+				"availability_bands",
+			])
 			.default("newest"),
 		offset: z.number().int().min(0).default(0),
 		limit: z.number().int().min(1).max(100).default(30),
@@ -198,6 +220,7 @@ export const getBoatByIdPublicInputSchema = z.object({
 		.optional(),
 	passengers: z.number().int().min(1).max(500).default(1),
 	durationHours: z.number().min(0.5).max(24).default(1),
+	includeInactive: z.boolean().optional().default(false),
 });
 
 export const getPublicBookingQuoteInputSchema = z
@@ -207,6 +230,20 @@ export const getPublicBookingQuoteInputSchema = z
 		endsAt: z.coerce.date(),
 		passengers: z.number().int().min(1).max(500),
 		discountCode: optionalTrimmedString(40),
+	})
+	.refine((value) => value.startsAt < value.endsAt, {
+		message: "startsAt must be before endsAt",
+		path: ["endsAt"],
+	});
+
+export const getPublicCheckoutReadModelInputSchema = z
+	.object({
+		boatId: z.string().trim().min(1),
+		startsAt: z.coerce.date(),
+		endsAt: z.coerce.date(),
+		passengers: z.number().int().min(1).max(500),
+		discountCode: optionalTrimmedString(40),
+		locale: z.string().trim().min(2).max(20).default("en-US"),
 	})
 	.refine((value) => value.startsAt < value.endsAt, {
 		message: "startsAt must be before endsAt",
@@ -242,12 +279,16 @@ export const createPublicBookingInputSchema = z
 export const requestBookingCancellationInputSchema =
 	bookingIdInputSchema.extend({
 		reason: optionalTrimmedString(1000),
+		reasonCode: cancellationReasonCodeSchema.optional(),
+		evidence: z.array(cancellationEvidenceInputSchema).max(10).optional(),
 	});
 
 export const reviewBookingCancellationInputSchema = bookingIdInputSchema.extend(
 	{
 		decision: z.enum(["approve", "reject"]),
 		reviewNote: optionalTrimmedString(1000),
+		reasonCode: cancellationReasonCodeSchema.optional(),
+		evidence: z.array(cancellationEvidenceInputSchema).max(10).optional(),
 	}
 );
 
@@ -488,6 +529,53 @@ export const quotePublicOutputSchema = z.object({
 	estimatedTotalAfterDiscountCents: z.number().int(),
 	estimatedPayNowAfterDiscountCents: z.number().int(),
 	estimatedPayLaterAfterDiscountCents: z.number().int(),
+});
+
+export const checkoutReadModelLineItemOutputSchema = z.object({
+	key: z.string(),
+	label: z.string(),
+	amountCents: z.number().int(),
+	formattedAmount: z.string(),
+	dueAt: z.enum(["now", "later", "total"]),
+});
+
+export const checkoutReadModelPolicyOutputSchema = z.object({
+	key: z.string(),
+	title: z.string(),
+	description: z.string(),
+});
+
+export const checkoutReadModelPublicOutputSchema = z.object({
+	boat: boatOutputSchema,
+	pricingQuote: pricingQuoteOutputSchema,
+	pricingQuoteAfterDiscount: pricingQuoteOutputSchema,
+	discount: z
+		.object({
+			code: z.string(),
+			discountType: z.enum(discountTypeValues),
+			discountValue: z.number().int(),
+			discountAmountCents: z.number().int(),
+		})
+		.nullable(),
+	lineItems: z.array(checkoutReadModelLineItemOutputSchema),
+	policies: z.array(checkoutReadModelPolicyOutputSchema),
+	totals: z.object({
+		totalCents: z.number().int(),
+		payNowCents: z.number().int(),
+		payLaterCents: z.number().int(),
+		totalFormatted: z.string(),
+		payNowFormatted: z.string(),
+		payLaterFormatted: z.string(),
+	}),
+	itinerary: z.object({
+		timezone: z.string(),
+		startsAt: z.coerce.date(),
+		endsAt: z.coerce.date(),
+		startsAtLabel: z.string(),
+		endsAtLabel: z.string(),
+		durationHours: z.number(),
+		passengers: z.number().int(),
+	}),
 });
 
 export const createPublicBookingOutputSchema = z.object({
