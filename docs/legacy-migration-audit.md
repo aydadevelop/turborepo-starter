@@ -171,6 +171,7 @@ Current status:
 - Public/customer booking baseline is migrated (public availability search + public quote + public create flow).
 - Cancellation/dispute/refund lifecycle baseline is migrated (request/review/process APIs + DB lifecycle tables).
 - Cancellation service now applies actor/time-based refund policy during cancellation flows (owner/customer), creates processed refund records, updates booking payment/refund state, emits refund notifications, and keeps calendar detach behavior.
+--todo ideas - add admin level resolver, add policy per org configuration with defaults and adjustments
 - Slot engine is built and tested (`computeBoatDaySlots`, `enrichSlotsWithPricing`, `filterSlotsAfterMinNotice`, midnight-crossing via `resolveWorkingWindow`).
 - Pricing engine is built and tested (rule matching, cents math, full quote with fee breakdown, pay-now/pay-later split).
 - `availabilityPublic` covers: boat filtering (status/active/approved), amenity key subquery, passenger capacity, boat type, price range, org/dock/search scoping, sorting, pagination, amenity facet counts, `includeUnavailable` flag, optional `withSlots`, and `availableFilters` metadata.
@@ -206,6 +207,7 @@ Missing subtasks:
 - [x] Add available-filter metadata to `availabilityPublic` output: `availableStartTimes` (union of slot start times), `passengerOptions` (distinct capacities), `durationOptions` (feasible durations from longest gap).
 - [x] Add production checkout read model for web + mini app (quote breakdown, fee lines, policy summary, localized display fields).
 - [ ] Add payment-intent lifecycle integration (reserve/capture/refund provider orchestration, idempotent retry semantics).
+- [ ] Add expiration timer and clearance.
 - [ ] Extend refund/dispute policy engine with richer reason taxonomy, explicit actor permission matrix, and evidence attachment workflow.
 - [x] Add availability-band sorting strategy as a `sortBy` option (port legacy 4-band algorithm when needed for fairness rotation).
 
@@ -249,6 +251,7 @@ Missing subtasks:
 - [x] Implement support router/service contracts baseline (create, assign, status updates, threaded messages).
 - [x] Add role-based operator controls aligned with Better Auth org permissions.
 - [ ] Add SLA timers and escalation automation.
+- [ ] Add Hook to AI first line answers/categorizations (context aware, proper guards, faq)
 - [x] Add regression tests for ticket threading and closure/escalation edge cases.
 
 ### 5) Incoming requests (Avito, Telegram, Sputnik/email)

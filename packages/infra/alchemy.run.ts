@@ -21,6 +21,7 @@ const isDeployCommand =
 	lifecycleEvent === "deploy" || process.argv.includes("deploy");
 const isDestroyCommand =
 	lifecycleEvent === "destroy" || process.argv.includes("destroy");
+const isLocalDevRuntime = process.argv.includes("--dev");
 
 // Only deploy/destroy commands (or CI) use production server env.
 const isDeploying =
@@ -28,6 +29,40 @@ const isDeploying =
 const envPath = isDeploying ? ".production" : "";
 config({ path: `../../apps/server/.env${envPath}` });
 config({ path: "./.env" });
+
+// Alchemy's Worker resource initializes Cloudflare API before local-mode branching.
+// In offline local dev, provide deterministic fallback credentials so no account discovery
+// network call is required to boot Miniflare workers.
+const localCloudflareAccountId =
+	process.env.CLOUDFLARE_ACCOUNT_ID ??
+	process.env.CF_ACCOUNT_ID ??
+	(isLocalDevRuntime ? "local-dev-account" : undefined);
+const cloudflareApiOptions: { accountId?: string } = isLocalDevRuntime
+	? {
+			accountId: localCloudflareAccountId,
+		}
+	: {};
+
+if (
+	isLocalDevRuntime &&
+	!process.env.CLOUDFLARE_API_TOKEN &&
+	!process.env.CLOUDFLARE_API_KEY
+) {
+	process.env.CLOUDFLARE_API_TOKEN = "local-dev-token";
+	console.warn(
+		"[infra] CLOUDFLARE_API_TOKEN is missing; using local placeholder token for offline dev."
+	);
+}
+
+if (
+	isLocalDevRuntime &&
+	!process.env.CLOUDFLARE_ACCOUNT_ID &&
+	!process.env.CF_ACCOUNT_ID
+) {
+	console.warn(
+		"[infra] CLOUDFLARE_ACCOUNT_ID is missing; using local placeholder accountId for offline dev."
+	);
+}
 
 if (isDeployCommand) {
 	const api = await createCloudflareApi();
@@ -71,6 +106,7 @@ const app = await alchemy(appName, {
 const db = await D1Database("database", {
 	migrationsDir: "../../packages/db/src/migrations",
 	adopt: true, // Reuse existing database if it exists
+	...cloudflareApiOptions,
 });
 
 const notificationDeadLetterQueue = await Queue("notificationDeadLetterQueue", {
@@ -78,6 +114,7 @@ const notificationDeadLetterQueue = await Queue("notificationDeadLetterQueue", {
 	settings: {
 		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
 	},
+	...cloudflareApiOptions,
 });
 
 const notificationQueue = await Queue("notificationQueue", {
@@ -86,6 +123,7 @@ const notificationQueue = await Queue("notificationQueue", {
 	settings: {
 		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
 	},
+	...cloudflareApiOptions,
 });
 
 // Local dev uses localhost ports, deployed stages use their web URL
@@ -123,6 +161,7 @@ export const server = await Worker("server", {
 	cwd: "../../apps/server",
 	entrypoint: "src/index.ts",
 	compatibility: "node",
+	...cloudflareApiOptions,
 	bindings: {
 		DB: db,
 		NOTIFICATION_QUEUE: notificationQueue,
@@ -154,6 +193,7 @@ export const notifications = await Worker("notifications", {
 	cwd: "../../apps/notifications",
 	entrypoint: "src/index.ts",
 	compatibility: "node",
+	...cloudflareApiOptions,
 	bindings: {
 		DB: db,
 		CORS_ORIGIN: getCorsOrigin(),
@@ -183,6 +223,7 @@ const shouldStartWeb = process.env.ALCHEMY_SKIP_WEB !== "1";
 export const web = shouldStartWeb
 	? await SvelteKit("web", {
 			cwd: "../../apps/web",
+			...cloudflareApiOptions,
 			bindings: {
 				PUBLIC_SERVER_URL: server.url!,
 			},
