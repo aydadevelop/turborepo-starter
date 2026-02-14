@@ -1,5 +1,9 @@
 import { db } from "@full-stack-cf-app/db";
 import {
+	bookingAffiliateAttribution,
+	bookingAffiliatePayout,
+} from "@full-stack-cf-app/db/schema/affiliate";
+import {
 	type BoatType,
 	boat,
 	boatAmenity,
@@ -7,6 +11,7 @@ import {
 	boatAvailabilityBlock,
 	boatCalendarConnection,
 	boatDock,
+	boatMinimumDurationRule,
 	boatPricingProfile,
 	boatPricingRule,
 } from "@full-stack-cf-app/db/schema/boat";
@@ -40,14 +45,21 @@ import {
 	estimateBookingSubtotalCentsFromProfile,
 } from "../../booking/pricing";
 import {
+	annotateSlotMinimumDuration,
 	type BusyInterval,
+	buildDurationOptions,
 	computeBoatDaySlots,
 	enrichSlotsWithPricing,
 	filterSlotsAfterMinNotice,
+	type MinimumDurationRule,
 	resolveWorkingWindow,
 } from "../../booking/slots";
 import { getCalendarAdapter } from "../../calendar/adapters/registry";
-import { organizationPermissionProcedure, publicProcedure } from "../../index";
+import {
+	organizationPermissionProcedure,
+	protectedProcedure,
+	publicProcedure,
+} from "../../index";
 import {
 	availabilityPublicOutputSchema,
 	cancelManagedBookingInputSchema,
@@ -60,12 +72,24 @@ import {
 	getManagedBookingInputSchema,
 	getManagedBookingOutputSchema,
 	getPublicBookingQuoteInputSchema,
+	listAffiliateBookingsInputSchema,
+	listAffiliateBookingsOutputSchema,
+	listManagedAffiliatePayoutsInputSchema,
+	listManagedAffiliatePayoutsOutputSchema,
 	listManagedBookingsInputSchema,
 	listManagedBookingsOutputSchema,
+	listMineBookingsInputSchema,
+	listMineBookingsOutputSchema,
 	listPublicBoatAvailabilityInputSchema,
+	processManagedAffiliatePayoutInputSchema,
 	quotePublicOutputSchema,
 } from "../booking.schemas";
 import { successOutputSchema } from "../shared/schema-utils";
+import {
+	attachAffiliateAttributionToBooking,
+	reconcileAffiliatePayoutForBooking,
+	resolveAffiliateReferralFromContext,
+} from "./affiliate.service";
 import { sortByAvailabilityBands } from "./availability-ranking.service";
 import {
 	cancelBookingAndSync,
@@ -76,6 +100,10 @@ import {
 	applyCancellationPolicyAndRefund,
 	assertCancellationPolicyReasonInput,
 } from "./cancellation-policy.service";
+import {
+	assertBookingActionAllowedByWindow,
+	loadOrganizationBookingActionPolicyProfile,
+} from "./action-policy.service";
 import { resolveBookingDiscount } from "./discount-resolution";
 import {
 	blockingBookingStatuses,
@@ -102,6 +130,35 @@ const getSqliteErrorMessage = (error: unknown): string => {
 		return error;
 	}
 	return "";
+};
+
+const obfuscateRef = (params: { prefix: string; raw: string }) => {
+	const normalized = params.raw.replace(/[^a-zA-Z0-9]/g, "");
+	if (normalized.length === 0) {
+		return `${params.prefix}-***`;
+	}
+	if (normalized.length <= 6) {
+		const head = normalized.slice(0, 2);
+		return `${params.prefix}-${head}***`;
+	}
+	return `${params.prefix}-${normalized.slice(0, 3)}***${normalized.slice(-3)}`;
+};
+
+const buildAffiliateCustomerRef = (params: {
+	customerUserId: string | null;
+	contactEmail: string | null;
+	contactPhone: string | null;
+	bookingId: string;
+}) => {
+	const raw =
+		params.customerUserId ??
+		params.contactEmail ??
+		params.contactPhone ??
+		params.bookingId;
+	return obfuscateRef({
+		prefix: "CUS",
+		raw,
+	});
 };
 
 const dateFormatterByTimeZone = new Map<string, Intl.DateTimeFormat>();
@@ -759,7 +816,8 @@ const enrichBoatWithSlots = (
 	startsAt: Date,
 	durationMinutes: number,
 	now: Date,
-	passengers: number
+	passengers: number,
+	minimumDurationRules: MinimumDurationRule[] = []
 ) => {
 	const dateStr = getDateStringInTimeZone(startsAt, r.boat.timezone);
 	const rawSlots = computeBoatDaySlots({
@@ -778,8 +836,14 @@ const enrichBoatWithSlots = (
 		now,
 		r.boat.minimumNoticeMinutes
 	);
-	return enrichSlotsWithPricing({
+	const annotated = annotateSlotMinimumDuration({
 		slots: filtered,
+		boatMinimumHours: r.boat.minimumHours,
+		minimumDurationRules,
+		timezone: r.boat.timezone,
+	});
+	return enrichSlotsWithPricing({
+		slots: annotated,
 		boatMinimumHours: r.boat.minimumHours,
 		passengers,
 		timezone: r.boat.timezone,
@@ -932,6 +996,7 @@ const prepareAvailabilityBandSortArtifacts = async (params: {
 	durationMinutes: number;
 	now: Date;
 	passengers: number;
+	minDurationRulesByBoatId: Map<string, MinimumDurationRule[]>;
 }) => {
 	const busyByBoatIdForSlots = await fetchBusyIntervalsForBoats(
 		params.resultsWithAvailability
@@ -945,7 +1010,8 @@ const prepareAvailabilityBandSortArtifacts = async (params: {
 			result.windowStartsAt,
 			params.durationMinutes,
 			params.now,
-			params.passengers
+			params.passengers,
+			params.minDurationRulesByBoatId.get(result.boat.id) ?? []
 		);
 		slotStartsByBoatId.set(
 			result.boat.id,
@@ -962,6 +1028,7 @@ const sortAvailabilityResultsForPublicRequest = async (params: {
 	durationMinutes: number;
 	now: Date;
 	passengers: number;
+	minDurationRulesByBoatId: Map<string, MinimumDurationRule[]>;
 }) => {
 	if (params.sortBy !== "availability_bands") {
 		sortAvailabilityResults(params.resultsWithAvailability, params.sortBy);
@@ -975,6 +1042,7 @@ const sortAvailabilityResultsForPublicRequest = async (params: {
 		durationMinutes: params.durationMinutes,
 		now: params.now,
 		passengers: params.passengers,
+		minDurationRulesByBoatId: params.minDurationRulesByBoatId,
 	});
 
 	sortAvailabilityResults(params.resultsWithAvailability, params.sortBy, {
@@ -992,6 +1060,7 @@ const buildAvailabilityItems = async (params: {
 	passengers: number;
 	withSlots: boolean;
 	preloadedBusyByBoatId?: Map<string, BusyInterval[]>;
+	minDurationRulesByBoatId: Map<string, MinimumDurationRule[]>;
 }): Promise<PublicAvailabilityItem[]> => {
 	if (!params.withSlots) {
 		return params.paged.map((result) => ({
@@ -1013,7 +1082,8 @@ const buildAvailabilityItems = async (params: {
 			result.windowStartsAt,
 			params.durationMinutes,
 			params.now,
-			params.passengers
+			params.passengers,
+			params.minDurationRulesByBoatId.get(result.boat.id) ?? []
 		);
 		return {
 			boat: result.boat,
@@ -1046,10 +1116,21 @@ const buildAvailableFilters = (params: {
 		}
 	}
 
+	const minBoatMinimumHours = params.resultsWithAvailability.reduce(
+		(min, r) => Math.min(min, r.boat.minimumHours),
+		Number.POSITIVE_INFINITY
+	);
+	const durationOptions = buildDurationOptions({
+		boatMinimumHours: Number.isFinite(minBoatMinimumHours)
+			? minBoatMinimumHours
+			: 0,
+		minimumDurationRules: [],
+	});
+
 	return {
 		availableStartTimes: [...allStartTimes].sort(),
 		passengerOptions,
-		durationOptions: [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5],
+		durationOptions,
 	};
 };
 
@@ -1186,6 +1267,386 @@ const buildAvailabilityWhereClause = (input: {
 };
 
 export const coreBookingRouter = {
+	listMine: protectedProcedure
+		.route({
+			tags: ["Booking"],
+			summary: "List my bookings",
+			description:
+				"List bookings where the current user is the customer. No organization required.",
+		})
+		.input(listMineBookingsInputSchema)
+		.output(listMineBookingsOutputSchema)
+		.handler(async ({ context, input }) => {
+			const userId = context.session?.user?.id;
+			if (!userId) {
+				throw new ORPCError("UNAUTHORIZED");
+			}
+
+			const where = and(
+				eq(booking.customerUserId, userId),
+				input.status ? eq(booking.status, input.status) : undefined,
+				input.from ? gt(booking.endsAt, input.from) : undefined,
+				input.to ? lt(booking.startsAt, input.to) : undefined
+			);
+
+			if (!where) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR");
+			}
+
+			const orderDir = input.sortOrder === "asc" ? asc : desc;
+			const sortColumnMap = {
+				startsAt: booking.startsAt,
+				createdAt: booking.createdAt,
+				totalPriceCents: booking.totalPriceCents,
+			} as const;
+			const orderByExpr = orderDir(sortColumnMap[input.sortBy]);
+
+			const [countResult, items] = await Promise.all([
+				db.select({ total: count() }).from(booking).where(where),
+				db
+					.select()
+					.from(booking)
+					.where(where)
+					.orderBy(orderByExpr)
+					.limit(input.limit)
+					.offset(input.offset),
+			]);
+
+			return {
+				items,
+				total: Number(countResult[0]?.total ?? 0),
+			};
+		}),
+
+	listAffiliateMine: protectedProcedure
+		.route({
+			tags: ["Booking"],
+			summary: "List my affiliate bookings",
+			description:
+				"List bookings attributed to the current affiliate user. Customer contact details are always obfuscated.",
+		})
+		.input(listAffiliateBookingsInputSchema)
+		.output(listAffiliateBookingsOutputSchema)
+		.handler(async ({ context, input }) => {
+			const userId = context.session?.user?.id;
+			if (!userId) {
+				throw new ORPCError("UNAUTHORIZED");
+			}
+
+			const where = and(
+				eq(bookingAffiliateAttribution.affiliateUserId, userId),
+				input.organizationId
+					? eq(bookingAffiliateAttribution.organizationId, input.organizationId)
+					: undefined,
+				input.status ? eq(booking.status, input.status) : undefined,
+				input.from ? gt(booking.endsAt, input.from) : undefined,
+				input.to ? lt(booking.startsAt, input.to) : undefined
+			);
+
+			if (!where) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR");
+			}
+
+			const orderDir = input.sortOrder === "asc" ? asc : desc;
+			const sortColumnMap = {
+				startsAt: booking.startsAt,
+				createdAt: booking.createdAt,
+				totalPriceCents: booking.totalPriceCents,
+			} as const;
+			const orderByExpr = orderDir(sortColumnMap[input.sortBy]);
+
+			const [countResult, items] = await Promise.all([
+				db
+					.select({ total: count() })
+					.from(bookingAffiliateAttribution)
+					.innerJoin(
+						booking,
+						eq(booking.id, bookingAffiliateAttribution.bookingId)
+					)
+					.where(where),
+				db
+					.select({
+						bookingId: booking.id,
+						referralCode: bookingAffiliateAttribution.referralCode,
+						boatId: booking.boatId,
+						boatName: boat.name,
+						startsAt: booking.startsAt,
+						endsAt: booking.endsAt,
+						timezone: booking.timezone,
+						status: booking.status,
+						paymentStatus: booking.paymentStatus,
+						passengers: booking.passengers,
+						customerUserId: booking.customerUserId,
+						contactEmail: booking.contactEmail,
+						contactPhone: booking.contactPhone,
+						payoutId: bookingAffiliatePayout.id,
+						payoutStatus: bookingAffiliatePayout.status,
+						commissionAmountCents: bookingAffiliatePayout.commissionAmountCents,
+						commissionCurrency: bookingAffiliatePayout.currency,
+						payoutEligibleAt: bookingAffiliatePayout.eligibleAt,
+						payoutPaidAt: bookingAffiliatePayout.paidAt,
+						payoutVoidedAt: bookingAffiliatePayout.voidedAt,
+						payoutVoidReason: bookingAffiliatePayout.voidReason,
+					})
+					.from(bookingAffiliateAttribution)
+					.innerJoin(
+						booking,
+						eq(booking.id, bookingAffiliateAttribution.bookingId)
+					)
+					.innerJoin(boat, eq(boat.id, booking.boatId))
+					.leftJoin(
+						bookingAffiliatePayout,
+						eq(bookingAffiliatePayout.bookingId, booking.id)
+					)
+					.where(where)
+					.orderBy(orderByExpr)
+					.limit(input.limit)
+					.offset(input.offset),
+			]);
+
+			const reconciledPayoutByBookingId = new Map<
+				string,
+				typeof bookingAffiliatePayout.$inferSelect | null
+			>();
+			await Promise.all(
+				items.map(async (item) => {
+					const payout = await reconcileAffiliatePayoutForBooking({
+						bookingId: item.bookingId,
+					});
+					reconciledPayoutByBookingId.set(item.bookingId, payout);
+				})
+			);
+
+			return {
+				items: items.map((item) => {
+					const reconciledPayout =
+						reconciledPayoutByBookingId.get(item.bookingId) ?? null;
+					return {
+						bookingRef: obfuscateRef({
+							prefix: "BKG",
+							raw: item.bookingId,
+						}),
+						customerRef: buildAffiliateCustomerRef({
+							customerUserId: item.customerUserId,
+							contactEmail: item.contactEmail,
+							contactPhone: item.contactPhone,
+							bookingId: item.bookingId,
+						}),
+						referralCode: item.referralCode,
+						boatId: item.boatId,
+						boatName: item.boatName,
+						startsAt: item.startsAt,
+						endsAt: item.endsAt,
+						timezone: item.timezone,
+						status: item.status,
+						paymentStatus: item.paymentStatus,
+						passengers: item.passengers,
+						commissionAmountCents:
+							reconciledPayout?.commissionAmountCents ??
+							item.commissionAmountCents ??
+							0,
+						commissionCurrency:
+							reconciledPayout?.currency ?? item.commissionCurrency ?? "RUB",
+						payoutStatus:
+							reconciledPayout?.status ?? item.payoutStatus ?? "pending",
+						payoutEligibleAt:
+							reconciledPayout?.eligibleAt ?? item.payoutEligibleAt ?? null,
+						payoutPaidAt: reconciledPayout?.paidAt ?? item.payoutPaidAt ?? null,
+						payoutVoidedAt:
+							reconciledPayout?.voidedAt ?? item.payoutVoidedAt ?? null,
+						payoutVoidReason:
+							reconciledPayout?.voidReason ?? item.payoutVoidReason ?? null,
+					};
+				}),
+				total: Number(countResult[0]?.total ?? 0),
+			};
+		}),
+
+	affiliatePayoutListManaged: organizationPermissionProcedure({
+		booking: ["read"],
+	})
+		.route({
+			tags: ["Booking"],
+			summary: "List managed affiliate payouts",
+			description:
+				"List affiliate payout records for the active organization with booking context.",
+		})
+		.input(listManagedAffiliatePayoutsInputSchema)
+		.output(listManagedAffiliatePayoutsOutputSchema)
+		.handler(async ({ context, input }) => {
+			const activeMembership = requireActiveMembership(context);
+			const organizationId =
+				input.organizationId ?? activeMembership.organizationId;
+			if (organizationId !== activeMembership.organizationId) {
+				throw new ORPCError("FORBIDDEN");
+			}
+
+			const where = and(
+				eq(bookingAffiliatePayout.organizationId, organizationId),
+				input.affiliateUserId
+					? eq(bookingAffiliatePayout.affiliateUserId, input.affiliateUserId)
+					: undefined,
+				input.status
+					? eq(bookingAffiliatePayout.status, input.status)
+					: undefined,
+				input.from ? gt(booking.endsAt, input.from) : undefined,
+				input.to ? lt(booking.startsAt, input.to) : undefined
+			);
+			if (!where) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR");
+			}
+
+			const [countResult, items] = await Promise.all([
+				db
+					.select({ total: count() })
+					.from(bookingAffiliatePayout)
+					.innerJoin(booking, eq(booking.id, bookingAffiliatePayout.bookingId))
+					.where(where),
+				db
+					.select({
+						payoutId: bookingAffiliatePayout.id,
+						bookingId: booking.id,
+						affiliateUserId: bookingAffiliatePayout.affiliateUserId,
+						referralCode: bookingAffiliateAttribution.referralCode,
+						commissionAmountCents: bookingAffiliatePayout.commissionAmountCents,
+						currency: bookingAffiliatePayout.currency,
+						status: bookingAffiliatePayout.status,
+						eligibleAt: bookingAffiliatePayout.eligibleAt,
+						paidAt: bookingAffiliatePayout.paidAt,
+						voidedAt: bookingAffiliatePayout.voidedAt,
+						voidReason: bookingAffiliatePayout.voidReason,
+						startsAt: booking.startsAt,
+						endsAt: booking.endsAt,
+						boatId: booking.boatId,
+						boatName: boat.name,
+					})
+					.from(bookingAffiliatePayout)
+					.innerJoin(booking, eq(booking.id, bookingAffiliatePayout.bookingId))
+					.innerJoin(
+						bookingAffiliateAttribution,
+						eq(
+							bookingAffiliateAttribution.id,
+							bookingAffiliatePayout.attributionId
+						)
+					)
+					.innerJoin(boat, eq(boat.id, booking.boatId))
+					.where(where)
+					.orderBy(desc(booking.startsAt))
+					.limit(input.limit)
+					.offset(input.offset),
+			]);
+
+			const reconciledPayoutByBookingId = new Map<
+				string,
+				typeof bookingAffiliatePayout.$inferSelect | null
+			>();
+			await Promise.all(
+				items.map(async (item) => {
+					const payout = await reconcileAffiliatePayoutForBooking({
+						bookingId: item.bookingId,
+					});
+					reconciledPayoutByBookingId.set(item.bookingId, payout);
+				})
+			);
+
+			return {
+				items: items.map((item) => {
+					const reconciledPayout =
+						reconciledPayoutByBookingId.get(item.bookingId) ?? null;
+					return {
+						payoutId: reconciledPayout?.id ?? item.payoutId,
+						bookingId: item.bookingId,
+						bookingRef: obfuscateRef({
+							prefix: "BKG",
+							raw: item.bookingId,
+						}),
+						affiliateUserId: item.affiliateUserId,
+						referralCode: item.referralCode,
+						commissionAmountCents:
+							reconciledPayout?.commissionAmountCents ??
+							item.commissionAmountCents,
+						currency: reconciledPayout?.currency ?? item.currency,
+						status: reconciledPayout?.status ?? item.status,
+						eligibleAt: reconciledPayout?.eligibleAt ?? item.eligibleAt,
+						paidAt: reconciledPayout?.paidAt ?? item.paidAt,
+						voidedAt: reconciledPayout?.voidedAt ?? item.voidedAt,
+						voidReason: reconciledPayout?.voidReason ?? item.voidReason,
+						startsAt: item.startsAt,
+						endsAt: item.endsAt,
+						boatId: item.boatId,
+						boatName: item.boatName,
+					};
+				}),
+				total: Number(countResult[0]?.total ?? 0),
+			};
+		}),
+
+	affiliatePayoutProcessManaged: organizationPermissionProcedure({
+		booking: ["update"],
+	})
+		.route({
+			tags: ["Booking"],
+			summary: "Process affiliate payout",
+			description:
+				"Mark an eligible affiliate payout as paid, or void a non-paid payout.",
+		})
+		.input(processManagedAffiliatePayoutInputSchema)
+		.output(successOutputSchema)
+		.handler(async ({ context, input }) => {
+			const activeMembership = requireActiveMembership(context);
+			const [managedPayout] = await db
+				.select()
+				.from(bookingAffiliatePayout)
+				.where(
+					and(
+						eq(bookingAffiliatePayout.id, input.payoutId),
+						eq(
+							bookingAffiliatePayout.organizationId,
+							activeMembership.organizationId
+						)
+					)
+				)
+				.limit(1);
+
+			if (!managedPayout) {
+				throw new ORPCError("NOT_FOUND");
+			}
+
+			const reconciled =
+				(await reconcileAffiliatePayoutForBooking({
+					bookingId: managedPayout.bookingId,
+				})) ?? managedPayout;
+
+			if (input.status === "paid" && reconciled.status !== "eligible") {
+				throw new ORPCError("BAD_REQUEST", {
+					message:
+						"Affiliate payout can be paid only after booking is completed and not cancelled/refunded.",
+				});
+			}
+
+			if (input.status === "voided" && reconciled.status === "paid") {
+				throw new ORPCError("BAD_REQUEST", {
+					message: "Paid affiliate payout cannot be voided.",
+				});
+			}
+
+			const now = new Date();
+			await db
+				.update(bookingAffiliatePayout)
+				.set({
+					status: input.status,
+					paidAt: input.status === "paid" ? now : null,
+					voidedAt: input.status === "voided" ? now : null,
+					voidReason: input.status === "voided" ? input.note : null,
+					externalPayoutRef:
+						input.externalPayoutRef ?? reconciled.externalPayoutRef,
+					updatedAt: now,
+				})
+				.where(eq(bookingAffiliatePayout.id, reconciled.id));
+
+			return { success: true };
+		}),
+
 	availabilityPublic: publicProcedure
 		.route({
 			tags: ["Booking"],
@@ -1226,6 +1687,7 @@ export const coreBookingRouter = {
 				pricingProfiles,
 				pricingRulesRows,
 				amenityCountRows,
+				minDurationRulesRows,
 			] = await Promise.all([
 				db
 					.select({
@@ -1293,6 +1755,15 @@ export const coreBookingRouter = {
 						)
 					)
 					.groupBy(boatAmenity.key),
+				db
+					.select()
+					.from(boatMinimumDurationRule)
+					.where(
+						and(
+							inArray(boatMinimumDurationRule.boatId, candidateBoatIds),
+							eq(boatMinimumDurationRule.isActive, true)
+						)
+					),
 			]);
 
 			const amenityCounts = buildAmenityCounts(amenityCountRows);
@@ -1302,6 +1773,16 @@ export const coreBookingRouter = {
 			const blockBusyByBoatId = buildBusyIntervalsByBoatId(overlappingBlocks);
 			const { pricingProfilesByBoatId, pricingRulesByBoatId } =
 				buildPricingLookups(pricingProfiles, pricingRulesRows);
+
+			const minDurationRulesByBoatId = new Map<string, MinimumDurationRule[]>();
+			for (const rule of minDurationRulesRows) {
+				const existing = minDurationRulesByBoatId.get(rule.boatId);
+				if (existing) {
+					existing.push(rule);
+				} else {
+					minDurationRulesByBoatId.set(rule.boatId, [rule]);
+				}
+			}
 
 			const resultsWithAvailability = scoreCandidateBoats({
 				candidateBoats,
@@ -1325,6 +1806,7 @@ export const coreBookingRouter = {
 					durationMinutes,
 					now,
 					passengers: input.passengers,
+					minDurationRulesByBoatId,
 				});
 
 			const total = resultsWithAvailability.length;
@@ -1340,6 +1822,7 @@ export const coreBookingRouter = {
 				passengers: input.passengers,
 				withSlots: input.withSlots,
 				preloadedBusyByBoatId: busyByBoatIdForSlots,
+				minDurationRulesByBoatId,
 			});
 
 			const availableFilters = buildAvailableFilters({
@@ -1398,6 +1881,7 @@ export const coreBookingRouter = {
 				dockRows,
 				pricingProfiles,
 				pricingRulesRows,
+				minDurationRulesRows,
 				slotBookings,
 				slotBlocks,
 			] = await Promise.all([
@@ -1453,6 +1937,15 @@ export const coreBookingRouter = {
 						and(
 							eq(boatPricingRule.boatId, foundBoat.id),
 							eq(boatPricingRule.isActive, true)
+						)
+					),
+				db
+					.select()
+					.from(boatMinimumDurationRule)
+					.where(
+						and(
+							eq(boatMinimumDurationRule.boatId, foundBoat.id),
+							eq(boatMinimumDurationRule.isActive, true)
 						)
 					),
 				db
@@ -1525,6 +2018,7 @@ export const coreBookingRouter = {
 			];
 
 			let slots: ReturnType<typeof enrichSlotsWithPricing> = [];
+
 			if (activePricingProfile) {
 				const rawSlots = computeBoatDaySlots({
 					date: dateStr,
@@ -1537,13 +2031,19 @@ export const coreBookingRouter = {
 					busyIntervals,
 					durationMinutes,
 				});
-				const filtered = filterSlotsAfterMinNotice(
+				const afterNotice = filterSlotsAfterMinNotice(
 					rawSlots,
 					now,
 					foundBoat.minimumNoticeMinutes
 				);
+				const annotated = annotateSlotMinimumDuration({
+					slots: afterNotice,
+					minimumDurationRules: minDurationRulesRows,
+					boatMinimumHours: foundBoat.minimumHours,
+					timezone: foundBoat.timezone,
+				});
 				slots = enrichSlotsWithPricing({
-					slots: filtered,
+					slots: annotated,
 					boatMinimumHours: foundBoat.minimumHours,
 					passengers: input.passengers,
 					timezone: foundBoat.timezone,
@@ -1553,7 +2053,10 @@ export const coreBookingRouter = {
 			}
 
 			const allStartTimes = slots.map((s) => s.startsAt.toISOString());
-			const durationOptions = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5];
+			const durationOptions = buildDurationOptions({
+				minimumDurationRules: minDurationRulesRows,
+				boatMinimumHours: foundBoat.minimumHours,
+			});
 
 			return {
 				boat: foundBoat,
@@ -1562,6 +2065,7 @@ export const coreBookingRouter = {
 				galleryAssets: galleryRows,
 				pricingQuote,
 				pricingRules: activeRules,
+				minimumDurationRules: minDurationRulesRows,
 				slots,
 				availableFilters: {
 					availableStartTimes: allStartTimes,
@@ -1655,6 +2159,33 @@ export const coreBookingRouter = {
 				totalPriceCentsOverride:
 					quote.pricingQuoteAfterDiscount.estimatedTotalPriceCents,
 			});
+
+			try {
+				const referral = await resolveAffiliateReferralFromContext(context);
+				if (
+					referral &&
+					(referral.organizationId === null ||
+						referral.organizationId === quote.publicBoat.organizationId)
+				) {
+					await attachAffiliateAttributionToBooking({
+						bookingId: created.booking.id,
+						organizationId: created.booking.organizationId,
+						currency: quote.pricingQuoteAfterDiscount.currency,
+						referral,
+						commissionAmountCents:
+							quote.pricingQuoteAfterDiscount.estimatedAffiliateFeeCents,
+						metadata: JSON.stringify({
+							requestUrl: context.requestUrl,
+							capturedFrom: "cookie",
+						}),
+					});
+				}
+			} catch (error) {
+				console.error(
+					"Failed to attach affiliate attribution to public booking",
+					error
+				);
+			}
 
 			try {
 				await emitBookingCreatedNotificationEvent({
@@ -1879,8 +2410,26 @@ export const coreBookingRouter = {
 				input.bookingId,
 				activeMembership.organizationId
 			);
+			if (
+				managedBooking.status === "completed" ||
+				managedBooking.status === "no_show"
+			) {
+				throw new ORPCError("BAD_REQUEST", {
+					message: "Booking can no longer be cancelled",
+				});
+			}
 			const wasAlreadyCancelled = managedBooking.status === "cancelled";
 			if (!wasAlreadyCancelled) {
+				const actionPolicyProfile =
+					await loadOrganizationBookingActionPolicyProfile(
+						managedBooking.organizationId
+					);
+				assertBookingActionAllowedByWindow({
+					action: "cancellation",
+					actor: "manager",
+					bookingStartsAt: managedBooking.startsAt,
+					policyProfile: actionPolicyProfile,
+				});
 				assertCancellationPolicyReasonInput({
 					actor: "owner",
 					reasonCode: input.reasonCode,
@@ -1951,6 +2500,17 @@ export const coreBookingRouter = {
 						);
 					}
 				}
+			}
+
+			try {
+				await reconcileAffiliatePayoutForBooking({
+					bookingId: managedBooking.id,
+				});
+			} catch (error) {
+				console.error(
+					"Failed to reconcile affiliate payout on cancellation",
+					error
+				);
 			}
 
 			return cancellationResult;

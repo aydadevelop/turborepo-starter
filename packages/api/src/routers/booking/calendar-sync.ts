@@ -142,6 +142,74 @@ export const syncCalendarLinkOnBookingCancel = async (params: {
 	}
 };
 
+export const syncCalendarLinkOnBookingUpdate = async (params: {
+	managedBooking: typeof booking.$inferSelect;
+	boatName: string;
+	calendarLink?: typeof bookingCalendarLink.$inferSelect | null;
+}): Promise<CalendarSyncResult> => {
+	const calendarLink = params.calendarLink;
+	if (!(calendarLink && calendarLink.externalCalendarId)) {
+		return {
+			status: "linked",
+			calendarLinkUpdate: {
+				syncError: null,
+				syncedAt: new Date(),
+			},
+		};
+	}
+
+	const adapter = getCalendarAdapter(calendarLink.provider);
+	if (!adapter) {
+		return {
+			status: "linked",
+			calendarLinkUpdate: {
+				syncError: null,
+				syncedAt: new Date(),
+			},
+		};
+	}
+
+	try {
+		const syncedEvent = await adapter.upsertEvent({
+			externalCalendarId: calendarLink.externalCalendarId,
+			externalEventId: calendarLink.externalEventId,
+			title: params.managedBooking.contactName
+				? `${params.boatName} booking for ${params.managedBooking.contactName}`
+				: `${params.boatName} booking`,
+			startsAt: params.managedBooking.startsAt,
+			endsAt: params.managedBooking.endsAt,
+			timezone: params.managedBooking.timezone,
+			description: params.managedBooking.notes ?? undefined,
+			metadata: {
+				bookingId: params.managedBooking.id,
+				organizationId: params.managedBooking.organizationId,
+				boatId: params.managedBooking.boatId,
+				source: params.managedBooking.source,
+			},
+		});
+
+		return {
+			status: "linked",
+			calendarLinkUpdate: {
+				externalCalendarId: syncedEvent.externalCalendarId,
+				externalEventId: syncedEvent.externalEventId,
+				iCalUid: syncedEvent.iCalUid ?? calendarLink.iCalUid,
+				externalEventVersion:
+					syncedEvent.version ?? calendarLink.externalEventVersion,
+				syncedAt: syncedEvent.syncedAt,
+				syncError: null,
+			},
+		};
+	} catch (error) {
+		return {
+			status: "sync_error",
+			calendarLinkUpdate: {
+				syncError: toSyncErrorMessage(error),
+			},
+		};
+	}
+};
+
 export const ensureNoExternalCalendarOverlap = async (params: {
 	provider: CreateManagedBookingCalendarLinkInput["provider"];
 	externalCalendarId?: string;

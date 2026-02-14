@@ -7,6 +7,7 @@ import {
 	boatAvailabilityRule,
 	boatCalendarConnection,
 	boatDock,
+	boatMinimumDurationRule,
 	boatPricingProfile,
 	boatPricingRule,
 } from "@full-stack-cf-app/db/schema/boat";
@@ -24,15 +25,18 @@ import {
 	boatCalendarConnectionOutputSchema,
 	boatDockOutputSchema,
 	boatIdInputSchema,
+	boatMinimumDurationRuleOutputSchema,
 	boatOutputSchema,
 	boatPricingProfileOutputSchema,
 	boatPricingRuleOutputSchema,
 	createBoatAssetInputSchema,
 	createBoatAvailabilityBlockInputSchema,
+	createBoatMinimumDurationRuleInputSchema,
 	createBoatPricingProfileInputSchema,
 	createBoatPricingRuleInputSchema,
 	createManagedBoatInputSchema,
 	deleteBoatAvailabilityBlockInputSchema,
+	deleteBoatMinimumDurationRuleInputSchema,
 	deleteBoatPricingRuleInputSchema,
 	getManagedBoatInputSchema,
 	getManagedBoatOutputSchema,
@@ -42,6 +46,7 @@ import {
 	listBoatAvailabilityRulesInputSchema,
 	listBoatCalendarConnectionsInputSchema,
 	listBoatDocksInputSchema,
+	listBoatMinimumDurationRulesInputSchema,
 	listBoatPricingProfilesInputSchema,
 	listBoatPricingRulesInputSchema,
 	listManagedBoatsInputSchema,
@@ -49,6 +54,7 @@ import {
 	replaceBoatAmenitiesInputSchema,
 	replaceBoatAvailabilityRulesInputSchema,
 	setDefaultBoatPricingProfileInputSchema,
+	updateBoatMinimumDurationRuleInputSchema,
 	updateManagedBoatInputSchema,
 	upsertBoatCalendarConnectionInputSchema,
 	upsertBoatDockInputSchema,
@@ -127,6 +133,7 @@ export const boatRouter = {
 				availabilityBlocks,
 				pricingProfiles,
 				pricingRules,
+				minimumDurationRules,
 			] = await Promise.all([
 				input.withAmenities
 					? db
@@ -174,6 +181,12 @@ export const boatRouter = {
 							.where(eq(boatPricingRule.boatId, managedBoat.id))
 							.orderBy(desc(boatPricingRule.priority))
 					: Promise.resolve(undefined),
+				input.withMinimumDurationRules
+					? db
+							.select()
+							.from(boatMinimumDurationRule)
+							.where(eq(boatMinimumDurationRule.boatId, managedBoat.id))
+					: Promise.resolve(undefined),
 			]);
 
 			return {
@@ -185,6 +198,7 @@ export const boatRouter = {
 				availabilityBlocks,
 				pricingProfiles,
 				pricingRules,
+				minimumDurationRules,
 			};
 		}),
 
@@ -223,6 +237,7 @@ export const boatRouter = {
 				crewCapacity: input.crewCapacity,
 				minimumHours: input.minimumHours,
 				minimumNoticeMinutes: input.minimumNoticeMinutes,
+				allowShiftRequests: input.allowShiftRequests,
 				workingHoursStart: input.workingHoursStart,
 				workingHoursEnd: input.workingHoursEnd,
 				timezone: input.timezone,
@@ -281,6 +296,7 @@ export const boatRouter = {
 				crewCapacity: input.crewCapacity,
 				minimumHours: input.minimumHours,
 				minimumNoticeMinutes: input.minimumNoticeMinutes,
+				allowShiftRequests: input.allowShiftRequests,
 				workingHoursStart: input.workingHoursStart,
 				workingHoursEnd: input.workingHoursEnd,
 				timezone: input.timezone,
@@ -1168,6 +1184,176 @@ export const boatRouter = {
 					and(
 						eq(boatPricingRule.id, input.ruleId),
 						eq(boatPricingRule.boatId, input.boatId)
+					)
+				);
+
+			return { success: true };
+		}),
+
+	// ─── minimum duration rules ────────────────────────────────────────────
+
+	minimumDurationRuleListManaged: organizationPermissionProcedure({
+		boat: ["read"],
+	})
+		.route({
+			tags: ["Boat"],
+			summary: "List minimum duration rules for a boat",
+		})
+		.input(listBoatMinimumDurationRulesInputSchema)
+		.output(z.array(boatMinimumDurationRuleOutputSchema))
+		.handler(async ({ context, input }) => {
+			const activeMembership = requireActiveMembership(context);
+			await requireManagedBoat(input.boatId, activeMembership.organizationId);
+
+			return await db
+				.select()
+				.from(boatMinimumDurationRule)
+				.where(eq(boatMinimumDurationRule.boatId, input.boatId));
+		}),
+
+	minimumDurationRuleCreateManaged: organizationPermissionProcedure({
+		boat: ["update"],
+	})
+		.route({
+			tags: ["Boat"],
+			summary: "Create a minimum duration rule",
+		})
+		.input(createBoatMinimumDurationRuleInputSchema)
+		.output(boatMinimumDurationRuleOutputSchema)
+		.handler(async ({ context, input }) => {
+			const activeMembership = requireActiveMembership(context);
+			await requireManagedBoat(input.boatId, activeMembership.organizationId);
+
+			const ruleId = crypto.randomUUID();
+			await db.insert(boatMinimumDurationRule).values({
+				id: ruleId,
+				boatId: input.boatId,
+				name: input.name,
+				startHour: input.startHour,
+				startMinute: input.startMinute,
+				endHour: input.endHour,
+				endMinute: input.endMinute,
+				minimumDurationMinutes: input.minimumDurationMinutes,
+				daysOfWeek: input.daysOfWeek,
+				isActive: input.isActive,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			const [created] = await db
+				.select()
+				.from(boatMinimumDurationRule)
+				.where(eq(boatMinimumDurationRule.id, ruleId))
+				.limit(1);
+
+			if (!created) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR");
+			}
+
+			return created;
+		}),
+
+	minimumDurationRuleUpdateManaged: organizationPermissionProcedure({
+		boat: ["update"],
+	})
+		.route({
+			tags: ["Boat"],
+			summary: "Update a minimum duration rule",
+		})
+		.input(updateBoatMinimumDurationRuleInputSchema)
+		.output(boatMinimumDurationRuleOutputSchema)
+		.handler(async ({ context, input }) => {
+			const activeMembership = requireActiveMembership(context);
+			await requireManagedBoat(input.boatId, activeMembership.organizationId);
+
+			const [existing] = await db
+				.select()
+				.from(boatMinimumDurationRule)
+				.where(
+					and(
+						eq(boatMinimumDurationRule.id, input.ruleId),
+						eq(boatMinimumDurationRule.boatId, input.boatId)
+					)
+				)
+				.limit(1);
+
+			if (!existing) {
+				throw new ORPCError("NOT_FOUND");
+			}
+
+			const updatePayload = {
+				name: input.name,
+				startHour: input.startHour,
+				startMinute: input.startMinute,
+				endHour: input.endHour,
+				endMinute: input.endMinute,
+				minimumDurationMinutes: input.minimumDurationMinutes,
+				daysOfWeek: input.daysOfWeek,
+				isActive: input.isActive,
+				updatedAt: new Date(),
+			};
+
+			const sanitized = Object.fromEntries(
+				Object.entries(updatePayload).filter(([, value]) => value !== undefined)
+			);
+
+			await db
+				.update(boatMinimumDurationRule)
+				.set(sanitized)
+				.where(
+					and(
+						eq(boatMinimumDurationRule.id, input.ruleId),
+						eq(boatMinimumDurationRule.boatId, input.boatId)
+					)
+				);
+
+			const [updated] = await db
+				.select()
+				.from(boatMinimumDurationRule)
+				.where(eq(boatMinimumDurationRule.id, input.ruleId))
+				.limit(1);
+
+			if (!updated) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR");
+			}
+
+			return updated;
+		}),
+
+	minimumDurationRuleDeleteManaged: organizationPermissionProcedure({
+		boat: ["update"],
+	})
+		.route({
+			tags: ["Boat"],
+			summary: "Delete a minimum duration rule",
+		})
+		.input(deleteBoatMinimumDurationRuleInputSchema)
+		.output(successOutputSchema)
+		.handler(async ({ context, input }) => {
+			const activeMembership = requireActiveMembership(context);
+			await requireManagedBoat(input.boatId, activeMembership.organizationId);
+
+			const [existing] = await db
+				.select()
+				.from(boatMinimumDurationRule)
+				.where(
+					and(
+						eq(boatMinimumDurationRule.id, input.ruleId),
+						eq(boatMinimumDurationRule.boatId, input.boatId)
+					)
+				)
+				.limit(1);
+
+			if (!existing) {
+				throw new ORPCError("NOT_FOUND");
+			}
+
+			await db
+				.delete(boatMinimumDurationRule)
+				.where(
+					and(
+						eq(boatMinimumDurationRule.id, input.ruleId),
+						eq(boatMinimumDurationRule.boatId, input.boatId)
 					)
 				);
 

@@ -20,8 +20,8 @@
 	const sessionQuery = authClient.useSession();
 
 	const privateDataQuery = createQuery(orpc.privateData.queryOptions());
-	const managedBookingsQuery = createQuery(
-		orpc.booking.listManaged.queryOptions({
+	const myBookingsQuery = createQuery(
+		orpc.booking.listMine.queryOptions({
 			input: {
 				limit: 20,
 				offset: 0,
@@ -139,7 +139,7 @@
 			});
 			cancelMessage = `Booking ${bookingId.slice(0, 8)} cancelled.`;
 			cancelDraftBookingId = null;
-			await $managedBookingsQuery.refetch();
+			await $myBookingsQuery.refetch();
 		} catch (error) {
 			cancelError =
 				error instanceof Error ? error.message : "Failed to cancel booking.";
@@ -229,7 +229,7 @@
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Managed Bookings</Card.Title>
+				<Card.Title>My Bookings</Card.Title>
 				<Card.Description>
 					Cancel bookings from dashboard. Cancellation policy, refund,
 					notification, and calendar detach are applied server-side.
@@ -243,48 +243,46 @@
 					<p class="text-sm text-destructive">{cancelError}</p>
 				{/if}
 
-				{#if $managedBookingsQuery.isPending}
+				{#if $myBookingsQuery.isPending}
+					<p class="text-sm text-muted-foreground">Loading bookings...</p>
+				{:else if $myBookingsQuery.isError}
 					<p class="text-sm text-muted-foreground">
-						Loading managed bookings...
+						Bookings are unavailable for this account.
 					</p>
-				{:else if $managedBookingsQuery.isError}
-					<p class="text-sm text-muted-foreground">
-						Managed bookings are unavailable for this account.
-					</p>
-				{:else if ($managedBookingsQuery.data?.items.length ?? 0) === 0}
+				{:else if ($myBookingsQuery.data?.items.length ?? 0) === 0}
 					<p class="text-sm text-muted-foreground">No bookings found.</p>
 				{:else}
 					<ul class="space-y-3">
-						{#each $managedBookingsQuery.data?.items ?? [] as managedBooking (managedBooking.id)}
+						{#each $myBookingsQuery.data?.items ?? [] as myBooking (myBooking.id)}
 							<li
 								class="flex flex-col gap-3 rounded-md border p-3 md:flex-row md:items-center md:justify-between"
 							>
 								<div class="space-y-1 text-sm">
 									<p class="font-medium">
-										#{managedBooking.id.slice(0, 8)} · {managedBooking.status}
+										#{myBooking.id.slice(0, 8)} · {myBooking.status}
 									</p>
 									<p class="text-muted-foreground">
 										{formatBookingRange(
-											managedBooking.startsAt,
-											managedBooking.endsAt
+											myBooking.startsAt,
+											myBooking.endsAt
 										)}
 									</p>
 									<p class="text-muted-foreground">
 										Total:
 										{formatMoney(
-											managedBooking.totalPriceCents,
-											managedBooking.currency
+											myBooking.totalPriceCents,
+											myBooking.currency
 										)}
 										· Refunded:
 										{formatMoney(
-											managedBooking.refundAmountCents ?? 0,
-											managedBooking.currency
+											myBooking.refundAmountCents ?? 0,
+											myBooking.currency
 										)}
 									</p>
 								</div>
-								{#if managedBooking.status === "cancelled"}
+								{#if myBooking.status === "cancelled"}
 									<Button variant="outline" disabled>Cancelled</Button>
-								{:else if cancelDraftBookingId === managedBooking.id}
+								{:else if cancelDraftBookingId === myBooking.id}
 									<div class="flex w-full max-w-sm flex-col gap-2">
 										<Input
 											value={cancelReasonDraft}
@@ -297,17 +295,17 @@
 										<div class="flex gap-2">
 											<Button
 												variant="destructive"
-												onclick={() => void confirmCancelManagedBooking(managedBooking.id)}
-												disabled={cancelPendingBookingId === managedBooking.id}
+												onclick={() => void confirmCancelManagedBooking(myBooking.id)}
+												disabled={cancelPendingBookingId === myBooking.id}
 											>
-												{cancelPendingBookingId === managedBooking.id
+												{cancelPendingBookingId === myBooking.id
 													? "Cancelling..."
 													: "Confirm cancel"}
 											</Button>
 											<Button
 												variant="outline"
 												onclick={cancelCancelBookingFlow}
-												disabled={cancelPendingBookingId === managedBooking.id}
+												disabled={cancelPendingBookingId === myBooking.id}
 											>
 												Dismiss
 											</Button>
@@ -316,7 +314,7 @@
 								{:else}
 									<Button
 										variant="outline"
-										onclick={() => startCancelBookingFlow(managedBooking.id)}
+										onclick={() => startCancelBookingFlow(myBooking.id)}
 									>
 										Cancel booking
 									</Button>

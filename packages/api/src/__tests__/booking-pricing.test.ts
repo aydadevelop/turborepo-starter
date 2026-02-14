@@ -4,6 +4,7 @@ import type { BoatPricingProfile, BoatPricingRule } from "../booking/pricing";
 import {
 	applyBoatPricingRulesToSubtotalCents,
 	buildBookingPricingQuote,
+	estimateBookingHours,
 	estimateBookingSubtotalCentsFromProfile,
 } from "../booking/pricing";
 
@@ -263,5 +264,101 @@ describe("booking pricing rules", () => {
 		});
 
 		expect(subtotal).toBe(10_000);
+	});
+});
+
+describe("sub-hour pricing (half-hour granularity)", () => {
+	it("bills 0.5h for a 30-min slot when boat minimum is 0", () => {
+		const hours = estimateBookingHours({
+			startsAt: new Date("2026-03-07T10:00:00.000Z"),
+			endsAt: new Date("2026-03-07T10:30:00.000Z"),
+			boatMinimumHours: 0,
+			profileMinimumHours: 0,
+		});
+		expect(hours).toBe(0.5);
+	});
+
+	it("bills 1h for a 30-min slot when boat minimum is 1 (default)", () => {
+		const hours = estimateBookingHours({
+			startsAt: new Date("2026-03-07T10:00:00.000Z"),
+			endsAt: new Date("2026-03-07T10:30:00.000Z"),
+			boatMinimumHours: 1,
+			profileMinimumHours: 1,
+		});
+		expect(hours).toBe(1);
+	});
+
+	it("bills 2h for a 30-min slot when boat minimum is 2 (big boat)", () => {
+		const hours = estimateBookingHours({
+			startsAt: new Date("2026-03-07T10:00:00.000Z"),
+			endsAt: new Date("2026-03-07T10:30:00.000Z"),
+			boatMinimumHours: 2,
+			profileMinimumHours: 1,
+		});
+		expect(hours).toBe(2);
+	});
+
+	it("rounds 45 minutes up to 1h", () => {
+		const hours = estimateBookingHours({
+			startsAt: new Date("2026-03-07T10:00:00.000Z"),
+			endsAt: new Date("2026-03-07T10:45:00.000Z"),
+			boatMinimumHours: 0,
+			profileMinimumHours: 0,
+		});
+		expect(hours).toBe(1);
+	});
+
+	it("computes correct subtotal for 30-min slot with no minimum", () => {
+		const profile = makeProfile({
+			baseHourlyPriceCents: 10_000,
+			minimumHours: 0,
+		});
+		const result = estimateBookingSubtotalCentsFromProfile({
+			startsAt: new Date("2026-03-07T10:00:00.000Z"),
+			endsAt: new Date("2026-03-07T10:30:00.000Z"),
+			boatMinimumHours: 0,
+			passengers: 1,
+			timeZone: "UTC",
+			profile,
+		});
+		expect(result.estimatedHours).toBe(0.5);
+		expect(result.subtotalCents).toBe(5000);
+	});
+
+	it("applies boat minimum over profile minimum", () => {
+		const profile = makeProfile({
+			baseHourlyPriceCents: 10_000,
+			minimumHours: 0,
+		});
+		const result = estimateBookingSubtotalCentsFromProfile({
+			startsAt: new Date("2026-03-07T10:00:00.000Z"),
+			endsAt: new Date("2026-03-07T10:30:00.000Z"),
+			boatMinimumHours: 2,
+			passengers: 1,
+			timeZone: "UTC",
+			profile,
+		});
+		expect(result.estimatedHours).toBe(2);
+		expect(result.subtotalCents).toBe(20_000);
+	});
+
+	it("keeps exact hours for whole-hour slots unchanged", () => {
+		const hours = estimateBookingHours({
+			startsAt: new Date("2026-03-07T10:00:00.000Z"),
+			endsAt: new Date("2026-03-07T13:00:00.000Z"),
+			boatMinimumHours: 1,
+			profileMinimumHours: 1,
+		});
+		expect(hours).toBe(3);
+	});
+
+	it("rounds 1.5h slot correctly", () => {
+		const hours = estimateBookingHours({
+			startsAt: new Date("2026-03-07T10:00:00.000Z"),
+			endsAt: new Date("2026-03-07T11:30:00.000Z"),
+			boatMinimumHours: 0,
+			profileMinimumHours: 0,
+		});
+		expect(hours).toBe(1.5);
 	});
 });

@@ -250,7 +250,7 @@ Missing subtasks:
 - [x] Define support domain schema and lifecycle states in new DB.
 - [x] Implement support router/service contracts baseline (create, assign, status updates, threaded messages).
 - [x] Add role-based operator controls aligned with Better Auth org permissions.
-- [ ] Add SLA timers and escalation automation.
+- [x] Add SLA timers and escalation automation.
 - [ ] Add Hook to AI first line answers/categorizations (context aware, proper guards, faq)
 - [x] Add regression tests for ticket threading and closure/escalation edge cases.
 

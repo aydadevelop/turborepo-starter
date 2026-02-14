@@ -31,6 +31,43 @@ export const relations = defineRelations(schema, (r) => ({
 			from: r.user.id,
 			to: r.notificationInApp.userId,
 		}),
+		affiliateReferrals: r.many.affiliateReferral({
+			from: r.user.id,
+			to: r.affiliateReferral.affiliateUserId,
+		}),
+		bookingAffiliateAttributions: r.many.bookingAffiliateAttribution({
+			from: r.user.id,
+			to: r.bookingAffiliateAttribution.affiliateUserId,
+		}),
+		bookingAffiliatePayouts: r.many.bookingAffiliatePayout({
+			from: r.user.id,
+			to: r.bookingAffiliatePayout.affiliateUserId,
+		}),
+		bookingShiftRequestsRequested: r.many.bookingShiftRequest({
+			from: r.user.id,
+			to: r.bookingShiftRequest.requestedByUserId,
+			alias: "shift_request_requester",
+		}),
+		bookingShiftRequestsCustomerDecision: r.many.bookingShiftRequest({
+			from: r.user.id,
+			to: r.bookingShiftRequest.customerDecisionByUserId,
+			alias: "shift_request_customer_decider",
+		}),
+		bookingShiftRequestsManagerDecision: r.many.bookingShiftRequest({
+			from: r.user.id,
+			to: r.bookingShiftRequest.managerDecisionByUserId,
+			alias: "shift_request_manager_decider",
+		}),
+		bookingShiftRequestsRejected: r.many.bookingShiftRequest({
+			from: r.user.id,
+			to: r.bookingShiftRequest.rejectedByUserId,
+			alias: "shift_request_rejector",
+		}),
+		bookingShiftRequestsApplied: r.many.bookingShiftRequest({
+			from: r.user.id,
+			to: r.bookingShiftRequest.appliedByUserId,
+			alias: "shift_request_applier",
+		}),
 		sentInvitations: r.many.invitation({
 			from: r.user.id,
 			to: r.invitation.inviterId,
@@ -61,11 +98,15 @@ export const relations = defineRelations(schema, (r) => ({
 	organization: {
 		members: r.many.member(),
 		invitations: r.many.invitation(),
+		affiliateReferrals: r.many.affiliateReferral(),
+		bookingAffiliateAttributions: r.many.bookingAffiliateAttribution(),
+		bookingAffiliatePayouts: r.many.bookingAffiliatePayout(),
 		notificationEvents: r.many.notificationEvent(),
 		notificationIntents: r.many.notificationIntent(),
 		notificationDeliveries: r.many.notificationDelivery(),
 		notificationPreferences: r.many.notificationPreference(),
 		inAppNotifications: r.many.notificationInApp(),
+		bookingShiftRequests: r.many.bookingShiftRequest(),
 	},
 
 	member: {
@@ -115,6 +156,7 @@ export const relations = defineRelations(schema, (r) => ({
 		availabilityBlocks: r.many.boatAvailabilityBlock(),
 		pricingProfiles: r.many.boatPricingProfile(),
 		pricingRules: r.many.boatPricingRule(),
+		minimumDurationRules: r.many.boatMinimumDurationRule(),
 	},
 
 	boatAmenity: {
@@ -185,6 +227,13 @@ export const relations = defineRelations(schema, (r) => ({
 		rules: r.many.boatPricingRule(),
 	},
 
+	boatMinimumDurationRule: {
+		boat: r.one.boat({
+			from: r.boatMinimumDurationRule.boatId,
+			to: r.boat.id,
+		}),
+	},
+
 	boatPricingRule: {
 		boat: r.one.boat({
 			from: r.boatPricingRule.boatId,
@@ -231,8 +280,20 @@ export const relations = defineRelations(schema, (r) => ({
 			from: r.booking.id,
 			to: r.bookingCancellationRequest.bookingId,
 		}),
+		shiftRequest: r.one.bookingShiftRequest({
+			from: r.booking.id,
+			to: r.bookingShiftRequest.bookingId,
+		}),
 		disputes: r.many.bookingDispute(),
 		refunds: r.many.bookingRefund(),
+		affiliateAttribution: r.one.bookingAffiliateAttribution({
+			from: r.booking.id,
+			to: r.bookingAffiliateAttribution.bookingId,
+		}),
+		affiliatePayout: r.one.bookingAffiliatePayout({
+			from: r.booking.id,
+			to: r.bookingAffiliatePayout.bookingId,
+		}),
 	},
 
 	bookingCalendarLink: {
@@ -309,6 +370,42 @@ export const relations = defineRelations(schema, (r) => ({
 		}),
 	},
 
+	bookingShiftRequest: {
+		booking: r.one.booking({
+			from: r.bookingShiftRequest.bookingId,
+			to: r.booking.id,
+		}),
+		organization: r.one.organization({
+			from: r.bookingShiftRequest.organizationId,
+			to: r.organization.id,
+		}),
+		requestedByUser: r.one.user({
+			from: r.bookingShiftRequest.requestedByUserId,
+			to: r.user.id,
+			alias: "shift_request_requester",
+		}),
+		customerDecisionByUser: r.one.user({
+			from: r.bookingShiftRequest.customerDecisionByUserId,
+			to: r.user.id,
+			alias: "shift_request_customer_decider",
+		}),
+		managerDecisionByUser: r.one.user({
+			from: r.bookingShiftRequest.managerDecisionByUserId,
+			to: r.user.id,
+			alias: "shift_request_manager_decider",
+		}),
+		rejectedByUser: r.one.user({
+			from: r.bookingShiftRequest.rejectedByUserId,
+			to: r.user.id,
+			alias: "shift_request_rejector",
+		}),
+		appliedByUser: r.one.user({
+			from: r.bookingShiftRequest.appliedByUserId,
+			to: r.user.id,
+			alias: "shift_request_applier",
+		}),
+	},
+
 	bookingDispute: {
 		booking: r.one.booking({
 			from: r.bookingDispute.bookingId,
@@ -353,6 +450,64 @@ export const relations = defineRelations(schema, (r) => ({
 			from: r.bookingRefund.processedByUserId,
 			to: r.user.id,
 			alias: "refund_processor",
+		}),
+	},
+
+	// ── Affiliate ────────────────────────────────────────────────────
+	affiliateReferral: {
+		affiliateUser: r.one.user({
+			from: r.affiliateReferral.affiliateUserId,
+			to: r.user.id,
+		}),
+		organization: r.one.organization({
+			from: r.affiliateReferral.organizationId,
+			to: r.organization.id,
+		}),
+		attributions: r.many.bookingAffiliateAttribution({
+			from: r.affiliateReferral.id,
+			to: r.bookingAffiliateAttribution.referralId,
+		}),
+	},
+
+	bookingAffiliateAttribution: {
+		booking: r.one.booking({
+			from: r.bookingAffiliateAttribution.bookingId,
+			to: r.booking.id,
+		}),
+		organization: r.one.organization({
+			from: r.bookingAffiliateAttribution.organizationId,
+			to: r.organization.id,
+		}),
+		affiliateUser: r.one.user({
+			from: r.bookingAffiliateAttribution.affiliateUserId,
+			to: r.user.id,
+		}),
+		referral: r.one.affiliateReferral({
+			from: r.bookingAffiliateAttribution.referralId,
+			to: r.affiliateReferral.id,
+		}),
+		payout: r.one.bookingAffiliatePayout({
+			from: r.bookingAffiliateAttribution.id,
+			to: r.bookingAffiliatePayout.attributionId,
+		}),
+	},
+
+	bookingAffiliatePayout: {
+		attribution: r.one.bookingAffiliateAttribution({
+			from: r.bookingAffiliatePayout.attributionId,
+			to: r.bookingAffiliateAttribution.id,
+		}),
+		booking: r.one.booking({
+			from: r.bookingAffiliatePayout.bookingId,
+			to: r.booking.id,
+		}),
+		organization: r.one.organization({
+			from: r.bookingAffiliatePayout.organizationId,
+			to: r.organization.id,
+		}),
+		affiliateUser: r.one.user({
+			from: r.bookingAffiliatePayout.affiliateUserId,
+			to: r.user.id,
 		}),
 	},
 

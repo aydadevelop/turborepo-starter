@@ -67,6 +67,29 @@ export const bookingCancellationRequestStatusValues = [
 	"rejected",
 	"withdrawn",
 ] as const;
+export const bookingShiftRequestStatusValues = [
+	"pending",
+	"approved",
+	"rejected",
+	"applied",
+	"cancelled",
+] as const;
+export const bookingShiftRequestDecisionValues = [
+	"pending",
+	"approved",
+	"rejected",
+] as const;
+export const bookingShiftRequestInitiatorRoleValues = [
+	"customer",
+	"manager",
+] as const;
+export const bookingShiftRequestPaymentAdjustmentStatusValues = [
+	"none",
+	"pending",
+	"captured",
+	"refunded",
+	"failed",
+] as const;
 export const bookingDisputeStatusValues = [
 	"open",
 	"under_review",
@@ -93,6 +116,14 @@ export type BookingPaymentAttemptStatus =
 	(typeof bookingPaymentAttemptStatusValues)[number];
 export type BookingCancellationRequestStatus =
 	(typeof bookingCancellationRequestStatusValues)[number];
+export type BookingShiftRequestStatus =
+	(typeof bookingShiftRequestStatusValues)[number];
+export type BookingShiftRequestDecision =
+	(typeof bookingShiftRequestDecisionValues)[number];
+export type BookingShiftRequestInitiatorRole =
+	(typeof bookingShiftRequestInitiatorRoleValues)[number];
+export type BookingShiftRequestPaymentAdjustmentStatus =
+	(typeof bookingShiftRequestPaymentAdjustmentStatusValues)[number];
 export type BookingDisputeStatus = (typeof bookingDisputeStatusValues)[number];
 export type BookingRefundStatus = (typeof bookingRefundStatusValues)[number];
 
@@ -363,6 +394,122 @@ export const bookingCancellationRequest = sqliteTable(
 		),
 		index("booking_cancellation_request_status_idx").on(table.status),
 		index("booking_cancellation_request_requestedByUserId_idx").on(
+			table.requestedByUserId
+		),
+	]
+);
+
+export const bookingShiftRequest = sqliteTable(
+	"booking_shift_request",
+	{
+		id: text("id").primaryKey(),
+		bookingId: text("booking_id")
+			.notNull()
+			.references(() => booking.id, { onDelete: "cascade" }),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		requestedByUserId: text("requested_by_user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		initiatedByRole: text("initiated_by_role", {
+			enum: bookingShiftRequestInitiatorRoleValues,
+		}).notNull(),
+		status: text("status", { enum: bookingShiftRequestStatusValues })
+			.notNull()
+			.default("pending"),
+		customerDecision: text("customer_decision", {
+			enum: bookingShiftRequestDecisionValues,
+		})
+			.notNull()
+			.default("pending"),
+		customerDecisionByUserId: text("customer_decision_by_user_id").references(
+			() => user.id,
+			{ onDelete: "set null" }
+		),
+		customerDecisionAt: integer("customer_decision_at", {
+			mode: "timestamp_ms",
+		}),
+		customerDecisionNote: text("customer_decision_note"),
+		managerDecision: text("manager_decision", {
+			enum: bookingShiftRequestDecisionValues,
+		})
+			.notNull()
+			.default("pending"),
+		managerDecisionByUserId: text("manager_decision_by_user_id").references(
+			() => user.id,
+			{ onDelete: "set null" }
+		),
+		managerDecisionAt: integer("manager_decision_at", { mode: "timestamp_ms" }),
+		managerDecisionNote: text("manager_decision_note"),
+		currentStartsAt: integer("current_starts_at", {
+			mode: "timestamp_ms",
+		}).notNull(),
+		currentEndsAt: integer("current_ends_at", {
+			mode: "timestamp_ms",
+		}).notNull(),
+		proposedStartsAt: integer("proposed_starts_at", {
+			mode: "timestamp_ms",
+		}).notNull(),
+		proposedEndsAt: integer("proposed_ends_at", {
+			mode: "timestamp_ms",
+		}).notNull(),
+		currentPassengers: integer("current_passengers").notNull(),
+		proposedPassengers: integer("proposed_passengers").notNull(),
+		currentBasePriceCents: integer("current_base_price_cents")
+			.notNull()
+			.default(0),
+		currentDiscountAmountCents: integer("current_discount_amount_cents")
+			.notNull()
+			.default(0),
+		proposedBasePriceCents: integer("proposed_base_price_cents")
+			.notNull()
+			.default(0),
+		proposedDiscountAmountCents: integer("proposed_discount_amount_cents")
+			.notNull()
+			.default(0),
+		currentTotalPriceCents: integer("current_total_price_cents")
+			.notNull()
+			.default(0),
+		proposedTotalPriceCents: integer("proposed_total_price_cents")
+			.notNull()
+			.default(0),
+		currentPayNowCents: integer("current_pay_now_cents").notNull().default(0),
+		proposedPayNowCents: integer("proposed_pay_now_cents").notNull().default(0),
+		priceDeltaCents: integer("price_delta_cents").notNull().default(0),
+		payNowDeltaCents: integer("pay_now_delta_cents").notNull().default(0),
+		currency: text("currency").notNull().default("RUB"),
+		discountCode: text("discount_code"),
+		reason: text("reason"),
+		rejectedByUserId: text("rejected_by_user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		rejectedAt: integer("rejected_at", { mode: "timestamp_ms" }),
+		rejectionReason: text("rejection_reason"),
+		appliedByUserId: text("applied_by_user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		appliedAt: integer("applied_at", { mode: "timestamp_ms" }),
+		paymentAdjustmentStatus: text("payment_adjustment_status", {
+			enum: bookingShiftRequestPaymentAdjustmentStatusValues,
+		})
+			.notNull()
+			.default("none"),
+		paymentAdjustmentAmountCents: integer("payment_adjustment_amount_cents")
+			.notNull()
+			.default(0),
+		paymentAdjustmentReference: text("payment_adjustment_reference"),
+		metadata: text("metadata"),
+		requestedAt: integer("requested_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		...timestamps,
+	},
+	(table) => [
+		uniqueIndex("booking_shift_request_bookingId_unique").on(table.bookingId),
+		index("booking_shift_request_organizationId_idx").on(table.organizationId),
+		index("booking_shift_request_status_idx").on(table.status),
+		index("booking_shift_request_requestedByUserId_idx").on(
 			table.requestedByUserId
 		),
 	]

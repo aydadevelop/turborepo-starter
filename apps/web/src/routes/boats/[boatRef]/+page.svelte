@@ -9,7 +9,7 @@
 		CardTitle,
 	} from "@full-stack-cf-app/ui/components/card";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
-	import { get } from "svelte/store";
+	import { derived, get } from "svelte/store";
 	import { dev } from "$app/environment";
 	import { page } from "$app/stores";
 	import { authClient } from "$lib/auth-client";
@@ -206,27 +206,54 @@
 		endsAt: Date;
 	};
 
-	const currentPage = get(page);
 	const defaultDate = toLocalIsoDate(
 		new Date(Date.now() + 24 * 60 * 60 * 1000)
 	);
-	const boatId = parseBoatIdFromRef(currentPage.params.boatRef ?? "");
-	const requestedDate = currentPage.url.searchParams.get("date") ?? defaultDate;
-	const requestedDurationHours = normalizeDurationHours(
-		currentPage.url.searchParams.get("durationHours"),
-		2
-	);
-	const requestedPassengers = clamp(
-		Number.parseInt(
-			currentPage.url.searchParams.get("passengers") ?? "2",
-			10
-		) || 2,
-		1,
-		500
-	);
 	const sessionQuery = authClient.useSession();
-	const authBypassEnabled =
-		dev && currentPage.url.searchParams.get("auth") === "dev";
+
+	let boatId = $state("");
+	let requestedDate = $state(defaultDate);
+	let requestedDurationHours = $state(2);
+	let requestedPassengers = $state(2);
+	let authBypassEnabled = $state(false);
+	let signInHref = $state("/login");
+	let devBypassHref = $state("");
+
+	$effect(() => {
+		const currentPage = $page;
+		boatId = parseBoatIdFromRef(currentPage.params.boatRef ?? "");
+		requestedDate = currentPage.url.searchParams.get("date") ?? defaultDate;
+		requestedDurationHours = normalizeDurationHours(
+			currentPage.url.searchParams.get("durationHours"),
+			2
+		);
+		requestedPassengers = clamp(
+			Number.parseInt(
+				currentPage.url.searchParams.get("passengers") ?? "2",
+				10
+			) || 2,
+			1,
+			500
+		);
+		authBypassEnabled =
+			dev && currentPage.url.searchParams.get("auth") === "dev";
+
+		const bookingPathSearchParams = new URLSearchParams(
+			currentPage.url.searchParams
+		);
+		bookingPathSearchParams.delete("auth");
+		const bookingPathWithQuery = bookingPathSearchParams.size
+			? `${currentPage.url.pathname}?${bookingPathSearchParams.toString()}`
+			: currentPage.url.pathname;
+		signInHref = `/login?next=${encodeURIComponent(bookingPathWithQuery)}`;
+
+		const devBypassSearchParams = new URLSearchParams(
+			currentPage.url.searchParams
+		);
+		devBypassSearchParams.set("auth", "dev");
+		devBypassHref = `${currentPage.url.pathname}?${devBypassSearchParams.toString()}`;
+	});
+
 	const hasBookingAccess = $derived(
 		authBypassEnabled || Boolean($sessionQuery.data?.user)
 	);
@@ -244,22 +271,10 @@
 		return user.email ? `Signed in as ${user.email}` : "Signed in";
 	};
 	const authStatusLabel = $derived(resolveAuthStatusLabel());
-	const bookingPathSearchParams = new URLSearchParams(
-		currentPage.url.searchParams
-	);
-	bookingPathSearchParams.delete("auth");
-	const bookingPathWithQuery = bookingPathSearchParams.size
-		? `${currentPage.url.pathname}?${bookingPathSearchParams.toString()}`
-		: currentPage.url.pathname;
-	const signInHref = `/login?next=${encodeURIComponent(bookingPathWithQuery)}`;
-	const devBypassSearchParams = new URLSearchParams(
-		currentPage.url.searchParams
-	);
-	devBypassSearchParams.set("auth", "dev");
-	const devBypassHref = `${currentPage.url.pathname}?${devBypassSearchParams.toString()}`;
 	const withUpdatedSearchParams = (
 		updates: Record<string, string | number>
 	): string => {
+		const currentPage = get(page);
 		const params = new URLSearchParams(currentPage.url.searchParams);
 		for (const [key, value] of Object.entries(updates)) {
 			params.set(key, String(value));
@@ -267,17 +282,42 @@
 		return `${currentPage.url.pathname}?${params.toString()}`;
 	};
 
-	const boatDetailQuery = createQuery({
-		...orpc.booking.getByIdPublic.queryOptions({
-			input: {
-				boatId: boatId || "missing-boat-id",
-				date: requestedDate,
-				durationHours: requestedDurationHours,
-				passengers: requestedPassengers,
-			},
-		}),
-		enabled: boatId.length > 0,
+	const boatDetailQueryOptions = derived(page, ($page) => {
+		const pageBoatId = parseBoatIdFromRef($page.params.boatRef ?? "");
+		const pageRequestedDate = $page.url.searchParams.get("date") ?? defaultDate;
+		const pageRequestedDurationHours = normalizeDurationHours(
+			$page.url.searchParams.get("durationHours"),
+			2
+		);
+		const pageRequestedPassengers = clamp(
+			Number.parseInt($page.url.searchParams.get("passengers") ?? "2", 10) || 2,
+			1,
+			500
+		);
+
+		return {
+			...orpc.booking.getByIdPublic.queryOptions({
+				input: {
+					boatId: pageBoatId || "missing-boat-id",
+					date: pageRequestedDate,
+					durationHours: pageRequestedDurationHours,
+					passengers: pageRequestedPassengers,
+				},
+				context: {
+					queryKey: [
+						"booking.getByIdPublic",
+						pageBoatId,
+						pageRequestedDate,
+						pageRequestedDurationHours,
+						pageRequestedPassengers,
+					],
+				},
+			}),
+			enabled: pageBoatId.length > 0,
+		};
 	});
+
+	const boatDetailQuery = createQuery(boatDetailQueryOptions);
 
 	const createPublicBookingMutation = createMutation(
 		orpc.booking.createPublic.mutationOptions()
@@ -386,6 +426,12 @@
 					</p>
 					<p>Type: {$boatDetailQuery.data.boat.type}</p>
 					<p>Capacity: {$boatDetailQuery.data.boat.passengerCapacity} guests</p>
+					<p>
+						Minimum booking:
+						{$boatDetailQuery.data.boat.minimumHours === 0
+							? "No minimum"
+							: `${$boatDetailQuery.data.boat.minimumHours}h`}
+					</p>
 					<p>
 						Working hours (local):
 						{$boatDetailQuery.data.boat.workingHoursStart}:00 -
@@ -610,6 +656,71 @@
 
 			<Card class="lg:col-span-3">
 				<CardHeader>
+					<CardTitle>Minimum Duration Rules</CardTitle>
+					<CardDescription>
+						Time windows that require longer minimum bookings.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					{#if $boatDetailQuery.data.minimumDurationRules.length === 0}
+						<p class="text-sm text-muted-foreground">
+							No minimum duration rules configured.
+						</p>
+					{:else}
+						<div class="overflow-x-auto">
+							<table class="w-full min-w-[700px] text-left text-sm">
+								<thead class="text-muted-foreground">
+									<tr class="border-b border-border">
+										<th class="py-2">Name</th>
+										<th class="py-2">Window (Local)</th>
+										<th class="py-2">Min Duration</th>
+										<th class="py-2">Days</th>
+										<th class="py-2">Active</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each $boatDetailQuery.data.minimumDurationRules as rule (rule.id)}
+										<tr class="border-b border-border/50">
+											<td class="py-2 font-medium text-foreground">
+												{rule.name}
+											</td>
+											<td class="py-2">
+												{formatHourMinute(rule.startHour, rule.startMinute, 0)}→
+												{formatHourMinute(rule.endHour, rule.endMinute, 0)}
+											</td>
+											<td class="py-2">
+												{rule.minimumDurationMinutes >= 60
+													? `${(rule.minimumDurationMinutes / 60).toFixed(
+															rule.minimumDurationMinutes % 60 === 0 ? 0 : 1
+														)}h`
+													: `${rule.minimumDurationMinutes}m`}
+											</td>
+											<td class="py-2">
+												{#if rule.daysOfWeek && Array.isArray(rule.daysOfWeek) && rule.daysOfWeek.length > 0}
+													{rule.daysOfWeek
+														.map(
+															(d: number) =>
+																weekdayLabels[
+																	Math.max(0, Math.min(6, Math.trunc(d)))
+																]
+														)
+														.join(", ")}
+												{:else}
+													Every day
+												{/if}
+											</td>
+											<td class="py-2">{rule.isActive ? "✓" : "✗"}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
+				</CardContent>
+			</Card>
+
+			<Card class="lg:col-span-3">
+				<CardHeader>
 					<CardTitle>Available Slots</CardTitle>
 					<CardDescription>
 						Boat local timestamps ({$boatDetailQuery.data.boat.timezone}),
@@ -676,7 +787,10 @@
 								</thead>
 								<tbody>
 									{#each $boatDetailQuery.data.slots as slot}
-										<tr class="border-b border-border/50">
+										<tr
+											class="border-b border-border/50"
+											class:opacity-50={!slot.meetsMinimumDuration}
+										>
 											<td class="py-2">
 												<div>
 													{formatDateTimeInZone(
@@ -705,7 +819,17 @@
 											<td class="py-2 font-mono text-xs">
 												{formatDateTimeIsoUtc(slot.endsAt)}
 											</td>
-											<td class="py-2">{slot.durationMinutes} min</td>
+											<td class="py-2">
+												{slot.durationMinutes} min
+												{#if !slot.meetsMinimumDuration}
+													<span
+														class="ml-1 inline-block rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+													>
+														min
+														{formatDurationLabel(slot.requiredMinimumDurationMinutes / 60)}
+													</span>
+												{/if}
+											</td>
 											<td class="py-2">
 												{formatDurationLabel(slot.estimatedHours)}
 											</td>
@@ -731,7 +855,17 @@
 												{formatPricingDeltaLabel(slot.discountLabel)}
 											</td>
 											<td class="py-2">
-												{#if hasSignedInUser}
+												{#if !slot.meetsMinimumDuration}
+													<a
+														href={withUpdatedSearchParams({
+															durationHours: slot.requiredMinimumDurationMinutes / 60,
+														})}
+														class="text-xs font-medium text-amber-600 hover:underline dark:text-amber-400"
+													>
+														View from
+														{formatDurationLabel(slot.requiredMinimumDurationMinutes / 60)}
+													</a>
+												{:else if hasSignedInUser}
 													<Button
 														size="sm"
 														variant="outline"

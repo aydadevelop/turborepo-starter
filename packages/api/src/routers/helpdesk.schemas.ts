@@ -39,6 +39,7 @@ export const listManagedSupportTicketsInputSchema = z.object({
 	status: z.enum(supportTicketStatusValues).optional(),
 	priority: z.enum(supportTicketPriorityValues).optional(),
 	assignedToUserId: z.string().trim().min(1).optional(),
+	overdueOnly: z.boolean().default(false),
 	search: optionalTrimmedString(120),
 	limit: z.number().int().min(1).max(100).default(50),
 });
@@ -70,3 +71,17 @@ export const listManagedSupportTicketMessagesInputSchema =
 	supportTicketIdInputSchema.extend({
 		limit: z.number().int().min(1).max(200).default(100),
 	});
+
+export const sweepManagedSupportTicketSlaInputSchema = z.object({
+	limit: z.number().int().min(1).max(500).default(100),
+	now: z.coerce.date().optional(),
+	dryRun: z.boolean().default(false),
+});
+
+export const sweepManagedSupportTicketSlaOutputSchema = z.object({
+	now: z.string().datetime(),
+	dryRun: z.boolean(),
+	scannedCount: z.number().int().min(0),
+	escalatedCount: z.number().int().min(0),
+	escalatedTicketIds: z.array(z.string().trim().min(1)),
+});

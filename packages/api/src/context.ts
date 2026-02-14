@@ -120,8 +120,38 @@ export interface Context {
 	activeMembership: ActiveOrganizationMembership | null;
 	requestUrl: string;
 	requestHostname: string;
+	requestCookies?: Readonly<Record<string, string>>;
 	notificationQueue?: NotificationQueueProducer;
 }
+
+const parseCookiesFromHeader = (
+	cookieHeader: string | null
+): Readonly<Record<string, string>> => {
+	if (!cookieHeader) {
+		return {};
+	}
+
+	const parsed: Record<string, string> = {};
+	for (const pair of cookieHeader.split(";")) {
+		const separatorIndex = pair.indexOf("=");
+		if (separatorIndex <= 0) {
+			continue;
+		}
+
+		const key = pair.slice(0, separatorIndex).trim();
+		if (!key) {
+			continue;
+		}
+		const rawValue = pair.slice(separatorIndex + 1).trim();
+		try {
+			parsed[key] = decodeURIComponent(rawValue);
+		} catch {
+			parsed[key] = rawValue;
+		}
+	}
+
+	return parsed;
+};
 
 const getActiveOrganizationMembership = async (
 	session: AuthSession
@@ -204,6 +234,9 @@ export async function createContext({
 	}
 
 	const activeMembership = await getActiveOrganizationMembership(session);
+	const requestCookies = parseCookiesFromHeader(
+		context.req.raw.headers.get("cookie")
+	);
 	const notificationQueueCandidate = (
 		context as HonoContext & {
 			env?: {
@@ -227,6 +260,7 @@ export async function createContext({
 		activeMembership,
 		requestUrl,
 		requestHostname,
+		requestCookies,
 		notificationQueue: resolvedNotificationQueue,
 	};
 }

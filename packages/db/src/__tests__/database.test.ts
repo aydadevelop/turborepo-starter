@@ -617,7 +617,7 @@ describe("Test Database Setup", () => {
 				source: "manual",
 				status: "cancelled",
 				paymentStatus: "refunded",
-				calendarSyncStatus: "failed",
+				calendarSyncStatus: "sync_error",
 				startsAt: new Date("2026-03-11T10:00:00.000Z"),
 				endsAt: new Date("2026-03-11T12:00:00.000Z"),
 				passengers: 3,

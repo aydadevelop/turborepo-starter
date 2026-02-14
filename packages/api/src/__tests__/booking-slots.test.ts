@@ -2,16 +2,21 @@ import { describe, expect, it } from "vitest";
 
 import type { BoatPricingProfile, BoatPricingRule } from "../booking/pricing";
 import {
+	type AnnotatedTimeSlot,
+	annotateSlotMinimumDuration,
 	type BoatDayConfig,
 	type BusyInterval,
+	buildDurationOptions,
 	computeBoatDaySlots,
 	computeFreeGaps,
 	enrichSlotsWithPricing,
 	extractSlotsFromGaps,
 	type FreeGap,
 	filterSlotsAfterMinNotice,
+	type MinimumDurationRule,
 	mergeBusyIntervals,
 	resolveWorkingWindow,
+	type TimeSlot,
 } from "../booking/slots";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -25,6 +30,13 @@ const nth = <T>(arr: readonly T[], index: number): T => {
 };
 
 const utc = (iso: string) => new Date(iso);
+
+/** Wrap plain TimeSlot[] with default annotation (0 min requirement). */
+const withAnnotation = (
+	slots: TimeSlot[],
+	requiredMinimumDurationMinutes = 0
+): AnnotatedTimeSlot[] =>
+	slots.map((s) => ({ ...s, requiredMinimumDurationMinutes }));
 
 const interval = (start: string, end: string): BusyInterval => ({
 	startsAt: utc(start),
@@ -78,6 +90,22 @@ const makeRule = (
 		...overrides,
 	};
 };
+
+const makeMinDurationRule = (
+	overrides: Partial<MinimumDurationRule> = {}
+): MinimumDurationRule => ({
+	id: "mdr-1",
+	boatId: "boat-1",
+	name: "Rule",
+	startHour: 0,
+	startMinute: 0,
+	endHour: 24,
+	endMinute: 0,
+	minimumDurationMinutes: 60,
+	daysOfWeek: null,
+	isActive: true,
+	...overrides,
+});
 
 const moscowBoat: BoatDayConfig = {
 	workingHoursStart: 9,
@@ -811,7 +839,7 @@ describe("enrichSlotsWithPricing", () => {
 		);
 
 		const enriched = enrichSlotsWithPricing({
-			slots,
+			slots: withAnnotation(slots),
 			boatMinimumHours: 1,
 			passengers: 2,
 			timezone: "UTC",
@@ -848,7 +876,7 @@ describe("enrichSlotsWithPricing", () => {
 		);
 
 		const enriched = enrichSlotsWithPricing({
-			slots,
+			slots: withAnnotation(slots),
 			boatMinimumHours: 2,
 			passengers: 1,
 			timezone: "UTC",
@@ -886,7 +914,7 @@ describe("enrichSlotsWithPricing", () => {
 		);
 
 		const enriched = enrichSlotsWithPricing({
-			slots,
+			slots: withAnnotation(slots),
 			boatMinimumHours: 1,
 			passengers: 1,
 			timezone: "UTC",
@@ -923,7 +951,7 @@ describe("enrichSlotsWithPricing", () => {
 		};
 
 		const enriched = enrichSlotsWithPricing({
-			slots: [morningSlot, eveningSlot],
+			slots: withAnnotation([morningSlot, eveningSlot]),
 			boatMinimumHours: 1,
 			passengers: 1,
 			timezone: "UTC",
@@ -962,7 +990,7 @@ describe("enrichSlotsWithPricing", () => {
 		};
 
 		const enriched = enrichSlotsWithPricing({
-			slots: [saturdaySlot, wednesdaySlot],
+			slots: withAnnotation([saturdaySlot, wednesdaySlot]),
 			boatMinimumHours: 1,
 			passengers: 1,
 			timezone: "UTC",
@@ -992,7 +1020,7 @@ describe("enrichSlotsWithPricing", () => {
 		];
 
 		const enriched = enrichSlotsWithPricing({
-			slots,
+			slots: withAnnotation(slots),
 			boatMinimumHours: 1,
 			passengers: 1,
 			timezone: "UTC",
@@ -1028,7 +1056,7 @@ describe("enrichSlotsWithPricing", () => {
 		];
 
 		const enrichedNormal = enrichSlotsWithPricing({
-			slots,
+			slots: withAnnotation(slots),
 			boatMinimumHours: 1,
 			passengers: 3, // within included, no surcharge
 			timezone: "UTC",
@@ -1037,7 +1065,7 @@ describe("enrichSlotsWithPricing", () => {
 		});
 
 		const enrichedOver = enrichSlotsWithPricing({
-			slots,
+			slots: withAnnotation(slots),
 			boatMinimumHours: 1,
 			passengers: 7, // 3 extra passengers
 			timezone: "UTC",
@@ -1169,7 +1197,7 @@ describe("multi-boat availability search simulation", () => {
 					durationMinutes: 120,
 				});
 				const enriched = enrichSlotsWithPricing({
-					slots,
+					slots: withAnnotation(slots),
 					boatMinimumHours: boat.config.minimumHours,
 					passengers: 2,
 					timezone: boat.config.timezone,
@@ -1209,7 +1237,7 @@ describe("multi-boat availability search simulation", () => {
 					durationMinutes: 120,
 				});
 				const enriched = enrichSlotsWithPricing({
-					slots,
+					slots: withAnnotation(slots),
 					boatMinimumHours: boat.config.minimumHours,
 					passengers: 1,
 					timezone: boat.config.timezone,
@@ -1256,7 +1284,7 @@ describe("multi-boat availability search simulation", () => {
 				durationMinutes,
 			});
 			const enriched = enrichSlotsWithPricing({
-				slots,
+				slots: withAnnotation(slots),
 				boatMinimumHours: utcBoat.minimumHours,
 				passengers: 1,
 				timezone: utcBoat.timezone,
@@ -1321,7 +1349,7 @@ describe("multi-boat availability search simulation", () => {
 		});
 
 		const shortEnriched = enrichSlotsWithPricing({
-			slots: shortSlots,
+			slots: withAnnotation(shortSlots),
 			boatMinimumHours: 1,
 			passengers: 1,
 			timezone: "UTC",
@@ -1329,7 +1357,7 @@ describe("multi-boat availability search simulation", () => {
 			pricingRules: [durationDiscount],
 		});
 		const longEnriched = enrichSlotsWithPricing({
-			slots: longSlots,
+			slots: withAnnotation(longSlots),
 			boatMinimumHours: 1,
 			passengers: 1,
 			timezone: "UTC",
@@ -1344,5 +1372,464 @@ describe("multi-boat availability search simulation", () => {
 		// Long (4h): -20% discount → 40000 - 8000 = 32000
 		expect(nth(longEnriched, 0).subtotalCents).toBe(32_000);
 		expect(nth(longEnriched, 0).discountLabel).not.toBeNull();
+	});
+});
+
+// ─── annotateSlotMinimumDuration ────────────────────────────────────────────
+
+describe("annotateSlotMinimumDuration", () => {
+	it("annotates slots with global boat minimum (big boat 5h)", () => {
+		const slots = extractSlotsFromGaps(
+			[
+				{
+					startsAt: utc("2026-07-15T09:00:00Z"),
+					endsAt: utc("2026-07-15T21:00:00Z"),
+					durationMinutes: 720,
+				},
+			],
+			120
+		);
+
+		const annotated = annotateSlotMinimumDuration({
+			slots,
+			boatMinimumHours: 5,
+			minimumDurationRules: [],
+			timezone: "UTC",
+		});
+
+		// All slots returned — none removed
+		expect(annotated).toHaveLength(slots.length);
+		// All annotated with 300 min (5h)
+		for (const s of annotated) {
+			expect(s.requiredMinimumDurationMinutes).toBe(300);
+		}
+	});
+
+	it("annotates slots that meet global boat minimum with 0 requirement when min is 0", () => {
+		const slots = extractSlotsFromGaps(
+			[
+				{
+					startsAt: utc("2026-07-15T09:00:00Z"),
+					endsAt: utc("2026-07-15T21:00:00Z"),
+					durationMinutes: 720,
+				},
+			],
+			300
+		);
+
+		const annotated = annotateSlotMinimumDuration({
+			slots,
+			boatMinimumHours: 5,
+			minimumDurationRules: [],
+			timezone: "UTC",
+		});
+
+		expect(annotated.length).toBeGreaterThan(0);
+		expect(annotated).toHaveLength(slots.length);
+		for (const s of annotated) {
+			expect(s.requiredMinimumDurationMinutes).toBe(300);
+		}
+	});
+
+	it("annotates bridge-window slots with higher minimum", () => {
+		const bridgeRule = makeMinDurationRule({
+			id: "bridge",
+			name: "Bridge hours",
+			startHour: 0,
+			endHour: 2,
+			minimumDurationMinutes: 120,
+		});
+
+		const slots = [
+			{
+				startsAt: utc("2026-07-15T00:30:00Z"),
+				endsAt: utc("2026-07-15T01:30:00Z"),
+			},
+			{
+				startsAt: utc("2026-07-15T10:00:00Z"),
+				endsAt: utc("2026-07-15T11:00:00Z"),
+			},
+		];
+
+		const annotated = annotateSlotMinimumDuration({
+			slots,
+			boatMinimumHours: 0,
+			minimumDurationRules: [bridgeRule],
+			timezone: "UTC",
+		});
+
+		// Both slots returned
+		expect(annotated).toHaveLength(2);
+		// Bridge slot gets 120min, normal slot gets 0
+		expect(nth(annotated, 0).requiredMinimumDurationMinutes).toBe(120);
+		expect(nth(annotated, 1).requiredMinimumDurationMinutes).toBe(0);
+	});
+
+	it("long slots in bridge window still get the requirement annotated", () => {
+		const bridgeRule = makeMinDurationRule({
+			id: "bridge",
+			name: "Bridge hours",
+			startHour: 0,
+			endHour: 2,
+			minimumDurationMinutes: 120,
+		});
+
+		const slots = [
+			{
+				startsAt: utc("2026-07-15T00:00:00Z"),
+				endsAt: utc("2026-07-15T02:00:00Z"),
+			},
+		];
+
+		const annotated = annotateSlotMinimumDuration({
+			slots,
+			boatMinimumHours: 0,
+			minimumDurationRules: [bridgeRule],
+			timezone: "UTC",
+		});
+
+		expect(annotated).toHaveLength(1);
+		expect(nth(annotated, 0).requiredMinimumDurationMinutes).toBe(120);
+	});
+
+	it("applies the highest minimum when multiple rules overlap", () => {
+		const bridgeRule = makeMinDurationRule({
+			id: "bridge",
+			startHour: 0,
+			endHour: 2,
+			minimumDurationMinutes: 120,
+		});
+		const nightRule = makeMinDurationRule({
+			id: "night",
+			name: "Night minimum",
+			startHour: 22,
+			endHour: 6,
+			minimumDurationMinutes: 180,
+		});
+
+		const slots = [
+			{
+				startsAt: utc("2026-07-15T01:00:00Z"),
+				endsAt: utc("2026-07-15T03:00:00Z"),
+			},
+			{
+				startsAt: utc("2026-07-15T01:00:00Z"),
+				endsAt: utc("2026-07-15T04:00:00Z"),
+			},
+		];
+
+		const annotated = annotateSlotMinimumDuration({
+			slots,
+			boatMinimumHours: 0,
+			minimumDurationRules: [bridgeRule, nightRule],
+			timezone: "UTC",
+		});
+
+		// Both slots returned, both annotated with 180 (highest)
+		expect(annotated).toHaveLength(2);
+		for (const s of annotated) {
+			expect(s.requiredMinimumDurationMinutes).toBe(180);
+		}
+	});
+
+	it("handles cross-midnight bridge window (23:00-03:00)", () => {
+		const bridgeRule = makeMinDurationRule({
+			id: "bridge-late",
+			name: "Late bridge",
+			startHour: 23,
+			endHour: 3,
+			minimumDurationMinutes: 120,
+		});
+
+		const slots = [
+			{
+				startsAt: utc("2026-07-15T23:30:00Z"),
+				endsAt: utc("2026-07-16T00:30:00Z"),
+			},
+			{
+				startsAt: utc("2026-07-15T23:00:00Z"),
+				endsAt: utc("2026-07-16T01:00:00Z"),
+			},
+			{
+				startsAt: utc("2026-07-15T15:00:00Z"),
+				endsAt: utc("2026-07-15T16:00:00Z"),
+			},
+		];
+
+		const annotated = annotateSlotMinimumDuration({
+			slots,
+			boatMinimumHours: 0,
+			minimumDurationRules: [bridgeRule],
+			timezone: "UTC",
+		});
+
+		// All 3 slots returned
+		expect(annotated).toHaveLength(3);
+		// Cross-midnight slots get 120, daytime slot gets 0
+		expect(nth(annotated, 0).requiredMinimumDurationMinutes).toBe(120);
+		expect(nth(annotated, 1).requiredMinimumDurationMinutes).toBe(120);
+		expect(nth(annotated, 2).requiredMinimumDurationMinutes).toBe(0);
+	});
+
+	it("ignores inactive rules", () => {
+		const inactiveRule = makeMinDurationRule({
+			id: "bridge",
+			startHour: 0,
+			endHour: 2,
+			minimumDurationMinutes: 120,
+			isActive: false,
+		});
+
+		const slots = [
+			{
+				startsAt: utc("2026-07-15T00:30:00Z"),
+				endsAt: utc("2026-07-15T01:30:00Z"),
+			},
+		];
+
+		const annotated = annotateSlotMinimumDuration({
+			slots,
+			boatMinimumHours: 0,
+			minimumDurationRules: [inactiveRule],
+			timezone: "UTC",
+		});
+
+		expect(annotated).toHaveLength(1);
+		// Inactive rule not applied, so 0 min requirement
+		expect(nth(annotated, 0).requiredMinimumDurationMinutes).toBe(0);
+	});
+
+	it("respects timezone for rule matching", () => {
+		const bridgeRule = makeMinDurationRule({
+			id: "bridge-msk",
+			name: "Moscow bridge",
+			startHour: 1,
+			endHour: 2,
+			minimumDurationMinutes: 120,
+		});
+
+		// 22:00 UTC = 01:00 MSK (next day) → in bridge window
+		// 01:00 UTC = 04:00 MSK → NOT in bridge window
+		const slots = [
+			{
+				startsAt: utc("2026-07-15T22:00:00Z"),
+				endsAt: utc("2026-07-15T23:00:00Z"),
+			},
+			{
+				startsAt: utc("2026-07-15T01:00:00Z"),
+				endsAt: utc("2026-07-15T02:00:00Z"),
+			},
+		];
+
+		const annotated = annotateSlotMinimumDuration({
+			slots,
+			boatMinimumHours: 0,
+			minimumDurationRules: [bridgeRule],
+			timezone: "Europe/Moscow",
+		});
+
+		expect(annotated).toHaveLength(2);
+		// First slot (22:00 UTC = 01:00 MSK) → in bridge window
+		expect(nth(annotated, 0).requiredMinimumDurationMinutes).toBe(120);
+		// Second slot (01:00 UTC = 04:00 MSK) → outside bridge window
+		expect(nth(annotated, 1).requiredMinimumDurationMinutes).toBe(0);
+	});
+
+	it("combines global minimum with rule-based minimum", () => {
+		const bridgeRule = makeMinDurationRule({
+			id: "bridge",
+			startHour: 0,
+			endHour: 2,
+			minimumDurationMinutes: 120,
+		});
+
+		const slots = [
+			{
+				startsAt: utc("2026-07-15T10:00:00Z"),
+				endsAt: utc("2026-07-15T11:00:00Z"),
+			},
+			{
+				startsAt: utc("2026-07-15T10:00:00Z"),
+				endsAt: utc("2026-07-15T10:30:00Z"),
+			},
+			{
+				startsAt: utc("2026-07-15T01:00:00Z"),
+				endsAt: utc("2026-07-15T02:00:00Z"),
+			},
+			{
+				startsAt: utc("2026-07-15T01:00:00Z"),
+				endsAt: utc("2026-07-15T03:00:00Z"),
+			},
+		];
+
+		const annotated = annotateSlotMinimumDuration({
+			slots,
+			boatMinimumHours: 1,
+			minimumDurationRules: [bridgeRule],
+			timezone: "UTC",
+		});
+
+		// All 4 returned
+		expect(annotated).toHaveLength(4);
+		// Daytime slots: global min 60
+		expect(nth(annotated, 0).requiredMinimumDurationMinutes).toBe(60);
+		expect(nth(annotated, 1).requiredMinimumDurationMinutes).toBe(60);
+		// Bridge slots: max(global 60, rule 120) = 120
+		expect(nth(annotated, 2).requiredMinimumDurationMinutes).toBe(120);
+		expect(nth(annotated, 3).requiredMinimumDurationMinutes).toBe(120);
+	});
+
+	it("supports daysOfWeek filtering", () => {
+		const bridgeRule = makeMinDurationRule({
+			id: "bridge-weekday",
+			startHour: 0,
+			endHour: 2,
+			minimumDurationMinutes: 120,
+			daysOfWeek: [1, 2, 3, 4, 5],
+		});
+
+		// 2026-07-15 = Wednesday (3), 2026-07-18 = Saturday (6)
+		const slots = [
+			{
+				startsAt: utc("2026-07-15T01:00:00Z"),
+				endsAt: utc("2026-07-15T02:00:00Z"),
+			},
+			{
+				startsAt: utc("2026-07-18T01:00:00Z"),
+				endsAt: utc("2026-07-18T02:00:00Z"),
+			},
+		];
+
+		const annotated = annotateSlotMinimumDuration({
+			slots,
+			boatMinimumHours: 0,
+			minimumDurationRules: [bridgeRule],
+			timezone: "UTC",
+		});
+
+		// Both returned
+		expect(annotated).toHaveLength(2);
+		// Wednesday → rule applies → 120
+		expect(nth(annotated, 0).requiredMinimumDurationMinutes).toBe(120);
+		// Saturday → rule does NOT apply (daysOfWeek excludes 6) → 0
+		expect(nth(annotated, 1).requiredMinimumDurationMinutes).toBe(0);
+	});
+
+	it("cross-midnight rule with daysOfWeek matches next-day slots", () => {
+		// Rule: Friday 23:00–02:00, daysOfWeek=[5] (Friday)
+		const bridgeRule = makeMinDurationRule({
+			id: "bridge-fri",
+			startHour: 23,
+			endHour: 2,
+			minimumDurationMinutes: 120,
+			daysOfWeek: [5], // Friday only
+		});
+
+		// 2026-07-17 = Friday, 2026-07-18 = Saturday
+		const slots = [
+			{
+				// Friday 23:30 → in Friday's window → should match
+				startsAt: utc("2026-07-17T23:30:00Z"),
+				endsAt: utc("2026-07-18T00:30:00Z"),
+			},
+			{
+				// Saturday 01:00 → in Friday's cross-midnight tail → should match
+				startsAt: utc("2026-07-18T01:00:00Z"),
+				endsAt: utc("2026-07-18T02:00:00Z"),
+			},
+			{
+				// Saturday 15:00 → not in window → should NOT match
+				startsAt: utc("2026-07-18T15:00:00Z"),
+				endsAt: utc("2026-07-18T16:00:00Z"),
+			},
+		];
+
+		const annotated = annotateSlotMinimumDuration({
+			slots,
+			boatMinimumHours: 0,
+			minimumDurationRules: [bridgeRule],
+			timezone: "UTC",
+		});
+
+		expect(annotated).toHaveLength(3);
+		// Friday 23:30 → 120
+		expect(nth(annotated, 0).requiredMinimumDurationMinutes).toBe(120);
+		// Saturday 01:00 → 120 (cross-midnight tail from Friday)
+		expect(nth(annotated, 1).requiredMinimumDurationMinutes).toBe(120);
+		// Saturday 15:00 → 0
+		expect(nth(annotated, 2).requiredMinimumDurationMinutes).toBe(0);
+	});
+});
+
+// ─── buildDurationOptions ───────────────────────────────────────────────────
+
+describe("buildDurationOptions", () => {
+	it("filters out durations below global boat minimum", () => {
+		const options = buildDurationOptions({
+			boatMinimumHours: 3,
+			minimumDurationRules: [],
+		});
+
+		for (const hours of options) {
+			expect(hours).toBeGreaterThanOrEqual(3);
+		}
+		expect(options).toContain(3);
+		expect(options).toContain(4);
+		expect(options).toContain(5);
+		expect(options).not.toContain(0.5);
+		expect(options).not.toContain(1);
+	});
+
+	it("returns all standard options when boat minimum is 0", () => {
+		const options = buildDurationOptions({
+			boatMinimumHours: 0,
+			minimumDurationRules: [],
+		});
+
+		expect(options).toEqual([0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5]);
+	});
+
+	it("returns all standard options when boat minimum is 0.5", () => {
+		const options = buildDurationOptions({
+			boatMinimumHours: 0.5,
+			minimumDurationRules: [],
+		});
+
+		expect(options[0]).toBe(0.5);
+	});
+
+	it("returns standard choices when minimum is 1 (default)", () => {
+		const options = buildDurationOptions({
+			boatMinimumHours: 1,
+			minimumDurationRules: [],
+		});
+
+		expect(options).toEqual([1, 1.5, 2, 2.5, 3, 3.5, 4, 5]);
+	});
+
+	it("includes minimum duration rules in the response", () => {
+		const bridgeRule = makeMinDurationRule({
+			id: "bridge",
+			startHour: 0,
+			endHour: 2,
+			minimumDurationMinutes: 120,
+		});
+
+		const result = buildDurationOptions({
+			boatMinimumHours: 1,
+			minimumDurationRules: [bridgeRule],
+		});
+
+		expect(result).toContain(1);
+		expect(result).toContain(2);
+	});
+
+	it("returns empty when minimum exceeds all standard options", () => {
+		const options = buildDurationOptions({
+			boatMinimumHours: 6,
+			minimumDurationRules: [],
+		});
+
+		expect(options).toHaveLength(0);
 	});
 });

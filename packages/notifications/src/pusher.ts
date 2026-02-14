@@ -31,9 +31,8 @@ type NotificationEventPublishedListener = (
 	hint: NotificationEventPublishedHint
 ) => void;
 
-const notificationEventPublishedListeners = new Set<
-	NotificationEventPublishedListener
->();
+const notificationEventPublishedListeners =
+	new Set<NotificationEventPublishedListener>();
 
 export const subscribeNotificationEventPublished = (
 	listener: NotificationEventPublishedListener

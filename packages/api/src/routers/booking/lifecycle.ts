@@ -7,7 +7,7 @@ import {
 	bookingRefund,
 } from "@full-stack-cf-app/db/schema/booking";
 import { ORPCError } from "@orpc/server";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, or } from "drizzle-orm";
 import z from "zod";
 import {
 	organizationPermissionProcedure,
@@ -21,6 +21,9 @@ import {
 	listManagedBookingCancellationRequestsInputSchema,
 	listManagedBookingDisputesInputSchema,
 	listManagedBookingRefundsInputSchema,
+	listMineBookingCancellationRequestsInputSchema,
+	listMineBookingDisputesInputSchema,
+	listMineBookingRefundsInputSchema,
 	processBookingRefundInputSchema,
 	requestBookingCancellationInputSchema,
 	requestBookingRefundInputSchema,
@@ -29,11 +32,16 @@ import {
 	reviewBookingRefundInputSchema,
 } from "../booking.schemas";
 import { successOutputSchema } from "../shared/schema-utils";
+import { reconcileAffiliatePayoutForBooking } from "./affiliate.service";
 import { cancelBookingAndSync } from "./calendar-sync";
 import {
 	applyCancellationPolicyAndRefund,
 	assertCancellationPolicyReasonInput,
 } from "./cancellation-policy.service";
+import {
+	assertBookingActionAllowedByWindow,
+	loadOrganizationBookingActionPolicyProfile,
+} from "./action-policy.service";
 import type { StoredCancellationRequestPayload } from "./cancellation-request-payload";
 import {
 	parseCancellationRequestPayload,
@@ -99,6 +107,24 @@ export const lifecycleBookingRouter = {
 					message: "Booking is already cancelled",
 				});
 			}
+			if (
+				customerBooking.status === "completed" ||
+				customerBooking.status === "no_show"
+			) {
+				throw new ORPCError("BAD_REQUEST", {
+					message: "Booking can no longer be cancelled",
+				});
+			}
+			const actionPolicyProfile =
+				await loadOrganizationBookingActionPolicyProfile(
+					customerBooking.organizationId
+				);
+			assertBookingActionAllowedByWindow({
+				action: "cancellation",
+				actor: "customer",
+				bookingStartsAt: customerBooking.startsAt,
+				policyProfile: actionPolicyProfile,
+			});
 
 			const [existingRequest] = await db
 				.select()
@@ -153,6 +179,47 @@ export const lifecycleBookingRouter = {
 			}
 
 			return toPublicCancellationRequest(savedRequest);
+		}),
+
+	cancellationRequestListMine: protectedProcedure
+		.route({
+			tags: ["Booking Lifecycle"],
+			summary: "List my cancellation requests",
+			description:
+				"List cancellation requests for bookings owned by the current signed-in user.",
+		})
+		.input(listMineBookingCancellationRequestsInputSchema)
+		.output(z.array(bookingCancellationRequestOutputSchema))
+		.handler(async ({ context, input }) => {
+			const sessionUserId = requireSessionUserId(context);
+			const requestColumns = getTableColumns(bookingCancellationRequest);
+
+			const where = and(
+				or(
+					eq(booking.customerUserId, sessionUserId),
+					eq(booking.createdByUserId, sessionUserId)
+				),
+				input.status
+					? eq(bookingCancellationRequest.status, input.status)
+					: undefined
+			);
+
+			if (!where) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR");
+			}
+
+			const requests = await db
+				.select(requestColumns)
+				.from(bookingCancellationRequest)
+				.innerJoin(
+					booking,
+					eq(booking.id, bookingCancellationRequest.bookingId)
+				)
+				.where(where)
+				.orderBy(desc(bookingCancellationRequest.requestedAt))
+				.limit(input.limit);
+
+			return requests.map(toPublicCancellationRequest);
 		}),
 
 	cancellationRequestListManaged: organizationPermissionProcedure({
@@ -252,6 +319,24 @@ export const lifecycleBookingRouter = {
 
 			const wasAlreadyCancelled = managedBooking.status === "cancelled";
 			if (!wasAlreadyCancelled) {
+				if (
+					managedBooking.status === "completed" ||
+					managedBooking.status === "no_show"
+				) {
+					throw new ORPCError("BAD_REQUEST", {
+						message: "Booking can no longer be cancelled",
+					});
+				}
+				const actionPolicyProfile =
+					await loadOrganizationBookingActionPolicyProfile(
+						managedBooking.organizationId
+					);
+				assertBookingActionAllowedByWindow({
+					action: "cancellation",
+					actor: "manager",
+					bookingStartsAt: managedBooking.startsAt,
+					policyProfile: actionPolicyProfile,
+				});
 				assertCancellationPolicyReasonInput({
 					actor: "customer",
 					reasonCode: effectiveReasonCode,
@@ -334,6 +419,17 @@ export const lifecycleBookingRouter = {
 				})
 				.where(eq(bookingCancellationRequest.id, existingRequest.id));
 
+			try {
+				await reconcileAffiliatePayoutForBooking({
+					bookingId: managedBooking.id,
+				});
+			} catch (error) {
+				console.error(
+					"Failed to reconcile affiliate payout after cancellation approval",
+					error
+				);
+			}
+
 			return { success: true };
 		}),
 
@@ -376,6 +472,42 @@ export const lifecycleBookingRouter = {
 			return createdDispute;
 		}),
 
+	disputeListMine: protectedProcedure
+		.route({
+			tags: ["Booking Lifecycle"],
+			summary: "List my booking disputes",
+			description:
+				"List disputes for bookings owned by the current signed-in user.",
+		})
+		.input(listMineBookingDisputesInputSchema)
+		.output(z.array(bookingDisputeOutputSchema))
+		.handler(async ({ context, input }) => {
+			const sessionUserId = requireSessionUserId(context);
+			const disputeColumns = getTableColumns(bookingDispute);
+
+			const where = and(
+				or(
+					eq(booking.customerUserId, sessionUserId),
+					eq(booking.createdByUserId, sessionUserId)
+				),
+				input.bookingId
+					? eq(bookingDispute.bookingId, input.bookingId)
+					: undefined,
+				input.status ? eq(bookingDispute.status, input.status) : undefined
+			);
+			if (!where) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR");
+			}
+
+			return await db
+				.select(disputeColumns)
+				.from(bookingDispute)
+				.innerJoin(booking, eq(booking.id, bookingDispute.bookingId))
+				.where(where)
+				.orderBy(desc(bookingDispute.createdAt))
+				.limit(input.limit);
+		}),
+
 	disputeListManaged: organizationPermissionProcedure({
 		booking: ["read"],
 	})
@@ -389,9 +521,18 @@ export const lifecycleBookingRouter = {
 		.output(z.array(bookingDisputeOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
+			if (input.bookingId) {
+				await requireManagedBooking(
+					input.bookingId,
+					activeMembership.organizationId
+				);
+			}
 
 			const where = and(
 				eq(bookingDispute.organizationId, activeMembership.organizationId),
+				input.bookingId
+					? eq(bookingDispute.bookingId, input.bookingId)
+					: undefined,
 				input.status ? eq(bookingDispute.status, input.status) : undefined
 			);
 			if (!where) {
@@ -501,6 +642,42 @@ export const lifecycleBookingRouter = {
 			return createdRefund;
 		}),
 
+	refundListMine: protectedProcedure
+		.route({
+			tags: ["Booking Lifecycle"],
+			summary: "List my booking refunds",
+			description:
+				"List refund requests for bookings owned by the current signed-in user.",
+		})
+		.input(listMineBookingRefundsInputSchema)
+		.output(z.array(bookingRefundOutputSchema))
+		.handler(async ({ context, input }) => {
+			const sessionUserId = requireSessionUserId(context);
+			const refundColumns = getTableColumns(bookingRefund);
+
+			const where = and(
+				or(
+					eq(booking.customerUserId, sessionUserId),
+					eq(booking.createdByUserId, sessionUserId)
+				),
+				input.bookingId
+					? eq(bookingRefund.bookingId, input.bookingId)
+					: undefined,
+				input.status ? eq(bookingRefund.status, input.status) : undefined
+			);
+			if (!where) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR");
+			}
+
+			return await db
+				.select(refundColumns)
+				.from(bookingRefund)
+				.innerJoin(booking, eq(booking.id, bookingRefund.bookingId))
+				.where(where)
+				.orderBy(desc(bookingRefund.createdAt))
+				.limit(input.limit);
+		}),
+
 	refundListManaged: organizationPermissionProcedure({
 		booking: ["read"],
 	})
@@ -514,9 +691,18 @@ export const lifecycleBookingRouter = {
 		.output(z.array(bookingRefundOutputSchema))
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
+			if (input.bookingId) {
+				await requireManagedBooking(
+					input.bookingId,
+					activeMembership.organizationId
+				);
+			}
 
 			const where = and(
 				eq(bookingRefund.organizationId, activeMembership.organizationId),
+				input.bookingId
+					? eq(bookingRefund.bookingId, input.bookingId)
+					: undefined,
 				input.status ? eq(bookingRefund.status, input.status) : undefined
 			);
 			if (!where) {
@@ -656,6 +842,17 @@ export const lifecycleBookingRouter = {
 							updatedAt: new Date(),
 						})
 						.where(eq(booking.id, managedBooking.id));
+
+					try {
+						await reconcileAffiliatePayoutForBooking({
+							bookingId: managedBooking.id,
+						});
+					} catch (error) {
+						console.error(
+							"Failed to reconcile affiliate payout after refund processing",
+							error
+						);
+					}
 				}
 			}
 

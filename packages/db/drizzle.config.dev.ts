@@ -40,7 +40,7 @@ const findLocalD1Database = (): string => {
 };
 
 export default defineConfig({
-	schema: "./src/schema",
+	schema: "./src/schema/index.ts",
 	out: "./src/migrations",
 	dialect: "sqlite",
 	dbCredentials: {

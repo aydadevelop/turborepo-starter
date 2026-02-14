@@ -4,6 +4,19 @@ import {
 	estimateBookingSubtotalCentsFromProfile,
 } from "./pricing";
 
+export interface MinimumDurationRule {
+	id: string;
+	boatId: string;
+	name: string;
+	startHour: number;
+	startMinute: number;
+	endHour: number;
+	endMinute: number;
+	minimumDurationMinutes: number;
+	daysOfWeek: number[] | null;
+	isActive: boolean;
+}
+
 export interface BusyInterval {
 	startsAt: Date;
 	endsAt: Date;
@@ -20,6 +33,10 @@ export interface TimeSlot {
 	endsAt: Date;
 }
 
+export interface AnnotatedTimeSlot extends TimeSlot {
+	requiredMinimumDurationMinutes: number;
+}
+
 export interface SlotWithPricing extends TimeSlot {
 	durationMinutes: number;
 	estimatedHours: number;
@@ -29,6 +46,8 @@ export interface SlotWithPricing extends TimeSlot {
 	payLaterCents: number;
 	currency: string;
 	discountLabel: string | null;
+	requiredMinimumDurationMinutes: number;
+	meetsMinimumDuration: boolean;
 }
 
 export interface BoatDayConfig {
@@ -39,6 +58,32 @@ export interface BoatDayConfig {
 }
 
 const MINUTE_MS = 60_000;
+
+/**
+ * Convert a local hour (+ optional minute fraction) on a given date
+ * string (YYYY-MM-DD) in a timezone to an absolute UTC Date.
+ */
+const localHourToUtc = (
+	date: string,
+	hour: number,
+	minute: number,
+	timezone: string,
+	dayOffset = 0
+): Date => {
+	const parts = date.split("-");
+	const year = Number(parts[0]);
+	const month = Number(parts[1]);
+	const day = Number(parts[2]);
+	const localDate = new Date(
+		Date.UTC(year, month - 1, day + dayOffset, hour, minute)
+	);
+	const utcStr = localDate.toLocaleString("en-US", { timeZone: "UTC" });
+	const tzStr = localDate.toLocaleString("en-US", { timeZone: timezone });
+	const utcMs = new Date(utcStr).getTime();
+	const tzMs = new Date(tzStr).getTime();
+	const offsetMs = tzMs - utcMs;
+	return new Date(localDate.getTime() - offsetMs);
+};
 
 /**
  * Convert a boat's working hours (integers 0–24 in local timezone)
@@ -52,27 +97,11 @@ export const resolveWorkingWindow = (params: {
 }): { dayStart: Date; dayEnd: Date } => {
 	const { date, workingHoursStart, workingHoursEnd, timezone } = params;
 
-	const toUtc = (hour: number, dayOffset = 0): Date => {
-		const parts = date.split("-");
-		const year = Number(parts[0]);
-		const month = Number(parts[1]);
-		const day = Number(parts[2]);
-		const localDate = new Date(
-			Date.UTC(year, month - 1, day + dayOffset, hour)
-		);
-		const utcStr = localDate.toLocaleString("en-US", { timeZone: "UTC" });
-		const tzStr = localDate.toLocaleString("en-US", { timeZone: timezone });
-		const utcMs = new Date(utcStr).getTime();
-		const tzMs = new Date(tzStr).getTime();
-		const offsetMs = tzMs - utcMs;
-		return new Date(localDate.getTime() - offsetMs);
-	};
-
 	const crossesMidnight = workingHoursEnd <= workingHoursStart;
-	const dayStart = toUtc(workingHoursStart);
+	const dayStart = localHourToUtc(date, workingHoursStart, 0, timezone);
 	const dayEnd = crossesMidnight
-		? toUtc(workingHoursEnd, 1)
-		: toUtc(workingHoursEnd);
+		? localHourToUtc(date, workingHoursEnd, 0, timezone, 1)
+		: localHourToUtc(date, workingHoursEnd, 0, timezone);
 
 	return { dayStart, dayEnd };
 };
@@ -271,7 +300,7 @@ export const computeBoatDaySlots = (params: {
  * Each slot may get different pricing (e.g. time-of-day surcharges).
  */
 export const enrichSlotsWithPricing = (params: {
-	slots: TimeSlot[];
+	slots: AnnotatedTimeSlot[];
 	boatMinimumHours: number;
 	passengers: number;
 	timezone: string;
@@ -316,6 +345,9 @@ export const enrichSlotsWithPricing = (params: {
 			payLaterCents: quote.estimatedPayLaterCents,
 			currency: quote.currency,
 			discountLabel: hasDiscount ? `${discountPercent}%` : null,
+			requiredMinimumDurationMinutes: slot.requiredMinimumDurationMinutes,
+			meetsMinimumDuration:
+				durationMinutes >= slot.requiredMinimumDurationMinutes,
 		};
 	});
 
@@ -330,3 +362,141 @@ export const filterSlotsAfterMinNotice = (
 	const cutoff = now.getTime() + minimumNoticeMinutes * MINUTE_MS;
 	return slots.filter((slot) => slot.startsAt.getTime() >= cutoff);
 };
+
+// ─── minimum duration rules ────────────────────────────────────────────────
+
+const STANDARD_DURATION_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5];
+
+/**
+ * Check whether a slot overlaps a rule's time window by converting
+ * the rule's local hours to absolute UTC boundaries for the slot's date,
+ * then doing a simple interval overlap check. Uses the same `localHourToUtc`
+ * that `resolveWorkingWindow` uses, so cross-midnight windows work naturally.
+ *
+ * For cross-midnight rules (e.g. 22:00–06:00), we also check the previous
+ * day's window, since a 01:00 slot falls in the prior evening's window.
+ */
+const slotIntersectsRuleWindow = (
+	slot: TimeSlot,
+	rule: MinimumDurationRule,
+	timezone: string
+): boolean => {
+	const localDateStr = slot.startsAt.toLocaleDateString("en-CA", {
+		timeZone: timezone,
+	});
+
+	const windowStart = rule.startHour * 60 + rule.startMinute;
+	const windowEnd = rule.endHour * 60 + rule.endMinute;
+	const crossesMidnight = windowEnd <= windowStart;
+
+	const overlaps = (dateStr: string, dayOffsetForEnd: number): boolean => {
+		const ruleStart = localHourToUtc(
+			dateStr,
+			rule.startHour,
+			rule.startMinute,
+			timezone
+		);
+		const ruleEnd = localHourToUtc(
+			dateStr,
+			rule.endHour,
+			rule.endMinute,
+			timezone,
+			dayOffsetForEnd
+		);
+		return (
+			slot.startsAt.getTime() < ruleEnd.getTime() &&
+			slot.endsAt.getTime() > ruleStart.getTime()
+		);
+	};
+
+	if (overlaps(localDateStr, crossesMidnight ? 1 : 0)) {
+		return true;
+	}
+
+	// For cross-midnight rules, also check the previous day's window
+	if (crossesMidnight) {
+		const prevDate = new Date(slot.startsAt.getTime() - 86_400_000);
+		const prevDateStr = prevDate.toLocaleDateString("en-CA", {
+			timeZone: timezone,
+		});
+		return overlaps(prevDateStr, 1);
+	}
+
+	return false;
+};
+
+/**
+ * Get the local day-of-week (0=Sun, 6=Sat) for a date in a timezone.
+ */
+const getLocalDayOfWeek = (date: Date, timezone: string): number => {
+	const local = new Date(date.toLocaleString("en-US", { timeZone: timezone }));
+	return local.getDay();
+};
+
+/**
+ * Annotate each slot with its effective minimum-duration requirement.
+ *
+ * Instead of filtering out slots that don't meet the minimum, every slot
+ * is returned with a `requiredMinimumDurationMinutes` value so the frontend
+ * can show restricted slots in a different colour (e.g. muted / lighter)
+ * and, on click, redirect the user to the same start time but with the
+ * required longer duration.
+ *
+ * For each slot the effective minimum is:
+ *   max(globalBoatMinimum, ...matchingRuleMinimums)
+ */
+export const annotateSlotMinimumDuration = (params: {
+	slots: TimeSlot[];
+	boatMinimumHours: number;
+	minimumDurationRules: MinimumDurationRule[];
+	timezone: string;
+}): AnnotatedTimeSlot[] => {
+	const { slots, boatMinimumHours, minimumDurationRules, timezone } = params;
+	const globalMinMinutes = boatMinimumHours * 60;
+	const activeRules = minimumDurationRules.filter((r) => r.isActive);
+
+	return slots.map((slot) => {
+		let requiredMinutes = globalMinMinutes;
+
+		for (const rule of activeRules) {
+			if (rule.daysOfWeek) {
+				const dayOfWeek = getLocalDayOfWeek(slot.startsAt, timezone);
+				const crossesMidnight =
+					rule.endHour * 60 + rule.endMinute <=
+					rule.startHour * 60 + rule.startMinute;
+				const prevDay = (dayOfWeek + 6) % 7;
+				if (
+					!(
+						rule.daysOfWeek.includes(dayOfWeek) ||
+						(crossesMidnight && rule.daysOfWeek.includes(prevDay))
+					)
+				) {
+					continue;
+				}
+			}
+
+			if (slotIntersectsRuleWindow(slot, rule, timezone)) {
+				requiredMinutes = Math.max(
+					requiredMinutes,
+					rule.minimumDurationMinutes
+				);
+			}
+		}
+
+		return {
+			...slot,
+			requiredMinimumDurationMinutes: requiredMinutes,
+		};
+	});
+};
+
+/**
+ * Build the list of selectable duration options (in hours) based on the
+ * boat's global minimum. Rules don't reduce the global list — they only
+ * affect per-slot filtering at query time.
+ */
+export const buildDurationOptions = (params: {
+	boatMinimumHours: number;
+	minimumDurationRules: MinimumDurationRule[];
+}): number[] =>
+	STANDARD_DURATION_OPTIONS.filter((hours) => hours >= params.boatMinimumHours);

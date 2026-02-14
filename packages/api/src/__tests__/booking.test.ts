@@ -7,8 +7,12 @@ import {
 	getPublicBookingQuoteInputSchema,
 	getPublicCheckoutReadModelInputSchema,
 	isValidDiscountCode,
+	listAffiliateBookingsInputSchema,
 	listManagedBookingPaymentAttemptsInputSchema,
 	listManagedBookingsInputSchema,
+	listMineBookingDisputesInputSchema,
+	listMineBookingPaymentAttemptsInputSchema,
+	listMineBookingRefundsInputSchema,
 	listPublicBoatAvailabilityInputSchema,
 	normalizeDiscountCode,
 	processBookingRefundInputSchema,
@@ -390,6 +394,48 @@ describe("booking router schemas", () => {
 	it("accepts managed payment attempt list payload", () => {
 		const result = listManagedBookingPaymentAttemptsInputSchema.safeParse({
 			status: "captured",
+			limit: 20,
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts mine payment attempt list payload", () => {
+		const result = listMineBookingPaymentAttemptsInputSchema.safeParse({
+			bookingId: "booking-1",
+			status: "captured",
+			limit: 20,
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts mine dispute list payload", () => {
+		const result = listMineBookingDisputesInputSchema.safeParse({
+			bookingId: "booking-1",
+			status: "open",
+			limit: 20,
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts mine refund list payload", () => {
+		const result = listMineBookingRefundsInputSchema.safeParse({
+			bookingId: "booking-1",
+			status: "requested",
+			limit: 20,
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts affiliate booking list payload", () => {
+		const result = listAffiliateBookingsInputSchema.safeParse({
+			organizationId: "org-1",
+			status: "confirmed",
+			sortBy: "createdAt",
+			sortOrder: "asc",
 			limit: 20,
 		});
 

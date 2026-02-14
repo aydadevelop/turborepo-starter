@@ -143,6 +143,9 @@ export const boat = sqliteTable(
 		minimumNoticeMinutes: integer("minimum_notice_minutes")
 			.notNull()
 			.default(0),
+		allowShiftRequests: integer("allow_shift_requests", { mode: "boolean" })
+			.notNull()
+			.default(true),
 		workingHoursStart: integer("working_hours_start").notNull().default(9),
 		workingHoursEnd: integer("working_hours_end").notNull().default(21),
 		timezone: text("timezone").notNull().default("UTC"),
@@ -326,6 +329,31 @@ export const boatAvailabilityRule = sqliteTable(
 			table.startMinute,
 			table.endMinute
 		),
+	]
+);
+
+export const boatMinimumDurationRule = sqliteTable(
+	"boat_minimum_duration_rule",
+	{
+		id: text("id").primaryKey(),
+		boatId: text("boat_id")
+			.notNull()
+			.references(() => boat.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		startHour: integer("start_hour").notNull().default(0),
+		startMinute: integer("start_minute").notNull().default(0),
+		endHour: integer("end_hour").notNull().default(24),
+		endMinute: integer("end_minute").notNull().default(0),
+		minimumDurationMinutes: integer("minimum_duration_minutes")
+			.notNull()
+			.default(60),
+		daysOfWeek: text("days_of_week", { mode: "json" }).$type<number[] | null>(),
+		isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+		...timestamps,
+	},
+	(table) => [
+		index("boat_minimum_duration_rule_boatId_idx").on(table.boatId),
+		index("boat_minimum_duration_rule_isActive_idx").on(table.isActive),
 	]
 );
 

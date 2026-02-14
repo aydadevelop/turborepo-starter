@@ -148,6 +148,14 @@
 				limit: 30,
 				offset: 0,
 			},
+			context: {
+				queryKey: [
+					"booking.availabilityPublic",
+					parsed.startsAt.toISOString(),
+					parsed.endsAt.toISOString(),
+					parsed.passengers,
+				],
+			},
 		});
 	});
 

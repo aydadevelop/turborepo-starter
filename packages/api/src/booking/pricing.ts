@@ -471,7 +471,8 @@ export const estimateBookingHours = (params: {
 	profileMinimumHours: number;
 }) => {
 	const intervalMs = params.endsAt.getTime() - params.startsAt.getTime();
-	const intervalHours = Math.max(1, Math.ceil(intervalMs / 3_600_000));
+	// Round up to the nearest half-hour (0.5h granularity)
+	const intervalHours = Math.ceil((intervalMs / 3_600_000) * 2) / 2;
 	return Math.max(
 		intervalHours,
 		params.boatMinimumHours,

@@ -1,3 +1,4 @@
+import { affiliatePayoutStatusValues } from "@full-stack-cf-app/db/schema/affiliate";
 import { boatTypeValues } from "@full-stack-cf-app/db/schema/boat";
 import {
 	booking,
@@ -15,12 +16,15 @@ import {
 	bookingPaymentStatusValues,
 	bookingRefund,
 	bookingRefundStatusValues,
+	bookingShiftRequest,
+	bookingShiftRequestStatusValues,
 	bookingSourceValues,
 	bookingStatusValues,
 	discountTypeValues,
 } from "@full-stack-cf-app/db/schema/booking";
 import { createSelectSchema } from "drizzle-orm/zod";
 import z from "zod";
+import { boatMinimumDurationRuleOutputSchema } from "./boat.schemas";
 import {
 	bookingCancellationEvidenceTypeValues,
 	bookingCancellationReasonCodeValues,
@@ -37,6 +41,33 @@ export const isValidDiscountCode = (value: string) =>
 
 export const bookingIdInputSchema = z.object({
 	bookingId: z.string().trim().min(1),
+});
+
+export const listMineBookingsInputSchema = z.object({
+	status: z.enum(bookingStatusValues).optional(),
+	from: z.coerce.date().optional(),
+	to: z.coerce.date().optional(),
+	sortBy: z
+		.enum(["startsAt", "createdAt", "totalPriceCents"])
+		.default("startsAt"),
+	sortOrder: z.enum(["asc", "desc"]).default("desc"),
+	offset: z.number().int().min(0).default(0),
+	limit: z.number().int().min(1).max(100).default(20),
+});
+
+export const listAffiliateBookingsInputSchema =
+	listMineBookingsInputSchema.extend({
+		organizationId: z.string().trim().optional(),
+	});
+
+export const listManagedAffiliatePayoutsInputSchema = z.object({
+	organizationId: z.string().trim().optional(),
+	affiliateUserId: z.string().trim().optional(),
+	status: z.enum(affiliatePayoutStatusValues).optional(),
+	from: z.coerce.date().optional(),
+	to: z.coerce.date().optional(),
+	limit: z.number().int().min(1).max(200).default(100),
+	offset: z.number().int().min(0).default(0),
 });
 
 export const listManagedBookingsInputSchema = z.object({
@@ -292,10 +323,50 @@ export const reviewBookingCancellationInputSchema = bookingIdInputSchema.extend(
 	}
 );
 
+export const listMineBookingCancellationRequestsInputSchema = z.object({
+	status: z.enum(bookingCancellationRequestStatusValues).optional(),
+	limit: z.number().int().min(1).max(100).default(50),
+});
+
 export const listManagedBookingCancellationRequestsInputSchema = z.object({
 	status: z.enum(bookingCancellationRequestStatusValues).optional(),
 	limit: z.number().int().min(1).max(100).default(50),
 });
+
+export const createBookingShiftRequestInputSchema = bookingIdInputSchema
+	.extend({
+		startsAt: z.coerce.date(),
+		endsAt: z.coerce.date(),
+		passengers: z.number().int().min(1).max(500).optional(),
+		reason: optionalTrimmedString(1000),
+	})
+	.refine((value) => value.startsAt < value.endsAt, {
+		message: "startsAt must be before endsAt",
+		path: ["endsAt"],
+	});
+
+export const listMineBookingShiftRequestsInputSchema = z.object({
+	status: z.enum(bookingShiftRequestStatusValues).optional(),
+	limit: z.number().int().min(1).max(100).default(50),
+});
+
+export const listManagedBookingShiftRequestsInputSchema = z.object({
+	status: z.enum(bookingShiftRequestStatusValues).optional(),
+	bookingId: z.string().trim().optional(),
+	limit: z.number().int().min(1).max(100).default(50),
+});
+
+export const reviewBookingShiftRequestMineInputSchema =
+	bookingIdInputSchema.extend({
+		decision: z.enum(["approve", "reject"]),
+		note: optionalTrimmedString(1000),
+	});
+
+export const reviewBookingShiftRequestManagedInputSchema =
+	bookingIdInputSchema.extend({
+		decision: z.enum(["approve", "reject"]),
+		note: optionalTrimmedString(1000),
+	});
 
 export const createBookingDisputeInputSchema = bookingIdInputSchema.extend({
 	reasonCode: optionalTrimmedString(80),
@@ -304,6 +375,13 @@ export const createBookingDisputeInputSchema = bookingIdInputSchema.extend({
 
 export const listManagedBookingDisputesInputSchema = z.object({
 	status: z.enum(bookingDisputeStatusValues).optional(),
+	bookingId: z.string().trim().optional(),
+	limit: z.number().int().min(1).max(100).default(50),
+});
+
+export const listMineBookingDisputesInputSchema = z.object({
+	status: z.enum(bookingDisputeStatusValues).optional(),
+	bookingId: z.string().trim().optional(),
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
@@ -320,6 +398,13 @@ export const requestBookingRefundInputSchema = bookingIdInputSchema.extend({
 
 export const listManagedBookingRefundsInputSchema = z.object({
 	status: z.enum(bookingRefundStatusValues).optional(),
+	bookingId: z.string().trim().optional(),
+	limit: z.number().int().min(1).max(100).default(50),
+});
+
+export const listMineBookingRefundsInputSchema = z.object({
+	status: z.enum(bookingRefundStatusValues).optional(),
+	bookingId: z.string().trim().optional(),
 	limit: z.number().int().min(1).max(100).default(50),
 });
 
@@ -360,6 +445,12 @@ export const listManagedBookingPaymentAttemptsInputSchema = z.object({
 	limit: z.number().int().min(1).max(200).default(100),
 });
 
+export const listMineBookingPaymentAttemptsInputSchema = z.object({
+	bookingId: z.string().trim().optional(),
+	status: z.enum(bookingPaymentAttemptStatusValues).optional(),
+	limit: z.number().int().min(1).max(200).default(100),
+});
+
 export const processManagedBookingPaymentAttemptInputSchema = z
 	.object({
 		paymentAttemptId: z.string().trim().min(1),
@@ -383,6 +474,13 @@ export const processManagedBookingPaymentAttemptInputSchema = z
 			path: ["failureReason"],
 		}
 	);
+
+export const processManagedAffiliatePayoutInputSchema = z.object({
+	payoutId: z.string().trim().min(1),
+	status: z.enum(["paid", "voided"]),
+	externalPayoutRef: optionalTrimmedString(255),
+	note: optionalTrimmedString(1000),
+});
 
 export const listManagedDiscountCodesInputSchema = z.object({
 	search: optionalTrimmedString(100),
@@ -481,6 +579,8 @@ export const slotWithPricingOutputSchema = z.object({
 	payLaterCents: z.number().int(),
 	currency: z.string(),
 	discountLabel: z.string().nullable(),
+	requiredMinimumDurationMinutes: z.number(),
+	meetsMinimumDuration: z.boolean(),
 });
 
 export const availableFiltersOutputSchema = z.object({
@@ -510,6 +610,7 @@ export const getBoatByIdPublicOutputSchema = z.object({
 	galleryAssets: z.array(boatAssetOutputSchema),
 	pricingQuote: pricingQuoteOutputSchema.nullable(),
 	pricingRules: z.array(boatPricingRuleOutputSchema),
+	minimumDurationRules: z.array(boatMinimumDurationRuleOutputSchema),
 	slots: z.array(slotWithPricingOutputSchema),
 	availableFilters: availableFiltersOutputSchema,
 });
@@ -594,6 +695,61 @@ export const listManagedBookingsOutputSchema = z.object({
 	total: z.number().int(),
 });
 
+export const listMineBookingsOutputSchema = z.object({
+	items: z.array(bookingOutputSchema),
+	total: z.number().int(),
+});
+
+export const affiliateBookingSummaryOutputSchema = z.object({
+	bookingRef: z.string(),
+	customerRef: z.string(),
+	referralCode: z.string(),
+	boatId: z.string(),
+	boatName: z.string(),
+	startsAt: z.coerce.date(),
+	endsAt: z.coerce.date(),
+	timezone: z.string(),
+	status: z.enum(bookingStatusValues),
+	paymentStatus: z.enum(bookingPaymentStatusValues),
+	passengers: z.number().int(),
+	commissionAmountCents: z.number().int(),
+	commissionCurrency: z.string(),
+	payoutStatus: z.enum(affiliatePayoutStatusValues),
+	payoutEligibleAt: z.coerce.date().nullable(),
+	payoutPaidAt: z.coerce.date().nullable(),
+	payoutVoidedAt: z.coerce.date().nullable(),
+	payoutVoidReason: z.string().nullable(),
+});
+
+export const listAffiliateBookingsOutputSchema = z.object({
+	items: z.array(affiliateBookingSummaryOutputSchema),
+	total: z.number().int(),
+});
+
+export const affiliatePayoutSummaryOutputSchema = z.object({
+	payoutId: z.string(),
+	bookingId: z.string(),
+	bookingRef: z.string(),
+	affiliateUserId: z.string(),
+	referralCode: z.string(),
+	commissionAmountCents: z.number().int(),
+	currency: z.string(),
+	status: z.enum(affiliatePayoutStatusValues),
+	eligibleAt: z.coerce.date().nullable(),
+	paidAt: z.coerce.date().nullable(),
+	voidedAt: z.coerce.date().nullable(),
+	voidReason: z.string().nullable(),
+	startsAt: z.coerce.date(),
+	endsAt: z.coerce.date(),
+	boatId: z.string(),
+	boatName: z.string(),
+});
+
+export const listManagedAffiliatePayoutsOutputSchema = z.object({
+	items: z.array(affiliatePayoutSummaryOutputSchema),
+	total: z.number().int(),
+});
+
 export const getManagedBookingOutputSchema = z.object({
 	booking: bookingOutputSchema,
 	calendarLink: bookingCalendarLinkOutputSchema.optional(),
@@ -609,6 +765,9 @@ export const createManagedBookingOutputSchema = z.object({
 export const bookingCancellationRequestOutputSchema = createSelectSchema(
 	bookingCancellationRequest
 );
+
+export const bookingShiftRequestOutputSchema =
+	createSelectSchema(bookingShiftRequest);
 
 export const bookingDisputeOutputSchema = createSelectSchema(bookingDispute);
 

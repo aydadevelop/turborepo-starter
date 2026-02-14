@@ -426,4 +426,44 @@ describe("booking cancellation policy integration", () => {
 			vi.useRealTimers();
 		}
 	});
+
+	it("rejects customer cancellation request after booking start window", async () => {
+		vi.useFakeTimers();
+		try {
+			vi.setSystemTime(new Date("2026-03-10T10:30:00.000Z"));
+			await seedAuthAndBoat();
+			await seedBookingWithCapturedPayment({
+				bookingId: "booking-customer-too-late",
+				startsAt: new Date("2026-03-10T10:00:00.000Z"),
+				endsAt: new Date("2026-03-10T12:00:00.000Z"),
+				capturedAmountCents: 2000,
+			});
+
+			await expect(
+				call(
+					bookingRouter.cancellationRequestCreate,
+					{
+						bookingId: "booking-customer-too-late",
+						reason: "Need to cancel too late",
+					},
+					{ context: customerContext }
+				)
+			).rejects.toMatchObject({
+				code: "BAD_REQUEST",
+			});
+
+			const requests = await testDbState.db
+				.select()
+				.from(bookingCancellationRequest)
+				.where(
+					eq(
+						bookingCancellationRequest.bookingId,
+						"booking-customer-too-late"
+					)
+				);
+			expect(requests).toHaveLength(0);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 });

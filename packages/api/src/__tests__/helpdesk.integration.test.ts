@@ -39,6 +39,8 @@ const managerContext: Context = {
 	requestHostname: "localhost",
 };
 
+const oneHourMs = 60 * 60 * 1000;
+
 const seedAuthFixtures = async () => {
 	await testDbState.db.insert(organization).values({
 		id: "org-1",
@@ -242,5 +244,124 @@ describe("helpdesk router (integration)", () => {
 		);
 		expect(afterClosedReply.ticket.status).toBe("pending_operator");
 		expect(afterClosedReply.ticket.closedAt).not.toBeNull();
+	});
+
+	it("applies priority SLA defaults and escalates overdue tickets by sweep", async () => {
+		await seedAuthFixtures();
+
+		const highPriorityTicket = await call(
+			helpdeskRouter.ticketCreateManaged,
+			{
+				subject: "High priority issue",
+				priority: "high",
+			},
+			{ context: managerContext }
+		);
+
+		expect(highPriorityTicket.dueAt).not.toBeNull();
+		const highPrioritySlaMs =
+			highPriorityTicket.dueAt!.getTime() - highPriorityTicket.createdAt.getTime();
+		expect(highPrioritySlaMs).toBe(8 * oneHourMs);
+
+		const now = new Date();
+		const overdueOpenTicket = await call(
+			helpdeskRouter.ticketCreateManaged,
+			{
+				subject: "Overdue open",
+				dueAt: new Date(now.getTime() - 2 * oneHourMs),
+			},
+			{ context: managerContext }
+		);
+		const overduePendingTicket = await call(
+			helpdeskRouter.ticketCreateManaged,
+			{
+				subject: "Overdue pending customer",
+				dueAt: new Date(now.getTime() - oneHourMs),
+			},
+			{ context: managerContext }
+		);
+		await call(
+			helpdeskRouter.ticketStatusManaged,
+			{
+				ticketId: overduePendingTicket.id,
+				status: "pending_customer",
+			},
+			{ context: managerContext }
+		);
+
+		const overdueResolvedTicket = await call(
+			helpdeskRouter.ticketCreateManaged,
+			{
+				subject: "Overdue resolved",
+				dueAt: new Date(now.getTime() - oneHourMs),
+			},
+			{ context: managerContext }
+		);
+		await call(
+			helpdeskRouter.ticketStatusManaged,
+			{
+				ticketId: overdueResolvedTicket.id,
+				status: "resolved",
+			},
+			{ context: managerContext }
+		);
+
+		const sweepResult = await call(
+			helpdeskRouter.ticketSlaSweepManaged,
+			{
+				now,
+				limit: 10,
+			},
+			{ context: managerContext }
+		);
+		expect(sweepResult.dryRun).toBe(false);
+		expect(sweepResult.scannedCount).toBe(2);
+		expect(sweepResult.escalatedCount).toBe(2);
+		expect(sweepResult.escalatedTicketIds).toEqual([
+			overdueOpenTicket.id,
+			overduePendingTicket.id,
+		]);
+
+		const escalatedOpen = await call(
+			helpdeskRouter.ticketGetManaged,
+			{
+				ticketId: overdueOpenTicket.id,
+				includeMessages: false,
+			},
+			{ context: managerContext }
+		);
+		expect(escalatedOpen.ticket.status).toBe("escalated");
+
+		const escalatedPending = await call(
+			helpdeskRouter.ticketGetManaged,
+			{
+				ticketId: overduePendingTicket.id,
+				includeMessages: false,
+			},
+			{ context: managerContext }
+		);
+		expect(escalatedPending.ticket.status).toBe("escalated");
+
+		const stillResolved = await call(
+			helpdeskRouter.ticketGetManaged,
+			{
+				ticketId: overdueResolvedTicket.id,
+				includeMessages: false,
+			},
+			{ context: managerContext }
+		);
+		expect(stillResolved.ticket.status).toBe("resolved");
+
+		const dryRunSweep = await call(
+			helpdeskRouter.ticketSlaSweepManaged,
+			{
+				now: new Date(now.getTime() + oneHourMs),
+				limit: 10,
+				dryRun: true,
+			},
+			{ context: managerContext }
+		);
+		expect(dryRunSweep.escalatedCount).toBe(0);
+		expect(dryRunSweep.escalatedTicketIds).toHaveLength(0);
 	});
 });

@@ -6,7 +6,16 @@ import {
 } from "@full-stack-cf-app/db/schema/support";
 import { notificationsPusher } from "@full-stack-cf-app/notifications/pusher";
 import { ORPCError } from "@orpc/server";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import {
+	and,
+	asc,
+	desc,
+	eq,
+	inArray,
+	isNotNull,
+	lte,
+	sql,
+} from "drizzle-orm";
 import z from "zod";
 
 import { organizationPermissionProcedure } from "../index";
@@ -17,6 +26,8 @@ import {
 	getManagedSupportTicketInputSchema,
 	listManagedSupportTicketMessagesInputSchema,
 	listManagedSupportTicketsInputSchema,
+	sweepManagedSupportTicketSlaInputSchema,
+	sweepManagedSupportTicketSlaOutputSchema,
 	supportTicketMessageOutputSchema,
 	supportTicketOutputSchema,
 	updateManagedSupportTicketStatusInputSchema,
@@ -25,6 +36,32 @@ import {
 	requireActiveMembership,
 	requireSessionUserId,
 } from "./shared/auth-utils";
+
+const supportTicketSlaEscalationStatuses = [
+	"open",
+	"pending_customer",
+	"pending_operator",
+] as const;
+
+const supportTicketNonTerminalStatuses = [
+	...supportTicketSlaEscalationStatuses,
+	"escalated",
+] as const;
+
+const supportTicketSlaHoursByPriority: Record<string, number> = {
+	low: 48,
+	normal: 24,
+	high: 8,
+	urgent: 2,
+};
+
+const computeDefaultSupportTicketDueAt = (params: {
+	priority: string;
+	createdAt: Date;
+}) => {
+	const hours = supportTicketSlaHoursByPriority[params.priority] ?? 24;
+	return new Date(params.createdAt.getTime() + hours * 60 * 60 * 1000);
+};
 
 const requireManagedSupportTicket = async (params: {
 	ticketId: string;
@@ -62,6 +99,13 @@ export const helpdeskRouter = {
 		.handler(async ({ context, input }) => {
 			const activeMembership = requireActiveMembership(context);
 			const sessionUserId = requireSessionUserId(context);
+			const createdAt = new Date();
+			const dueAt =
+				input.dueAt ??
+				computeDefaultSupportTicketDueAt({
+					priority: input.priority,
+					createdAt,
+				});
 
 			if (input.bookingId) {
 				const [managedBooking] = await db
@@ -94,10 +138,10 @@ export const helpdeskRouter = {
 				priority: input.priority,
 				subject: input.subject,
 				description: input.description,
-				dueAt: input.dueAt,
+				dueAt,
 				metadata: input.metadata,
-				createdAt: new Date(),
-				updatedAt: new Date(),
+				createdAt,
+				updatedAt: createdAt,
 			});
 
 			const [createdTicket] = await db
@@ -171,6 +215,13 @@ export const helpdeskRouter = {
 				input.assignedToUserId
 					? eq(supportTicket.assignedToUserId, input.assignedToUserId)
 					: undefined,
+				input.overdueOnly
+					? and(
+							isNotNull(supportTicket.dueAt),
+							lte(supportTicket.dueAt, new Date()),
+							inArray(supportTicket.status, supportTicketNonTerminalStatuses)
+						)
+					: undefined,
 				input.search
 					? sql`(lower(${supportTicket.subject}) like ${`%${input.search.toLowerCase()}%`} or lower(coalesce(${supportTicket.description}, '')) like ${`%${input.search.toLowerCase()}%`})`
 					: undefined
@@ -186,6 +237,108 @@ export const helpdeskRouter = {
 				.where(where)
 				.orderBy(desc(supportTicket.createdAt))
 				.limit(input.limit);
+		}),
+
+	ticketSlaSweepManaged: organizationPermissionProcedure({
+		support: ["update"],
+	})
+		.route({
+			tags: ["Helpdesk"],
+			summary: "Escalate overdue support tickets",
+			description:
+				"Escalates overdue support tickets based on SLA due time and emits notification events for assignees/customers.",
+		})
+		.input(sweepManagedSupportTicketSlaInputSchema)
+		.output(sweepManagedSupportTicketSlaOutputSchema)
+		.handler(async ({ context, input }) => {
+			const activeMembership = requireActiveMembership(context);
+			const sessionUserId = requireSessionUserId(context);
+			const now = input.now ?? new Date();
+
+			const overdueTickets = await db
+				.select()
+				.from(supportTicket)
+				.where(
+					and(
+						eq(supportTicket.organizationId, activeMembership.organizationId),
+						inArray(
+							supportTicket.status,
+							supportTicketSlaEscalationStatuses
+						),
+						isNotNull(supportTicket.dueAt),
+						lte(supportTicket.dueAt, now)
+					)
+				)
+				.orderBy(asc(supportTicket.dueAt), asc(supportTicket.createdAt))
+				.limit(input.limit);
+
+			const escalatedTicketIds = overdueTickets.map((ticket) => ticket.id);
+			if (!input.dryRun && escalatedTicketIds.length > 0) {
+				await db
+					.update(supportTicket)
+					.set({
+						status: "escalated",
+						updatedAt: now,
+					})
+					.where(inArray(supportTicket.id, escalatedTicketIds));
+
+				for (const ticket of overdueTickets) {
+					const recipientUserIds = [
+						ticket.assignedToUserId,
+						ticket.customerUserId,
+						ticket.createdByUserId,
+					].filter((value, index, array): value is string => {
+						return Boolean(value) && array.indexOf(value) === index;
+					});
+					if (recipientUserIds.length === 0) {
+						continue;
+					}
+
+					try {
+						await notificationsPusher({
+							input: {
+								organizationId: activeMembership.organizationId,
+								actorUserId: sessionUserId,
+								eventType: "support.ticket.sla_escalated",
+								sourceType: "support_ticket",
+								sourceId: ticket.id,
+								idempotencyKey: `support.ticket.sla_escalated:${ticket.id}:${now.toISOString()}`,
+								payload: {
+									recipients: recipientUserIds.map((userId) => ({
+										userId,
+										title: `Ticket escalated: ${ticket.subject}`,
+										body:
+											"SLA due time passed. Ticket needs immediate attention.",
+										ctaUrl: `/dashboard/helpdesk/${ticket.id}`,
+										channels: ["in_app"],
+										severity: "warning",
+										metadata: {
+											ticketId: ticket.id,
+											priority: ticket.priority,
+											previousStatus: ticket.status,
+											dueAt: ticket.dueAt?.toISOString() ?? null,
+										},
+									})),
+								},
+							},
+							queue: context.notificationQueue,
+						});
+					} catch (error) {
+						console.error(
+							"Failed to emit support.ticket.sla_escalated event",
+							error
+						);
+					}
+				}
+			}
+
+			return {
+				now: now.toISOString(),
+				dryRun: input.dryRun,
+				scannedCount: overdueTickets.length,
+				escalatedCount: input.dryRun ? 0 : overdueTickets.length,
+				escalatedTicketIds,
+			};
 		}),
 
 	ticketGetManaged: organizationPermissionProcedure({
@@ -401,7 +554,9 @@ export const helpdeskRouter = {
 				.update(supportTicket)
 				.set({
 					status:
-						input.isInternal || managedTicket.status === "resolved"
+						input.isInternal ||
+						managedTicket.status === "resolved" ||
+						managedTicket.status === "escalated"
 							? managedTicket.status
 							: "pending_operator",
 					updatedAt: new Date(),

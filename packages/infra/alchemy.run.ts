@@ -9,6 +9,23 @@ import {
 import { CloudflareStateStore } from "alchemy/state";
 import { config } from "dotenv";
 
+// Prevent crash when dev server rebuild terminates in-flight HTTP connections.
+// undici emits unhandled 'error' events on aborted fetch streams during restart.
+process.on("uncaughtException", (error) => {
+	if (
+		error instanceof TypeError &&
+		error.message === "terminated" &&
+		"cause" in error &&
+		error.cause instanceof Error &&
+		"code" in error.cause &&
+		error.cause.code === "UND_ERR_SOCKET"
+	) {
+		return;
+	}
+	console.error(error);
+	process.exit(1);
+});
+
 // Parse --stage from CLI or default to "dev"
 const stageIndex = process.argv.indexOf("--stage");
 const stage =
@@ -21,11 +38,11 @@ const isDeployCommand =
 	lifecycleEvent === "deploy" || process.argv.includes("deploy");
 const isDestroyCommand =
 	lifecycleEvent === "destroy" || process.argv.includes("destroy");
-const isLocalDevRuntime = process.argv.includes("--dev");
 
 // Only deploy/destroy commands (or CI) use production server env.
 const isDeploying =
 	isDeployCommand || isDestroyCommand || Boolean(process.env.CI);
+const isLocalDevRuntime = !isDeploying;
 const envPath = isDeploying ? ".production" : "";
 config({ path: `../../apps/server/.env${envPath}` });
 config({ path: "./.env" });

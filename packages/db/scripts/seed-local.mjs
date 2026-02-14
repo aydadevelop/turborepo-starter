@@ -11,6 +11,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { hashPassword } from "better-auth/crypto";
 import Database from "better-sqlite3";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -266,6 +267,42 @@ const isIgnorableMigrationError = (error) => {
 	);
 };
 
+const collectMigrationSqlFiles = (rootDir) => {
+	const sqlFiles = [];
+	const stack = [rootDir];
+
+	while (stack.length > 0) {
+		const currentDir = stack.pop();
+		if (!currentDir) {
+			continue;
+		}
+
+		for (const entry of readdirSync(currentDir, { withFileTypes: true })) {
+			const absolutePath = path.join(currentDir, entry.name);
+			if (entry.isDirectory()) {
+				stack.push(absolutePath);
+				continue;
+			}
+
+			if (!entry.isFile()) {
+				continue;
+			}
+
+			const isLegacySql = MIGRATION_FILENAME_RE.test(entry.name);
+			const isFolderStyleSql = entry.name === "migration.sql";
+			if (!isLegacySql && !isFolderStyleSql) {
+				continue;
+			}
+
+			sqlFiles.push(absolutePath);
+		}
+	}
+
+	return sqlFiles.sort((left, right) =>
+		left.localeCompare(right, undefined, { numeric: true })
+	);
+};
+
 const applyMigrationsIfNeeded = (sqlite, requiredTables) => {
 	const missingTables = getMissingTables(sqlite, requiredTables);
 	if (missingTables.length === 0) {
@@ -273,10 +310,7 @@ const applyMigrationsIfNeeded = (sqlite, requiredTables) => {
 	}
 
 	const migrationsDir = path.resolve(scriptDir, "../src/migrations");
-	const migrationFiles = readdirSync(migrationsDir)
-		.filter((filename) => MIGRATION_FILENAME_RE.test(filename))
-		.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-		.map((filename) => path.resolve(migrationsDir, filename));
+	const migrationFiles = collectMigrationSqlFiles(migrationsDir);
 
 	for (const migrationPath of migrationFiles) {
 		const rawSql = readFileSync(migrationPath, "utf8");
@@ -301,7 +335,11 @@ const ensureSchemaExists = (sqlite) => {
 	const requiredTables = [
 		"organization",
 		"user",
+		"account",
 		"member",
+		"affiliate_referral",
+		"booking_affiliate_attribution",
+		"booking_affiliate_payout",
 		"boat_dock",
 		"boat",
 		"boat_asset",
@@ -310,12 +348,14 @@ const ensureSchemaExists = (sqlite) => {
 		"boat_availability_block",
 		"boat_pricing_profile",
 		"boat_pricing_rule",
+		"boat_minimum_duration_rule",
 		"booking",
 		"booking_calendar_link",
 		"booking_discount_code",
 		"booking_discount_application",
 		"booking_payment_attempt",
 		"booking_cancellation_request",
+		"booking_shift_request",
 		"booking_dispute",
 		"booking_refund",
 		"support_ticket",
@@ -379,7 +419,7 @@ const withCommon = (rows, now) =>
 		...row,
 	}));
 
-const buildBaselineSeedData = ({ anchorDateMs }) => {
+const buildBaselineSeedData = ({ anchorDateMs, ownerPasswordHash }) => {
 	const atUtc = (dayOffset, hour, minute = 0) =>
 		anchorDateMs + dayOffset * DAY_MS + hour * HOUR_MS + minute * 60 * 1000;
 	const now = atUtc(0, 9);
@@ -389,6 +429,7 @@ const buildBaselineSeedData = ({ anchorDateMs }) => {
 	const userManagerId = "seed_user_manager_olga";
 	const userAgentId = "seed_user_agent_nina";
 	const userCustomerId = "seed_user_customer_ivan";
+	const userAffiliateId = "seed_user_affiliate_lena";
 
 	const dockNorthId = "seed_dock_demo_north";
 	const dockSouthId = "seed_dock_demo_south";
@@ -400,6 +441,8 @@ const buildBaselineSeedData = ({ anchorDateMs }) => {
 	const bookingConfirmedId = "seed_booking_aurora_confirmed";
 	const bookingPendingId = "seed_booking_odyssey_pending";
 	const bookingCompletedId = "seed_booking_aurora_completed";
+	const bookingCollisionBlockerId = "seed_booking_aurora_collision_blocker";
+	const shiftRequestCollisionId = "seed_shift_request_collision_pending";
 
 	const ticketOpenId = "seed_ticket_open_route_help";
 	const ticketResolvedId = "seed_ticket_resolved_feedback";
@@ -424,7 +467,7 @@ const buildBaselineSeedData = ({ anchorDateMs }) => {
 				{
 					id: userOwnerId,
 					name: "Alex Owner",
-					email: "owner+seed@boat.local",
+					email: "boat@boat.com",
 					email_verified: 1,
 					image: null,
 				},
@@ -448,6 +491,25 @@ const buildBaselineSeedData = ({ anchorDateMs }) => {
 					email: "customer+seed@boat.local",
 					email_verified: 1,
 					image: null,
+				},
+				{
+					id: userAffiliateId,
+					name: "Lena Affiliate",
+					email: "affiliate+seed@boat.local",
+					email_verified: 1,
+					image: null,
+				},
+			],
+			now
+		),
+		accounts: withCommon(
+			[
+				{
+					id: "seed_account_owner_credential",
+					account_id: userOwnerId,
+					provider_id: "credential",
+					user_id: userOwnerId,
+					password: ownerPasswordHash,
 				},
 			],
 			now
@@ -798,6 +860,59 @@ const buildBaselineSeedData = ({ anchorDateMs }) => {
 			],
 			now
 		),
+		minimumDurationRules: withCommon(
+			[
+				{
+					id: "seed_min_dur_aurora_bridge",
+					boat_id: boatAuroraId,
+					name: "Bridge hours (01:00–03:00)",
+					start_hour: 1,
+					start_minute: 0,
+					end_hour: 3,
+					end_minute: 0,
+					minimum_duration_minutes: 120,
+					days_of_week: null,
+					is_active: 1,
+				},
+				{
+					id: "seed_min_dur_odyssey_global",
+					boat_id: boatOdysseyId,
+					name: "Yacht minimum 5h",
+					start_hour: 0,
+					start_minute: 0,
+					end_hour: 24,
+					end_minute: 0,
+					minimum_duration_minutes: 300,
+					days_of_week: null,
+					is_active: 1,
+				},
+				{
+					id: "seed_min_dur_odyssey_weekend_evening",
+					boat_id: boatOdysseyId,
+					name: "Weekend evening min 3h",
+					start_hour: 17,
+					start_minute: 0,
+					end_hour: 22,
+					end_minute: 0,
+					minimum_duration_minutes: 180,
+					days_of_week: toJson([5, 6]),
+					is_active: 1,
+				},
+				{
+					id: "seed_min_dur_night_shift_bridge",
+					boat_id: boatNightShiftId,
+					name: "Night bridge hours (01:00–03:00)",
+					start_hour: 1,
+					start_minute: 0,
+					end_hour: 3,
+					end_minute: 0,
+					minimum_duration_minutes: 180,
+					days_of_week: null,
+					is_active: 1,
+				},
+			],
+			now
+		),
 		pricingRules: withCommon(
 			[
 				{
@@ -908,6 +1023,37 @@ const buildBaselineSeedData = ({ anchorDateMs }) => {
 			],
 			now
 		),
+		affiliateReferrals: withCommon(
+			[
+				{
+					id: "seed_affiliate_referral_lena_org",
+					code: "SEEDLENA10",
+					affiliate_user_id: userAffiliateId,
+					organization_id: organizationId,
+					name: "Lena Marina Referral",
+					status: "active",
+					attribution_window_days: 30,
+					metadata: toJson({
+						scenario: "baseline",
+						channel: "content",
+					}),
+				},
+				{
+					id: "seed_affiliate_referral_lena_global",
+					code: "SEEDLENA_GLOBAL",
+					affiliate_user_id: userAffiliateId,
+					organization_id: null,
+					name: "Lena Global Referral",
+					status: "active",
+					attribution_window_days: 45,
+					metadata: toJson({
+						scenario: "baseline",
+						channel: "global-partner",
+					}),
+				},
+			],
+			now
+		),
 		bookings: withCommon(
 			[
 				{
@@ -1000,6 +1146,106 @@ const buildBaselineSeedData = ({ anchorDateMs }) => {
 					refund_amount_cents: null,
 					metadata: toJson({ channel: "partner", scenario: "baseline" }),
 				},
+				{
+					id: bookingCollisionBlockerId,
+					organization_id: organizationId,
+					boat_id: boatAuroraId,
+					customer_user_id: userManagerId,
+					created_by_user_id: userOwnerId,
+					source: "manual",
+					status: "confirmed",
+					payment_status: "unpaid",
+					calendar_sync_status: "pending",
+					starts_at: atUtc(1, 12, 30),
+					ends_at: atUtc(1, 15, 30),
+					passengers: 2,
+					contact_name: "Ops Hold",
+					contact_phone: null,
+					contact_email: null,
+					timezone: "Europe/Moscow",
+					base_price_cents: 200_000,
+					discount_amount_cents: 0,
+					total_price_cents: 200_000,
+					currency: "RUB",
+					notes: "Collision blocker for shift approval demo",
+					special_requests: null,
+					external_ref: "seed-manual-collision-blocker",
+					cancelled_at: null,
+					cancelled_by_user_id: null,
+					cancellation_reason: null,
+					refund_amount_cents: null,
+					metadata: toJson({ scenario: "baseline", lane: "shift-collision" }),
+				},
+			],
+			now
+		),
+		bookingAffiliateAttributions: withCommon(
+			[
+				{
+					id: "seed_booking_aff_attribution_completed",
+					booking_id: bookingCompletedId,
+					organization_id: organizationId,
+					affiliate_user_id: userAffiliateId,
+					referral_id: "seed_affiliate_referral_lena_org",
+					referral_code: "SEEDLENA10",
+					source: "cookie",
+					clicked_at: atUtc(-5, 11, 15),
+					metadata: toJson({
+						scenario: "baseline",
+						landingPath: "/boats/seed-aurora-8",
+					}),
+				},
+				{
+					id: "seed_booking_aff_attribution_pending",
+					booking_id: bookingPendingId,
+					organization_id: organizationId,
+					affiliate_user_id: userAffiliateId,
+					referral_id: "seed_affiliate_referral_lena_global",
+					referral_code: "SEEDLENA_GLOBAL",
+					source: "query",
+					clicked_at: atUtc(1, 14, 20),
+					metadata: toJson({
+						scenario: "baseline",
+						landingPath: "/boats/seed-odyssey-12",
+					}),
+				},
+			],
+			now
+		),
+		bookingAffiliatePayouts: withCommon(
+			[
+				{
+					id: "seed_booking_aff_payout_completed",
+					attribution_id: "seed_booking_aff_attribution_completed",
+					booking_id: bookingCompletedId,
+					organization_id: organizationId,
+					affiliate_user_id: userAffiliateId,
+					commission_amount_cents: 21_000,
+					currency: "RUB",
+					status: "eligible",
+					eligible_at: atUtc(-2, 9, 0),
+					paid_at: null,
+					voided_at: null,
+					void_reason: null,
+					external_payout_ref: null,
+					metadata: toJson({ scenario: "baseline" }),
+				},
+				{
+					id: "seed_booking_aff_payout_pending",
+					attribution_id: "seed_booking_aff_attribution_pending",
+					booking_id: bookingPendingId,
+					organization_id: organizationId,
+					affiliate_user_id: userAffiliateId,
+					commission_amount_cents: 48_000,
+					currency: "RUB",
+					status: "pending",
+					eligible_at: null,
+					paid_at: null,
+					voided_at: null,
+					void_reason: null,
+					external_payout_ref: null,
+					metadata: toJson({ scenario: "baseline" }),
+				},
 			],
 			now
 		),
@@ -1074,6 +1320,59 @@ const buildBaselineSeedData = ({ anchorDateMs }) => {
 					failure_reason: null,
 					metadata: toJson({ source: "seed-baseline" }),
 					processed_at: now,
+				},
+			],
+			now
+		),
+		shiftRequests: withCommon(
+			[
+				{
+					id: shiftRequestCollisionId,
+					booking_id: bookingConfirmedId,
+					organization_id: organizationId,
+					requested_by_user_id: userCustomerId,
+					initiated_by_role: "customer",
+					status: "pending",
+					customer_decision: "approved",
+					customer_decision_by_user_id: userCustomerId,
+					customer_decision_at: now - 30 * 60 * 1000,
+					customer_decision_note: "Can we shift a bit later?",
+					manager_decision: "pending",
+					manager_decision_by_user_id: null,
+					manager_decision_at: null,
+					manager_decision_note: null,
+					current_starts_at: atUtc(1, 10),
+					current_ends_at: atUtc(1, 13),
+					proposed_starts_at: atUtc(1, 12),
+					proposed_ends_at: atUtc(1, 15),
+					current_passengers: 6,
+					proposed_passengers: 6,
+					current_base_price_cents: 450_000,
+					current_discount_amount_cents: 45_000,
+					proposed_base_price_cents: 450_000,
+					proposed_discount_amount_cents: 45_000,
+					current_total_price_cents: 405_000,
+					proposed_total_price_cents: 405_000,
+					current_pay_now_cents: 0,
+					proposed_pay_now_cents: 0,
+					price_delta_cents: 0,
+					pay_now_delta_cents: 0,
+					currency: "RUB",
+					discount_code: "SEED_EARLY10",
+					reason: "Shift to later daytime slot",
+					rejected_by_user_id: null,
+					rejected_at: null,
+					rejection_reason: null,
+					applied_by_user_id: null,
+					applied_at: null,
+					payment_adjustment_status: "none",
+					payment_adjustment_amount_cents: 0,
+					payment_adjustment_reference: null,
+					metadata: toJson({
+						scenario: "baseline",
+						expectedOutcome: "cancelled_on_manager_approval",
+					}),
+					requested_at: now - 30 * 60 * 1000,
 				},
 			],
 			now
@@ -1244,8 +1543,9 @@ const applyBookingPressureScenario = (seed) => {
 			status: "confirmed",
 			payment_status: "partially_paid",
 			calendar_sync_status: "linked",
-			starts_at: atUtc(1, 12),
-			ends_at: atUtc(1, 15),
+			// No-overlap trigger now enforces hard constraints; keep back-to-back pressure.
+			starts_at: atUtc(1, 13),
+			ends_at: atUtc(1, 16),
 			passengers: 4,
 			contact_name: "Ivan Petrov",
 			contact_phone: "+79991234567",
@@ -1255,7 +1555,7 @@ const applyBookingPressureScenario = (seed) => {
 			discount_amount_cents: 0,
 			total_price_cents: 360_000,
 			currency: "RUB",
-			notes: "Intentional overlap for stress checks",
+			notes: "Back-to-back stress slot for no-overlap checks",
 			special_requests: null,
 			external_ref: "seed-api-overlap-1",
 			cancelled_at: null,
@@ -1416,6 +1716,39 @@ const applyBookingPressureScenario = (seed) => {
 		requested_at: atUtc(0, 16),
 		approved_at: null,
 		processed_at: null,
+		created_at: now,
+		updated_at: now,
+	});
+
+	seed.bookingAffiliateAttributions.push({
+		id: "seed_booking_aff_attribution_cancelled",
+		booking_id: "seed_booking_odyssey_cancelled",
+		organization_id: organizationId,
+		affiliate_user_id: "seed_user_affiliate_lena",
+		referral_id: "seed_affiliate_referral_lena_org",
+		referral_code: "SEEDLENA10",
+		source: "manual",
+		clicked_at: atUtc(-3, 10),
+		metadata: toJson({ scenario: "booking-pressure" }),
+		created_at: now,
+		updated_at: now,
+	});
+
+	seed.bookingAffiliatePayouts.push({
+		id: "seed_booking_aff_payout_cancelled_voided",
+		attribution_id: "seed_booking_aff_attribution_cancelled",
+		booking_id: "seed_booking_odyssey_cancelled",
+		organization_id: organizationId,
+		affiliate_user_id: "seed_user_affiliate_lena",
+		commission_amount_cents: 42_000,
+		currency: "RUB",
+		status: "voided",
+		eligible_at: null,
+		paid_at: null,
+		voided_at: atUtc(-2, 12, 30),
+		void_reason: "booking_cancelled",
+		external_payout_ref: null,
+		metadata: toJson({ scenario: "booking-pressure" }),
 		created_at: now,
 		updated_at: now,
 	});
@@ -1718,9 +2051,9 @@ const applyPricingIntersectionsScenario = (seed) => {
 	});
 };
 
-const buildSeedData = ({ anchorDate, scenario }) => {
+const buildSeedData = ({ anchorDate, scenario, ownerPasswordHash }) => {
 	const anchorDateMs = parseAnchorDate(anchorDate);
-	const seed = buildBaselineSeedData({ anchorDateMs });
+	const seed = buildBaselineSeedData({ anchorDateMs, ownerPasswordHash });
 
 	if (scenario === "booking-pressure" || scenario === "full") {
 		applyBookingPressureScenario(seed);
@@ -1744,15 +2077,20 @@ const clearSeedNamespace = (sqlite) => {
 		"telegram_notification",
 		"support_ticket_message",
 		"support_ticket",
+		"booking_affiliate_payout",
+		"booking_affiliate_attribution",
 		"booking_refund",
 		"booking_dispute",
 		"booking_cancellation_request",
 		"booking_payment_attempt",
 		"booking_discount_application",
 		"booking_calendar_link",
+		"booking_shift_request",
 		"booking",
+		"affiliate_referral",
 		"booking_discount_code",
 		"boat_pricing_rule",
+		"boat_minimum_duration_rule",
 		"boat_pricing_profile",
 		"boat_availability_block",
 		"boat_calendar_connection",
@@ -1761,6 +2099,7 @@ const clearSeedNamespace = (sqlite) => {
 		"boat",
 		"boat_dock",
 		"member",
+		"account",
 		"organization",
 		"user",
 	];
@@ -1795,6 +2134,7 @@ const clearSeedNamespace = (sqlite) => {
 const writeSeedData = (sqlite, seed) => {
 	upsertRow(sqlite, "organization", ["id"], seed.organization);
 	upsertMany(sqlite, "user", seed.users);
+	upsertMany(sqlite, "account", seed.accounts);
 	upsertMany(sqlite, "member", seed.members);
 	upsertMany(sqlite, "boat_dock", seed.docks);
 
@@ -1806,11 +2146,16 @@ const writeSeedData = (sqlite, seed) => {
 		["boat_availability_block", seed.availabilityBlocks],
 		["boat_pricing_profile", seed.pricingProfiles],
 		["boat_pricing_rule", seed.pricingRules],
+		["boat_minimum_duration_rule", seed.minimumDurationRules],
 		["booking_discount_code", seed.discountCodes],
+		["affiliate_referral", seed.affiliateReferrals],
 		["booking", seed.bookings],
+		["booking_affiliate_attribution", seed.bookingAffiliateAttributions],
+		["booking_affiliate_payout", seed.bookingAffiliatePayouts],
 		["booking_calendar_link", seed.bookingCalendarLinks],
 		["booking_discount_application", seed.discountApplications],
 		["booking_payment_attempt", seed.paymentAttempts],
+		["booking_shift_request", seed.shiftRequests],
 		["booking_cancellation_request", seed.cancellationRequests],
 		["booking_dispute", seed.disputes],
 		["booking_refund", seed.refunds],
@@ -1827,7 +2172,7 @@ const writeSeedData = (sqlite, seed) => {
 	}
 };
 
-const main = () => {
+const main = async () => {
 	const options = parseArgs();
 	const resolvedDbPath = options.dbPath ?? findLocalD1Database();
 	const parentDir = path.dirname(resolvedDbPath);
@@ -1839,10 +2184,12 @@ const main = () => {
 	try {
 		sqlite.pragma("foreign_keys = ON");
 		ensureSchemaExists(sqlite);
+		const ownerPasswordHash = await hashPassword("boatboat");
 
 		const seed = buildSeedData({
 			anchorDate: options.anchorDate,
 			scenario: options.scenario,
+			ownerPasswordHash,
 		});
 
 		sqlite.transaction(() => {
@@ -1858,8 +2205,9 @@ const main = () => {
 				`Scenario: ${options.scenario}`,
 				`Anchor date: ${options.anchorDate}`,
 				`Organization: ${seed.organization.slug}`,
-				`Users: ${seed.users.length}, boats: ${seed.boats.length}, bookings: ${seed.bookings.length}, pricing rules: ${seed.pricingRules.length}`,
+				`Users: ${seed.users.length}, boats: ${seed.boats.length}, bookings: ${seed.bookings.length}, shift requests: ${seed.shiftRequests.length}, affiliate referrals: ${seed.affiliateReferrals.length}, affiliate payouts: ${seed.bookingAffiliatePayouts.length}, pricing rules: ${seed.pricingRules.length}, min-duration rules: ${seed.minimumDurationRules.length}`,
 				`Support tickets: ${seed.supportTickets.length}, inbound: ${seed.inboundMessages.length}, telegram webhook events: ${seed.telegramWebhookEvents.length}`,
+				"Owner login: boat@boat.com / boatboat",
 			].join("\n")
 		);
 	} finally {
@@ -1867,4 +2215,7 @@ const main = () => {
 	}
 };
 
-main();
+main().catch((error) => {
+	console.error(error);
+	process.exitCode = 1;
+});

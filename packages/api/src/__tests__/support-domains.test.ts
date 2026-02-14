@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	createManagedSupportTicketInputSchema,
 	createManagedSupportTicketMessageInputSchema,
+	sweepManagedSupportTicketSlaInputSchema,
 	updateManagedSupportTicketStatusInputSchema,
 } from "../routers/helpdesk.schemas";
 import {
@@ -40,6 +41,16 @@ describe("support and intake schemas", () => {
 		const result = updateManagedSupportTicketStatusInputSchema.safeParse({
 			ticketId: "ticket-1",
 			status: "resolved",
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts support ticket SLA sweep payload", () => {
+		const result = sweepManagedSupportTicketSlaInputSchema.safeParse({
+			limit: 50,
+			now: "2026-03-18T10:00:00.000Z",
+			dryRun: false,
 		});
 
 		expect(result.success).toBe(true);

@@ -4,7 +4,7 @@ import {
 	bookingPaymentAttempt,
 } from "@full-stack-cf-app/db/schema/booking";
 import { ORPCError } from "@orpc/server";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, or, sql } from "drizzle-orm";
 import z from "zod";
 import {
 	organizationPermissionProcedure,
@@ -14,8 +14,10 @@ import {
 	bookingPaymentAttemptOutputSchema,
 	createBookingPaymentAttemptInputSchema,
 	listManagedBookingPaymentAttemptsInputSchema,
+	listMineBookingPaymentAttemptsInputSchema,
 	processManagedBookingPaymentAttemptInputSchema,
 } from "../booking.schemas";
+import { reconcileAffiliatePayoutForBooking } from "./affiliate.service";
 import {
 	requireActiveMembership,
 	requireCustomerBookingAccess,
@@ -136,6 +138,16 @@ export const paymentBookingRouter = {
 
 			if (shouldAutoCaptureMock) {
 				await syncBookingPaymentStatusFromAttempts(customerBooking.id);
+				try {
+					await reconcileAffiliatePayoutForBooking({
+						bookingId: customerBooking.id,
+					});
+				} catch (error) {
+					console.error(
+						"Failed to reconcile affiliate payout after mock capture",
+						error
+					);
+				}
 			}
 
 			if (
@@ -167,6 +179,44 @@ export const paymentBookingRouter = {
 				outstandingAmountCents,
 				paymentAttempt: createdPaymentAttempt,
 			};
+		}),
+
+	paymentAttemptListMine: protectedProcedure
+		.route({
+			tags: ["Payment"],
+			summary: "List my payment attempts",
+			description:
+				"List payment attempts for bookings owned by the current signed-in user.",
+		})
+		.input(listMineBookingPaymentAttemptsInputSchema)
+		.output(z.array(bookingPaymentAttemptOutputSchema))
+		.handler(async ({ context, input }) => {
+			const sessionUserId = requireSessionUserId(context);
+			const paymentAttemptColumns = getTableColumns(bookingPaymentAttempt);
+
+			const where = and(
+				or(
+					eq(booking.customerUserId, sessionUserId),
+					eq(booking.createdByUserId, sessionUserId)
+				),
+				input.bookingId
+					? eq(bookingPaymentAttempt.bookingId, input.bookingId)
+					: undefined,
+				input.status
+					? eq(bookingPaymentAttempt.status, input.status)
+					: undefined
+			);
+			if (!where) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR");
+			}
+
+			return await db
+				.select(paymentAttemptColumns)
+				.from(bookingPaymentAttempt)
+				.innerJoin(booking, eq(booking.id, bookingPaymentAttempt.bookingId))
+				.where(where)
+				.orderBy(desc(bookingPaymentAttempt.createdAt))
+				.limit(input.limit);
 		}),
 
 	paymentAttemptListManaged: organizationPermissionProcedure({
@@ -286,6 +336,17 @@ export const paymentBookingRouter = {
 						updatedAt: new Date(),
 					})
 					.where(eq(booking.id, managedBooking.id));
+			}
+
+			try {
+				await reconcileAffiliatePayoutForBooking({
+					bookingId: managedBooking.id,
+				});
+			} catch (error) {
+				console.error(
+					"Failed to reconcile affiliate payout after payment processing",
+					error
+				);
 			}
 
 			const [updatedAttempt] = await db

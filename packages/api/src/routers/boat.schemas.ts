@@ -9,6 +9,7 @@ import {
 	boatAvailabilityRule,
 	boatCalendarConnection,
 	boatDock,
+	boatMinimumDurationRule,
 	boatPricingProfile,
 	boatPricingRule,
 	boatStatusValues,
@@ -51,6 +52,7 @@ export const getManagedBoatInputSchema = boatIdInputSchema.extend({
 	withCalendarConnections: z.boolean().optional().default(true),
 	withAvailability: z.boolean().optional().default(true),
 	withPricing: z.boolean().optional().default(true),
+	withMinimumDurationRules: z.boolean().optional().default(true),
 });
 
 export const createManagedBoatInputSchema = z
@@ -61,13 +63,14 @@ export const createManagedBoatInputSchema = z
 		type: z.enum(boatTypeValues).default("other"),
 		passengerCapacity: z.number().int().min(1).max(500).default(1),
 		crewCapacity: z.number().int().min(0).max(50).default(0),
-		minimumHours: z.number().int().min(1).max(24).default(1),
+		minimumHours: z.number().int().min(0).max(24).default(1),
 		minimumNoticeMinutes: z
 			.number()
 			.int()
 			.min(0)
 			.max(24 * 60)
 			.default(0),
+		allowShiftRequests: z.boolean().default(true),
 		workingHoursStart: z.number().int().min(0).max(23).default(9),
 		workingHoursEnd: z.number().int().min(1).max(24).default(21),
 		timezone: z.string().trim().min(2).max(120).default("UTC"),
@@ -89,13 +92,14 @@ export const updateManagedBoatInputSchema = z
 		type: z.enum(boatTypeValues).optional(),
 		passengerCapacity: z.number().int().min(1).max(500).optional(),
 		crewCapacity: z.number().int().min(0).max(50).optional(),
-		minimumHours: z.number().int().min(1).max(24).optional(),
+		minimumHours: z.number().int().min(0).max(24).optional(),
 		minimumNoticeMinutes: z
 			.number()
 			.int()
 			.min(0)
 			.max(24 * 60)
 			.optional(),
+		allowShiftRequests: z.boolean().optional(),
 		workingHoursStart: z.number().int().min(0).max(23).optional(),
 		workingHoursEnd: z.number().int().min(1).max(24).optional(),
 		timezone: z.string().trim().min(2).max(120).optional(),
@@ -245,7 +249,7 @@ export const createBoatPricingProfileInputSchema = boatIdInputSchema.extend({
 	name: z.string().trim().min(2).max(120),
 	currency: z.string().trim().length(3).default("RUB"),
 	baseHourlyPriceCents: z.number().int().min(0),
-	minimumHours: z.number().int().min(1).max(24).default(1),
+	minimumHours: z.number().int().min(0).max(24).default(1),
 	depositPercentage: z.number().int().min(0).max(100).default(0),
 	serviceFeePercentage: z.number().int().min(0).max(100).default(0),
 	affiliateFeePercentage: z.number().int().min(0).max(100).default(0),
@@ -417,6 +421,61 @@ export const boatPricingProfileOutputSchema =
 
 export const boatPricingRuleOutputSchema = createSelectSchema(boatPricingRule);
 
+export const boatMinimumDurationRuleOutputSchema = createSelectSchema(
+	boatMinimumDurationRule
+);
+
+// ─── minimum duration rule CRUD schemas ─────────────────────────────────────
+
+export const listBoatMinimumDurationRulesInputSchema = boatIdInputSchema;
+
+const halfHourMinute = z.union([z.literal(0), z.literal(30)]);
+
+export const createBoatMinimumDurationRuleInputSchema = boatIdInputSchema
+	.extend({
+		name: z.string().trim().min(2).max(120),
+		startHour: z.number().int().min(0).max(23).default(0),
+		startMinute: halfHourMinute.default(0),
+		endHour: z.number().int().min(0).max(24).default(24),
+		endMinute: halfHourMinute.default(0),
+		minimumDurationMinutes: z.number().int().min(30).max(1440),
+		daysOfWeek: z
+			.array(z.number().int().min(0).max(6))
+			.nullable()
+			.default(null),
+		isActive: z.boolean().default(true),
+	})
+	.refine((v) => !(v.endHour === 24 && v.endMinute !== 0), {
+		message: "endHour=24 only supports endMinute=0",
+		path: ["endMinute"],
+	});
+
+export const updateBoatMinimumDurationRuleInputSchema = boatIdInputSchema
+	.extend({
+		ruleId: z.string().trim().min(1),
+		name: optionalTrimmedString(120),
+		startHour: z.number().int().min(0).max(23).optional(),
+		startMinute: halfHourMinute.optional(),
+		endHour: z.number().int().min(0).max(24).optional(),
+		endMinute: halfHourMinute.optional(),
+		minimumDurationMinutes: z.number().int().min(30).max(1440).optional(),
+		daysOfWeek: z.array(z.number().int().min(0).max(6)).nullable().optional(),
+		isActive: z.boolean().optional(),
+	})
+	.refine(
+		(v) =>
+			!(v.endHour === 24 && v.endMinute !== undefined && v.endMinute !== 0),
+		{
+			message: "endHour=24 only supports endMinute=0",
+			path: ["endMinute"],
+		}
+	);
+
+export const deleteBoatMinimumDurationRuleInputSchema =
+	boatIdInputSchema.extend({
+		ruleId: z.string().trim().min(1),
+	});
+
 export const getManagedBoatOutputSchema = z.object({
 	boat: boatOutputSchema,
 	amenities: z.array(boatAmenityOutputSchema).optional(),
@@ -426,4 +485,5 @@ export const getManagedBoatOutputSchema = z.object({
 	availabilityBlocks: z.array(boatAvailabilityBlockOutputSchema).optional(),
 	pricingProfiles: z.array(boatPricingProfileOutputSchema).optional(),
 	pricingRules: z.array(boatPricingRuleOutputSchema).optional(),
+	minimumDurationRules: z.array(boatMinimumDurationRuleOutputSchema).optional(),
 });
