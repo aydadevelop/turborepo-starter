@@ -10,9 +10,10 @@ import {
 	type bookingStatusValues,
 } from "@full-stack-cf-app/db/schema/booking";
 import { ORPCError } from "@orpc/server";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type z from "zod";
 
+import { requireManaged } from "../../lib/db-helpers";
 import type { createManagedBookingInputSchema } from "../booking.schemas";
 import {
 	requireActiveMembership as requireActiveMembershipImpl,
@@ -21,7 +22,7 @@ import {
 import {
 	requireCalendarConnectionForBoat,
 	requireManagedBoat as requireManagedBoatImpl,
-} from "../shared/boat-access";
+} from "../boat/access";
 
 export const requireManagedBoat = requireManagedBoatImpl;
 export const requireActiveMembership = requireActiveMembershipImpl;
@@ -59,46 +60,11 @@ export const requireManagedCalendarConnection = async (params: {
 }) =>
 	requireCalendarConnectionForBoat(params.calendarConnectionId, params.boatId);
 
-export const requireManagedBooking = async (
-	bookingId: string,
-	organizationId: string
-) => {
-	const [managedBooking] = await db
-		.select()
-		.from(booking)
-		.where(
-			and(eq(booking.id, bookingId), eq(booking.organizationId, organizationId))
-		)
-		.limit(1);
+export const requireManagedBooking = (bookingId: string, organizationId: string) =>
+	requireManaged(booking, bookingId, organizationId);
 
-	if (!managedBooking) {
-		throw new ORPCError("NOT_FOUND");
-	}
-
-	return managedBooking;
-};
-
-export const requireManagedDiscountCode = async (
-	discountCodeId: string,
-	organizationId: string
-) => {
-	const [managedCode] = await db
-		.select()
-		.from(bookingDiscountCode)
-		.where(
-			and(
-				eq(bookingDiscountCode.id, discountCodeId),
-				eq(bookingDiscountCode.organizationId, organizationId)
-			)
-		)
-		.limit(1);
-
-	if (!managedCode) {
-		throw new ORPCError("NOT_FOUND");
-	}
-
-	return managedCode;
-};
+export const requireManagedDiscountCode = (discountCodeId: string, organizationId: string) =>
+	requireManaged(bookingDiscountCode, discountCodeId, organizationId);
 
 export const requireCustomerBookingAccess = async (params: {
 	bookingId: string;
@@ -124,71 +90,25 @@ export const requireCustomerBookingAccess = async (params: {
 	return customerBooking;
 };
 
-export const requireManagedDispute = async (params: {
+export const requireManagedDispute = (params: {
 	disputeId: string;
 	organizationId: string;
-}) => {
-	const [managedDispute] = await db
-		.select()
-		.from(bookingDispute)
-		.where(
-			and(
-				eq(bookingDispute.id, params.disputeId),
-				eq(bookingDispute.organizationId, params.organizationId)
-			)
-		)
-		.limit(1);
+}) => requireManaged(bookingDispute, params.disputeId, params.organizationId);
 
-	if (!managedDispute) {
-		throw new ORPCError("NOT_FOUND");
-	}
-
-	return managedDispute;
-};
-
-export const requireManagedRefund = async (params: {
+export const requireManagedRefund = (params: {
 	refundId: string;
 	organizationId: string;
-}) => {
-	const [managedRefund] = await db
-		.select()
-		.from(bookingRefund)
-		.where(
-			and(
-				eq(bookingRefund.id, params.refundId),
-				eq(bookingRefund.organizationId, params.organizationId)
-			)
-		)
-		.limit(1);
+}) => requireManaged(bookingRefund, params.refundId, params.organizationId);
 
-	if (!managedRefund) {
-		throw new ORPCError("NOT_FOUND");
-	}
-
-	return managedRefund;
-};
-
-export const requireManagedPaymentAttempt = async (params: {
+export const requireManagedPaymentAttempt = (params: {
 	paymentAttemptId: string;
 	organizationId: string;
-}) => {
-	const [managedPaymentAttempt] = await db
-		.select()
-		.from(bookingPaymentAttempt)
-		.where(
-			and(
-				eq(bookingPaymentAttempt.id, params.paymentAttemptId),
-				eq(bookingPaymentAttempt.organizationId, params.organizationId)
-			)
-		)
-		.limit(1);
-
-	if (!managedPaymentAttempt) {
-		throw new ORPCError("NOT_FOUND");
-	}
-
-	return managedPaymentAttempt;
-};
+}) =>
+	requireManaged(
+		bookingPaymentAttempt,
+		params.paymentAttemptId,
+		params.organizationId
+	);
 
 export const syncBookingPaymentStatusFromAttempts = async (
 	managedBookingId: string

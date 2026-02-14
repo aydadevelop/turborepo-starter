@@ -24,11 +24,11 @@ import {
 } from "@full-stack-cf-app/db/schema/booking";
 import { createSelectSchema } from "drizzle-orm/zod";
 import z from "zod";
-import { boatMinimumDurationRuleOutputSchema } from "./boat.schemas";
+import { boatMinimumDurationRuleOutputSchema } from "./boat/schemas";
 import {
 	bookingCancellationEvidenceTypeValues,
 	bookingCancellationReasonCodeValues,
-} from "./booking/cancellation-policy.templates";
+} from "./booking/cancellation/policy.templates";
 import { optionalTrimmedString } from "./shared/schema-utils";
 
 const discountCodePattern = /^[A-Z0-9][A-Z0-9_-]{2,39}$/;
@@ -537,7 +537,7 @@ import {
 	boatDockOutputSchema,
 	boatOutputSchema,
 	boatPricingRuleOutputSchema,
-} from "./boat.schemas";
+} from "./boat/schemas";
 
 export const bookingOutputSchema = createSelectSchema(booking);
 

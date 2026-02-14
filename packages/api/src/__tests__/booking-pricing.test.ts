@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type { BoatPricingProfile, BoatPricingRule } from "../booking/pricing";
+import type { BoatPricingProfile, BoatPricingRule } from "../routers/booking/services/pricing";
 import {
 	applyBoatPricingRulesToSubtotalCents,
 	buildBookingPricingQuote,
 	estimateBookingHours,
 	estimateBookingSubtotalCentsFromProfile,
-} from "../booking/pricing";
+} from "../routers/booking/services/pricing";
 
 const makeProfile = (
 	overrides: Partial<BoatPricingProfile> = {}

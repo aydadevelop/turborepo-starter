@@ -5,6 +5,8 @@ import { notificationQueueMessageSchema } from "@full-stack-cf-app/notifications
 import { and, asc, eq } from "drizzle-orm";
 import type { Context as HonoContext } from "hono";
 
+import type { EventBus } from "./lib/event-bus";
+
 export interface CreateContextOptions {
 	context: HonoContext;
 }
@@ -122,6 +124,7 @@ export interface Context {
 	requestHostname: string;
 	requestCookies?: Readonly<Record<string, string>>;
 	notificationQueue?: NotificationQueueProducer;
+	eventBus?: EventBus;
 }
 
 const parseCookiesFromHeader = (

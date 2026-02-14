@@ -33,7 +33,7 @@ import z from "zod";
 import {
 	buildBookingPricingQuote,
 	estimateBookingSubtotalCentsFromProfile,
-} from "../../booking/pricing";
+} from "./services/pricing";
 import {
 	organizationPermissionProcedure,
 	protectedProcedure,
@@ -46,9 +46,9 @@ import {
 	reviewBookingShiftRequestManagedInputSchema,
 	reviewBookingShiftRequestMineInputSchema,
 } from "../booking.schemas";
-import { reconcileAffiliatePayoutForBooking } from "./affiliate.service";
-import { syncCalendarLinkOnBookingUpdate } from "./calendar-sync";
-import { resolveBookingDiscount } from "./discount-resolution";
+import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
+import { syncCalendarLinkOnBookingUpdate } from "./services/calendar-sync";
+import { resolveBookingDiscount } from "./discount/resolution";
 import {
 	blockingBookingStatuses,
 	requireActiveMembership,
@@ -60,7 +60,7 @@ import {
 import {
 	assertBookingActionAllowedByWindow,
 	loadOrganizationBookingActionPolicyProfile,
-} from "./action-policy.service";
+} from "./services/action-policy";
 
 const terminalBookingStatuses = new Set(["cancelled", "completed", "no_show"]);
 const MIN_PAYMENT_ADJUSTMENT_CENTS = 100;
@@ -786,7 +786,6 @@ const rejectShiftRequest = async (params: {
 export const shiftBookingRouter = {
 	shiftRequestCreate: protectedProcedure
 		.route({
-			tags: ["Booking Lifecycle"],
 			summary: "Create booking shift request",
 			description:
 				"Create or replace a booking shift request with pricing deltas. The initiator auto-approves their side; apply happens only after both sides approve.",
@@ -953,7 +952,6 @@ export const shiftBookingRouter = {
 
 	shiftRequestListMine: protectedProcedure
 		.route({
-			tags: ["Booking Lifecycle"],
 			summary: "List my booking shift requests",
 			description:
 				"List shift requests for bookings owned by the current signed-in user.",
@@ -988,7 +986,6 @@ export const shiftBookingRouter = {
 		booking: ["read"],
 	})
 		.route({
-			tags: ["Booking Lifecycle"],
 			summary: "List managed booking shift requests",
 			description:
 				"List booking shift requests for the active organization with optional filters.",
@@ -1025,7 +1022,6 @@ export const shiftBookingRouter = {
 
 	shiftRequestReviewMine: protectedProcedure
 		.route({
-			tags: ["Booking Lifecycle"],
 			summary: "Review booking shift request as customer",
 			description:
 				"Approve or reject a shift request from the customer side. Booking is updated only after manager approval too.",
@@ -1136,7 +1132,6 @@ export const shiftBookingRouter = {
 		booking: ["update"],
 	})
 		.route({
-			tags: ["Booking Lifecycle"],
 			summary: "Review booking shift request as manager",
 			description:
 				"Approve or reject a shift request from the organization side. Booking is updated only after customer approval too.",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { BoatPricingProfile, BoatPricingRule } from "../booking/pricing";
+import type { BoatPricingProfile, BoatPricingRule } from "../routers/booking/services/pricing";
 import {
 	type AnnotatedTimeSlot,
 	annotateSlotMinimumDuration,
@@ -17,7 +17,7 @@ import {
 	mergeBusyIntervals,
 	resolveWorkingWindow,
 	type TimeSlot,
-} from "../booking/slots";
+} from "../routers/booking/services/slots";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 

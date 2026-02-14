@@ -1,19 +1,9 @@
 import { db } from "@full-stack-cf-app/db";
 import {
-	bookingAffiliateAttribution,
-	bookingAffiliatePayout,
-} from "@full-stack-cf-app/db/schema/affiliate";
-import {
-	type BoatType,
 	boat,
-	boatAmenity,
-	boatAsset,
 	boatAvailabilityBlock,
 	boatCalendarConnection,
-	boatDock,
-	boatMinimumDurationRule,
 	boatPricingProfile,
-	boatPricingRule,
 } from "@full-stack-cf-app/db/schema/boat";
 import {
 	booking,
@@ -26,11 +16,9 @@ import {
 	and,
 	asc,
 	count,
-	countDistinct,
 	desc,
 	eq,
 	gt,
-	gte,
 	inArray,
 	isNull,
 	lt,
@@ -39,72 +27,38 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
-import {
-	type BoatPricingRule,
-	buildBookingPricingQuote,
-	estimateBookingSubtotalCentsFromProfile,
-} from "../../booking/pricing";
-import {
-	annotateSlotMinimumDuration,
-	type BusyInterval,
-	buildDurationOptions,
-	computeBoatDaySlots,
-	enrichSlotsWithPricing,
-	filterSlotsAfterMinNotice,
-	type MinimumDurationRule,
-	resolveWorkingWindow,
-} from "../../booking/slots";
 import { getCalendarAdapter } from "../../calendar/adapters/registry";
 import {
 	organizationPermissionProcedure,
 	protectedProcedure,
-	publicProcedure,
 } from "../../index";
 import {
-	availabilityPublicOutputSchema,
 	cancelManagedBookingInputSchema,
 	createManagedBookingInputSchema,
 	createManagedBookingOutputSchema,
-	createPublicBookingInputSchema,
-	createPublicBookingOutputSchema,
-	getBoatByIdPublicInputSchema,
-	getBoatByIdPublicOutputSchema,
 	getManagedBookingInputSchema,
 	getManagedBookingOutputSchema,
-	getPublicBookingQuoteInputSchema,
-	listAffiliateBookingsInputSchema,
-	listAffiliateBookingsOutputSchema,
-	listManagedAffiliatePayoutsInputSchema,
-	listManagedAffiliatePayoutsOutputSchema,
 	listManagedBookingsInputSchema,
 	listManagedBookingsOutputSchema,
 	listMineBookingsInputSchema,
 	listMineBookingsOutputSchema,
-	listPublicBoatAvailabilityInputSchema,
-	processManagedAffiliatePayoutInputSchema,
-	quotePublicOutputSchema,
 } from "../booking.schemas";
 import { successOutputSchema } from "../shared/schema-utils";
-import {
-	attachAffiliateAttributionToBooking,
-	reconcileAffiliatePayoutForBooking,
-	resolveAffiliateReferralFromContext,
-} from "./affiliate.service";
-import { sortByAvailabilityBands } from "./availability-ranking.service";
+import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
 import {
 	cancelBookingAndSync,
 	ensureNoExternalCalendarOverlap,
 	syncCalendarLinkOnBookingCreate,
-} from "./calendar-sync";
+} from "./services/calendar-sync";
 import {
 	applyCancellationPolicyAndRefund,
 	assertCancellationPolicyReasonInput,
-} from "./cancellation-policy.service";
+} from "./cancellation/policy.service";
 import {
 	assertBookingActionAllowedByWindow,
 	loadOrganizationBookingActionPolicyProfile,
-} from "./action-policy.service";
-import { resolveBookingDiscount } from "./discount-resolution";
+} from "./services/action-policy";
+import { resolveBookingDiscount } from "./discount/resolution";
 import {
 	blockingBookingStatuses,
 	type CreateManagedBookingCalendarLinkInput,
@@ -116,11 +70,7 @@ import {
 	requireManagedCalendarConnection,
 	requireSessionUserId,
 } from "./helpers";
-import {
-	emitBookingCancelledNotificationEvent,
-	emitBookingCreatedNotificationEvent,
-	emitBookingRefundProcessedNotificationEvent,
-} from "./notification-events";
+import { buildRecipients, formatRefundAmount } from "../../lib/event-bus";
 
 const getSqliteErrorMessage = (error: unknown): string => {
 	if (error instanceof Error) {
@@ -132,60 +82,7 @@ const getSqliteErrorMessage = (error: unknown): string => {
 	return "";
 };
 
-const obfuscateRef = (params: { prefix: string; raw: string }) => {
-	const normalized = params.raw.replace(/[^a-zA-Z0-9]/g, "");
-	if (normalized.length === 0) {
-		return `${params.prefix}-***`;
-	}
-	if (normalized.length <= 6) {
-		const head = normalized.slice(0, 2);
-		return `${params.prefix}-${head}***`;
-	}
-	return `${params.prefix}-${normalized.slice(0, 3)}***${normalized.slice(-3)}`;
-};
-
-const buildAffiliateCustomerRef = (params: {
-	customerUserId: string | null;
-	contactEmail: string | null;
-	contactPhone: string | null;
-	bookingId: string;
-}) => {
-	const raw =
-		params.customerUserId ??
-		params.contactEmail ??
-		params.contactPhone ??
-		params.bookingId;
-	return obfuscateRef({
-		prefix: "CUS",
-		raw,
-	});
-};
-
-const dateFormatterByTimeZone = new Map<string, Intl.DateTimeFormat>();
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-const getDateStringInTimeZone = (date: Date, timeZone: string): string => {
-	let formatter = dateFormatterByTimeZone.get(timeZone);
-	if (!formatter) {
-		formatter = new Intl.DateTimeFormat("en-US", {
-			timeZone,
-			year: "numeric",
-			month: "2-digit",
-			day: "2-digit",
-		});
-		dateFormatterByTimeZone.set(timeZone, formatter);
-	}
-
-	const parts = formatter.formatToParts(date);
-	const getPart = (type: Intl.DateTimeFormatPartTypes): string => {
-		const part = parts.find((entry) => entry.type === type);
-		return part?.value ?? "";
-	};
-
-	return `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
-};
-
-const ensureNoBookingOverlap = async (params: {
+export const ensureNoBookingOverlap = async (params: {
 	organizationId: string;
 	boatId: string;
 	startsAt: Date;
@@ -212,7 +109,8 @@ const ensureNoBookingOverlap = async (params: {
 	}
 };
 
-const ensureNoAvailabilityBlockOverlap = async (params: {
+
+export const ensureNoAvailabilityBlockOverlap = async (params: {
 	boatId: string;
 	startsAt: Date;
 	endsAt: Date;
@@ -237,7 +135,8 @@ const ensureNoAvailabilityBlockOverlap = async (params: {
 	}
 };
 
-const resolveActivePricingProfile = async (params: {
+
+export const resolveActivePricingProfile = async (params: {
 	boatId: string;
 	startsAt: Date;
 }) => {
@@ -270,7 +169,8 @@ const resolveActivePricingProfile = async (params: {
 	return activeProfile;
 };
 
-const resolvePrimaryCalendarLinkInput = async (params: {
+
+export const resolvePrimaryCalendarLinkInput = async (params: {
 	boatId: string;
 }): Promise<CreateManagedBookingCalendarLinkInput> => {
 	const [primaryConnection] = await db
@@ -321,7 +221,8 @@ const resolvePrimaryCalendarLinkInput = async (params: {
 	};
 };
 
-const createManagedBookingRecord = async (params: {
+
+export const createManagedBookingRecord = async (params: {
 	input: CreateManagedBookingInput;
 	organizationId: string;
 	sessionUserId?: string;
@@ -494,782 +395,10 @@ const createManagedBookingRecord = async (params: {
 	};
 };
 
-export const resolvePublicBookingQuote = async (params: {
-	context: {
-		session: {
-			user: {
-				id: string;
-			};
-		} | null;
-	};
-	input: {
-		boatId: string;
-		startsAt: Date;
-		endsAt: Date;
-		passengers: number;
-		discountCode?: string;
-	};
-}) => {
-	const [publicBoat] = await db
-		.select()
-		.from(boat)
-		.where(
-			and(
-				eq(boat.id, params.input.boatId),
-				eq(boat.status, "active"),
-				eq(boat.isActive, true),
-				isNull(boat.archivedAt)
-			)
-		)
-		.limit(1);
-
-	if (!publicBoat) {
-		throw new ORPCError("NOT_FOUND");
-	}
-
-	if (params.input.passengers > publicBoat.passengerCapacity) {
-		throw new ORPCError("BAD_REQUEST", {
-			message: "Passenger count exceeds boat capacity",
-		});
-	}
-
-	await ensureNoBookingOverlap({
-		organizationId: publicBoat.organizationId,
-		boatId: publicBoat.id,
-		startsAt: params.input.startsAt,
-		endsAt: params.input.endsAt,
-	});
-	await ensureNoAvailabilityBlockOverlap({
-		boatId: publicBoat.id,
-		startsAt: params.input.startsAt,
-		endsAt: params.input.endsAt,
-	});
-
-	const calendarLink = await resolvePrimaryCalendarLinkInput({
-		boatId: publicBoat.id,
-	});
-	await ensureNoExternalCalendarOverlap({
-		provider: calendarLink.provider,
-		externalCalendarId: calendarLink.externalCalendarId,
-		startsAt: params.input.startsAt,
-		endsAt: params.input.endsAt,
-	});
-
-	const activePricingProfile = await resolveActivePricingProfile({
-		boatId: publicBoat.id,
-		startsAt: params.input.startsAt,
-	});
-	const allPricingRules = await db
-		.select()
-		.from(boatPricingRule)
-		.where(
-			and(
-				eq(boatPricingRule.boatId, publicBoat.id),
-				eq(boatPricingRule.isActive, true)
-			)
-		);
-	const pricingRules = allPricingRules.filter(
-		(rule) =>
-			!rule.pricingProfileId ||
-			rule.pricingProfileId === activePricingProfile.id
-	);
-
-	const { estimatedHours, subtotalCents } =
-		estimateBookingSubtotalCentsFromProfile({
-			startsAt: params.input.startsAt,
-			endsAt: params.input.endsAt,
-			boatMinimumHours: publicBoat.minimumHours,
-			passengers: params.input.passengers,
-			timeZone: publicBoat.timezone,
-			profile: activePricingProfile,
-			pricingRules,
-		});
-	const pricingQuote = buildBookingPricingQuote({
-		profile: activePricingProfile,
-		estimatedHours,
-		subtotalCents,
-	});
-
-	const sessionUserId = params.context.session?.user.id;
-	const resolvedDiscount = await resolveBookingDiscount({
-		organizationId: publicBoat.organizationId,
-		boatId: publicBoat.id,
-		startsAt: params.input.startsAt,
-		basePriceCents: subtotalCents,
-		discountCode: params.input.discountCode,
-		customerUserId: sessionUserId,
-	});
-
-	const discountedSubtotalCents = Math.max(
-		subtotalCents - (resolvedDiscount?.discountAmountCents ?? 0),
-		0
-	);
-	const pricingQuoteAfterDiscount = buildBookingPricingQuote({
-		profile: activePricingProfile,
-		estimatedHours,
-		subtotalCents: discountedSubtotalCents,
-	});
-
-	return {
-		publicBoat,
-		calendarLink,
-		pricingQuote,
-		pricingQuoteAfterDiscount,
-		resolvedDiscount,
-		sessionUserId,
-		estimatedTotalAfterDiscountCents:
-			pricingQuoteAfterDiscount.estimatedTotalPriceCents,
-		estimatedPayNowAfterDiscountCents:
-			pricingQuoteAfterDiscount.estimatedPayNowCents,
-		estimatedPayLaterAfterDiscountCents:
-			pricingQuoteAfterDiscount.estimatedPayLaterCents,
-	};
-};
-
-interface AvailabilityResult {
-	boat: typeof boat.$inferSelect;
-	pricingQuote: ReturnType<typeof buildBookingPricingQuote>;
-	available: boolean;
-	windowStartsAt: Date;
-	windowEndsAt: Date;
-	activePricingProfile: typeof boatPricingProfile.$inferSelect;
-	activeRules: BoatPricingRule[];
-}
-
-interface PublicAvailabilityItem {
-	boat: AvailabilityResult["boat"];
-	pricingQuote: AvailabilityResult["pricingQuote"];
-	available: boolean;
-	slots?: ReturnType<typeof enrichSlotsWithPricing>;
-}
-
-interface PublicAvailabilitySearchInput {
-	startsAt?: Date;
-	endsAt?: Date;
-	date?: string;
-	durationHours?: number;
-	passengers: number;
-	includeUnavailable?: boolean;
-	minEstimatedTotalCents?: number;
-	maxEstimatedTotalCents?: number;
-}
-
-type AvailabilitySearchMode = "range" | "date_duration";
-
-const resolveAvailabilitySearchMode = (
-	input: PublicAvailabilitySearchInput
-): AvailabilitySearchMode => {
-	if (input.startsAt && input.endsAt) {
-		return "range";
-	}
-
-	if (input.date && input.durationHours !== undefined) {
-		return "date_duration";
-	}
-
-	throw new ORPCError("BAD_REQUEST", {
-		message: "Provide either startsAt/endsAt or date/durationHours",
-	});
-};
-
-const resolveBroadAvailabilityWindow = (params: {
-	input: PublicAvailabilitySearchInput;
-	mode: AvailabilitySearchMode;
-}): { startsAt: Date; endsAt: Date } => {
-	if (params.mode === "range") {
-		return {
-			startsAt: params.input.startsAt as Date,
-			endsAt: params.input.endsAt as Date,
-		};
-	}
-
-	const date = params.input.date as string;
-	const dayStartUtc = new Date(`${date}T00:00:00.000Z`);
-
-	return {
-		startsAt: new Date(dayStartUtc.getTime() - 2 * DAY_MS),
-		endsAt: new Date(dayStartUtc.getTime() + 3 * DAY_MS),
-	};
-};
-
-const resolveCandidateWindowForBoat = (params: {
-	candidateBoat: typeof boat.$inferSelect;
-	input: PublicAvailabilitySearchInput;
-	mode: AvailabilitySearchMode;
-}): { startsAt: Date; endsAt: Date; durationMinutes: number } => {
-	if (params.mode === "range") {
-		const startsAt = params.input.startsAt as Date;
-		const endsAt = params.input.endsAt as Date;
-		const durationMinutes = Math.max(
-			30,
-			Math.round((endsAt.getTime() - startsAt.getTime()) / 60_000)
-		);
-
-		return { startsAt, endsAt, durationMinutes };
-	}
-
-	const { dayStart } = resolveWorkingWindow({
-		date: params.input.date as string,
-		workingHoursStart: params.candidateBoat.workingHoursStart,
-		workingHoursEnd: params.candidateBoat.workingHoursEnd,
-		timezone: params.candidateBoat.timezone,
-	});
-	const durationMinutes = Math.max(
-		30,
-		Math.round((params.input.durationHours as number) * 60)
-	);
-
-	return {
-		startsAt: dayStart,
-		endsAt: new Date(dayStart.getTime() + durationMinutes * 60_000),
-		durationMinutes,
-	};
-};
-
-const hasOverlap = (intervals: BusyInterval[], startsAt: Date, endsAt: Date) =>
-	intervals.some(
-		(interval) => interval.startsAt < endsAt && interval.endsAt > startsAt
-	);
-
-const buildBusyIntervalsByBoatId = (
-	rows: Array<{
-		boatId: string;
-		startsAt: Date;
-		endsAt: Date;
-	}>
-) => {
-	const map = new Map<string, BusyInterval[]>();
-	for (const row of rows) {
-		const existing = map.get(row.boatId);
-		if (existing) {
-			existing.push({ startsAt: row.startsAt, endsAt: row.endsAt });
-		} else {
-			map.set(row.boatId, [{ startsAt: row.startsAt, endsAt: row.endsAt }]);
-		}
-	}
-	return map;
-};
-
-const resolveActivePricingProfileForWindow = (params: {
-	profiles: (typeof boatPricingProfile.$inferSelect)[];
-	startsAt: Date;
-}) =>
-	params.profiles.find(
-		(profile) =>
-			profile.validFrom <= params.startsAt &&
-			(profile.validTo === null || profile.validTo > params.startsAt)
-	) ?? null;
-
-const fetchBusyIntervalsForBoats = async (items: AvailabilityResult[]) => {
-	const boatIds = items.map((item) => item.boat.id);
-	if (boatIds.length === 0) {
-		return new Map<string, BusyInterval[]>();
-	}
-
-	const [slotBookings, slotBlocks] = await Promise.all([
-		db
-			.select({
-				boatId: booking.boatId,
-				startsAt: booking.startsAt,
-				endsAt: booking.endsAt,
-			})
-			.from(booking)
-			.where(
-				and(
-					inArray(booking.boatId, boatIds),
-					inArray(booking.status, blockingBookingStatuses)
-				)
-			),
-		db
-			.select({
-				boatId: boatAvailabilityBlock.boatId,
-				startsAt: boatAvailabilityBlock.startsAt,
-				endsAt: boatAvailabilityBlock.endsAt,
-			})
-			.from(boatAvailabilityBlock)
-			.where(
-				and(
-					inArray(boatAvailabilityBlock.boatId, boatIds),
-					eq(boatAvailabilityBlock.isActive, true)
-				)
-			),
-	]);
-
-	const busyByBoatId = new Map<string, BusyInterval[]>();
-	for (const b of slotBookings) {
-		const arr = busyByBoatId.get(b.boatId) ?? [];
-		arr.push({ startsAt: b.startsAt, endsAt: b.endsAt });
-		busyByBoatId.set(b.boatId, arr);
-	}
-	for (const b of slotBlocks) {
-		const arr = busyByBoatId.get(b.boatId) ?? [];
-		arr.push({ startsAt: b.startsAt, endsAt: b.endsAt });
-		busyByBoatId.set(b.boatId, arr);
-	}
-
-	return busyByBoatId;
-};
-
-const enrichBoatWithSlots = (
-	r: AvailabilityResult,
-	busyIntervals: BusyInterval[],
-	startsAt: Date,
-	durationMinutes: number,
-	now: Date,
-	passengers: number,
-	minimumDurationRules: MinimumDurationRule[] = []
-) => {
-	const dateStr = getDateStringInTimeZone(startsAt, r.boat.timezone);
-	const rawSlots = computeBoatDaySlots({
-		date: dateStr,
-		boat: {
-			workingHoursStart: r.boat.workingHoursStart,
-			workingHoursEnd: r.boat.workingHoursEnd,
-			timezone: r.boat.timezone,
-			minimumHours: r.boat.minimumHours,
-		},
-		busyIntervals,
-		durationMinutes,
-	});
-	const filtered = filterSlotsAfterMinNotice(
-		rawSlots,
-		now,
-		r.boat.minimumNoticeMinutes
-	);
-	const annotated = annotateSlotMinimumDuration({
-		slots: filtered,
-		boatMinimumHours: r.boat.minimumHours,
-		minimumDurationRules,
-		timezone: r.boat.timezone,
-	});
-	return enrichSlotsWithPricing({
-		slots: annotated,
-		boatMinimumHours: r.boat.minimumHours,
-		passengers,
-		timezone: r.boat.timezone,
-		profile: r.activePricingProfile,
-		pricingRules: r.activeRules,
-	});
-};
-
-const scoreCandidate = (
-	candidateBoat: typeof boat.$inferSelect,
-	input: PublicAvailabilitySearchInput,
-	mode: AvailabilitySearchMode,
-	bookingBusyByBoatId: Map<string, BusyInterval[]>,
-	blockBusyByBoatId: Map<string, BusyInterval[]>,
-	pricingProfilesByBoatId: Map<
-		string,
-		(typeof boatPricingProfile.$inferSelect)[]
-	>,
-	pricingRulesByBoatId: Map<string, BoatPricingRule[]>
-): AvailabilityResult | null => {
-	const { startsAt, endsAt } = resolveCandidateWindowForBoat({
-		candidateBoat,
-		input,
-		mode,
-	});
-
-	const bookingBusyIntervals = bookingBusyByBoatId.get(candidateBoat.id) ?? [];
-	const blockBusyIntervals = blockBusyByBoatId.get(candidateBoat.id) ?? [];
-	const isUnavailable =
-		hasOverlap(bookingBusyIntervals, startsAt, endsAt) ||
-		hasOverlap(blockBusyIntervals, startsAt, endsAt);
-
-	if (isUnavailable && !input.includeUnavailable) {
-		return null;
-	}
-
-	const boatProfiles = pricingProfilesByBoatId.get(candidateBoat.id) ?? [];
-	const activePricingProfile = resolveActivePricingProfileForWindow({
-		profiles: boatProfiles,
-		startsAt,
-	});
-	if (!activePricingProfile) {
-		return null;
-	}
-
-	const allRules = pricingRulesByBoatId.get(candidateBoat.id) ?? [];
-	const activeRules = allRules.filter(
-		(rule) =>
-			!rule.pricingProfileId ||
-			rule.pricingProfileId === activePricingProfile.id
-	);
-
-	const { estimatedHours, subtotalCents } =
-		estimateBookingSubtotalCentsFromProfile({
-			startsAt,
-			endsAt,
-			boatMinimumHours: candidateBoat.minimumHours,
-			passengers: input.passengers,
-			timeZone: candidateBoat.timezone,
-			profile: activePricingProfile,
-			pricingRules: activeRules,
-		});
-	const pricingQuote = buildBookingPricingQuote({
-		profile: activePricingProfile,
-		estimatedHours,
-		subtotalCents,
-	});
-
-	if (
-		input.minEstimatedTotalCents !== undefined &&
-		pricingQuote.estimatedTotalPriceCents < input.minEstimatedTotalCents
-	) {
-		return null;
-	}
-	if (
-		input.maxEstimatedTotalCents !== undefined &&
-		pricingQuote.estimatedTotalPriceCents > input.maxEstimatedTotalCents
-	) {
-		return null;
-	}
-
-	return {
-		boat: candidateBoat,
-		pricingQuote,
-		available: !isUnavailable,
-		windowStartsAt: startsAt,
-		windowEndsAt: endsAt,
-		activePricingProfile,
-		activeRules,
-	};
-};
-
-const buildAmenityCounts = (
-	rows: Array<{ key: string; count: number | string | bigint }>
-) => {
-	const amenityCounts: Record<string, number> = {};
-	for (const row of rows) {
-		amenityCounts[row.key] = Number(row.count);
-	}
-	return amenityCounts;
-};
-
-const scoreCandidateBoats = (params: {
-	candidateBoats: (typeof boat.$inferSelect)[];
-	input: PublicAvailabilitySearchInput;
-	mode: AvailabilitySearchMode;
-	bookingBusyByBoatId: Map<string, BusyInterval[]>;
-	blockBusyByBoatId: Map<string, BusyInterval[]>;
-	pricingProfilesByBoatId: Map<
-		string,
-		(typeof boatPricingProfile.$inferSelect)[]
-	>;
-	pricingRulesByBoatId: Map<string, BoatPricingRule[]>;
-}) => {
-	const resultsWithAvailability: AvailabilityResult[] = [];
-	for (const candidateBoat of params.candidateBoats) {
-		const result = scoreCandidate(
-			candidateBoat,
-			params.input,
-			params.mode,
-			params.bookingBusyByBoatId,
-			params.blockBusyByBoatId,
-			params.pricingProfilesByBoatId,
-			params.pricingRulesByBoatId
-		);
-		if (result) {
-			resultsWithAvailability.push(result);
-		}
-	}
-	return resultsWithAvailability;
-};
-
-const resolveAvailabilityDurationMinutes = (params: {
-	mode: AvailabilitySearchMode;
-	input: PublicAvailabilitySearchInput;
-}) =>
-	params.mode === "range"
-		? Math.max(
-				30,
-				Math.round(
-					((params.input.endsAt as Date).getTime() -
-						(params.input.startsAt as Date).getTime()) /
-						60_000
-				)
-			)
-		: Math.max(30, Math.round((params.input.durationHours as number) * 60));
-
-const prepareAvailabilityBandSortArtifacts = async (params: {
-	resultsWithAvailability: AvailabilityResult[];
-	durationMinutes: number;
-	now: Date;
-	passengers: number;
-	minDurationRulesByBoatId: Map<string, MinimumDurationRule[]>;
-}) => {
-	const busyByBoatIdForSlots = await fetchBusyIntervalsForBoats(
-		params.resultsWithAvailability
-	);
-	const slotStartsByBoatId = new Map<string, Date[]>();
-	for (const result of params.resultsWithAvailability) {
-		const busyIntervals = busyByBoatIdForSlots.get(result.boat.id) ?? [];
-		const slots = enrichBoatWithSlots(
-			result,
-			busyIntervals,
-			result.windowStartsAt,
-			params.durationMinutes,
-			params.now,
-			params.passengers,
-			params.minDurationRulesByBoatId.get(result.boat.id) ?? []
-		);
-		slotStartsByBoatId.set(
-			result.boat.id,
-			slots.map((slot) => slot.startsAt)
-		);
-	}
-
-	return { busyByBoatIdForSlots, slotStartsByBoatId };
-};
-
-const sortAvailabilityResultsForPublicRequest = async (params: {
-	resultsWithAvailability: AvailabilityResult[];
-	sortBy: string | undefined;
-	durationMinutes: number;
-	now: Date;
-	passengers: number;
-	minDurationRulesByBoatId: Map<string, MinimumDurationRule[]>;
-}) => {
-	if (params.sortBy !== "availability_bands") {
-		sortAvailabilityResults(params.resultsWithAvailability, params.sortBy);
-		return {
-			busyByBoatIdForSlots: undefined,
-		};
-	}
-
-	const artifacts = await prepareAvailabilityBandSortArtifacts({
-		resultsWithAvailability: params.resultsWithAvailability,
-		durationMinutes: params.durationMinutes,
-		now: params.now,
-		passengers: params.passengers,
-		minDurationRulesByBoatId: params.minDurationRulesByBoatId,
-	});
-
-	sortAvailabilityResults(params.resultsWithAvailability, params.sortBy, {
-		slotStartsByBoatId: artifacts.slotStartsByBoatId,
-		now: params.now,
-	});
-
-	return artifacts;
-};
-
-const buildAvailabilityItems = async (params: {
-	paged: AvailabilityResult[];
-	durationMinutes: number;
-	now: Date;
-	passengers: number;
-	withSlots: boolean;
-	preloadedBusyByBoatId?: Map<string, BusyInterval[]>;
-	minDurationRulesByBoatId: Map<string, MinimumDurationRule[]>;
-}): Promise<PublicAvailabilityItem[]> => {
-	if (!params.withSlots) {
-		return params.paged.map((result) => ({
-			boat: result.boat,
-			pricingQuote: result.pricingQuote,
-			available: result.available,
-		}));
-	}
-
-	const busyByBoatId =
-		params.preloadedBusyByBoatId ??
-		(await fetchBusyIntervalsForBoats(params.paged));
-
-	return params.paged.map((result) => {
-		const busyIntervals = busyByBoatId.get(result.boat.id) ?? [];
-		const slots = enrichBoatWithSlots(
-			result,
-			busyIntervals,
-			result.windowStartsAt,
-			params.durationMinutes,
-			params.now,
-			params.passengers,
-			params.minDurationRulesByBoatId.get(result.boat.id) ?? []
-		);
-		return {
-			boat: result.boat,
-			pricingQuote: result.pricingQuote,
-			available: result.available,
-			slots,
-		};
-	});
-};
-
-const buildAvailableFilters = (params: {
-	resultsWithAvailability: AvailabilityResult[];
-	items: PublicAvailabilityItem[];
-	withSlots: boolean;
-}) => {
-	const passengerSet = new Set<number>();
-	for (const result of params.resultsWithAvailability) {
-		passengerSet.add(result.boat.passengerCapacity);
-	}
-	const passengerOptions = [...passengerSet].sort((a, b) => a - b);
-
-	const allStartTimes = new Set<string>();
-	if (params.withSlots) {
-		for (const item of params.items) {
-			if (item.slots) {
-				for (const slot of item.slots) {
-					allStartTimes.add(slot.startsAt.toISOString());
-				}
-			}
-		}
-	}
-
-	const minBoatMinimumHours = params.resultsWithAvailability.reduce(
-		(min, r) => Math.min(min, r.boat.minimumHours),
-		Number.POSITIVE_INFINITY
-	);
-	const durationOptions = buildDurationOptions({
-		boatMinimumHours: Number.isFinite(minBoatMinimumHours)
-			? minBoatMinimumHours
-			: 0,
-		minimumDurationRules: [],
-	});
-
-	return {
-		availableStartTimes: [...allStartTimes].sort(),
-		passengerOptions,
-		durationOptions,
-	};
-};
-
-const sortAvailabilityResults = (
-	results: AvailabilityResult[],
-	sortBy?: string,
-	options?: {
-		slotStartsByBoatId?: ReadonlyMap<string, readonly Date[]>;
-		now?: Date;
-	}
-) => {
-	switch (sortBy) {
-		case "availability_bands": {
-			const slotStartsByBoatId = options?.slotStartsByBoatId;
-			if (!slotStartsByBoatId) {
-				results.sort(
-					(a, b) => b.boat.createdAt.getTime() - a.boat.createdAt.getTime()
-				);
-				break;
-			}
-
-			const ordered = sortByAvailabilityBands({
-				results,
-				slotStartsByBoatId,
-				now: options?.now,
-			});
-			results.splice(0, results.length, ...ordered);
-			break;
-		}
-		case "price_asc":
-			results.sort(
-				(a, b) =>
-					a.pricingQuote.estimatedTotalPriceCents -
-					b.pricingQuote.estimatedTotalPriceCents
-			);
-			break;
-		case "price_desc":
-			results.sort(
-				(a, b) =>
-					b.pricingQuote.estimatedTotalPriceCents -
-					a.pricingQuote.estimatedTotalPriceCents
-			);
-			break;
-		case "capacity_desc":
-			results.sort(
-				(a, b) => b.boat.passengerCapacity - a.boat.passengerCapacity
-			);
-			break;
-		default:
-			results.sort(
-				(a, b) => b.boat.createdAt.getTime() - a.boat.createdAt.getTime()
-			);
-	}
-};
-
-const buildPricingLookups = (
-	pricingProfiles: (typeof boatPricingProfile.$inferSelect)[],
-	pricingRulesRows: (typeof boatPricingRule.$inferSelect)[]
-) => {
-	const pricingProfilesByBoatId = new Map<
-		string,
-		(typeof boatPricingProfile.$inferSelect)[]
-	>();
-	for (const profile of pricingProfiles) {
-		const existing = pricingProfilesByBoatId.get(profile.boatId);
-		if (existing) {
-			existing.push(profile);
-		} else {
-			pricingProfilesByBoatId.set(profile.boatId, [profile]);
-		}
-	}
-	for (const profiles of pricingProfilesByBoatId.values()) {
-		profiles.sort(
-			(a, b) =>
-				Number(b.isDefault) - Number(a.isDefault) ||
-				b.validFrom.getTime() - a.validFrom.getTime()
-		);
-	}
-
-	const pricingRulesByBoatId = new Map<string, BoatPricingRule[]>();
-	for (const rule of pricingRulesRows) {
-		const existing = pricingRulesByBoatId.get(rule.boatId);
-		if (existing) {
-			existing.push(rule);
-		} else {
-			pricingRulesByBoatId.set(rule.boatId, [rule]);
-		}
-	}
-
-	return { pricingProfilesByBoatId, pricingRulesByBoatId };
-};
-
-const buildAvailabilityWhereClause = (input: {
-	organizationId?: string;
-	dockId?: string;
-	boatId?: string;
-	boatType?: BoatType;
-	passengers: number;
-	search?: string;
-	amenityKeys?: string[];
-}) => {
-	const amenityKeys =
-		input.amenityKeys && input.amenityKeys.length > 0
-			? Array.from(new Set(input.amenityKeys))
-			: undefined;
-
-	return and(
-		eq(boat.status, "active"),
-		eq(boat.isActive, true),
-		isNull(boat.archivedAt),
-		input.organizationId
-			? eq(boat.organizationId, input.organizationId)
-			: undefined,
-		input.dockId ? eq(boat.dockId, input.dockId) : undefined,
-		input.boatId ? eq(boat.id, input.boatId) : undefined,
-		input.boatType ? eq(boat.type, input.boatType) : undefined,
-		gte(boat.passengerCapacity, input.passengers),
-		input.search
-			? sql`(lower(${boat.name}) like ${`%${input.search.toLowerCase()}%`} or lower(${boat.slug}) like ${`%${input.search.toLowerCase()}%`})`
-			: undefined,
-		amenityKeys
-			? sql`(
-					select count(*)
-					from ${boatAmenity}
-					where ${boatAmenity.boatId} = ${boat.id}
-						and ${boatAmenity.isEnabled} = 1
-						and ${boatAmenity.key} in (${sql.join(
-							amenityKeys.map((key) => sql`${key}`),
-							sql`, `
-						)})
-				) = ${amenityKeys.length}`
-			: undefined
-	);
-};
 
 export const coreBookingRouter = {
 	listMine: protectedProcedure
 		.route({
-			tags: ["Booking"],
 			summary: "List my bookings",
 			description:
 				"List bookings where the current user is the customer. No organization required.",
@@ -1318,905 +447,11 @@ export const coreBookingRouter = {
 			};
 		}),
 
-	listAffiliateMine: protectedProcedure
-		.route({
-			tags: ["Booking"],
-			summary: "List my affiliate bookings",
-			description:
-				"List bookings attributed to the current affiliate user. Customer contact details are always obfuscated.",
-		})
-		.input(listAffiliateBookingsInputSchema)
-		.output(listAffiliateBookingsOutputSchema)
-		.handler(async ({ context, input }) => {
-			const userId = context.session?.user?.id;
-			if (!userId) {
-				throw new ORPCError("UNAUTHORIZED");
-			}
-
-			const where = and(
-				eq(bookingAffiliateAttribution.affiliateUserId, userId),
-				input.organizationId
-					? eq(bookingAffiliateAttribution.organizationId, input.organizationId)
-					: undefined,
-				input.status ? eq(booking.status, input.status) : undefined,
-				input.from ? gt(booking.endsAt, input.from) : undefined,
-				input.to ? lt(booking.startsAt, input.to) : undefined
-			);
-
-			if (!where) {
-				throw new ORPCError("INTERNAL_SERVER_ERROR");
-			}
-
-			const orderDir = input.sortOrder === "asc" ? asc : desc;
-			const sortColumnMap = {
-				startsAt: booking.startsAt,
-				createdAt: booking.createdAt,
-				totalPriceCents: booking.totalPriceCents,
-			} as const;
-			const orderByExpr = orderDir(sortColumnMap[input.sortBy]);
-
-			const [countResult, items] = await Promise.all([
-				db
-					.select({ total: count() })
-					.from(bookingAffiliateAttribution)
-					.innerJoin(
-						booking,
-						eq(booking.id, bookingAffiliateAttribution.bookingId)
-					)
-					.where(where),
-				db
-					.select({
-						bookingId: booking.id,
-						referralCode: bookingAffiliateAttribution.referralCode,
-						boatId: booking.boatId,
-						boatName: boat.name,
-						startsAt: booking.startsAt,
-						endsAt: booking.endsAt,
-						timezone: booking.timezone,
-						status: booking.status,
-						paymentStatus: booking.paymentStatus,
-						passengers: booking.passengers,
-						customerUserId: booking.customerUserId,
-						contactEmail: booking.contactEmail,
-						contactPhone: booking.contactPhone,
-						payoutId: bookingAffiliatePayout.id,
-						payoutStatus: bookingAffiliatePayout.status,
-						commissionAmountCents: bookingAffiliatePayout.commissionAmountCents,
-						commissionCurrency: bookingAffiliatePayout.currency,
-						payoutEligibleAt: bookingAffiliatePayout.eligibleAt,
-						payoutPaidAt: bookingAffiliatePayout.paidAt,
-						payoutVoidedAt: bookingAffiliatePayout.voidedAt,
-						payoutVoidReason: bookingAffiliatePayout.voidReason,
-					})
-					.from(bookingAffiliateAttribution)
-					.innerJoin(
-						booking,
-						eq(booking.id, bookingAffiliateAttribution.bookingId)
-					)
-					.innerJoin(boat, eq(boat.id, booking.boatId))
-					.leftJoin(
-						bookingAffiliatePayout,
-						eq(bookingAffiliatePayout.bookingId, booking.id)
-					)
-					.where(where)
-					.orderBy(orderByExpr)
-					.limit(input.limit)
-					.offset(input.offset),
-			]);
-
-			const reconciledPayoutByBookingId = new Map<
-				string,
-				typeof bookingAffiliatePayout.$inferSelect | null
-			>();
-			await Promise.all(
-				items.map(async (item) => {
-					const payout = await reconcileAffiliatePayoutForBooking({
-						bookingId: item.bookingId,
-					});
-					reconciledPayoutByBookingId.set(item.bookingId, payout);
-				})
-			);
-
-			return {
-				items: items.map((item) => {
-					const reconciledPayout =
-						reconciledPayoutByBookingId.get(item.bookingId) ?? null;
-					return {
-						bookingRef: obfuscateRef({
-							prefix: "BKG",
-							raw: item.bookingId,
-						}),
-						customerRef: buildAffiliateCustomerRef({
-							customerUserId: item.customerUserId,
-							contactEmail: item.contactEmail,
-							contactPhone: item.contactPhone,
-							bookingId: item.bookingId,
-						}),
-						referralCode: item.referralCode,
-						boatId: item.boatId,
-						boatName: item.boatName,
-						startsAt: item.startsAt,
-						endsAt: item.endsAt,
-						timezone: item.timezone,
-						status: item.status,
-						paymentStatus: item.paymentStatus,
-						passengers: item.passengers,
-						commissionAmountCents:
-							reconciledPayout?.commissionAmountCents ??
-							item.commissionAmountCents ??
-							0,
-						commissionCurrency:
-							reconciledPayout?.currency ?? item.commissionCurrency ?? "RUB",
-						payoutStatus:
-							reconciledPayout?.status ?? item.payoutStatus ?? "pending",
-						payoutEligibleAt:
-							reconciledPayout?.eligibleAt ?? item.payoutEligibleAt ?? null,
-						payoutPaidAt: reconciledPayout?.paidAt ?? item.payoutPaidAt ?? null,
-						payoutVoidedAt:
-							reconciledPayout?.voidedAt ?? item.payoutVoidedAt ?? null,
-						payoutVoidReason:
-							reconciledPayout?.voidReason ?? item.payoutVoidReason ?? null,
-					};
-				}),
-				total: Number(countResult[0]?.total ?? 0),
-			};
-		}),
-
-	affiliatePayoutListManaged: organizationPermissionProcedure({
-		booking: ["read"],
-	})
-		.route({
-			tags: ["Booking"],
-			summary: "List managed affiliate payouts",
-			description:
-				"List affiliate payout records for the active organization with booking context.",
-		})
-		.input(listManagedAffiliatePayoutsInputSchema)
-		.output(listManagedAffiliatePayoutsOutputSchema)
-		.handler(async ({ context, input }) => {
-			const activeMembership = requireActiveMembership(context);
-			const organizationId =
-				input.organizationId ?? activeMembership.organizationId;
-			if (organizationId !== activeMembership.organizationId) {
-				throw new ORPCError("FORBIDDEN");
-			}
-
-			const where = and(
-				eq(bookingAffiliatePayout.organizationId, organizationId),
-				input.affiliateUserId
-					? eq(bookingAffiliatePayout.affiliateUserId, input.affiliateUserId)
-					: undefined,
-				input.status
-					? eq(bookingAffiliatePayout.status, input.status)
-					: undefined,
-				input.from ? gt(booking.endsAt, input.from) : undefined,
-				input.to ? lt(booking.startsAt, input.to) : undefined
-			);
-			if (!where) {
-				throw new ORPCError("INTERNAL_SERVER_ERROR");
-			}
-
-			const [countResult, items] = await Promise.all([
-				db
-					.select({ total: count() })
-					.from(bookingAffiliatePayout)
-					.innerJoin(booking, eq(booking.id, bookingAffiliatePayout.bookingId))
-					.where(where),
-				db
-					.select({
-						payoutId: bookingAffiliatePayout.id,
-						bookingId: booking.id,
-						affiliateUserId: bookingAffiliatePayout.affiliateUserId,
-						referralCode: bookingAffiliateAttribution.referralCode,
-						commissionAmountCents: bookingAffiliatePayout.commissionAmountCents,
-						currency: bookingAffiliatePayout.currency,
-						status: bookingAffiliatePayout.status,
-						eligibleAt: bookingAffiliatePayout.eligibleAt,
-						paidAt: bookingAffiliatePayout.paidAt,
-						voidedAt: bookingAffiliatePayout.voidedAt,
-						voidReason: bookingAffiliatePayout.voidReason,
-						startsAt: booking.startsAt,
-						endsAt: booking.endsAt,
-						boatId: booking.boatId,
-						boatName: boat.name,
-					})
-					.from(bookingAffiliatePayout)
-					.innerJoin(booking, eq(booking.id, bookingAffiliatePayout.bookingId))
-					.innerJoin(
-						bookingAffiliateAttribution,
-						eq(
-							bookingAffiliateAttribution.id,
-							bookingAffiliatePayout.attributionId
-						)
-					)
-					.innerJoin(boat, eq(boat.id, booking.boatId))
-					.where(where)
-					.orderBy(desc(booking.startsAt))
-					.limit(input.limit)
-					.offset(input.offset),
-			]);
-
-			const reconciledPayoutByBookingId = new Map<
-				string,
-				typeof bookingAffiliatePayout.$inferSelect | null
-			>();
-			await Promise.all(
-				items.map(async (item) => {
-					const payout = await reconcileAffiliatePayoutForBooking({
-						bookingId: item.bookingId,
-					});
-					reconciledPayoutByBookingId.set(item.bookingId, payout);
-				})
-			);
-
-			return {
-				items: items.map((item) => {
-					const reconciledPayout =
-						reconciledPayoutByBookingId.get(item.bookingId) ?? null;
-					return {
-						payoutId: reconciledPayout?.id ?? item.payoutId,
-						bookingId: item.bookingId,
-						bookingRef: obfuscateRef({
-							prefix: "BKG",
-							raw: item.bookingId,
-						}),
-						affiliateUserId: item.affiliateUserId,
-						referralCode: item.referralCode,
-						commissionAmountCents:
-							reconciledPayout?.commissionAmountCents ??
-							item.commissionAmountCents,
-						currency: reconciledPayout?.currency ?? item.currency,
-						status: reconciledPayout?.status ?? item.status,
-						eligibleAt: reconciledPayout?.eligibleAt ?? item.eligibleAt,
-						paidAt: reconciledPayout?.paidAt ?? item.paidAt,
-						voidedAt: reconciledPayout?.voidedAt ?? item.voidedAt,
-						voidReason: reconciledPayout?.voidReason ?? item.voidReason,
-						startsAt: item.startsAt,
-						endsAt: item.endsAt,
-						boatId: item.boatId,
-						boatName: item.boatName,
-					};
-				}),
-				total: Number(countResult[0]?.total ?? 0),
-			};
-		}),
-
-	affiliatePayoutProcessManaged: organizationPermissionProcedure({
-		booking: ["update"],
-	})
-		.route({
-			tags: ["Booking"],
-			summary: "Process affiliate payout",
-			description:
-				"Mark an eligible affiliate payout as paid, or void a non-paid payout.",
-		})
-		.input(processManagedAffiliatePayoutInputSchema)
-		.output(successOutputSchema)
-		.handler(async ({ context, input }) => {
-			const activeMembership = requireActiveMembership(context);
-			const [managedPayout] = await db
-				.select()
-				.from(bookingAffiliatePayout)
-				.where(
-					and(
-						eq(bookingAffiliatePayout.id, input.payoutId),
-						eq(
-							bookingAffiliatePayout.organizationId,
-							activeMembership.organizationId
-						)
-					)
-				)
-				.limit(1);
-
-			if (!managedPayout) {
-				throw new ORPCError("NOT_FOUND");
-			}
-
-			const reconciled =
-				(await reconcileAffiliatePayoutForBooking({
-					bookingId: managedPayout.bookingId,
-				})) ?? managedPayout;
-
-			if (input.status === "paid" && reconciled.status !== "eligible") {
-				throw new ORPCError("BAD_REQUEST", {
-					message:
-						"Affiliate payout can be paid only after booking is completed and not cancelled/refunded.",
-				});
-			}
-
-			if (input.status === "voided" && reconciled.status === "paid") {
-				throw new ORPCError("BAD_REQUEST", {
-					message: "Paid affiliate payout cannot be voided.",
-				});
-			}
-
-			const now = new Date();
-			await db
-				.update(bookingAffiliatePayout)
-				.set({
-					status: input.status,
-					paidAt: input.status === "paid" ? now : null,
-					voidedAt: input.status === "voided" ? now : null,
-					voidReason: input.status === "voided" ? input.note : null,
-					externalPayoutRef:
-						input.externalPayoutRef ?? reconciled.externalPayoutRef,
-					updatedAt: now,
-				})
-				.where(eq(bookingAffiliatePayout.id, reconciled.id));
-
-			return { success: true };
-		}),
-
-	availabilityPublic: publicProcedure
-		.route({
-			tags: ["Booking"],
-			summary: "Search public boat availability",
-			description:
-				"Search for available boats in a time range with pricing quotes, amenity filters, and sorting.",
-		})
-		.input(listPublicBoatAvailabilityInputSchema)
-		.output(availabilityPublicOutputSchema)
-		.handler(async ({ input }) => {
-			const mode = resolveAvailabilitySearchMode(input);
-			const broadWindow = resolveBroadAvailabilityWindow({ input, mode });
-			const where = buildAvailabilityWhereClause(input);
-
-			if (!where) {
-				throw new ORPCError("INTERNAL_SERVER_ERROR");
-			}
-
-			const fetchLimit = input.offset + input.limit;
-			const candidateBoats = await db
-				.select()
-				.from(boat)
-				.where(where)
-				.orderBy(desc(boat.createdAt))
-				.limit(fetchLimit + 100);
-
-			if (candidateBoats.length === 0) {
-				return { items: [], total: 0, amenityCounts: {} };
-			}
-
-			const candidateBoatIds = candidateBoats.map(
-				(candidateBoat) => candidateBoat.id
-			);
-
-			const [
-				overlappingBookings,
-				overlappingBlocks,
-				pricingProfiles,
-				pricingRulesRows,
-				amenityCountRows,
-				minDurationRulesRows,
-			] = await Promise.all([
-				db
-					.select({
-						boatId: booking.boatId,
-						startsAt: booking.startsAt,
-						endsAt: booking.endsAt,
-					})
-					.from(booking)
-					.where(
-						and(
-							inArray(booking.boatId, candidateBoatIds),
-							inArray(booking.status, blockingBookingStatuses),
-							lt(booking.startsAt, broadWindow.endsAt),
-							gt(booking.endsAt, broadWindow.startsAt)
-						)
-					),
-				db
-					.select({
-						boatId: boatAvailabilityBlock.boatId,
-						startsAt: boatAvailabilityBlock.startsAt,
-						endsAt: boatAvailabilityBlock.endsAt,
-					})
-					.from(boatAvailabilityBlock)
-					.where(
-						and(
-							inArray(boatAvailabilityBlock.boatId, candidateBoatIds),
-							eq(boatAvailabilityBlock.isActive, true),
-							lt(boatAvailabilityBlock.startsAt, broadWindow.endsAt),
-							gt(boatAvailabilityBlock.endsAt, broadWindow.startsAt)
-						)
-					),
-				db
-					.select()
-					.from(boatPricingProfile)
-					.where(
-						and(
-							inArray(boatPricingProfile.boatId, candidateBoatIds),
-							isNull(boatPricingProfile.archivedAt)
-						)
-					)
-					.orderBy(
-						asc(boatPricingProfile.boatId),
-						desc(boatPricingProfile.isDefault),
-						desc(boatPricingProfile.validFrom)
-					),
-				db
-					.select()
-					.from(boatPricingRule)
-					.where(
-						and(
-							inArray(boatPricingRule.boatId, candidateBoatIds),
-							eq(boatPricingRule.isActive, true)
-						)
-					),
-				db
-					.select({
-						key: boatAmenity.key,
-						count: countDistinct(boatAmenity.boatId),
-					})
-					.from(boatAmenity)
-					.where(
-						and(
-							inArray(boatAmenity.boatId, candidateBoatIds),
-							eq(boatAmenity.isEnabled, true)
-						)
-					)
-					.groupBy(boatAmenity.key),
-				db
-					.select()
-					.from(boatMinimumDurationRule)
-					.where(
-						and(
-							inArray(boatMinimumDurationRule.boatId, candidateBoatIds),
-							eq(boatMinimumDurationRule.isActive, true)
-						)
-					),
-			]);
-
-			const amenityCounts = buildAmenityCounts(amenityCountRows);
-
-			const bookingBusyByBoatId =
-				buildBusyIntervalsByBoatId(overlappingBookings);
-			const blockBusyByBoatId = buildBusyIntervalsByBoatId(overlappingBlocks);
-			const { pricingProfilesByBoatId, pricingRulesByBoatId } =
-				buildPricingLookups(pricingProfiles, pricingRulesRows);
-
-			const minDurationRulesByBoatId = new Map<string, MinimumDurationRule[]>();
-			for (const rule of minDurationRulesRows) {
-				const existing = minDurationRulesByBoatId.get(rule.boatId);
-				if (existing) {
-					existing.push(rule);
-				} else {
-					minDurationRulesByBoatId.set(rule.boatId, [rule]);
-				}
-			}
-
-			const resultsWithAvailability = scoreCandidateBoats({
-				candidateBoats,
-				input,
-				mode,
-				bookingBusyByBoatId,
-				blockBusyByBoatId,
-				pricingProfilesByBoatId,
-				pricingRulesByBoatId,
-			});
-
-			const durationMinutes = resolveAvailabilityDurationMinutes({
-				mode,
-				input,
-			});
-			const now = new Date();
-			const { busyByBoatIdForSlots } =
-				await sortAvailabilityResultsForPublicRequest({
-					resultsWithAvailability,
-					sortBy: input.sortBy,
-					durationMinutes,
-					now,
-					passengers: input.passengers,
-					minDurationRulesByBoatId,
-				});
-
-			const total = resultsWithAvailability.length;
-			const paged = resultsWithAvailability.slice(
-				input.offset,
-				input.offset + input.limit
-			);
-
-			const items = await buildAvailabilityItems({
-				paged,
-				durationMinutes,
-				now,
-				passengers: input.passengers,
-				withSlots: input.withSlots,
-				preloadedBusyByBoatId: busyByBoatIdForSlots,
-				minDurationRulesByBoatId,
-			});
-
-			const availableFilters = buildAvailableFilters({
-				resultsWithAvailability,
-				items,
-				withSlots: input.withSlots,
-			});
-
-			return { items, total, amenityCounts, availableFilters };
-		}),
-
-	getByIdPublic: publicProcedure
-		.route({
-			tags: ["Booking"],
-			summary: "Get public boat detail by ID",
-			description:
-				"Fetch a single boat with dock, amenities, gallery, pricing, and available time slots for a date.",
-		})
-		.input(getBoatByIdPublicInputSchema)
-		.output(getBoatByIdPublicOutputSchema)
-		.handler(async ({ input }) => {
-			const [foundBoat] = await db
-				.select()
-				.from(boat)
-				.where(
-					and(
-						eq(boat.id, input.boatId),
-						input.includeInactive ? undefined : eq(boat.status, "active"),
-						input.includeInactive ? undefined : eq(boat.isActive, true),
-						input.includeInactive ? undefined : isNull(boat.archivedAt)
-					)
-				)
-				.limit(1);
-
-			if (!foundBoat) {
-				throw new ORPCError("NOT_FOUND");
-			}
-
-			const now = new Date();
-			const dateStr =
-				input.date ?? getDateStringInTimeZone(now, foundBoat.timezone);
-			const durationMinutes = Math.max(
-				30,
-				Math.round(input.durationHours * 60)
-			);
-			const { dayStart } = resolveWorkingWindow({
-				date: dateStr,
-				workingHoursStart: foundBoat.workingHoursStart,
-				workingHoursEnd: foundBoat.workingHoursEnd,
-				timezone: foundBoat.timezone,
-			});
-
-			const [
-				amenityRows,
-				galleryRows,
-				dockRows,
-				pricingProfiles,
-				pricingRulesRows,
-				minDurationRulesRows,
-				slotBookings,
-				slotBlocks,
-			] = await Promise.all([
-				db
-					.select()
-					.from(boatAmenity)
-					.where(
-						and(
-							eq(boatAmenity.boatId, foundBoat.id),
-							eq(boatAmenity.isEnabled, true)
-						)
-					),
-				db
-					.select()
-					.from(boatAsset)
-					.where(
-						and(
-							eq(boatAsset.boatId, foundBoat.id),
-							eq(boatAsset.purpose, "gallery")
-						)
-					)
-					.orderBy(asc(boatAsset.sortOrder)),
-				foundBoat.dockId
-					? db
-							.select()
-							.from(boatDock)
-							.where(eq(boatDock.id, foundBoat.dockId))
-							.limit(1)
-					: Promise.resolve([]),
-				db
-					.select()
-					.from(boatPricingProfile)
-					.where(
-						and(
-							eq(boatPricingProfile.boatId, foundBoat.id),
-							isNull(boatPricingProfile.archivedAt),
-							lte(boatPricingProfile.validFrom, dayStart),
-							or(
-								isNull(boatPricingProfile.validTo),
-								gt(boatPricingProfile.validTo, dayStart)
-							)
-						)
-					)
-					.orderBy(
-						desc(boatPricingProfile.isDefault),
-						desc(boatPricingProfile.validFrom)
-					)
-					.limit(1),
-				db
-					.select()
-					.from(boatPricingRule)
-					.where(
-						and(
-							eq(boatPricingRule.boatId, foundBoat.id),
-							eq(boatPricingRule.isActive, true)
-						)
-					),
-				db
-					.select()
-					.from(boatMinimumDurationRule)
-					.where(
-						and(
-							eq(boatMinimumDurationRule.boatId, foundBoat.id),
-							eq(boatMinimumDurationRule.isActive, true)
-						)
-					),
-				db
-					.select({
-						startsAt: booking.startsAt,
-						endsAt: booking.endsAt,
-					})
-					.from(booking)
-					.where(
-						and(
-							eq(booking.boatId, foundBoat.id),
-							inArray(booking.status, blockingBookingStatuses)
-						)
-					),
-				db
-					.select({
-						startsAt: boatAvailabilityBlock.startsAt,
-						endsAt: boatAvailabilityBlock.endsAt,
-					})
-					.from(boatAvailabilityBlock)
-					.where(
-						and(
-							eq(boatAvailabilityBlock.boatId, foundBoat.id),
-							eq(boatAvailabilityBlock.isActive, true)
-						)
-					),
-			]);
-
-			const activePricingProfile = pricingProfiles[0] ?? null;
-			const dock = dockRows[0] ?? null;
-
-			const activeRules = activePricingProfile
-				? pricingRulesRows.filter(
-						(rule) =>
-							!rule.pricingProfileId ||
-							rule.pricingProfileId === activePricingProfile.id
-					)
-				: [];
-
-			let pricingQuote: ReturnType<typeof buildBookingPricingQuote> | null =
-				null;
-
-			if (activePricingProfile) {
-				const { estimatedHours, subtotalCents } =
-					estimateBookingSubtotalCentsFromProfile({
-						startsAt: dayStart,
-						endsAt: new Date(dayStart.getTime() + durationMinutes * 60_000),
-						boatMinimumHours: foundBoat.minimumHours,
-						passengers: input.passengers,
-						timeZone: foundBoat.timezone,
-						profile: activePricingProfile,
-						pricingRules: activeRules,
-					});
-				pricingQuote = buildBookingPricingQuote({
-					profile: activePricingProfile,
-					estimatedHours,
-					subtotalCents,
-				});
-			}
-
-			const busyIntervals: BusyInterval[] = [
-				...slotBookings.map((b) => ({
-					startsAt: b.startsAt,
-					endsAt: b.endsAt,
-				})),
-				...slotBlocks.map((b) => ({
-					startsAt: b.startsAt,
-					endsAt: b.endsAt,
-				})),
-			];
-
-			let slots: ReturnType<typeof enrichSlotsWithPricing> = [];
-
-			if (activePricingProfile) {
-				const rawSlots = computeBoatDaySlots({
-					date: dateStr,
-					boat: {
-						workingHoursStart: foundBoat.workingHoursStart,
-						workingHoursEnd: foundBoat.workingHoursEnd,
-						timezone: foundBoat.timezone,
-						minimumHours: foundBoat.minimumHours,
-					},
-					busyIntervals,
-					durationMinutes,
-				});
-				const afterNotice = filterSlotsAfterMinNotice(
-					rawSlots,
-					now,
-					foundBoat.minimumNoticeMinutes
-				);
-				const annotated = annotateSlotMinimumDuration({
-					slots: afterNotice,
-					minimumDurationRules: minDurationRulesRows,
-					boatMinimumHours: foundBoat.minimumHours,
-					timezone: foundBoat.timezone,
-				});
-				slots = enrichSlotsWithPricing({
-					slots: annotated,
-					boatMinimumHours: foundBoat.minimumHours,
-					passengers: input.passengers,
-					timezone: foundBoat.timezone,
-					profile: activePricingProfile,
-					pricingRules: activeRules,
-				});
-			}
-
-			const allStartTimes = slots.map((s) => s.startsAt.toISOString());
-			const durationOptions = buildDurationOptions({
-				minimumDurationRules: minDurationRulesRows,
-				boatMinimumHours: foundBoat.minimumHours,
-			});
-
-			return {
-				boat: foundBoat,
-				dock,
-				amenities: amenityRows,
-				galleryAssets: galleryRows,
-				pricingQuote,
-				pricingRules: activeRules,
-				minimumDurationRules: minDurationRulesRows,
-				slots,
-				availableFilters: {
-					availableStartTimes: allStartTimes,
-					passengerOptions: [foundBoat.passengerCapacity],
-					durationOptions,
-				},
-			};
-		}),
-
-	quotePublic: publicProcedure
-		.route({
-			tags: ["Booking"],
-			summary: "Get a public booking quote",
-			description:
-				"Calculate pricing for a specific boat, time range, and optional discount code.",
-		})
-		.input(getPublicBookingQuoteInputSchema)
-		.output(quotePublicOutputSchema)
-		.handler(async ({ context, input }) => {
-			const quote = await resolvePublicBookingQuote({
-				context,
-				input,
-			});
-
-			return {
-				boat: quote.publicBoat,
-				pricingQuote: quote.pricingQuote,
-				pricingQuoteAfterDiscount: quote.pricingQuoteAfterDiscount,
-				discount: quote.resolvedDiscount
-					? {
-							code: quote.resolvedDiscount.normalizedDiscountCode,
-							discountType: quote.resolvedDiscount.discountType,
-							discountValue: quote.resolvedDiscount.discountValue,
-							discountAmountCents: quote.resolvedDiscount.discountAmountCents,
-						}
-					: null,
-				estimatedTotalAfterDiscountCents:
-					quote.estimatedTotalAfterDiscountCents,
-				estimatedPayNowAfterDiscountCents:
-					quote.estimatedPayNowAfterDiscountCents,
-				estimatedPayLaterAfterDiscountCents:
-					quote.estimatedPayLaterAfterDiscountCents,
-			};
-		}),
-
-	createPublic: publicProcedure
-		.route({
-			tags: ["Booking"],
-			summary: "Create a public booking",
-			description:
-				"Book a boat as a public user. Validates availability, calculates pricing, and syncs calendar.",
-		})
-		.input(createPublicBookingInputSchema)
-		.output(createPublicBookingOutputSchema)
-		.handler(async ({ context, input }) => {
-			const quote = await resolvePublicBookingQuote({
-				context,
-				input,
-			});
-
-			const managedLikeInput: CreateManagedBookingInput = {
-				boatId: quote.publicBoat.id,
-				customerUserId: quote.sessionUserId,
-				source: input.source,
-				status: "pending",
-				paymentStatus: "unpaid",
-				startsAt: input.startsAt,
-				endsAt: input.endsAt,
-				passengers: input.passengers,
-				contactName: input.contactName,
-				contactPhone: input.contactPhone,
-				contactEmail: input.contactEmail,
-				timezone: input.timezone,
-				basePriceCents: quote.pricingQuote.estimatedBasePriceCents,
-				currency: quote.pricingQuote.currency,
-				calendarLink: quote.calendarLink,
-				discountCode: input.discountCode,
-				notes: input.notes,
-				specialRequests: input.specialRequests,
-				externalRef: input.externalRef,
-				metadata: input.metadata,
-			};
-
-			const created = await createManagedBookingRecord({
-				input: managedLikeInput,
-				organizationId: quote.publicBoat.organizationId,
-				sessionUserId: quote.sessionUserId,
-				boatName: quote.publicBoat.name,
-				resolvedDiscount: quote.resolvedDiscount,
-				calendarLink: quote.calendarLink,
-				totalPriceCentsOverride:
-					quote.pricingQuoteAfterDiscount.estimatedTotalPriceCents,
-			});
-
-			try {
-				const referral = await resolveAffiliateReferralFromContext(context);
-				if (
-					referral &&
-					(referral.organizationId === null ||
-						referral.organizationId === quote.publicBoat.organizationId)
-				) {
-					await attachAffiliateAttributionToBooking({
-						bookingId: created.booking.id,
-						organizationId: created.booking.organizationId,
-						currency: quote.pricingQuoteAfterDiscount.currency,
-						referral,
-						commissionAmountCents:
-							quote.pricingQuoteAfterDiscount.estimatedAffiliateFeeCents,
-						metadata: JSON.stringify({
-							requestUrl: context.requestUrl,
-							capturedFrom: "cookie",
-						}),
-					});
-				}
-			} catch (error) {
-				console.error(
-					"Failed to attach affiliate attribution to public booking",
-					error
-				);
-			}
-
-			try {
-				await emitBookingCreatedNotificationEvent({
-					queue: context.notificationQueue,
-					actorUserId: quote.sessionUserId ?? undefined,
-					booking: created.booking,
-					boatName: quote.publicBoat.name,
-					recipientUserIds: [quote.sessionUserId],
-				});
-			} catch (error) {
-				console.error("Failed to emit booking.created event", error);
-			}
-
-			return {
-				...created,
-				pricingQuote: quote.pricingQuote,
-				pricingQuoteAfterDiscount: quote.pricingQuoteAfterDiscount,
-				estimatedTotalAfterDiscountCents:
-					quote.estimatedTotalAfterDiscountCents,
-				estimatedPayNowAfterDiscountCents:
-					quote.estimatedPayNowAfterDiscountCents,
-				estimatedPayLaterAfterDiscountCents:
-					quote.estimatedPayLaterAfterDiscountCents,
-			};
-		}),
 
 	listManaged: organizationPermissionProcedure({
 		booking: ["read"],
 	})
 		.route({
-			tags: ["Booking"],
 			summary: "List managed bookings",
 			description:
 				"List bookings for the active organization with filters, sorting, and pagination.",
@@ -2280,7 +515,6 @@ export const coreBookingRouter = {
 		booking: ["read"],
 	})
 		.route({
-			tags: ["Booking"],
 			summary: "Get managed booking details",
 			description:
 				"Get a booking with optional discount application and calendar link.",
@@ -2321,7 +555,6 @@ export const coreBookingRouter = {
 		booking: ["create"],
 	})
 		.route({
-			tags: ["Booking"],
 			summary: "Create a managed booking",
 			description:
 				"Create a booking as an organization operator with full control over pricing and calendar.",
@@ -2378,17 +611,25 @@ export const coreBookingRouter = {
 				resolvedDiscount,
 				calendarLink: input.calendarLink,
 			});
-			try {
-				await emitBookingCreatedNotificationEvent({
-					queue: context.notificationQueue,
-					actorUserId: sessionUserId,
-					booking: created.booking,
+			context.eventBus.emit({
+				type: "booking.created",
+				organizationId: created.booking.organizationId,
+				actorUserId: sessionUserId,
+				sourceType: "booking",
+				sourceId: created.booking.id,
+				payload: {
+					bookingId: created.booking.id,
 					boatName: managedBoat.name,
-					recipientUserIds: [input.customerUserId, sessionUserId],
-				});
-			} catch (error) {
-				console.error("Failed to emit booking.created event", error);
-			}
+					windowText: `${managedBoat.name}: ${created.booking.startsAt.toISOString()} - ${created.booking.endsAt.toISOString()}`,
+				},
+				recipients: buildRecipients({
+					userIds: [input.customerUserId, sessionUserId],
+					title: "Booking created",
+					body: `${managedBoat.name}: ${created.booking.startsAt.toISOString()} - ${created.booking.endsAt.toISOString()}`,
+					ctaUrl: `/dashboard/bookings/${created.booking.id}`,
+					metadata: { bookingId: created.booking.id },
+				}),
+			});
 
 			return created;
 		}),
@@ -2397,7 +638,6 @@ export const coreBookingRouter = {
 		booking: ["update"],
 	})
 		.route({
-			tags: ["Booking"],
 			summary: "Cancel a managed booking",
 			description: "Cancel a booking and sync the calendar event deletion.",
 		})
@@ -2460,45 +700,68 @@ export const coreBookingRouter = {
 					.where(eq(boat.id, managedBooking.boatId))
 					.limit(1);
 
-				try {
-					await emitBookingCancelledNotificationEvent({
-						queue: context.notificationQueue,
-						actorUserId: sessionUserId,
-						booking: managedBooking,
+				context.eventBus.emit({
+					type: "booking.cancelled",
+					organizationId: managedBooking.organizationId,
+					actorUserId: sessionUserId,
+					sourceType: "booking",
+					sourceId: managedBooking.id,
+					payload: {
+						bookingId: managedBooking.id,
 						boatName: managedBoat?.name ?? "Boat booking",
-						occurredAt: new Date(),
-						recipientUserIds: [
+						windowText: `${managedBoat?.name ?? "Boat booking"}: ${managedBooking.startsAt.toISOString()} - ${managedBooking.endsAt.toISOString()}`,
+					},
+					recipients: buildRecipients({
+						userIds: [
 							managedBooking.customerUserId,
 							managedBooking.createdByUserId,
 							sessionUserId,
 						],
-					});
-				} catch (error) {
-					console.error("Failed to emit booking.cancelled event", error);
-				}
+						title: "Booking cancelled",
+						body: `${managedBoat?.name ?? "Boat booking"}: ${managedBooking.startsAt.toISOString()} - ${managedBooking.endsAt.toISOString()}`,
+						ctaUrl: `/dashboard/bookings/${managedBooking.id}`,
+						severity: "warning",
+						metadata: { bookingId: managedBooking.id },
+					}),
+				});
 
 				if (cancellationSettlement.refund) {
-					try {
-						await emitBookingRefundProcessedNotificationEvent({
-							queue: context.notificationQueue,
-							actorUserId: sessionUserId,
-							booking: managedBooking,
-							boatName: managedBoat?.name ?? "Boat booking",
+					const boatName = managedBoat?.name ?? "Boat booking";
+					const formattedAmount = formatRefundAmount({
+						amountCents: cancellationSettlement.refund.amountCents,
+						currency: managedBooking.currency,
+					});
+					context.eventBus.emit({
+						type: "booking.refund.processed",
+						organizationId: managedBooking.organizationId,
+						actorUserId: sessionUserId,
+						sourceType: "booking",
+						sourceId: managedBooking.id,
+						payload: {
+							bookingId: managedBooking.id,
+							boatName,
+							windowText: `${boatName}: ${managedBooking.startsAt.toISOString()} - ${managedBooking.endsAt.toISOString()}`,
 							refundId: cancellationSettlement.refund.refundId,
 							refundAmountCents: cancellationSettlement.refund.amountCents,
-							occurredAt: new Date(),
-							recipientUserIds: [
+							formattedAmount,
+						},
+						recipients: buildRecipients({
+							userIds: [
 								managedBooking.customerUserId,
 								managedBooking.createdByUserId,
 								sessionUserId,
 							],
-						});
-					} catch (error) {
-						console.error(
-							"Failed to emit booking.refund.processed event",
-							error
-						);
-					}
+							title: "Refund processed",
+							body: `${boatName}: ${formattedAmount} refunded`,
+							ctaUrl: `/dashboard/bookings/${managedBooking.id}`,
+							severity: "success",
+							metadata: {
+								bookingId: managedBooking.id,
+								refundId: cancellationSettlement.refund.refundId,
+								refundAmountCents: cancellationSettlement.refund.amountCents,
+							},
+						}),
+					});
 				}
 			}
 

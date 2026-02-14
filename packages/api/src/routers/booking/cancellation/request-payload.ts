@@ -1,7 +1,7 @@
 import type {
 	BookingCancellationEvidence,
 	BookingCancellationReasonCode,
-} from "./cancellation-policy.templates";
+} from "./policy.templates";
 
 export interface StoredCancellationRequestPayload {
 	reason?: string;

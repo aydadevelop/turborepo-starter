@@ -9,7 +9,7 @@ import {
 	normalizeBoatSlug,
 	replaceBoatAvailabilityRulesInputSchema,
 	updateManagedBoatInputSchema,
-} from "../routers/boat.schemas";
+} from "../routers/boat/schemas";
 
 describe("boat router schemas", () => {
 	it("normalizes slugs from human names", () => {

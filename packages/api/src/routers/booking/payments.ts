@@ -17,7 +17,7 @@ import {
 	listMineBookingPaymentAttemptsInputSchema,
 	processManagedBookingPaymentAttemptInputSchema,
 } from "../booking.schemas";
-import { reconcileAffiliatePayoutForBooking } from "./affiliate.service";
+import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
 import {
 	requireActiveMembership,
 	requireCustomerBookingAccess,
@@ -36,7 +36,6 @@ const isLocalMockPaymentEnabled = (hostname: string | undefined) => {
 export const paymentBookingRouter = {
 	paymentAttemptCreate: protectedProcedure
 		.route({
-			tags: ["Payment"],
 			summary: "Create payment attempt",
 			description:
 				"Initiate a payment attempt for a booking. Returns idempotent result if the same idempotency key is reused.",
@@ -183,7 +182,6 @@ export const paymentBookingRouter = {
 
 	paymentAttemptListMine: protectedProcedure
 		.route({
-			tags: ["Payment"],
 			summary: "List my payment attempts",
 			description:
 				"List payment attempts for bookings owned by the current signed-in user.",
@@ -223,7 +221,6 @@ export const paymentBookingRouter = {
 		booking: ["read"],
 	})
 		.route({
-			tags: ["Payment"],
 			summary: "List managed payment attempts",
 			description:
 				"List payment attempts for the organization, optionally filtered by booking or status.",
@@ -267,7 +264,6 @@ export const paymentBookingRouter = {
 		booking: ["update"],
 	})
 		.route({
-			tags: ["Payment"],
 			summary: "Process payment attempt",
 			description:
 				"Update a payment attempt status (captured, failed, etc.) and sync the booking payment status.",

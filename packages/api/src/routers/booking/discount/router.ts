@@ -3,7 +3,7 @@ import { bookingDiscountCode } from "@full-stack-cf-app/db/schema/booking";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import z from "zod";
-import { organizationPermissionProcedure } from "../../index";
+import { organizationPermissionProcedure } from "../../../index";
 import {
 	discountCodeOutputSchema,
 	isValidDiscountCode,
@@ -11,21 +11,20 @@ import {
 	normalizeDiscountCode,
 	setManagedDiscountCodeActiveInputSchema,
 	upsertManagedDiscountCodeInputSchema,
-} from "../booking.schemas";
-import { successOutputSchema } from "../shared/schema-utils";
+} from "../../booking.schemas";
+import { successOutputSchema } from "../../shared/schema-utils";
 import {
 	requireActiveMembership,
 	requireManagedBoat,
 	requireManagedDiscountCode,
 	requireSessionUserId,
-} from "./helpers";
+} from "../helpers";
 
 export const discountCodeBookingRouter = {
 	discountCodeListManaged: organizationPermissionProcedure({
 		booking: ["read"],
 	})
 		.route({
-			tags: ["Discount"],
 			summary: "List managed discount codes",
 			description:
 				"List discount codes for the organization, with optional filtering by boat, status, or search term.",
@@ -65,7 +64,6 @@ export const discountCodeBookingRouter = {
 		booking: ["update"],
 	})
 		.route({
-			tags: ["Discount"],
 			summary: "Create or update discount code",
 			description:
 				"Create a new discount code or update an existing one. The code is normalized to uppercase.",
@@ -159,7 +157,6 @@ export const discountCodeBookingRouter = {
 		booking: ["update"],
 	})
 		.route({
-			tags: ["Discount"],
 			summary: "Toggle discount code active status",
 			description: "Enable or disable a discount code.",
 		})

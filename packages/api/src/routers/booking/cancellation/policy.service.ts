@@ -15,7 +15,7 @@ import {
 	type BookingCancellationReasonCode,
 	bookingCancellationReasonCatalog,
 	defaultBookingCancellationPolicyProfile,
-} from "./cancellation-policy.templates";
+} from "./policy.templates";
 
 export type BookingCancellationActor = BookingCancellationPolicyActor;
 

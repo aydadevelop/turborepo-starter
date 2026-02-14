@@ -7,7 +7,7 @@ import {
 import { booking, bookingRefund } from "@full-stack-cf-app/db/schema/booking";
 import { and, eq } from "drizzle-orm";
 
-import type { Context } from "../../context";
+import type { Context } from "../../../context";
 
 export const AFFILIATE_REFERRAL_COOKIE_NAME = "affiliate_ref";
 

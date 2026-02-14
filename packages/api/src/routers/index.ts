@@ -7,7 +7,7 @@ import {
 	protectedProcedure,
 	publicProcedure,
 } from "../index";
-import { boatRouter } from "./boat";
+import { boatRouter } from "./boat/router";
 import { bookingRouter } from "./booking";
 import { helpdeskRouter } from "./helpdesk";
 import { intakeRouter } from "./intake";

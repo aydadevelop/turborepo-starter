@@ -4,7 +4,6 @@ import {
 	supportTicket,
 	supportTicketMessage,
 } from "@full-stack-cf-app/db/schema/support";
-import { notificationsPusher } from "@full-stack-cf-app/notifications/pusher";
 import { ORPCError } from "@orpc/server";
 import {
 	and,
@@ -19,6 +18,8 @@ import {
 import z from "zod";
 
 import { organizationPermissionProcedure } from "../index";
+import { buildRecipients } from "../lib/event-bus";
+import { insertAndReturn, requireManaged } from "../lib/db-helpers";
 import {
 	assignManagedSupportTicketInputSchema,
 	createManagedSupportTicketInputSchema,
@@ -32,10 +33,7 @@ import {
 	supportTicketOutputSchema,
 	updateManagedSupportTicketStatusInputSchema,
 } from "./helpdesk.schemas";
-import {
-	requireActiveMembership,
-	requireSessionUserId,
-} from "./shared/auth-utils";
+import { requireSessionUserId } from "./shared/auth-utils";
 
 const supportTicketSlaEscalationStatuses = [
 	"open",
@@ -63,28 +61,6 @@ const computeDefaultSupportTicketDueAt = (params: {
 	return new Date(params.createdAt.getTime() + hours * 60 * 60 * 1000);
 };
 
-const requireManagedSupportTicket = async (params: {
-	ticketId: string;
-	organizationId: string;
-}) => {
-	const [managedTicket] = await db
-		.select()
-		.from(supportTicket)
-		.where(
-			and(
-				eq(supportTicket.id, params.ticketId),
-				eq(supportTicket.organizationId, params.organizationId)
-			)
-		)
-		.limit(1);
-
-	if (!managedTicket) {
-		throw new ORPCError("NOT_FOUND");
-	}
-
-	return managedTicket;
-};
-
 export const helpdeskRouter = {
 	ticketCreateManaged: organizationPermissionProcedure({
 		support: ["create"],
@@ -97,7 +73,7 @@ export const helpdeskRouter = {
 		.input(createManagedSupportTicketInputSchema)
 		.output(supportTicketOutputSchema)
 		.handler(async ({ context, input }) => {
-			const activeMembership = requireActiveMembership(context);
+			const { activeMembership, eventBus } = context;
 			const sessionUserId = requireSessionUserId(context);
 			const createdAt = new Date();
 			const dueAt =
@@ -127,7 +103,7 @@ export const helpdeskRouter = {
 			}
 
 			const ticketId = crypto.randomUUID();
-			await db.insert(supportTicket).values({
+			const createdTicket = await insertAndReturn(supportTicket, {
 				id: ticketId,
 				organizationId: activeMembership.organizationId,
 				bookingId: input.bookingId,
@@ -144,53 +120,26 @@ export const helpdeskRouter = {
 				updatedAt: createdAt,
 			});
 
-			const [createdTicket] = await db
-				.select()
-				.from(supportTicket)
-				.where(eq(supportTicket.id, ticketId))
-				.limit(1);
-
-			if (!createdTicket) {
-				throw new ORPCError("INTERNAL_SERVER_ERROR");
-			}
-
-			const recipientUserIds = [
-				input.assignedToUserId,
-				input.customerUserId,
-			].filter((value, index, array): value is string => {
-				return Boolean(value) && array.indexOf(value) === index;
+			eventBus.emit({
+				type: "support.ticket.created",
+				organizationId: activeMembership.organizationId,
+				actorUserId: sessionUserId,
+				sourceType: "support_ticket",
+				sourceId: ticketId,
+				payload: {
+					ticketId,
+					subject: input.subject,
+					source: input.source,
+					priority: input.priority,
+				},
+				recipients: buildRecipients({
+					userIds: [input.assignedToUserId, input.customerUserId],
+					title: `New support ticket: ${input.subject}`,
+					body: input.description ?? undefined,
+					ctaUrl: `/dashboard/helpdesk/${ticketId}`,
+					metadata: { ticketId, source: input.source, priority: input.priority },
+				}),
 			});
-			if (recipientUserIds.length > 0) {
-				try {
-					await notificationsPusher({
-						input: {
-							organizationId: activeMembership.organizationId,
-							actorUserId: sessionUserId,
-							eventType: "support.ticket.created",
-							sourceType: "support_ticket",
-							sourceId: ticketId,
-							idempotencyKey: `support.ticket.created:${ticketId}`,
-							payload: {
-								recipients: recipientUserIds.map((userId) => ({
-									userId,
-									title: `New support ticket: ${input.subject}`,
-									body: input.description ?? undefined,
-									ctaUrl: `/dashboard/helpdesk/${ticketId}`,
-									channels: ["in_app"],
-									metadata: {
-										ticketId,
-										source: input.source,
-										priority: input.priority,
-									},
-								})),
-							},
-						},
-						queue: context.notificationQueue,
-					});
-				} catch (error) {
-					console.error("Failed to emit support.ticket.created event", error);
-				}
-			}
 
 			return createdTicket;
 		}),
@@ -207,7 +156,7 @@ export const helpdeskRouter = {
 		.input(listManagedSupportTicketsInputSchema)
 		.output(z.array(supportTicketOutputSchema))
 		.handler(({ context, input }) => {
-			const activeMembership = requireActiveMembership(context);
+			const { activeMembership } = context;
 			const where = and(
 				eq(supportTicket.organizationId, activeMembership.organizationId),
 				input.status ? eq(supportTicket.status, input.status) : undefined,
@@ -251,7 +200,7 @@ export const helpdeskRouter = {
 		.input(sweepManagedSupportTicketSlaInputSchema)
 		.output(sweepManagedSupportTicketSlaOutputSchema)
 		.handler(async ({ context, input }) => {
-			const activeMembership = requireActiveMembership(context);
+			const { activeMembership, eventBus } = context;
 			const sessionUserId = requireSessionUserId(context);
 			const now = input.now ?? new Date();
 
@@ -283,52 +232,37 @@ export const helpdeskRouter = {
 					.where(inArray(supportTicket.id, escalatedTicketIds));
 
 				for (const ticket of overdueTickets) {
-					const recipientUserIds = [
-						ticket.assignedToUserId,
-						ticket.customerUserId,
-						ticket.createdByUserId,
-					].filter((value, index, array): value is string => {
-						return Boolean(value) && array.indexOf(value) === index;
-					});
-					if (recipientUserIds.length === 0) {
-						continue;
-					}
-
-					try {
-						await notificationsPusher({
-							input: {
-								organizationId: activeMembership.organizationId,
-								actorUserId: sessionUserId,
-								eventType: "support.ticket.sla_escalated",
-								sourceType: "support_ticket",
-								sourceId: ticket.id,
-								idempotencyKey: `support.ticket.sla_escalated:${ticket.id}:${now.toISOString()}`,
-								payload: {
-									recipients: recipientUserIds.map((userId) => ({
-										userId,
-										title: `Ticket escalated: ${ticket.subject}`,
-										body:
-											"SLA due time passed. Ticket needs immediate attention.",
-										ctaUrl: `/dashboard/helpdesk/${ticket.id}`,
-										channels: ["in_app"],
-										severity: "warning",
-										metadata: {
-											ticketId: ticket.id,
-											priority: ticket.priority,
-											previousStatus: ticket.status,
-											dueAt: ticket.dueAt?.toISOString() ?? null,
-										},
-									})),
-								},
+					eventBus.emit({
+						type: "support.ticket.sla_escalated",
+						organizationId: activeMembership.organizationId,
+						actorUserId: sessionUserId,
+						sourceType: "support_ticket",
+						sourceId: ticket.id,
+						payload: {
+							ticketId: ticket.id,
+							subject: ticket.subject,
+							priority: ticket.priority,
+							previousStatus: ticket.status,
+							dueAt: ticket.dueAt?.toISOString() ?? null,
+						},
+						recipients: buildRecipients({
+							userIds: [
+								ticket.assignedToUserId,
+								ticket.customerUserId,
+								ticket.createdByUserId,
+							],
+							title: `Ticket escalated: ${ticket.subject}`,
+							body: "SLA due time passed. Ticket needs immediate attention.",
+							ctaUrl: `/dashboard/helpdesk/${ticket.id}`,
+							severity: "warning",
+							metadata: {
+								ticketId: ticket.id,
+								priority: ticket.priority,
+								previousStatus: ticket.status,
+								dueAt: ticket.dueAt?.toISOString() ?? null,
 							},
-							queue: context.notificationQueue,
-						});
-					} catch (error) {
-						console.error(
-							"Failed to emit support.ticket.sla_escalated event",
-							error
-						);
-					}
+						}),
+					});
 				}
 			}
 
@@ -358,11 +292,12 @@ export const helpdeskRouter = {
 			})
 		)
 		.handler(async ({ context, input }) => {
-			const activeMembership = requireActiveMembership(context);
-			const managedTicket = await requireManagedSupportTicket({
-				ticketId: input.ticketId,
-				organizationId: activeMembership.organizationId,
-			});
+			const { activeMembership } = context;
+			const managedTicket = await requireManaged(
+				supportTicket,
+				input.ticketId,
+				activeMembership.organizationId
+			);
 
 			const messages = input.includeMessages
 				? await db
@@ -390,11 +325,12 @@ export const helpdeskRouter = {
 		.input(assignManagedSupportTicketInputSchema)
 		.output(supportTicketOutputSchema)
 		.handler(async ({ context, input }) => {
-			const activeMembership = requireActiveMembership(context);
-			const managedTicket = await requireManagedSupportTicket({
-				ticketId: input.ticketId,
-				organizationId: activeMembership.organizationId,
-			});
+			const { activeMembership } = context;
+			const managedTicket = await requireManaged(
+				supportTicket,
+				input.ticketId,
+				activeMembership.organizationId
+			);
 
 			await db
 				.update(supportTicket)
@@ -429,12 +365,13 @@ export const helpdeskRouter = {
 		.input(updateManagedSupportTicketStatusInputSchema)
 		.output(supportTicketOutputSchema)
 		.handler(async ({ context, input }) => {
-			const activeMembership = requireActiveMembership(context);
+			const { activeMembership, eventBus } = context;
 			const sessionUserId = requireSessionUserId(context);
-			const managedTicket = await requireManagedSupportTicket({
-				ticketId: input.ticketId,
-				organizationId: activeMembership.organizationId,
-			});
+			const managedTicket = await requireManaged(
+				supportTicket,
+				input.ticketId,
+				activeMembership.organizationId
+			);
 
 			await db
 				.update(supportTicket)
@@ -465,54 +402,41 @@ export const helpdeskRouter = {
 			}
 
 			if (managedTicket.status !== updatedTicket.status) {
-				const recipientUserIds = [
-					updatedTicket.assignedToUserId,
-					updatedTicket.customerUserId,
-					updatedTicket.createdByUserId,
-				].filter((value, index, array): value is string => {
-					return Boolean(value) && array.indexOf(value) === index;
+				eventBus.emit({
+					type: "support.ticket.status_changed",
+					organizationId: activeMembership.organizationId,
+					actorUserId: sessionUserId,
+					sourceType: "support_ticket",
+					sourceId: updatedTicket.id,
+					payload: {
+						ticketId: updatedTicket.id,
+						subject: updatedTicket.subject,
+						fromStatus: managedTicket.status,
+						toStatus: updatedTicket.status,
+						priority: updatedTicket.priority,
+					},
+					recipients: buildRecipients({
+						userIds: [
+							updatedTicket.assignedToUserId,
+							updatedTicket.customerUserId,
+							updatedTicket.createdByUserId,
+						],
+						title: `Ticket status: ${updatedTicket.status}`,
+						body: `${updatedTicket.subject} (${managedTicket.status} -> ${updatedTicket.status})`,
+						ctaUrl: `/dashboard/helpdesk/${updatedTicket.id}`,
+						severity:
+							updatedTicket.status === "resolved" ||
+							updatedTicket.status === "closed"
+								? "success"
+								: "info",
+						metadata: {
+							ticketId: updatedTicket.id,
+							fromStatus: managedTicket.status,
+							toStatus: updatedTicket.status,
+							priority: updatedTicket.priority,
+						},
+					}),
 				});
-
-				if (recipientUserIds.length > 0) {
-					try {
-						await notificationsPusher({
-							input: {
-								organizationId: activeMembership.organizationId,
-								actorUserId: sessionUserId,
-								eventType: "support.ticket.status_changed",
-								sourceType: "support_ticket",
-								sourceId: updatedTicket.id,
-								idempotencyKey: `support.ticket.status_changed:${updatedTicket.id}:${updatedTicket.updatedAt.toISOString()}`,
-								payload: {
-									recipients: recipientUserIds.map((userId) => ({
-										userId,
-										title: `Ticket status: ${updatedTicket.status}`,
-										body: `${updatedTicket.subject} (${managedTicket.status} -> ${updatedTicket.status})`,
-										ctaUrl: `/dashboard/helpdesk/${updatedTicket.id}`,
-										channels: ["in_app"],
-										severity:
-											updatedTicket.status === "resolved" ||
-											updatedTicket.status === "closed"
-												? "success"
-												: "info",
-										metadata: {
-											ticketId: updatedTicket.id,
-											fromStatus: managedTicket.status,
-											toStatus: updatedTicket.status,
-											priority: updatedTicket.priority,
-										},
-									})),
-								},
-							},
-							queue: context.notificationQueue,
-						});
-					} catch (error) {
-						console.error(
-							"Failed to emit support.ticket.status_changed event",
-							error
-						);
-					}
-				}
 			}
 
 			return updatedTicket;
@@ -530,16 +454,16 @@ export const helpdeskRouter = {
 		.input(createManagedSupportTicketMessageInputSchema)
 		.output(supportTicketMessageOutputSchema)
 		.handler(async ({ context, input }) => {
-			const activeMembership = requireActiveMembership(context);
+			const { activeMembership } = context;
 			const sessionUserId = requireSessionUserId(context);
-			const managedTicket = await requireManagedSupportTicket({
-				ticketId: input.ticketId,
-				organizationId: activeMembership.organizationId,
-			});
+			const managedTicket = await requireManaged(
+				supportTicket,
+				input.ticketId,
+				activeMembership.organizationId
+			);
 
-			const messageId = crypto.randomUUID();
-			await db.insert(supportTicketMessage).values({
-				id: messageId,
+			const createdMessage = await insertAndReturn(supportTicketMessage, {
+				id: crypto.randomUUID(),
 				ticketId: managedTicket.id,
 				organizationId: activeMembership.organizationId,
 				authorUserId: sessionUserId,
@@ -563,16 +487,6 @@ export const helpdeskRouter = {
 				})
 				.where(eq(supportTicket.id, managedTicket.id));
 
-			const [createdMessage] = await db
-				.select()
-				.from(supportTicketMessage)
-				.where(eq(supportTicketMessage.id, messageId))
-				.limit(1);
-
-			if (!createdMessage) {
-				throw new ORPCError("INTERNAL_SERVER_ERROR");
-			}
-
 			return createdMessage;
 		}),
 
@@ -587,11 +501,12 @@ export const helpdeskRouter = {
 		.input(listManagedSupportTicketMessagesInputSchema)
 		.output(z.array(supportTicketMessageOutputSchema))
 		.handler(async ({ context, input }) => {
-			const activeMembership = requireActiveMembership(context);
-			await requireManagedSupportTicket({
-				ticketId: input.ticketId,
-				organizationId: activeMembership.organizationId,
-			});
+			const { activeMembership } = context;
+			await requireManaged(
+				supportTicket,
+				input.ticketId,
+				activeMembership.organizationId
+			);
 
 			return db
 				.select()

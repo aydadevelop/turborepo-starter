@@ -20,7 +20,7 @@ import {
 } from "@full-stack-cf-app/db/schema/boat";
 import { createSelectSchema } from "drizzle-orm/zod";
 import z from "zod";
-import { optionalTrimmedString } from "./shared/schema-utils";
+import { optionalTrimmedString } from "../shared/schema-utils";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 

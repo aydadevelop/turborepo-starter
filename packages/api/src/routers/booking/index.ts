@@ -1,16 +1,25 @@
+import { o } from "../../index";
 import { mergeRouterFragments } from "../shared/router-merge";
-import { checkoutBookingRouter } from "./checkout";
+import { affiliateBookingRouter } from "./affiliate";
+import { cancellationBookingRouter } from "./cancellation/router";
 import { coreBookingRouter } from "./core";
-import { discountCodeBookingRouter } from "./discount-codes";
-import { lifecycleBookingRouter } from "./lifecycle";
+import { discountCodeBookingRouter } from "./discount/router";
+import { disputeBookingRouter } from "./dispute";
 import { paymentBookingRouter } from "./payments";
+import { publicBookingRouter } from "./storefront";
+import { refundBookingRouter } from "./refund";
 import { shiftBookingRouter } from "./shift";
 
-export const bookingRouter = mergeRouterFragments(
-	coreBookingRouter,
-	checkoutBookingRouter,
-	lifecycleBookingRouter,
-	shiftBookingRouter,
-	paymentBookingRouter,
-	discountCodeBookingRouter
+export const bookingRouter = o.tag("Booking").router(
+	mergeRouterFragments(
+		coreBookingRouter,
+		o.tag("Storefront").router(publicBookingRouter),
+		o.tag("Affiliate").router(affiliateBookingRouter),
+		o.tag("Cancellation").router(cancellationBookingRouter),
+		o.tag("Dispute").router(disputeBookingRouter),
+		o.tag("Refund").router(refundBookingRouter),
+		o.tag("Shift").router(shiftBookingRouter),
+		o.tag("Payment").router(paymentBookingRouter),
+		o.tag("Discount").router(discountCodeBookingRouter)
+	)
 );

@@ -5,12 +5,12 @@ import {
 } from "@full-stack-cf-app/db/schema/booking";
 import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
-import { getCalendarAdapter } from "../../calendar/adapters/registry";
+import { getCalendarAdapter } from "../../../calendar/adapters/registry";
 import type {
 	CalendarSyncResult,
 	CreateManagedBookingCalendarLinkInput,
 	CreateManagedBookingInput,
-} from "./helpers";
+} from "../helpers";
 
 const toSyncErrorMessage = (error: unknown) => {
 	if (error instanceof Error) {

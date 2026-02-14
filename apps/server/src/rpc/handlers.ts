@@ -51,19 +51,66 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
 						description: "Health checks and access control",
 					},
 					{
-						name: "Boat",
-						description:
-							"Boat CRUD, docks, amenities, assets, calendar connections, availability, and pricing",
+						name: "Boats",
+						description: "Boat CRUD — create, list, update, archive",
+					},
+					{
+						name: "Docks",
+						description: "Dock management for boats",
+					},
+					{
+						name: "Amenities",
+						description: "Boat amenity listings and replacement",
+					},
+					{
+						name: "Assets",
+						description: "Media and file assets attached to boats",
+					},
+					{
+						name: "Calendar",
+						description: "Calendar connection sync and management",
+					},
+					{
+						name: "Availability",
+						description: "Weekly availability rules and date-specific blocks",
+					},
+					{
+						name: "Pricing",
+						description: "Pricing profiles and conditional pricing rules",
+					},
+					{
+						name: "Min Duration",
+						description: "Minimum booking duration rules per time slot",
 					},
 					{
 						name: "Booking",
 						description:
-							"Booking creation, listing, availability search, and quotes",
+							"Booking CRUD — list, get, create, and cancel managed bookings",
 					},
 					{
-						name: "Booking Lifecycle",
+						name: "Storefront",
 						description:
-							"Cancellation requests, disputes, and refund workflows",
+							"Public storefront — availability search, quotes, checkout, and booking creation",
+					},
+					{
+						name: "Affiliate",
+						description: "Affiliate booking attribution and payout management",
+					},
+					{
+						name: "Cancellation",
+						description: "Cancellation request submission, listing, and review",
+					},
+					{
+						name: "Dispute",
+						description: "Booking dispute creation, listing, and resolution",
+					},
+					{
+						name: "Refund",
+						description: "Refund request submission, review, and processing",
+					},
+					{
+						name: "Shift",
+						description: "Booking shift (reschedule) requests and review",
 					},
 					{
 						name: "Payment",
@@ -92,6 +139,51 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
 					{
 						name: "Todo",
 						description: "Todo list management",
+					},
+				],
+				"x-tagGroups": [
+					{
+						name: "System",
+						tags: ["System"],
+					},
+					{
+						name: "Boat Management",
+						tags: [
+							"Boats",
+							"Docks",
+							"Amenities",
+							"Assets",
+							"Calendar",
+							"Availability",
+							"Pricing",
+							"Min Duration",
+						],
+					},
+					{
+						name: "Bookings & Payments",
+						tags: [
+							"Booking",
+							"Storefront",
+							"Affiliate",
+							"Cancellation",
+							"Dispute",
+							"Refund",
+							"Shift",
+							"Payment",
+							"Discount",
+						],
+					},
+					{
+						name: "Support",
+						tags: ["Helpdesk", "Intake"],
+					},
+					{
+						name: "Communication",
+						tags: ["Notifications", "Telegram"],
+					},
+					{
+						name: "Misc",
+						tags: ["Todo"],
 					},
 				],
 			}),

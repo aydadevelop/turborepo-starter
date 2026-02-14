@@ -1,5 +1,5 @@
 import type { boat } from "@full-stack-cf-app/db/schema/boat";
-import type { BookingPricingQuote } from "../../booking/pricing";
+import type { BookingPricingQuote } from "./pricing";
 import {
 	checkoutLineItemLabels,
 	checkoutPolicyTemplates,
