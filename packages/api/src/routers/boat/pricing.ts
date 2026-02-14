@@ -11,6 +11,7 @@ import { organizationPermissionProcedure } from "../../index";
 import { insertAndReturn } from "../../lib/db-helpers";
 import { requireSessionUserId } from "../shared/auth-utils";
 import { successOutputSchema } from "../shared/schema-utils";
+import { requireManagedBoat } from "./access";
 import {
 	boatPricingProfileOutputSchema,
 	boatPricingRuleOutputSchema,
@@ -21,7 +22,6 @@ import {
 	listBoatPricingRulesInputSchema,
 	setDefaultBoatPricingProfileInputSchema,
 } from "./schemas";
-import { requireManagedBoat } from "./access";
 
 export const boatPricingRouter = {
 	profileList: organizationPermissionProcedure({
@@ -33,7 +33,10 @@ export const boatPricingRouter = {
 		.input(listBoatPricingProfilesInputSchema)
 		.output(z.array(boatPricingProfileOutputSchema))
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			const where = and(
 				eq(boatPricingProfile.boatId, input.boatId),
@@ -63,7 +66,10 @@ export const boatPricingRouter = {
 		.output(boatPricingProfileOutputSchema)
 		.handler(async ({ context, input }) => {
 			const sessionUserId = requireSessionUserId(context);
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			if (
 				input.validFrom &&
@@ -115,7 +121,10 @@ export const boatPricingRouter = {
 		.input(setDefaultBoatPricingProfileInputSchema)
 		.output(successOutputSchema)
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			const [profile] = await db
 				.select()
@@ -160,7 +169,10 @@ export const boatPricingRouter = {
 		.input(listBoatPricingRulesInputSchema)
 		.output(z.array(boatPricingRuleOutputSchema))
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			const where = and(
 				eq(boatPricingRule.boatId, input.boatId),
@@ -189,7 +201,10 @@ export const boatPricingRouter = {
 		.input(createBoatPricingRuleInputSchema)
 		.output(boatPricingRuleOutputSchema)
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			if (input.pricingProfileId) {
 				const [pricingProfile] = await db
@@ -243,7 +258,10 @@ export const boatPricingRouter = {
 		.input(deleteBoatPricingRuleInputSchema)
 		.output(successOutputSchema)
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			const [existingRule] = await db
 				.select()

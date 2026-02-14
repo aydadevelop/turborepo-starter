@@ -6,12 +6,12 @@ import z from "zod";
 
 import { organizationPermissionProcedure } from "../../index";
 import { insertAndReturn } from "../../lib/db-helpers";
+import { requireCalendarConnectionForBoat, requireManagedBoat } from "./access";
 import {
 	boatCalendarConnectionOutputSchema,
 	listBoatCalendarConnectionsInputSchema,
 	upsertBoatCalendarConnectionInputSchema,
 } from "./schemas";
-import { requireCalendarConnectionForBoat, requireManagedBoat } from "./access";
 
 export const boatCalendarRouter = {
 	list: organizationPermissionProcedure({
@@ -23,7 +23,10 @@ export const boatCalendarRouter = {
 		.input(listBoatCalendarConnectionsInputSchema)
 		.output(z.array(boatCalendarConnectionOutputSchema))
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 			return await db
 				.select()
 				.from(boatCalendarConnection)
@@ -39,7 +42,10 @@ export const boatCalendarRouter = {
 		.input(upsertBoatCalendarConnectionInputSchema)
 		.output(boatCalendarConnectionOutputSchema)
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			const connectionId = input.id ?? crypto.randomUUID();
 

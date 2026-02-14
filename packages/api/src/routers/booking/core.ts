@@ -32,6 +32,7 @@ import {
 	organizationPermissionProcedure,
 	protectedProcedure,
 } from "../../index";
+import { buildRecipients, formatRefundAmount } from "../../lib/event-bus";
 import {
 	cancelManagedBookingInputSchema,
 	createManagedBookingInputSchema,
@@ -44,20 +45,10 @@ import {
 	listMineBookingsOutputSchema,
 } from "../booking.schemas";
 import { successOutputSchema } from "../shared/schema-utils";
-import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
-import {
-	cancelBookingAndSync,
-	ensureNoExternalCalendarOverlap,
-	syncCalendarLinkOnBookingCreate,
-} from "./services/calendar-sync";
 import {
 	applyCancellationPolicyAndRefund,
 	assertCancellationPolicyReasonInput,
 } from "./cancellation/policy.service";
-import {
-	assertBookingActionAllowedByWindow,
-	loadOrganizationBookingActionPolicyProfile,
-} from "./services/action-policy";
 import { resolveBookingDiscount } from "./discount/resolution";
 import {
 	blockingBookingStatuses,
@@ -70,7 +61,16 @@ import {
 	requireManagedCalendarConnection,
 	requireSessionUserId,
 } from "./helpers";
-import { buildRecipients, formatRefundAmount } from "../../lib/event-bus";
+import {
+	assertBookingActionAllowedByWindow,
+	loadOrganizationBookingActionPolicyProfile,
+} from "./services/action-policy";
+import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
+import {
+	cancelBookingAndSync,
+	ensureNoExternalCalendarOverlap,
+	syncCalendarLinkOnBookingCreate,
+} from "./services/calendar-sync";
 
 const getSqliteErrorMessage = (error: unknown): string => {
 	if (error instanceof Error) {
@@ -109,7 +109,6 @@ export const ensureNoBookingOverlap = async (params: {
 	}
 };
 
-
 export const ensureNoAvailabilityBlockOverlap = async (params: {
 	boatId: string;
 	startsAt: Date;
@@ -134,7 +133,6 @@ export const ensureNoAvailabilityBlockOverlap = async (params: {
 		});
 	}
 };
-
 
 export const resolveActivePricingProfile = async (params: {
 	boatId: string;
@@ -168,7 +166,6 @@ export const resolveActivePricingProfile = async (params: {
 
 	return activeProfile;
 };
-
 
 export const resolvePrimaryCalendarLinkInput = async (params: {
 	boatId: string;
@@ -220,7 +217,6 @@ export const resolvePrimaryCalendarLinkInput = async (params: {
 		syncedAt: undefined,
 	};
 };
-
 
 export const createManagedBookingRecord = async (params: {
 	input: CreateManagedBookingInput;
@@ -395,7 +391,6 @@ export const createManagedBookingRecord = async (params: {
 	};
 };
 
-
 export const coreBookingRouter = {
 	listMine: protectedProcedure
 		.route({
@@ -446,7 +441,6 @@ export const coreBookingRouter = {
 				total: Number(countResult[0]?.total ?? 0),
 			};
 		}),
-
 
 	listManaged: organizationPermissionProcedure({
 		booking: ["read"],

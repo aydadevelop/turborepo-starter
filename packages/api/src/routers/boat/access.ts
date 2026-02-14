@@ -9,7 +9,12 @@ export const requireManagedBoat = (boatId: string, organizationId: string) =>
 	requireManaged(boat, boatId, organizationId);
 
 export const requireManagedDock = (dockId: string, organizationId: string) =>
-	requireManaged(boatDock, dockId, organizationId, "Dock does not belong to the active organization");
+	requireManaged(
+		boatDock,
+		dockId,
+		organizationId,
+		"Dock does not belong to the active organization"
+	);
 
 export const requireCalendarConnectionForBoat = (
 	calendarConnectionId: string,

@@ -1,8 +1,5 @@
 import { db } from "@full-stack-cf-app/db";
-import {
-	booking,
-	bookingRefund,
-} from "@full-stack-cf-app/db/schema/booking";
+import { booking, bookingRefund } from "@full-stack-cf-app/db/schema/booking";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, getTableColumns, inArray, or } from "drizzle-orm";
 import z from "zod";
@@ -19,7 +16,6 @@ import {
 	reviewBookingRefundInputSchema,
 } from "../booking.schemas";
 import { successOutputSchema } from "../shared/schema-utils";
-import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
 import {
 	requireActiveMembership,
 	requireCustomerBookingAccess,
@@ -27,6 +23,7 @@ import {
 	requireManagedRefund,
 	requireSessionUserId,
 } from "./helpers";
+import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
 
 export const refundBookingRouter = {
 	refundRequestCreate: protectedProcedure

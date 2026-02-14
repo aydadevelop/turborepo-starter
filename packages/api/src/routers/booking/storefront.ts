@@ -11,6 +11,7 @@ import {
 	boatPricingRule,
 } from "@full-stack-cf-app/db/schema/boat";
 import { booking } from "@full-stack-cf-app/db/schema/booking";
+import { notificationsPusher } from "@full-stack-cf-app/notifications/pusher";
 import { ORPCError } from "@orpc/server";
 import {
 	and,
@@ -27,6 +28,39 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
+import { publicProcedure } from "../../index";
+import { buildRecipients } from "../../lib/event-bus";
+import {
+	availabilityPublicOutputSchema,
+	checkoutReadModelPublicOutputSchema,
+	createPublicBookingInputSchema,
+	createPublicBookingOutputSchema,
+	getBoatByIdPublicInputSchema,
+	getBoatByIdPublicOutputSchema,
+	getPublicBookingQuoteInputSchema,
+	getPublicCheckoutReadModelInputSchema,
+	listPublicBoatAvailabilityInputSchema,
+	quotePublicOutputSchema,
+} from "../booking.schemas";
+import {
+	createManagedBookingRecord,
+	ensureNoAvailabilityBlockOverlap,
+	ensureNoBookingOverlap,
+	resolveActivePricingProfile,
+	resolvePrimaryCalendarLinkInput,
+} from "./core";
+import { resolveBookingDiscount } from "./discount/resolution";
+import {
+	blockingBookingStatuses,
+	type CreateManagedBookingInput,
+} from "./helpers";
+import {
+	attachAffiliateAttributionToBooking,
+	resolveAffiliateReferralFromContext,
+} from "./services/affiliate";
+import { sortByAvailabilityBands } from "./services/availability-ranking";
+import { ensureNoExternalCalendarOverlap } from "./services/calendar-sync";
+import { buildCheckoutReadModel } from "./services/checkout-read-model";
 import {
 	type BoatPricingRule,
 	buildBookingPricingQuote,
@@ -42,40 +76,6 @@ import {
 	type MinimumDurationRule,
 	resolveWorkingWindow,
 } from "./services/slots";
-import { publicProcedure } from "../../index";
-import {
-	availabilityPublicOutputSchema,
-	checkoutReadModelPublicOutputSchema,
-	createPublicBookingInputSchema,
-	createPublicBookingOutputSchema,
-	getBoatByIdPublicInputSchema,
-	getBoatByIdPublicOutputSchema,
-	getPublicBookingQuoteInputSchema,
-	getPublicCheckoutReadModelInputSchema,
-	listPublicBoatAvailabilityInputSchema,
-	quotePublicOutputSchema,
-} from "../booking.schemas";
-import {
-	attachAffiliateAttributionToBooking,
-	resolveAffiliateReferralFromContext,
-} from "./services/affiliate";
-import { sortByAvailabilityBands } from "./services/availability-ranking";
-import { ensureNoExternalCalendarOverlap } from "./services/calendar-sync";
-import { buildCheckoutReadModel } from "./services/checkout-read-model";
-import {
-	createManagedBookingRecord,
-	ensureNoAvailabilityBlockOverlap,
-	ensureNoBookingOverlap,
-	resolveActivePricingProfile,
-	resolvePrimaryCalendarLinkInput,
-} from "./core";
-import { resolveBookingDiscount } from "./discount/resolution";
-import {
-	blockingBookingStatuses,
-	type CreateManagedBookingInput,
-} from "./helpers";
-import { notificationsPusher } from "@full-stack-cf-app/notifications/pusher";
-import { buildRecipients } from "../../lib/event-bus";
 
 const dateFormatterByTimeZone = new Map<string, Intl.DateTimeFormat>();
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -6,6 +6,7 @@ import z from "zod";
 
 import { organizationPermissionProcedure } from "../../index";
 import { insertAndReturn } from "../../lib/db-helpers";
+import { requireManagedDock } from "./access";
 import {
 	boatDockOutputSchema,
 	isValidBoatSlug,
@@ -13,7 +14,6 @@ import {
 	normalizeBoatSlug,
 	upsertBoatDockInputSchema,
 } from "./schemas";
-import { requireManagedDock } from "./access";
 
 export const boatDockRouter = {
 	list: organizationPermissionProcedure({

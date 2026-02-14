@@ -29,11 +29,6 @@ import {
 	or,
 } from "drizzle-orm";
 import z from "zod";
-
-import {
-	buildBookingPricingQuote,
-	estimateBookingSubtotalCentsFromProfile,
-} from "./services/pricing";
 import {
 	organizationPermissionProcedure,
 	protectedProcedure,
@@ -46,8 +41,6 @@ import {
 	reviewBookingShiftRequestManagedInputSchema,
 	reviewBookingShiftRequestMineInputSchema,
 } from "../booking.schemas";
-import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
-import { syncCalendarLinkOnBookingUpdate } from "./services/calendar-sync";
 import { resolveBookingDiscount } from "./discount/resolution";
 import {
 	blockingBookingStatuses,
@@ -61,6 +54,12 @@ import {
 	assertBookingActionAllowedByWindow,
 	loadOrganizationBookingActionPolicyProfile,
 } from "./services/action-policy";
+import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
+import { syncCalendarLinkOnBookingUpdate } from "./services/calendar-sync";
+import {
+	buildBookingPricingQuote,
+	estimateBookingSubtotalCentsFromProfile,
+} from "./services/pricing";
 
 const terminalBookingStatuses = new Set(["cancelled", "completed", "no_show"]);
 const MIN_PAYMENT_ADJUSTMENT_CENTS = 100;
@@ -634,7 +633,8 @@ const applyShiftRequestIfReady = async (params: {
 		await db
 			.update(booking)
 			.set({
-				refundAmountCents: (managedBooking.refundAmountCents ?? 0) + refundAmountCents,
+				refundAmountCents:
+					(managedBooking.refundAmountCents ?? 0) + refundAmountCents,
 				updatedAt: now,
 			})
 			.where(eq(booking.id, managedBooking.id));

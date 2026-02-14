@@ -14,15 +14,15 @@ import { eq, sql } from "drizzle-orm";
 import type z from "zod";
 
 import { requireManaged } from "../../lib/db-helpers";
+import {
+	requireCalendarConnectionForBoat,
+	requireManagedBoat as requireManagedBoatImpl,
+} from "../boat/access";
 import type { createManagedBookingInputSchema } from "../booking.schemas";
 import {
 	requireActiveMembership as requireActiveMembershipImpl,
 	requireSessionUserId as requireSessionUserIdImpl,
 } from "../shared/auth-utils";
-import {
-	requireCalendarConnectionForBoat,
-	requireManagedBoat as requireManagedBoatImpl,
-} from "../boat/access";
 
 export const requireManagedBoat = requireManagedBoatImpl;
 export const requireActiveMembership = requireActiveMembershipImpl;
@@ -60,11 +60,15 @@ export const requireManagedCalendarConnection = async (params: {
 }) =>
 	requireCalendarConnectionForBoat(params.calendarConnectionId, params.boatId);
 
-export const requireManagedBooking = (bookingId: string, organizationId: string) =>
-	requireManaged(booking, bookingId, organizationId);
+export const requireManagedBooking = (
+	bookingId: string,
+	organizationId: string
+) => requireManaged(booking, bookingId, organizationId);
 
-export const requireManagedDiscountCode = (discountCodeId: string, organizationId: string) =>
-	requireManaged(bookingDiscountCode, discountCodeId, organizationId);
+export const requireManagedDiscountCode = (
+	discountCodeId: string,
+	organizationId: string
+) => requireManaged(bookingDiscountCode, discountCodeId, organizationId);
 
 export const requireCustomerBookingAccess = async (params: {
 	bookingId: string;

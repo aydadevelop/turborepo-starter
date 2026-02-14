@@ -17,7 +17,6 @@ import {
 	listMineBookingPaymentAttemptsInputSchema,
 	processManagedBookingPaymentAttemptInputSchema,
 } from "../booking.schemas";
-import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
 import {
 	requireActiveMembership,
 	requireCustomerBookingAccess,
@@ -26,6 +25,7 @@ import {
 	requireSessionUserId,
 	syncBookingPaymentStatusFromAttempts,
 } from "./helpers";
+import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
 
 const isLocalMockPaymentEnabled = (hostname: string | undefined) => {
 	return (

@@ -1,8 +1,5 @@
 import { db } from "@full-stack-cf-app/db";
-import {
-	booking,
-	bookingDispute,
-} from "@full-stack-cf-app/db/schema/booking";
+import { booking, bookingDispute } from "@full-stack-cf-app/db/schema/booking";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, getTableColumns, or } from "drizzle-orm";
 import z from "zod";

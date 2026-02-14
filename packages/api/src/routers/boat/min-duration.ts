@@ -7,6 +7,7 @@ import z from "zod";
 import { organizationPermissionProcedure } from "../../index";
 import { buildUpdatePayload, insertAndReturn } from "../../lib/db-helpers";
 import { successOutputSchema } from "../shared/schema-utils";
+import { requireManagedBoat } from "./access";
 import {
 	boatMinimumDurationRuleOutputSchema,
 	createBoatMinimumDurationRuleInputSchema,
@@ -14,7 +15,6 @@ import {
 	listBoatMinimumDurationRulesInputSchema,
 	updateBoatMinimumDurationRuleInputSchema,
 } from "./schemas";
-import { requireManagedBoat } from "./access";
 
 export const boatMinDurationRouter = {
 	list: organizationPermissionProcedure({
@@ -26,7 +26,10 @@ export const boatMinDurationRouter = {
 		.input(listBoatMinimumDurationRulesInputSchema)
 		.output(z.array(boatMinimumDurationRuleOutputSchema))
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			return await db
 				.select()
@@ -43,7 +46,10 @@ export const boatMinDurationRouter = {
 		.input(createBoatMinimumDurationRuleInputSchema)
 		.output(boatMinimumDurationRuleOutputSchema)
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			return await insertAndReturn(boatMinimumDurationRule, {
 				id: crypto.randomUUID(),
@@ -70,7 +76,10 @@ export const boatMinDurationRouter = {
 		.input(updateBoatMinimumDurationRuleInputSchema)
 		.output(boatMinimumDurationRuleOutputSchema)
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			const [existing] = await db
 				.select()
@@ -130,7 +139,10 @@ export const boatMinDurationRouter = {
 		.input(deleteBoatMinimumDurationRuleInputSchema)
 		.output(successOutputSchema)
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			const [existing] = await db
 				.select()

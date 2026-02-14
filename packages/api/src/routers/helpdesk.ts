@@ -5,21 +5,12 @@ import {
 	supportTicketMessage,
 } from "@full-stack-cf-app/db/schema/support";
 import { ORPCError } from "@orpc/server";
-import {
-	and,
-	asc,
-	desc,
-	eq,
-	inArray,
-	isNotNull,
-	lte,
-	sql,
-} from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import z from "zod";
 
 import { organizationPermissionProcedure } from "../index";
-import { buildRecipients } from "../lib/event-bus";
 import { insertAndReturn, requireManaged } from "../lib/db-helpers";
+import { buildRecipients } from "../lib/event-bus";
 import {
 	assignManagedSupportTicketInputSchema,
 	createManagedSupportTicketInputSchema,
@@ -27,10 +18,10 @@ import {
 	getManagedSupportTicketInputSchema,
 	listManagedSupportTicketMessagesInputSchema,
 	listManagedSupportTicketsInputSchema,
-	sweepManagedSupportTicketSlaInputSchema,
-	sweepManagedSupportTicketSlaOutputSchema,
 	supportTicketMessageOutputSchema,
 	supportTicketOutputSchema,
+	sweepManagedSupportTicketSlaInputSchema,
+	sweepManagedSupportTicketSlaOutputSchema,
 	updateManagedSupportTicketStatusInputSchema,
 } from "./helpdesk.schemas";
 import { requireSessionUserId } from "./shared/auth-utils";
@@ -137,7 +128,11 @@ export const helpdeskRouter = {
 					title: `New support ticket: ${input.subject}`,
 					body: input.description ?? undefined,
 					ctaUrl: `/dashboard/helpdesk/${ticketId}`,
-					metadata: { ticketId, source: input.source, priority: input.priority },
+					metadata: {
+						ticketId,
+						source: input.source,
+						priority: input.priority,
+					},
 				}),
 			});
 
@@ -210,10 +205,7 @@ export const helpdeskRouter = {
 				.where(
 					and(
 						eq(supportTicket.organizationId, activeMembership.organizationId),
-						inArray(
-							supportTicket.status,
-							supportTicketSlaEscalationStatuses
-						),
+						inArray(supportTicket.status, supportTicketSlaEscalationStatuses),
 						isNotNull(supportTicket.dueAt),
 						lte(supportTicket.dueAt, now)
 					)

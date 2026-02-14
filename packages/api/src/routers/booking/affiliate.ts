@@ -19,8 +19,8 @@ import {
 	processManagedAffiliatePayoutInputSchema,
 } from "../booking.schemas";
 import { successOutputSchema } from "../shared/schema-utils";
-import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
 import { requireActiveMembership } from "./helpers";
+import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
 
 const obfuscateRef = (params: { prefix: string; raw: string }) => {
 	const normalized = params.raw.replace(/[^a-zA-Z0-9]/g, "");

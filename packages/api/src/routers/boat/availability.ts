@@ -11,6 +11,7 @@ import { organizationPermissionProcedure } from "../../index";
 import { insertAndReturn } from "../../lib/db-helpers";
 import { requireSessionUserId } from "../shared/auth-utils";
 import { successOutputSchema } from "../shared/schema-utils";
+import { requireCalendarConnectionForBoat, requireManagedBoat } from "./access";
 import {
 	boatAvailabilityBlockOutputSchema,
 	boatAvailabilityRuleOutputSchema,
@@ -20,7 +21,6 @@ import {
 	listBoatAvailabilityRulesInputSchema,
 	replaceBoatAvailabilityRulesInputSchema,
 } from "./schemas";
-import { requireCalendarConnectionForBoat, requireManagedBoat } from "./access";
 
 export const boatAvailabilityRouter = {
 	ruleList: organizationPermissionProcedure({
@@ -32,7 +32,10 @@ export const boatAvailabilityRouter = {
 		.input(listBoatAvailabilityRulesInputSchema)
 		.output(z.array(boatAvailabilityRuleOutputSchema))
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 			return await db
 				.select()
 				.from(boatAvailabilityRule)
@@ -50,7 +53,10 @@ export const boatAvailabilityRouter = {
 		.input(replaceBoatAvailabilityRulesInputSchema)
 		.output(z.array(boatAvailabilityRuleOutputSchema))
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			await db
 				.delete(boatAvailabilityRule)
@@ -86,7 +92,10 @@ export const boatAvailabilityRouter = {
 		.input(listBoatAvailabilityBlocksInputSchema)
 		.output(z.array(boatAvailabilityBlockOutputSchema))
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			const where = and(
 				eq(boatAvailabilityBlock.boatId, input.boatId),
@@ -119,7 +128,10 @@ export const boatAvailabilityRouter = {
 		.output(boatAvailabilityBlockOutputSchema)
 		.handler(async ({ context, input }) => {
 			const sessionUserId = requireSessionUserId(context);
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			if (input.calendarConnectionId) {
 				await requireCalendarConnectionForBoat(
@@ -153,7 +165,10 @@ export const boatAvailabilityRouter = {
 		.input(deleteBoatAvailabilityBlockInputSchema)
 		.output(successOutputSchema)
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			const [existingBlock] = await db
 				.select()

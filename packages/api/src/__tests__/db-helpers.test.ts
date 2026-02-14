@@ -5,7 +5,15 @@ import {
 	createTestDatabase,
 } from "@full-stack-cf-app/db/test";
 import { sql } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 
 const testDbState = createTestDatabase();
 
@@ -27,11 +35,14 @@ describe("db-helpers", () => {
 
 	beforeEach(() => {
 		clearTestDatabase(testDbState.db);
-		testDbState.db.insert(organization).values({
-			id: "org-1",
-			name: "Test Org",
-			slug: "test-org",
-		}).run();
+		testDbState.db
+			.insert(organization)
+			.values({
+				id: "org-1",
+				name: "Test Org",
+				slug: "test-org",
+			})
+			.run();
 	});
 
 	describe("insertAndReturn", () => {
@@ -55,16 +66,19 @@ describe("db-helpers", () => {
 
 	describe("requireManaged", () => {
 		it("returns the row when it belongs to the organization", async () => {
-			testDbState.db.insert(boat).values({
-				id: "boat-2",
-				organizationId: "org-1",
-				name: "Managed Boat",
-				slug: "managed-boat",
-				status: "active",
-				passengerCapacity: 8,
-				minimumHours: 2,
-				timezone: "UTC",
-			}).run();
+			testDbState.db
+				.insert(boat)
+				.values({
+					id: "boat-2",
+					organizationId: "org-1",
+					name: "Managed Boat",
+					slug: "managed-boat",
+					status: "active",
+					passengerCapacity: 8,
+					minimumHours: 2,
+					timezone: "UTC",
+				})
+				.run();
 
 			const result = await requireManaged(boat, "boat-2", "org-1");
 			expect(result.id).toBe("boat-2");
@@ -80,16 +94,19 @@ describe("db-helpers", () => {
 		});
 
 		it("throws NOT_FOUND when org does not match", async () => {
-			testDbState.db.insert(boat).values({
-				id: "boat-3",
-				organizationId: "org-1",
-				name: "Other Org Boat",
-				slug: "other-org-boat",
-				status: "active",
-				passengerCapacity: 6,
-				minimumHours: 1,
-				timezone: "UTC",
-			}).run();
+			testDbState.db
+				.insert(boat)
+				.values({
+					id: "boat-3",
+					organizationId: "org-1",
+					name: "Other Org Boat",
+					slug: "other-org-boat",
+					status: "active",
+					passengerCapacity: 6,
+					minimumHours: 1,
+					timezone: "UTC",
+				})
+				.run();
 
 			await expect(
 				requireManaged(boat, "boat-3", "org-wrong")
@@ -110,16 +127,19 @@ describe("db-helpers", () => {
 
 	describe("requireOwned", () => {
 		it("returns the row when both columns match", async () => {
-			testDbState.db.insert(boat).values({
-				id: "boat-4",
-				organizationId: "org-1",
-				name: "Owned Boat",
-				slug: "owned-boat",
-				status: "active",
-				passengerCapacity: 4,
-				minimumHours: 1,
-				timezone: "UTC",
-			}).run();
+			testDbState.db
+				.insert(boat)
+				.values({
+					id: "boat-4",
+					organizationId: "org-1",
+					name: "Owned Boat",
+					slug: "owned-boat",
+					status: "active",
+					passengerCapacity: 4,
+					minimumHours: 1,
+					timezone: "UTC",
+				})
+				.run();
 
 			const result = await requireOwned(
 				boat,

@@ -16,6 +16,8 @@ import z from "zod";
 
 import { organizationPermissionProcedure } from "../../index";
 import { buildUpdatePayload, insertAndReturn } from "../../lib/db-helpers";
+import { successOutputSchema } from "../shared/schema-utils";
+import { requireManagedBoat, requireManagedDock } from "./access";
 import {
 	archiveManagedBoatInputSchema,
 	boatOutputSchema,
@@ -27,8 +29,6 @@ import {
 	normalizeBoatSlug,
 	updateManagedBoatInputSchema,
 } from "./schemas";
-import { requireManagedBoat, requireManagedDock } from "./access";
-import { successOutputSchema } from "../shared/schema-utils";
 
 export const boatSelfRouter = {
 	listManaged: organizationPermissionProcedure({
@@ -78,7 +78,10 @@ export const boatSelfRouter = {
 		.output(getManagedBoatOutputSchema)
 		.handler(async ({ context, input }) => {
 			const { organizationId } = context.activeMembership;
-			const managedBoat = await requireManagedBoat(input.boatId, organizationId);
+			const managedBoat = await requireManagedBoat(
+				input.boatId,
+				organizationId
+			);
 
 			const [
 				amenities,
@@ -256,7 +259,10 @@ export const boatSelfRouter = {
 				.update(boat)
 				.set(updateFields)
 				.where(
-					and(eq(boat.id, input.boatId), eq(boat.organizationId, organizationId))
+					and(
+						eq(boat.id, input.boatId),
+						eq(boat.organizationId, organizationId)
+					)
 				);
 
 			const [updatedBoat] = await db
@@ -295,7 +301,10 @@ export const boatSelfRouter = {
 					updatedAt: new Date(),
 				})
 				.where(
-					and(eq(boat.id, input.boatId), eq(boat.organizationId, organizationId))
+					and(
+						eq(boat.id, input.boatId),
+						eq(boat.organizationId, organizationId)
+					)
 				);
 
 			return { success: true };

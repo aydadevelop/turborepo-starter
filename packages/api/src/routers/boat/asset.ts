@@ -7,12 +7,12 @@ import z from "zod";
 import { organizationPermissionProcedure } from "../../index";
 import { insertAndReturn } from "../../lib/db-helpers";
 import { requireSessionUserId } from "../shared/auth-utils";
+import { requireManagedBoat } from "./access";
 import {
 	boatAssetOutputSchema,
 	createBoatAssetInputSchema,
 	listBoatAssetsInputSchema,
 } from "./schemas";
-import { requireManagedBoat } from "./access";
 
 export const boatAssetRouter = {
 	list: organizationPermissionProcedure({
@@ -24,7 +24,10 @@ export const boatAssetRouter = {
 		.input(listBoatAssetsInputSchema)
 		.output(z.array(boatAssetOutputSchema))
 		.handler(async ({ context, input }) => {
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			const where = and(
 				eq(boatAsset.boatId, input.boatId),
@@ -53,7 +56,10 @@ export const boatAssetRouter = {
 		.output(boatAssetOutputSchema)
 		.handler(async ({ context, input }) => {
 			const sessionUserId = requireSessionUserId(context);
-			await requireManagedBoat(input.boatId, context.activeMembership.organizationId);
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
 
 			if (input.isPrimary) {
 				await db
