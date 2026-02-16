@@ -534,6 +534,7 @@ export const setManagedDiscountCodeActiveInputSchema = z.object({
 import {
 	boatAmenityOutputSchema,
 	boatAssetOutputSchema,
+	boatAvailabilityBlockOutputSchema,
 	boatDockOutputSchema,
 	boatOutputSchema,
 	boatPricingRuleOutputSchema,
@@ -610,6 +611,7 @@ export const getBoatByIdPublicOutputSchema = z.object({
 	galleryAssets: z.array(boatAssetOutputSchema),
 	pricingQuote: pricingQuoteOutputSchema.nullable(),
 	pricingRules: z.array(boatPricingRuleOutputSchema),
+	availabilityBlocks: z.array(boatAvailabilityBlockOutputSchema),
 	minimumDurationRules: z.array(boatMinimumDurationRuleOutputSchema),
 	slots: z.array(slotWithPricingOutputSchema),
 	availableFilters: availableFiltersOutputSchema,

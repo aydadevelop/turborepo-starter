@@ -183,6 +183,7 @@ Current status:
 - `quotePublic` covers: single-boat pricing with discount code, before/after breakdown.
 - `checkoutReadModelPublic` baseline is added (line items, payment split, policy summaries, localized labels for web/mini-app checkout UX).
 
+
 Legacy filter features — parity status:
 
 | Feature | Legacy (`filterService`) | Current | Status |
@@ -209,6 +210,7 @@ Missing subtasks:
 - [x] Align `getByIdPublic` direct-link behavior with legacy via `includeInactive` opt-in flag (default keeps active-only public behavior).
 - [x] Wire slot generation into `availabilityPublic`: add `date` (ISO string) + `duration` (hours) as input alternatives to `startsAt`/`endsAt`; add `withSlots` flag to return per-boat time slots via `computeBoatDaySlots` + `filterSlotsAfterMinNotice`.
 - [x] Add available-filter metadata to `availabilityPublic` output: `availableStartTimes` (union of slot start times), `passengerOptions` (distinct capacities), `durationOptions` (feasible durations from longest gap).
+- [x] On boat filter take minhours in to account and special hours(for example where could be day with min 5h but it would show default slots and mark as available)
 - [x] Add production checkout read model for web + mini app (quote breakdown, fee lines, policy summary, localized display fields).
 - [ ] Add payment-intent lifecycle integration (reserve/capture/refund provider orchestration, idempotent retry semantics).
 - [ ] Add expiration timer and clearance.

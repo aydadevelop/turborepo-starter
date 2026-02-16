@@ -226,6 +226,11 @@ export const server = await Worker("server", {
 			"CALENDAR_SYNC_TASK_TOKEN",
 			process.env.CALENDAR_SYNC_TASK_TOKEN || ""
 		),
+		CLOUDPAYMENTS_PUBLIC_ID: process.env.CLOUDPAYMENTS_PUBLIC_ID || process.env.PUBLIC_CLOUDPAYMENTS_PUBLIC_ID || "",
+		CLOUDPAYMENTS_API_SECRET: alchemy.secret.env(
+			"CLOUDPAYMENTS_API_SECRET",
+			process.env.CLOUDPAYMENTS_API_SECRET || ""
+		),
 	},
 	dev: { port: 3000 },
 });
@@ -273,6 +278,8 @@ export const web = shouldStartWeb
 				// go through the ngrok origin (same-origin → /server/rpc)
 				PUBLIC_SERVER_URL: shouldStartTunnel ? "/server" : server.url!,
 				PUBLIC_BASE_PATH: shouldStartTunnel ? "/web" : "",
+				PUBLIC_CLOUDPAYMENTS_PUBLIC_ID:
+					process.env.PUBLIC_CLOUDPAYMENTS_PUBLIC_ID || "",
 			},
 		})
 	: undefined;

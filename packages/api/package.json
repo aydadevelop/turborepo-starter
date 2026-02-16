@@ -8,6 +8,12 @@
     "./*": {
       "default": "./src/*.ts"
     },
+    "./payments/webhooks": {
+      "default": "./src/payments/webhooks/index.ts"
+    },
+    "./payments/webhooks/*": {
+      "default": "./src/payments/webhooks/*.ts"
+    },
     "./routers": {
       "default": "./src/routers/index.ts"
     },

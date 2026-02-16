@@ -8,129 +8,66 @@
 		CardTitle,
 	} from "@full-stack-cf-app/ui/components/card";
 	import { Input } from "@full-stack-cf-app/ui/components/input";
+	import { PUBLIC_CLOUDPAYMENTS_PUBLIC_ID } from "$env/static/public";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
-	import { derived } from "svelte/store";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import { orpc } from "$lib/orpc";
 
+	interface CpWidget {
+		start(params: Record<string, unknown>): Promise<{ success: boolean }>;
+	}
+	interface CpNamespace {
+		CloudPayments: new () => CpWidget;
+	}
+
 	const sessionQuery = authClient.useSession();
 	const HOUR_MS = 60 * 60 * 1000;
+	const BOOKING_EXPIRY_MS = 2 * 60 * 1000; // 2 minutes
 
-	const canManageOrganizationQuery = createQuery({
-		...orpc.canManageOrganization.queryOptions(),
-		retry: false,
-	});
-
-	const mineBookingsQuery = createQuery(
-		orpc.booking.listMine.queryOptions({
+	const mineBookingsQuery = createQuery({
+		...orpc.booking.listMine.queryOptions({
 			input: {
 				limit: 100,
 				offset: 0,
 				sortBy: "startsAt",
 				sortOrder: "desc",
 			},
-		})
-	);
-
-	const managedBookingsQueryOptions = derived(
-		canManageOrganizationQuery,
-		($canManageOrganizationQuery) => {
-			return {
-				...orpc.booking.listManaged.queryOptions({
-					input: {
-						limit: 100,
-						offset: 0,
-						sortBy: "startsAt",
-						sortOrder: "desc",
-					},
-				}),
-				enabled: Boolean(
-					$canManageOrganizationQuery.data?.canManageOrganization
-				),
-			};
-		}
-	);
-	const managedBookingsQuery = createQuery(managedBookingsQueryOptions);
+		}),
+		refetchInterval: 5000,
+	});
 
 	const myCancellationRequestsQuery = createQuery(
 		orpc.booking.cancellationRequestListMine.queryOptions({
-			input: {
-				limit: 100,
-			},
+			input: { limit: 100 },
 		})
-	);
-
-	const managedCancellationRequestsQueryOptions = derived(
-		canManageOrganizationQuery,
-		($canManageOrganizationQuery) => {
-			return {
-				...orpc.booking.cancellationRequestListManaged.queryOptions({
-					input: {
-						limit: 100,
-					},
-				}),
-				enabled: Boolean(
-					$canManageOrganizationQuery.data?.canManageOrganization
-				),
-			};
-		}
-	);
-	const managedCancellationRequestsQuery = createQuery(
-		managedCancellationRequestsQueryOptions
 	);
 
 	const myShiftRequestsQuery = createQuery(
 		orpc.booking.shiftRequestListMine.queryOptions({
-			input: {
-				limit: 100,
-			},
+			input: { limit: 100 },
 		})
-	);
-
-	const managedShiftRequestsQueryOptions = derived(
-		canManageOrganizationQuery,
-		($canManageOrganizationQuery) => {
-			return {
-				...orpc.booking.shiftRequestListManaged.queryOptions({
-					input: {
-						limit: 100,
-					},
-				}),
-				enabled: Boolean(
-					$canManageOrganizationQuery.data?.canManageOrganization
-				),
-			};
-		}
-	);
-	const managedShiftRequestsQuery = createQuery(
-		managedShiftRequestsQueryOptions
 	);
 
 	const myDisputesQuery = createQuery(
 		orpc.booking.disputeListMine.queryOptions({
-			input: {
-				limit: 100,
-			},
+			input: { limit: 100 },
 		})
 	);
 
 	const myRefundsQuery = createQuery(
 		orpc.booking.refundListMine.queryOptions({
-			input: {
-				limit: 100,
-			},
+			input: { limit: 100 },
 		})
 	);
 
-	const myPaymentAttemptsQuery = createQuery(
-		orpc.booking.paymentAttemptListMine.queryOptions({
-			input: {
-				limit: 100,
-			},
-		})
-	);
+	const myPaymentAttemptsQuery = createQuery({
+		...orpc.booking.paymentAttemptListMine.queryOptions({
+			input: { limit: 100 },
+		}),
+		refetchInterval: 5000,
+	});
 
 	const myAffiliateBookingsQuery = createQuery(
 		orpc.booking.listAffiliateMine.queryOptions({
@@ -142,34 +79,9 @@
 			},
 		})
 	);
-	const managedAffiliatePayoutsQueryOptions = derived(
-		canManageOrganizationQuery,
-		($canManageOrganizationQuery) => {
-			return {
-				...orpc.booking.affiliatePayoutListManaged.queryOptions({
-					input: {
-						limit: 100,
-						offset: 0,
-					},
-				}),
-				enabled: Boolean(
-					$canManageOrganizationQuery.data?.canManageOrganization
-				),
-			};
-		}
-	);
-	const managedAffiliatePayoutsQuery = createQuery(
-		managedAffiliatePayoutsQueryOptions
-	);
 
-	const cancelManagedBookingMutation = createMutation(
-		orpc.booking.cancelManaged.mutationOptions()
-	);
 	const requestCancellationMutation = createMutation(
 		orpc.booking.cancellationRequestCreate.mutationOptions()
-	);
-	const reviewCancellationRequestMutation = createMutation(
-		orpc.booking.cancellationRequestReviewManaged.mutationOptions()
 	);
 	const createShiftRequestMutation = createMutation(
 		orpc.booking.shiftRequestCreate.mutationOptions()
@@ -177,11 +89,8 @@
 	const reviewShiftRequestMineMutation = createMutation(
 		orpc.booking.shiftRequestReviewMine.mutationOptions()
 	);
-	const reviewShiftRequestManagedMutation = createMutation(
-		orpc.booking.shiftRequestReviewManaged.mutationOptions()
-	);
-	const processAffiliatePayoutMutation = createMutation(
-		orpc.booking.affiliatePayoutProcessManaged.mutationOptions()
+	const paymentCreateMutation = createMutation(
+		orpc.booking.paymentAttemptCreate.mutationOptions()
 	);
 
 	let bookingStatusFilter = $state("all");
@@ -189,9 +98,6 @@
 	let cancelDraftBookingId = $state<string | null>(null);
 	let cancelReasonDraft = $state("Please cancel this booking");
 	let cancelPendingBookingId = $state<string | null>(null);
-	let reviewDraftBookingId = $state<string | null>(null);
-	let reviewNoteDraft = $state("Reviewed by operator");
-	let reviewPendingBookingId = $state<string | null>(null);
 	let shiftDraftBookingId = $state<string | null>(null);
 	let shiftDraftStartsAt = $state("");
 	let shiftDraftEndsAt = $state("");
@@ -201,7 +107,7 @@
 	let shiftReviewDraftBookingId = $state<string | null>(null);
 	let shiftReviewNoteDraft = $state("Reviewed shift request");
 	let shiftReviewPendingBookingId = $state<string | null>(null);
-	let payoutPendingId = $state<string | null>(null);
+	let payPendingBookingId = $state<string | null>(null);
 	let actionMessage = $state<string | null>(null);
 	let actionError = $state<string | null>(null);
 
@@ -210,10 +116,6 @@
 			goto(resolve("/login"));
 		}
 	});
-
-	const hasManagerAccess = $derived(
-		Boolean($canManageOrganizationQuery.data?.canManageOrganization)
-	);
 
 	const toDate = (value: Date | string): Date =>
 		value instanceof Date ? value : new Date(value);
@@ -400,66 +302,39 @@
 		}
 	};
 
-	const currentBookings = $derived.by(() => {
-		if (hasManagerAccess) {
-			return $managedBookingsQuery.data?.items ?? [];
-		}
-		return $mineBookingsQuery.data?.items ?? [];
-	});
-
-	const totalBookings = $derived.by(() => {
-		if (hasManagerAccess) {
-			return $managedBookingsQuery.data?.total ?? 0;
-		}
-		return $mineBookingsQuery.data?.total ?? 0;
-	});
+	const currentBookings = $derived($mineBookingsQuery.data?.items ?? []);
+	const totalBookings = $derived($mineBookingsQuery.data?.total ?? 0);
 
 	const affiliateBookings = $derived(
 		$myAffiliateBookingsQuery.data?.items ?? []
 	);
-	const managedAffiliatePayouts = $derived(
-		$managedAffiliatePayoutsQuery.data?.items ?? []
+
+	const myCancellationRequests = $derived(
+		$myCancellationRequestsQuery.data ?? []
 	);
-
-	const currentCancellationRequests = $derived.by(() => {
-		if (hasManagerAccess) {
-			return $managedCancellationRequestsQuery.data ?? [];
-		}
-		return $myCancellationRequestsQuery.data ?? [];
-	});
-
-	const currentShiftRequests = $derived.by(() => {
-		if (hasManagerAccess) {
-			return $managedShiftRequestsQuery.data ?? [];
-		}
-		return $myShiftRequestsQuery.data ?? [];
-	});
-
+	const myShiftRequests = $derived($myShiftRequestsQuery.data ?? []);
 	const myDisputes = $derived($myDisputesQuery.data ?? []);
 	const myRefunds = $derived($myRefundsQuery.data ?? []);
 	const myPaymentAttempts = $derived($myPaymentAttemptsQuery.data ?? []);
 
 	const bookingRequestByBookingId = $derived.by(() => {
 		return new Map(
-			currentCancellationRequests.map((request) => [request.bookingId, request])
+			myCancellationRequests.map((request) => [request.bookingId, request])
 		);
 	});
 
 	const shiftRequestByBookingId = $derived.by(() => {
 		return new Map(
-			currentShiftRequests.map((request) => [request.bookingId, request])
+			myShiftRequests.map((request) => [request.bookingId, request])
 		);
 	});
 
 	const shiftRequestsNeedingReview = $derived.by(() => {
-		return currentShiftRequests.filter((request) => {
-			if (request.status !== "pending") {
-				return false;
-			}
-			if (hasManagerAccess) {
-				return request.managerDecision === "pending";
-			}
-			return request.customerDecision === "pending";
+		return myShiftRequests.filter((request) => {
+			return (
+				request.status === "pending" &&
+				request.customerDecision === "pending"
+			);
 		});
 	});
 
@@ -520,75 +395,31 @@
 		});
 	});
 
-	const pendingEscalations = $derived.by(() => {
-		if (!hasManagerAccess) {
-			return [];
-		}
-		return currentCancellationRequests.filter(
-			(request) => request.status === "requested"
-		);
-	});
-
-	const activeBookingCount = $derived.by(() => {
-		return currentBookings.filter((item) => activeStatuses.has(item.status))
-			.length;
-	});
-
-	const cancelledBookingCount = $derived.by(() => {
-		return currentBookings.filter((item) => item.status === "cancelled").length;
-	});
-
-	const bookingsPending = $derived(
-		hasManagerAccess
-			? $managedBookingsQuery.isPending
-			: $mineBookingsQuery.isPending
+	const activeBookingCount = $derived(
+		currentBookings.filter((item) => activeStatuses.has(item.status)).length
 	);
 
-	const bookingsError = $derived.by(() => {
-		if (hasManagerAccess) {
-			return $managedBookingsQuery.error;
-		}
-		return $mineBookingsQuery.error;
-	});
+	const cancelledBookingCount = $derived(
+		currentBookings.filter((item) => item.status === "cancelled").length
+	);
+
+	const bookingsPending = $derived($mineBookingsQuery.isPending);
+	const bookingsError = $derived($mineBookingsQuery.error);
 
 	const affiliateBookingsPending = $derived(
 		$myAffiliateBookingsQuery.isPending
 	);
 	const affiliateBookingsError = $derived($myAffiliateBookingsQuery.error);
-	const managedAffiliatePayoutsPending = $derived(
-		$managedAffiliatePayoutsQuery.isPending
+
+	const cancellationRequestsPending = $derived(
+		$myCancellationRequestsQuery.isPending
 	);
-	const managedAffiliatePayoutsError = $derived(
-		$managedAffiliatePayoutsQuery.error
+	const cancellationRequestsError = $derived(
+		$myCancellationRequestsQuery.error
 	);
 
-	const cancellationRequestsPending = $derived.by(() => {
-		if (hasManagerAccess) {
-			return $managedCancellationRequestsQuery.isPending;
-		}
-		return $myCancellationRequestsQuery.isPending;
-	});
-
-	const cancellationRequestsError = $derived.by(() => {
-		if (hasManagerAccess) {
-			return $managedCancellationRequestsQuery.error;
-		}
-		return $myCancellationRequestsQuery.error;
-	});
-
-	const shiftRequestsPending = $derived.by(() => {
-		if (hasManagerAccess) {
-			return $managedShiftRequestsQuery.isPending;
-		}
-		return $myShiftRequestsQuery.isPending;
-	});
-
-	const shiftRequestsError = $derived.by(() => {
-		if (hasManagerAccess) {
-			return $managedShiftRequestsQuery.error;
-		}
-		return $myShiftRequestsQuery.error;
-	});
+	const shiftRequestsPending = $derived($myShiftRequestsQuery.isPending);
+	const shiftRequestsError = $derived($myShiftRequestsQuery.error);
 
 	const disputesPending = $derived($myDisputesQuery.isPending);
 	const disputesError = $derived($myDisputesQuery.error);
@@ -598,7 +429,7 @@
 	const paymentAttemptsError = $derived($myPaymentAttemptsQuery.error);
 
 	const refetchBookingState = async () => {
-		const tasks: Promise<unknown>[] = [
+		await Promise.all([
 			$mineBookingsQuery.refetch(),
 			$myAffiliateBookingsQuery.refetch(),
 			$myCancellationRequestsQuery.refetch(),
@@ -606,23 +437,12 @@
 			$myDisputesQuery.refetch(),
 			$myRefundsQuery.refetch(),
 			$myPaymentAttemptsQuery.refetch(),
-		];
-
-		if (hasManagerAccess) {
-			tasks.push($managedBookingsQuery.refetch());
-			tasks.push($managedCancellationRequestsQuery.refetch());
-			tasks.push($managedShiftRequestsQuery.refetch());
-			tasks.push($managedAffiliatePayoutsQuery.refetch());
-		}
-
-		await Promise.all(tasks);
+		]);
 	};
 
 	const startCancelFlow = (bookingId: string) => {
 		cancelDraftBookingId = bookingId;
-		cancelReasonDraft = hasManagerAccess
-			? "Cancelled by operator"
-			: "Please cancel this booking";
+		cancelReasonDraft = "Please cancel this booking";
 		actionError = null;
 		actionMessage = null;
 	};
@@ -637,33 +457,20 @@
 		actionError = null;
 		actionMessage = null;
 		try {
-			if (hasManagerAccess) {
-				await $cancelManagedBookingMutation.mutateAsync({
-					bookingId,
-					...(cancelReasonDraft.trim()
-						? { reason: cancelReasonDraft.trim() }
-						: {}),
-				});
-				actionMessage = `Booking ${bookingId.slice(0, 8)} cancelled.`;
-			} else {
-				await $requestCancellationMutation.mutateAsync({
-					bookingId,
-					...(cancelReasonDraft.trim()
-						? { reason: cancelReasonDraft.trim() }
-						: {}),
-				});
-				actionMessage = `Cancellation request submitted for booking ${bookingId.slice(0, 8)}.`;
-			}
+			await $requestCancellationMutation.mutateAsync({
+				bookingId,
+				...(cancelReasonDraft.trim()
+					? { reason: cancelReasonDraft.trim() }
+					: {}),
+			});
+			actionMessage = `Cancellation request submitted for booking ${bookingId.slice(0, 8)}.`;
 			closeCancelFlow();
 			await refetchBookingState();
 		} catch (error) {
-			if (error instanceof Error) {
-				actionError = error.message;
-			} else if (hasManagerAccess) {
-				actionError = "Failed to cancel booking.";
-			} else {
-				actionError = "Failed to request cancellation.";
-			}
+			actionError =
+				error instanceof Error
+					? error.message
+					: "Failed to request cancellation.";
 		} finally {
 			cancelPendingBookingId = null;
 		}
@@ -763,24 +570,13 @@
 		actionError = null;
 		actionMessage = null;
 		try {
-			if (hasManagerAccess) {
-				await $reviewShiftRequestManagedMutation.mutateAsync({
-					bookingId,
-					decision,
-					...(shiftReviewNoteDraft.trim()
-						? { note: shiftReviewNoteDraft.trim() }
-						: {}),
-				});
-			} else {
-				await $reviewShiftRequestMineMutation.mutateAsync({
-					bookingId,
-					decision,
-					...(shiftReviewNoteDraft.trim()
-						? { note: shiftReviewNoteDraft.trim() }
-						: {}),
-				});
-			}
-
+			await $reviewShiftRequestMineMutation.mutateAsync({
+				bookingId,
+				decision,
+				...(shiftReviewNoteDraft.trim()
+					? { note: shiftReviewNoteDraft.trim() }
+					: {}),
+			});
 			actionMessage = `Shift request ${decision}d for booking ${bookingId.slice(0, 8)}.`;
 			closeShiftReview();
 			await refetchBookingState();
@@ -794,77 +590,95 @@
 		}
 	};
 
-	const startEscalationReview = (bookingId: string) => {
-		reviewDraftBookingId = bookingId;
-		reviewNoteDraft = "Reviewed by operator";
-		actionError = null;
-		actionMessage = null;
-	};
-
-	const closeEscalationReview = () => {
-		reviewDraftBookingId = null;
-		reviewNoteDraft = "Reviewed by operator";
-	};
-
-	const reviewEscalation = async (
-		bookingId: string,
-		decision: "approve" | "reject"
-	) => {
-		reviewPendingBookingId = bookingId;
-		actionError = null;
-		actionMessage = null;
-		try {
-			await $reviewCancellationRequestMutation.mutateAsync({
-				bookingId,
-				decision,
-				...(reviewNoteDraft.trim()
-					? { reviewNote: reviewNoteDraft.trim() }
-					: {}),
-			});
-			actionMessage = `Escalation ${decision}d for booking ${bookingId.slice(0, 8)}.`;
-			closeEscalationReview();
-			await refetchBookingState();
-		} catch (error) {
-			actionError =
-				error instanceof Error ? error.message : "Failed to review escalation.";
-		} finally {
-			reviewPendingBookingId = null;
+	const canPay = (bookingItem: (typeof currentBookings)[number]): boolean => {
+		if (bookingItem.status === "cancelled") {
+			return false;
 		}
+		return (
+			bookingItem.paymentStatus === "unpaid" ||
+			bookingItem.paymentStatus === "partially_paid" ||
+			bookingItem.paymentStatus === "failed"
+		);
 	};
 
-	const processAffiliatePayout = async (
-		payoutId: string,
-		status: "paid" | "voided"
+	const getExpiresAt = (bookingItem: (typeof currentBookings)[number]): Date | null => {
+		if (bookingItem.status !== "pending" && bookingItem.status !== "awaiting_payment") {
+			return null;
+		}
+		if (bookingItem.paymentStatus === "paid" || bookingItem.paymentStatus === "partially_paid") {
+			return null;
+		}
+		return new Date(toDate(bookingItem.createdAt).getTime() + BOOKING_EXPIRY_MS);
+	};
+
+	let now = $state(Date.now());
+	$effect(() => {
+		const timer = setInterval(() => { now = Date.now(); }, 1000);
+		return () => clearInterval(timer);
+	});
+
+	const formatCountdown = (expiresAt: Date): string => {
+		const diff = expiresAt.getTime() - now;
+		if (diff <= 0) {
+			return "Expired";
+		}
+		const mins = Math.floor(diff / 60_000);
+		const secs = Math.floor((diff % 60_000) / 1000);
+		return `${mins}:${String(secs).padStart(2, "0")}`;
+	};
+
+	const startPayment = async (
+		bookingItem: (typeof currentBookings)[number]
 	) => {
-		payoutPendingId = payoutId;
+		const cpPublicId = PUBLIC_CLOUDPAYMENTS_PUBLIC_ID || undefined;
+		if (!cpPublicId) {
+			actionError = "CloudPayments is not configured";
+			return;
+		}
+
+		payPendingBookingId = bookingItem.id;
 		actionError = null;
 		actionMessage = null;
 
 		try {
-			await $processAffiliatePayoutMutation.mutateAsync({
-				payoutId,
-				status,
-				...(status === "paid"
-					? {
-							externalPayoutRef: `manual-${Date.now()}`,
-						}
-					: {
-							note: "Voided by manager",
-						}),
+			const result = await $paymentCreateMutation.mutateAsync({
+				bookingId: bookingItem.id,
+				idempotencyKey: crypto.randomUUID(),
+				provider: "cloudpayments",
+				currency: bookingItem.currency,
 			});
 
-			actionMessage =
-				status === "paid"
-					? "Affiliate payout marked as paid."
-					: "Affiliate payout marked as voided.";
+			const amountUnits = result.paymentAttempt.amountCents / 100;
+
+			const widget = new (window as unknown as { cp: CpNamespace }).cp.CloudPayments();
+			const widgetResult = await widget.start({
+				publicTerminalId: cpPublicId,
+				description: `Booking #${bookingItem.id.slice(0, 8)}`,
+				paymentSchema: "Single",
+				currency: bookingItem.currency,
+				amount: amountUnits,
+				externalId: bookingItem.id,
+				skin: "classic",
+				autoClose: 7,
+				culture: "ru-RU",
+				metadata: {
+					bookingId: bookingItem.id,
+					paymentAttemptId: result.paymentAttempt.id,
+				},
+			});
+
+			if (widgetResult.success) {
+				actionMessage = `Payment successful for booking #${bookingItem.id.slice(0, 8)}`;
+			} else {
+				actionMessage = `Payment widget closed for booking #${bookingItem.id.slice(0, 8)}`;
+			}
+
 			await refetchBookingState();
 		} catch (error) {
 			actionError =
-				error instanceof Error
-					? error.message
-					: "Failed to process affiliate payout.";
+				error instanceof Error ? error.message : "Payment failed";
 		} finally {
-			payoutPendingId = null;
+			payPendingBookingId = null;
 		}
 	};
 </script>
@@ -880,21 +694,14 @@
 {:else}
 	<div class="mx-auto w-full max-w-6xl space-y-6 px-6 py-10">
 		<div class="space-y-2">
-			<h1 class="text-3xl font-bold tracking-tight">
-				{hasManagerAccess ? "Booking Operations" : "My Bookings"}
-			</h1>
+			<h1 class="text-3xl font-bold tracking-tight">My Bookings</h1>
 			<p class="text-sm text-muted-foreground">
-				{#if hasManagerAccess}
-					Organization view with booking history, cancellation escalations,
-					statuses, and direct actions.
-				{:else}
-					Personal booking history with statuses and cancellation request
-					options.
-				{/if}
+				Personal booking history with statuses and cancellation request
+				options.
 			</p>
 		</div>
 
-		<div class="grid gap-4 md:grid-cols-5">
+		<div class="grid gap-4 md:grid-cols-4">
 			<Card>
 				<CardHeader class="space-y-1 pb-2">
 					<CardDescription>Total Bookings</CardDescription>
@@ -915,26 +722,8 @@
 			</Card>
 			<Card>
 				<CardHeader class="space-y-1 pb-2">
-					<CardDescription>
-						{hasManagerAccess ? "Escalations Pending" : "Cancellation Requests"}
-					</CardDescription>
-					<CardTitle class="text-2xl">
-						{hasManagerAccess
-							? pendingEscalations.length
-							: currentCancellationRequests.length}
-					</CardTitle>
-				</CardHeader>
-			</Card>
-			<Card>
-				<CardHeader class="space-y-1 pb-2">
-					<CardDescription>
-						{hasManagerAccess ? "Shift Reviews Pending" : "My Shift Requests"}
-					</CardDescription>
-					<CardTitle class="text-2xl">
-						{hasManagerAccess
-							? shiftRequestsNeedingReview.length
-							: currentShiftRequests.length}
-					</CardTitle>
+					<CardDescription>My Shift Requests</CardDescription>
+					<CardTitle class="text-2xl">{myShiftRequests.length}</CardTitle>
 				</CardHeader>
 			</Card>
 		</div>
@@ -948,15 +737,9 @@
 
 		<Card>
 			<CardHeader>
-				<CardTitle>
-					{hasManagerAccess
-						? "Cancellation Escalations"
-						: "My Cancellation Requests"}
-				</CardTitle>
+				<CardTitle>My Cancellation Requests</CardTitle>
 				<CardDescription>
-					{hasManagerAccess
-						? "Review cancellation requests raised by customers."
-						: "Track your cancellation request statuses."}
+					Track your cancellation request statuses.
 				</CardDescription>
 			</CardHeader>
 			<CardContent class="space-y-3">
@@ -971,17 +754,13 @@
 							? cancellationRequestsError.message
 							: "Unknown error"}
 					</p>
-				{:else if hasManagerAccess && pendingEscalations.length === 0}
-					<p class="text-sm text-muted-foreground">
-						No pending cancellation escalations.
-					</p>
-				{:else if !hasManagerAccess && currentCancellationRequests.length === 0}
+				{:else if myCancellationRequests.length === 0}
 					<p class="text-sm text-muted-foreground">
 						No cancellation requests yet.
 					</p>
 				{:else}
 					<ul class="space-y-3">
-						{#each (hasManagerAccess ? pendingEscalations : currentCancellationRequests) as escalation (escalation.id)}
+						{#each myCancellationRequests as escalation (escalation.id)}
 							<li class="space-y-2 rounded-md border p-3">
 								<div class="flex flex-wrap items-start justify-between gap-2">
 									<div>
@@ -1008,56 +787,6 @@
 										{escalation.status}
 									</span>
 								</div>
-
-								{#if hasManagerAccess}
-									{#if reviewDraftBookingId === escalation.bookingId}
-										<div
-											class="flex flex-col gap-2 md:flex-row md:items-center"
-										>
-											<Input
-												value={reviewNoteDraft}
-												oninput={(event) => {
-													const target = event.target as HTMLInputElement;
-													reviewNoteDraft = target.value;
-												}}
-												placeholder="Review note"
-											/>
-											<div class="flex gap-2">
-												<Button
-													variant="default"
-													disabled={reviewPendingBookingId === escalation.bookingId}
-													onclick={() =>
-														void reviewEscalation(escalation.bookingId, "approve")}
-												>
-													Approve
-												</Button>
-												<Button
-													variant="destructive"
-													disabled={reviewPendingBookingId === escalation.bookingId}
-													onclick={() =>
-														void reviewEscalation(escalation.bookingId, "reject")}
-												>
-													Reject
-												</Button>
-												<Button
-													variant="outline"
-													disabled={reviewPendingBookingId === escalation.bookingId}
-													onclick={closeEscalationReview}
-												>
-													Dismiss
-												</Button>
-											</div>
-										</div>
-									{:else}
-										<Button
-											size="sm"
-											variant="outline"
-											onclick={() => startEscalationReview(escalation.bookingId)}
-										>
-											Review escalation
-										</Button>
-									{/if}
-								{/if}
 							</li>
 						{/each}
 					</ul>
@@ -1067,13 +796,9 @@
 
 		<Card>
 			<CardHeader>
-				<CardTitle>
-					{hasManagerAccess ? "Shift Requests Review" : "My Shift Requests"}
-				</CardTitle>
+				<CardTitle>My Shift Requests</CardTitle>
 				<CardDescription>
-					{hasManagerAccess
-						? "Approve/reject customer shift requests. Late slot conflicts auto-cancel on approval."
-						: "Track your shift requests and approve manager-proposed changes."}
+					Track your shift requests and approve manager-proposed changes.
 				</CardDescription>
 			</CardHeader>
 			<CardContent class="space-y-3">
@@ -1086,11 +811,11 @@
 							? shiftRequestsError.message
 							: "Unknown error"}
 					</p>
-				{:else if currentShiftRequests.length === 0}
+				{:else if myShiftRequests.length === 0}
 					<p class="text-sm text-muted-foreground">No shift requests yet.</p>
 				{:else}
 					<ul class="space-y-3">
-						{#each currentShiftRequests as shiftRequest (shiftRequest.id)}
+						{#each myShiftRequests as shiftRequest (shiftRequest.id)}
 							<li class="space-y-2 rounded-md border p-3">
 								<div class="flex flex-wrap items-start justify-between gap-2">
 									<div class="space-y-1">
@@ -1145,7 +870,7 @@
 									</span>
 								</div>
 
-								{#if shiftRequest.status === "pending" && ((hasManagerAccess && shiftRequest.managerDecision === "pending") || (!hasManagerAccess && shiftRequest.customerDecision === "pending"))}
+								{#if shiftRequest.status === "pending" && shiftRequest.customerDecision === "pending"}
 									{#if shiftReviewDraftBookingId === shiftRequest.bookingId}
 										<div
 											class="flex flex-col gap-2 md:flex-row md:items-center"
@@ -1201,100 +926,7 @@
 			</CardContent>
 		</Card>
 
-		{#if hasManagerAccess}
-			<Card>
-				<CardHeader>
-					<CardTitle class="text-base">Affiliate Payout Processing</CardTitle>
-					<CardDescription>
-						Process eligible affiliate payouts after completed bookings.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{#if managedAffiliatePayoutsPending}
-						<p class="text-sm text-muted-foreground">
-							Loading affiliate payouts...
-						</p>
-					{:else if managedAffiliatePayoutsError}
-						<p class="text-sm text-destructive">
-							Failed to load affiliate payouts:
-							{managedAffiliatePayoutsError instanceof Error
-								? managedAffiliatePayoutsError.message
-								: "Unknown error"}
-						</p>
-					{:else if managedAffiliatePayouts.length === 0}
-						<p class="text-sm text-muted-foreground">
-							No affiliate payouts found.
-						</p>
-					{:else}
-						<ul class="space-y-3">
-							{#each managedAffiliatePayouts as payout (payout.payoutId)}
-								<li class="rounded-md border p-3">
-									<div class="flex flex-wrap items-start justify-between gap-3">
-										<div class="space-y-1">
-											<p class="text-sm font-medium text-foreground">
-												{payout.bookingRef} · {payout.boatName}
-											</p>
-											<p class="text-xs text-muted-foreground">
-												Affiliate: {payout.affiliateUserId}
-											</p>
-											<p class="text-xs text-muted-foreground">
-												Referral: {payout.referralCode}
-											</p>
-											<p class="text-xs text-muted-foreground">
-												{formatBookingRange(payout.startsAt, payout.endsAt)}
-											</p>
-											<p class="text-xs text-muted-foreground">
-												Commission:
-												{formatMoney(payout.commissionAmountCents, payout.currency)}
-											</p>
-											{#if payout.paidAt}
-												<p class="text-xs text-muted-foreground">
-													Paid at {formatDateTime(payout.paidAt)}
-												</p>
-											{:else if payout.eligibleAt}
-												<p class="text-xs text-muted-foreground">
-													Eligible since {formatDateTime(payout.eligibleAt)}
-												</p>
-											{/if}
-										</div>
-										<div class="flex flex-col items-end gap-2">
-											<span
-												class={`rounded-full px-2 py-1 text-xs font-medium ${affiliatePayoutStatusClass(payout.status)}`}
-											>
-												{payout.status}
-											</span>
-											<div class="flex gap-2">
-												<Button
-													size="sm"
-													variant="default"
-													disabled={payout.status !== "eligible" || payoutPendingId === payout.payoutId}
-													onclick={() =>
-														void processAffiliatePayout(payout.payoutId, "paid")}
-												>
-													Mark paid
-												</Button>
-												<Button
-													size="sm"
-													variant="outline"
-													disabled={payout.status === "paid" || payoutPendingId === payout.payoutId}
-													onclick={() =>
-														void processAffiliatePayout(payout.payoutId, "voided")}
-												>
-													Void
-												</Button>
-											</div>
-										</div>
-									</div>
-								</li>
-							{/each}
-						</ul>
-					{/if}
-				</CardContent>
-			</Card>
-		{/if}
-
-		{#if !hasManagerAccess}
-			<Card>
+		<Card>
 				<CardHeader>
 					<CardTitle class="text-base">
 						Affiliate Referrals (Redacted)
@@ -1532,7 +1164,6 @@
 					</CardContent>
 				</Card>
 			</div>
-		{/if}
 
 		<Card>
 			<CardHeader>
@@ -1589,6 +1220,7 @@
 					<ul class="space-y-3">
 						{#each filteredBookings as bookingItem (bookingItem.id)}
 							{@const shiftRequest = shiftRequestByBookingId.get(bookingItem.id)}
+							{@const expiresAt = getExpiresAt(bookingItem)}
 							<li class="space-y-3 rounded-md border p-3">
 								<div class="flex flex-wrap items-start justify-between gap-3">
 									<div class="space-y-1">
@@ -1607,8 +1239,12 @@
 												? ` · Contact: ${bookingItem.contactName}`
 												: ""}
 										</p>
+										<p class="text-xs text-muted-foreground">
+											Created: {formatDateTime(bookingItem.createdAt)}
+										</p>
 									</div>
-									<div class="flex flex-wrap gap-2">
+									<div class="flex flex-col items-end gap-2">
+										<div class="flex flex-wrap gap-2">
 										<span
 											class={`rounded-full px-2 py-1 text-xs font-medium ${bookingStatusClass(bookingItem.status)}`}
 										>
@@ -1627,7 +1263,7 @@
 												Escalation: {request?.status}
 											</span>
 										{/if}
-										{#if !hasManagerAccess && latestDisputeByBookingId.get(bookingItem.id)}
+										{#if latestDisputeByBookingId.get(bookingItem.id)}
 											{@const dispute = latestDisputeByBookingId.get(bookingItem.id)}
 											<span
 												class={`rounded-full px-2 py-1 text-xs font-medium ${disputeStatusClass(dispute?.status ?? "open")}`}
@@ -1635,7 +1271,7 @@
 												Dispute: {dispute?.status}
 											</span>
 										{/if}
-										{#if !hasManagerAccess && latestRefundByBookingId.get(bookingItem.id)}
+										{#if latestRefundByBookingId.get(bookingItem.id)}
 											{@const refund = latestRefundByBookingId.get(bookingItem.id)}
 											<span
 												class={`rounded-full px-2 py-1 text-xs font-medium ${refundStatusClass(refund?.status ?? "requested")}`}
@@ -1643,7 +1279,7 @@
 												Refund: {refund?.status}
 											</span>
 										{/if}
-										{#if !hasManagerAccess && latestPaymentAttemptByBookingId.get(bookingItem.id)}
+										{#if latestPaymentAttemptByBookingId.get(bookingItem.id)}
 											{@const attempt = latestPaymentAttemptByBookingId.get(bookingItem.id)}
 											<span
 												class={`rounded-full px-2 py-1 text-xs font-medium ${paymentAttemptStatusClass(attempt?.status ?? "initiated")}`}
@@ -1656,6 +1292,13 @@
 												class={`rounded-full px-2 py-1 text-xs font-medium ${shiftStatusClass(shiftRequest.status)}`}
 											>
 												Shift: {shiftRequest.status}
+											</span>
+										{/if}
+										</div>
+										{#if expiresAt}
+											{@const countdown = formatCountdown(expiresAt)}
+											<span class={`text-xs font-medium ${countdown === "Expired" ? "text-destructive" : "text-amber-600"}`}>
+												{countdown === "Expired" ? "⏰ Payment expired" : `⏳ Pay within ${countdown}`}
 											</span>
 										{/if}
 									</div>
@@ -1688,8 +1331,22 @@
 										Open boat page
 									</Button>
 
+									{#if canPay(bookingItem)}
+										<Button
+											size="sm"
+											variant="default"
+											disabled={payPendingBookingId === bookingItem.id}
+											onclick={() => void startPayment(bookingItem)}
+											data-testid="pay-button"
+										>
+											{payPendingBookingId === bookingItem.id
+												? "Processing..."
+												: `Pay ${formatMoney(bookingItem.totalPriceCents - (bookingItem.refundAmountCents ?? 0), bookingItem.currency)}`}
+										</Button>
+									{/if}
+
 									{#if bookingItem.status !== "cancelled"}
-										{#if !hasManagerAccess && bookingRequestByBookingId.get(bookingItem.id)?.status === "requested"}
+										{#if bookingRequestByBookingId.get(bookingItem.id)?.status === "requested"}
 											<Button size="sm" variant="outline" disabled>
 												Cancellation requested
 											</Button>
@@ -1707,14 +1364,12 @@
 												/>
 												<div class="flex gap-2">
 													<Button
-														variant={hasManagerAccess ? "destructive" : "default"}
+														variant="default"
 														disabled={cancelPendingBookingId === bookingItem.id}
 														onclick={() =>
 															void confirmCancellationAction(bookingItem.id)}
 													>
-														{hasManagerAccess
-															? "Confirm cancel"
-															: "Send request"}
+														Send request
 													</Button>
 													<Button
 														variant="outline"
@@ -1731,7 +1386,7 @@
 												variant="outline"
 												onclick={() => startCancelFlow(bookingItem.id)}
 											>
-												{hasManagerAccess ? "Cancel booking" : "Request cancellation"}
+												Request cancellation
 											</Button>
 										{/if}
 									{/if}

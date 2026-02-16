@@ -10,6 +10,7 @@ export const env = createEnv({
 	client: {
 		PUBLIC_SERVER_URL: z.string().min(1),
 		PUBLIC_BASE_PATH: z.string().optional(),
+		PUBLIC_CLOUDPAYMENTS_PUBLIC_ID: z.string().optional(),
 	},
 	runtimeEnv,
 	emptyStringAsUndefined: true,

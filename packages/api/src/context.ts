@@ -1,7 +1,10 @@
 import { auth } from "@full-stack-cf-app/auth";
 import { db } from "@full-stack-cf-app/db";
 import { member } from "@full-stack-cf-app/db/schema/auth";
-import { notificationQueueMessageSchema } from "@full-stack-cf-app/notifications/contracts";
+import {
+	bookingExpirationCheckMessageSchema,
+	notificationQueueMessageSchema,
+} from "@full-stack-cf-app/notifications/contracts";
 import { and, asc, eq } from "drizzle-orm";
 import type { Context as HonoContext } from "hono";
 
@@ -80,11 +83,32 @@ const getInlineNotificationProcessor = () => {
 };
 
 const inlineNotificationQueueProducer: NotificationQueueProducer = {
-	send: async (message) => {
+	send: async (message, options) => {
+		const expirationMessage =
+			bookingExpirationCheckMessageSchema.safeParse(message);
+		if (expirationMessage.success) {
+			const delayMs = (options?.delaySeconds ?? 0) * 1000;
+			const bookingId = expirationMessage.data.bookingId;
+			setTimeout(async () => {
+				try {
+					const { expireBookingIfUnpaid } = await import(
+						"./routers/booking/services/expiration"
+					);
+					await expireBookingIfUnpaid(bookingId);
+				} catch (error) {
+					console.error(
+						`[inline-expiration] Failed to expire booking ${bookingId}:`,
+						error
+					);
+				}
+			}, delayMs);
+			return;
+		}
+
 		const parsedMessage = notificationQueueMessageSchema.safeParse(message);
 		if (!parsedMessage.success) {
 			throw new Error(
-				"Inline notification queue supports only notification.event.v1 messages"
+				"Inline notification queue: unsupported message kind"
 			);
 		}
 

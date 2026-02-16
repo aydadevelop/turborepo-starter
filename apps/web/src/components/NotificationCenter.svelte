@@ -331,7 +331,7 @@
 						{#each notifications.slice(0, MAX_ITEMS) as item (item.id)}
 							<li class="border-b border-border/60 last:border-b-0">
 								<a
-									href={item.ctaUrl ?? resolve("/dashboard")}
+									href={resolve(item.ctaUrl ?? "/dashboard")}
 									class="block px-4 py-3 transition hover:bg-muted/40"
 									onclick={() => handleNotificationClick(item.id)}
 								>

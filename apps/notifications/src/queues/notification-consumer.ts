@@ -2,6 +2,7 @@ import { db } from "@full-stack-cf-app/db";
 import { telegramNotification } from "@full-stack-cf-app/db/schema/support";
 import { env } from "@full-stack-cf-app/env/server";
 import {
+	bookingExpirationCheckMessageSchema,
 	legacyNotificationQueueMessageSchema,
 	notificationQueueMessageSchema,
 } from "@full-stack-cf-app/notifications/contracts";
@@ -201,6 +202,36 @@ const handleEventQueueMessage = async (
 	queueMessage.ack();
 };
 
+const handleBookingExpirationCheck = async (
+	queueMessage: Message,
+	bookingId: string
+) => {
+	try {
+		const { expireBookingIfUnpaid } = await import(
+			"@full-stack-cf-app/api/routers/booking/services/expiration"
+		);
+		const result = await expireBookingIfUnpaid(bookingId);
+		if (result.expired) {
+			console.log(
+				`[booking-expiration] booking ${bookingId} expired via queue`
+			);
+		}
+		queueMessage.ack();
+	} catch (error) {
+		console.error(
+			`[booking-expiration] failed to process ${bookingId}:`,
+			error
+		);
+		if (queueMessage.attempts < MAX_RETRY_ATTEMPTS) {
+			queueMessage.retry({
+				delaySeconds: Math.min(queueMessage.attempts * 30, 300),
+			});
+			return;
+		}
+		queueMessage.ack();
+	}
+};
+
 export const processNotificationBatch = async (
 	batch: MessageBatch<unknown>
 ) => {
@@ -210,6 +241,17 @@ export const processNotificationBatch = async (
 		);
 		if (eventMessage.success) {
 			await handleEventQueueMessage(queueMessage, eventMessage.data.eventId);
+			continue;
+		}
+
+		const expirationMessage = bookingExpirationCheckMessageSchema.safeParse(
+			queueMessage.body
+		);
+		if (expirationMessage.success) {
+			await handleBookingExpirationCheck(
+				queueMessage,
+				expirationMessage.data.bookingId
+			);
 			continue;
 		}
 

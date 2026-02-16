@@ -11,6 +11,7 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
+    "@full-stack-cf-app/api": "*",
     "@full-stack-cf-app/db": "*",
     "@full-stack-cf-app/env": "*",
     "@full-stack-cf-app/notifications": "*",

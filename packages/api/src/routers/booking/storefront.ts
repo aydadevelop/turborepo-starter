@@ -61,6 +61,7 @@ import {
 import { sortByAvailabilityBands } from "./services/availability-ranking";
 import { ensureNoExternalCalendarOverlap } from "./services/calendar-sync";
 import { buildCheckoutReadModel } from "./services/checkout-read-model";
+import { enqueueBookingExpirationCheck } from "./services/expiration";
 import {
 	type BoatPricingRule,
 	buildBookingPricingQuote,
@@ -338,6 +339,38 @@ const hasOverlap = (intervals: BusyInterval[], startsAt: Date, endsAt: Date) =>
 		(interval) => interval.startsAt < endsAt && interval.endsAt > startsAt
 	);
 
+const violatesMinimumDurationRules = (params: {
+	candidateBoat: typeof boat.$inferSelect;
+	startsAt: Date;
+	endsAt: Date;
+	minimumDurationRules: MinimumDurationRule[];
+}) => {
+	const [requestedSlot] = annotateSlotMinimumDuration({
+		slots: [
+			{
+				startsAt: params.startsAt,
+				endsAt: params.endsAt,
+			},
+		],
+		boatMinimumHours: params.candidateBoat.minimumHours,
+		minimumDurationRules: params.minimumDurationRules,
+		timezone: params.candidateBoat.timezone,
+	});
+
+	if (!requestedSlot) {
+		return false;
+	}
+
+	const requestedDurationMinutes = Math.max(
+		30,
+		Math.round(
+			(params.endsAt.getTime() - params.startsAt.getTime()) / 60_000
+		)
+	);
+
+	return requestedDurationMinutes < requestedSlot.requiredMinimumDurationMinutes;
+};
+
 const buildBusyIntervalsByBoatId = (
 	rows: Array<{
 		boatId: string;
@@ -465,6 +498,7 @@ const scoreCandidate = (
 	mode: AvailabilitySearchMode,
 	bookingBusyByBoatId: Map<string, BusyInterval[]>,
 	blockBusyByBoatId: Map<string, BusyInterval[]>,
+	minDurationRulesByBoatId: Map<string, MinimumDurationRule[]>,
 	pricingProfilesByBoatId: Map<
 		string,
 		(typeof boatPricingProfile.$inferSelect)[]
@@ -479,9 +513,17 @@ const scoreCandidate = (
 
 	const bookingBusyIntervals = bookingBusyByBoatId.get(candidateBoat.id) ?? [];
 	const blockBusyIntervals = blockBusyByBoatId.get(candidateBoat.id) ?? [];
+	const minimumDurationRules = minDurationRulesByBoatId.get(candidateBoat.id) ?? [];
+	const isDurationInvalid = violatesMinimumDurationRules({
+		candidateBoat,
+		startsAt,
+		endsAt,
+		minimumDurationRules,
+	});
 	const isUnavailable =
 		hasOverlap(bookingBusyIntervals, startsAt, endsAt) ||
-		hasOverlap(blockBusyIntervals, startsAt, endsAt);
+		hasOverlap(blockBusyIntervals, startsAt, endsAt) ||
+		isDurationInvalid;
 
 	if (isUnavailable && !input.includeUnavailable) {
 		return null;
@@ -559,6 +601,7 @@ const scoreCandidateBoats = (params: {
 	mode: AvailabilitySearchMode;
 	bookingBusyByBoatId: Map<string, BusyInterval[]>;
 	blockBusyByBoatId: Map<string, BusyInterval[]>;
+	minDurationRulesByBoatId: Map<string, MinimumDurationRule[]>;
 	pricingProfilesByBoatId: Map<
 		string,
 		(typeof boatPricingProfile.$inferSelect)[]
@@ -573,6 +616,7 @@ const scoreCandidateBoats = (params: {
 			params.mode,
 			params.bookingBusyByBoatId,
 			params.blockBusyByBoatId,
+			params.minDurationRulesByBoatId,
 			params.pricingProfilesByBoatId,
 			params.pricingRulesByBoatId
 		);
@@ -1016,6 +1060,7 @@ export const publicBookingRouter = {
 				mode,
 				bookingBusyByBoatId,
 				blockBusyByBoatId,
+				minDurationRulesByBoatId,
 				pricingProfilesByBoatId,
 				pricingRulesByBoatId,
 			});
@@ -1108,7 +1153,7 @@ export const publicBookingRouter = {
 				pricingRulesRows,
 				minDurationRulesRows,
 				slotBookings,
-				slotBlocks,
+				availabilityBlockRows,
 			] = await Promise.all([
 				db
 					.select()
@@ -1186,16 +1231,17 @@ export const publicBookingRouter = {
 						)
 					),
 				db
-					.select({
-						startsAt: boatAvailabilityBlock.startsAt,
-						endsAt: boatAvailabilityBlock.endsAt,
-					})
+					.select()
 					.from(boatAvailabilityBlock)
 					.where(
 						and(
 							eq(boatAvailabilityBlock.boatId, foundBoat.id),
 							eq(boatAvailabilityBlock.isActive, true)
 						)
+					)
+					.orderBy(
+						asc(boatAvailabilityBlock.startsAt),
+						asc(boatAvailabilityBlock.endsAt)
 					),
 			]);
 
@@ -1236,7 +1282,7 @@ export const publicBookingRouter = {
 					startsAt: b.startsAt,
 					endsAt: b.endsAt,
 				})),
-				...slotBlocks.map((b) => ({
+				...availabilityBlockRows.map((b) => ({
 					startsAt: b.startsAt,
 					endsAt: b.endsAt,
 				})),
@@ -1290,6 +1336,7 @@ export const publicBookingRouter = {
 				galleryAssets: galleryRows,
 				pricingQuote,
 				pricingRules: activeRules,
+				availabilityBlocks: availabilityBlockRows,
 				minimumDurationRules: minDurationRulesRows,
 				slots,
 				availableFilters: {
@@ -1415,7 +1462,7 @@ export const publicBookingRouter = {
 					userIds: [quote.sessionUserId],
 					title: "Booking created",
 					body: `${quote.publicBoat.name}: ${created.booking.startsAt.toISOString()} - ${created.booking.endsAt.toISOString()}`,
-					ctaUrl: `/dashboard/bookings/${created.booking.id}`,
+					ctaUrl: `/bookings`,
 					metadata: { bookingId: created.booking.id },
 				});
 				if (recipients.length > 0) {
@@ -1435,6 +1482,11 @@ export const publicBookingRouter = {
 			} catch (error) {
 				console.error("Failed to emit booking.created event", error);
 			}
+
+			await enqueueBookingExpirationCheck(
+				created.booking.id,
+				context.notificationQueue
+			);
 
 			return {
 				...created,

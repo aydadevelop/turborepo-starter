@@ -33,6 +33,7 @@ import {
 	protectedProcedure,
 } from "../../index";
 import { buildRecipients, formatRefundAmount } from "../../lib/event-bus";
+import { enqueueBookingExpirationCheck } from "./services/expiration";
 import {
 	cancelManagedBookingInputSchema,
 	createManagedBookingInputSchema,
@@ -620,10 +621,15 @@ export const coreBookingRouter = {
 					userIds: [input.customerUserId, sessionUserId],
 					title: "Booking created",
 					body: `${managedBoat.name}: ${created.booking.startsAt.toISOString()} - ${created.booking.endsAt.toISOString()}`,
-					ctaUrl: `/dashboard/bookings/${created.booking.id}`,
+					ctaUrl: `/bookings`,
 					metadata: { bookingId: created.booking.id },
 				}),
 			});
+
+			await enqueueBookingExpirationCheck(
+				created.booking.id,
+				context.notificationQueue
+			);
 
 			return created;
 		}),
@@ -713,7 +719,7 @@ export const coreBookingRouter = {
 						],
 						title: "Booking cancelled",
 						body: `${managedBoat?.name ?? "Boat booking"}: ${managedBooking.startsAt.toISOString()} - ${managedBooking.endsAt.toISOString()}`,
-						ctaUrl: `/dashboard/bookings/${managedBooking.id}`,
+						ctaUrl: `/bookings`,
 						severity: "warning",
 						metadata: { bookingId: managedBooking.id },
 					}),
@@ -747,7 +753,7 @@ export const coreBookingRouter = {
 							],
 							title: "Refund processed",
 							body: `${boatName}: ${formattedAmount} refunded`,
-							ctaUrl: `/dashboard/bookings/${managedBooking.id}`,
+							ctaUrl: `/bookings`,
 							severity: "success",
 							metadata: {
 								bookingId: managedBooking.id,

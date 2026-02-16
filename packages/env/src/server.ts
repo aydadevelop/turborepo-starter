@@ -19,6 +19,8 @@ const stringEnvVars = {
 	GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN:
 		cfEnv.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN,
 	CALENDAR_SYNC_TASK_TOKEN: cfEnv.CALENDAR_SYNC_TASK_TOKEN,
+	CLOUDPAYMENTS_PUBLIC_ID: cfEnv.CLOUDPAYMENTS_PUBLIC_ID,
+	CLOUDPAYMENTS_API_SECRET: cfEnv.CLOUDPAYMENTS_API_SECRET,
 };
 
 // Validate and export typed environment variables
@@ -41,6 +43,8 @@ export const env = {
 			GOOGLE_CALENDAR_CREDENTIALS_JSON: z.string().default(""),
 			GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN: z.string().default(""),
 			CALENDAR_SYNC_TASK_TOKEN: z.string().default(""),
+			CLOUDPAYMENTS_PUBLIC_ID: z.string().default(""),
+			CLOUDPAYMENTS_API_SECRET: z.string().default(""),
 		},
 		runtimeEnv: stringEnvVars,
 		emptyStringAsUndefined: false, // Keep empty strings for optional vars

@@ -157,6 +157,10 @@ export const paymentBookingRouter = {
 				await db
 					.update(booking)
 					.set({
+						status:
+							customerBooking.status === "pending"
+								? "awaiting_payment"
+								: customerBooking.status,
 						paymentStatus: "unpaid",
 						updatedAt: new Date(),
 					})

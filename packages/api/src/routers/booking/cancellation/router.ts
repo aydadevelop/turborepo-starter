@@ -363,7 +363,7 @@ export const cancellationBookingRouter = {
 						],
 						title: "Booking cancelled",
 						body: `${managedBoat?.name ?? "Boat booking"}: ${managedBooking.startsAt.toISOString()} - ${managedBooking.endsAt.toISOString()}`,
-						ctaUrl: `/dashboard/bookings/${managedBooking.id}`,
+						ctaUrl: `/bookings`,
 						severity: "warning",
 						metadata: { bookingId: managedBooking.id },
 					}),
@@ -397,7 +397,7 @@ export const cancellationBookingRouter = {
 							],
 							title: "Refund processed",
 							body: `${boatName}: ${formattedAmount} refunded`,
-							ctaUrl: `/dashboard/bookings/${managedBooking.id}`,
+							ctaUrl: `/bookings`,
 							severity: "success",
 							metadata: {
 								bookingId: managedBooking.id,

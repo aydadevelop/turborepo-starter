@@ -8,6 +8,7 @@
 		CardHeader,
 		CardTitle,
 	} from "@full-stack-cf-app/ui/components/card";
+	import { PUBLIC_CLOUDPAYMENTS_PUBLIC_ID } from "$env/static/public";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { derived, get } from "svelte/store";
 	import { dev } from "$app/environment";
@@ -16,6 +17,13 @@
 	import { authClient } from "$lib/auth-client";
 	import { parseBoatIdFromRef } from "$lib/boat-pages";
 	import { orpc } from "$lib/orpc";
+
+	interface CpWidget {
+		start(params: Record<string, unknown>): Promise<{ success: boolean }>;
+	}
+	interface CpNamespace {
+		CloudPayments: new () => CpWidget;
+	}
 
 	const clamp = (value: number, min: number, max: number): number =>
 		Math.min(Math.max(value, min), max);
@@ -70,6 +78,13 @@
 		}
 		return `+${label}`;
 	};
+	const formatBlockSourceLabel = (source: string): string =>
+		source
+			.split("_")
+			.map((part) =>
+				part.length > 0 ? `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}` : part
+			)
+			.join(" ");
 	const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 	const parseJsonObject = (raw: string): Record<string, unknown> => {
 		try {
@@ -331,6 +346,11 @@
 	let mockPaymentMessage = $state<string | null>(null);
 	let mockPaymentError = $state<string | null>(null);
 
+	let cpPendingSlotKey = $state<string | null>(null);
+	let cpMessage = $state<string | null>(null);
+	let cpError = $state<string | null>(null);
+	const cpPublicId = PUBLIC_CLOUDPAYMENTS_PUBLIC_ID || undefined;
+
 	const bookAndPayWithMock = async (slot: BookableSlot) => {
 		const user = $sessionQuery.data?.user;
 		if (!user) {
@@ -388,6 +408,92 @@
 				error instanceof Error ? error.message : "Mock payment failed.";
 		} finally {
 			mockPaymentPendingSlotKey = null;
+		}
+	};
+
+	const bookAndPayWithCloudPayments = async (slot: BookableSlot) => {
+		const user = $sessionQuery.data?.user;
+		if (!user) {
+			cpError = "Sign in first to create a booking.";
+			cpMessage = null;
+			return;
+		}
+		if (!cpPublicId) {
+			cpError = "CloudPayments is not configured.";
+			cpMessage = null;
+			return;
+		}
+
+		const slotKey = toSlotKey(slot.startsAt, slot.endsAt);
+		cpPendingSlotKey = slotKey;
+		cpMessage = null;
+		cpError = null;
+
+		try {
+			const bookingResult = await $createPublicBookingMutation.mutateAsync({
+				boatId,
+				startsAt: slot.startsAt,
+				endsAt: slot.endsAt,
+				passengers: requestedPassengers,
+				contactName: user.name?.trim() || "Customer",
+				contactPhone: user.email ? undefined : "+10000000000",
+				contactEmail: user.email ?? undefined,
+				timezone: "UTC",
+				source: "web",
+			});
+
+			const payNowCents = Math.max(
+				bookingResult.estimatedPayNowAfterDiscountCents,
+				0
+			);
+			if (payNowCents <= 0) {
+				cpMessage = `Booking created — no payment needed (${bookingResult.booking.id.slice(0, 8)}).`;
+				await $boatDetailQuery.refetch();
+				return;
+			}
+
+			const paymentResult = await $createPaymentAttemptMutation.mutateAsync({
+				bookingId: bookingResult.booking.id,
+				idempotencyKey: buildIdempotencyKey(),
+				provider: "cloudpayments",
+				currency: bookingResult.pricingQuoteAfterDiscount.currency,
+				...(payNowCents > 0 ? { amountCents: payNowCents } : {}),
+			});
+
+			const amountUnits = paymentResult.paymentAttempt.amountCents / 100;
+			const widget = new (window as unknown as { cp: CpNamespace }).cp.CloudPayments();
+			const widgetResult = await widget.start({
+				publicTerminalId: cpPublicId,
+				description: `Booking #${bookingResult.booking.id.slice(0, 8)}`,
+				paymentSchema: "Single",
+				currency: bookingResult.pricingQuoteAfterDiscount.currency,
+				amount: amountUnits,
+				externalId: bookingResult.booking.id,
+				skin: "classic",
+				autoClose: 7,
+				culture: "ru-RU",
+				receiptEmail: user.email ?? "",
+				userInfo: {
+					firstName: user.name ?? "",
+					email: user.email ?? "",
+				},
+				metadata: {
+					bookingId: bookingResult.booking.id,
+					paymentAttemptId: paymentResult.paymentAttempt.id,
+				},
+			});
+
+			if (widgetResult.success) {
+				cpMessage = `Payment captured for booking ${bookingResult.booking.id.slice(0, 8)}.`;
+			} else {
+				cpMessage = `Payment widget closed for booking ${bookingResult.booking.id.slice(0, 8)}.`;
+			}
+
+			await $boatDetailQuery.refetch();
+		} catch (error) {
+			cpError = error instanceof Error ? error.message : "Payment failed.";
+		} finally {
+			cpPendingSlotKey = null;
 		}
 	};
 </script>
@@ -724,6 +830,77 @@
 
 			<Card class="lg:col-span-3">
 				<CardHeader>
+					<CardTitle>Blocked Date Ranges</CardTitle>
+					<CardDescription>
+						Active maintenance and calendar/manual blocks applied to this boat.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					{#if $boatDetailQuery.data.availabilityBlocks.length === 0}
+						<p class="text-sm text-muted-foreground">
+							No active blocked date ranges.
+						</p>
+					{:else}
+						<div class="overflow-x-auto">
+							<table class="w-full min-w-[1100px] text-left text-sm">
+								<thead class="text-muted-foreground">
+									<tr class="border-b border-border">
+										<th class="py-2">Source</th>
+										<th class="py-2">Start (Local)</th>
+										<th class="py-2">End (Local)</th>
+										<th class="py-2">Start (UTC ISO)</th>
+										<th class="py-2">End (UTC ISO)</th>
+										<th class="py-2">Reason</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each $boatDetailQuery.data.availabilityBlocks as block (block.id)}
+										<tr class="border-b border-border/50">
+											<td class="py-2 font-medium text-foreground">
+												{formatBlockSourceLabel(block.source)}
+											</td>
+											<td class="py-2">
+												<div>
+													{formatDateTimeInZone(
+															block.startsAt,
+															$boatDetailQuery.data.boat.timezone
+														)}
+												</div>
+												<div class="text-xs text-muted-foreground">
+													{formatDateTimeUtc(block.startsAt)} UTC
+												</div>
+											</td>
+											<td class="py-2">
+												<div>
+													{formatDateTimeInZone(
+															block.endsAt,
+															$boatDetailQuery.data.boat.timezone
+														)}
+												</div>
+												<div class="text-xs text-muted-foreground">
+													{formatDateTimeUtc(block.endsAt)} UTC
+												</div>
+											</td>
+											<td class="py-2 font-mono text-xs">
+												{formatDateTimeIsoUtc(block.startsAt)}
+											</td>
+											<td class="py-2 font-mono text-xs">
+												{formatDateTimeIsoUtc(block.endsAt)}
+											</td>
+											<td class="py-2">
+												{block.reason ?? "—"}
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
+				</CardContent>
+			</Card>
+
+			<Card class="lg:col-span-3">
+				<CardHeader>
 					<CardTitle>Available Slots</CardTitle>
 					<CardDescription>
 						Boat local timestamps ({$boatDetailQuery.data.boat.timezone}),
@@ -869,21 +1046,34 @@
 														{formatDurationLabel(slot.requiredMinimumDurationMinutes / 60)}
 													</a>
 												{:else if hasSignedInUser}
-													<Button
-														size="sm"
-														variant="outline"
-														disabled={Boolean(mockPaymentPendingSlotKey)}
-														onclick={() => {
-																void bookAndPayWithMock(slot);
-															}}
-													>
-														{mockPaymentPendingSlotKey ===
-															slot.startsAt.toISOString() +
-																"-" +
-																slot.endsAt.toISOString()
+													<div class="flex gap-1">
+														{#if cpPublicId}
+															<Button
+																size="sm"
+																data-testid="cp-pay-button"
+																disabled={Boolean(cpPendingSlotKey || mockPaymentPendingSlotKey)}
+																onclick={() => {
+																		void bookAndPayWithCloudPayments(slot);
+																	}}
+															>
+																{cpPendingSlotKey === toSlotKey(slot.startsAt, slot.endsAt)
+																	? "Processing..."
+																	: "Book & Pay"}
+															</Button>
+														{/if}
+														<Button
+															size="sm"
+															variant="outline"
+															disabled={Boolean(mockPaymentPendingSlotKey || cpPendingSlotKey)}
+															onclick={() => {
+																	void bookAndPayWithMock(slot);
+																}}
+														>
+															{mockPaymentPendingSlotKey === toSlotKey(slot.startsAt, slot.endsAt)
 																? "Processing..."
 																: "Book & Mock Pay"}
-													</Button>
+														</Button>
+													</div>
 												{:else}
 													<span class="text-xs text-muted-foreground">
 														Sign in to book

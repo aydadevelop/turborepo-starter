@@ -2,6 +2,8 @@ import { organization } from "@full-stack-cf-app/db/schema/auth";
 import {
 	boat,
 	boatAmenity,
+	boatAvailabilityBlock,
+	boatMinimumDurationRule,
 	boatPricingProfile,
 	boatPricingRule,
 } from "@full-stack-cf-app/db/schema/boat";
@@ -463,6 +465,85 @@ describe("booking availabilityPublic (integration)", () => {
 		expect(boatItem.pricingQuote.estimatedHours).toBe(2);
 	});
 
+	it("marks boats unavailable when requested duration violates minimum-duration rules", async () => {
+		await testDbState.db.insert(organization).values({
+			id: "org-1",
+			name: "Org",
+			slug: "org",
+		});
+
+		await testDbState.db.insert(boat).values({
+			id: "boat-min-duration-guard",
+			organizationId: "org-1",
+			name: "Odyssey 12",
+			slug: "seed-odyssey-12",
+			status: "active",
+			passengerCapacity: 12,
+			minimumHours: 2,
+			minimumNoticeMinutes: 0,
+			workingHoursStart: 10,
+			workingHoursEnd: 22,
+			timezone: "Europe/Moscow",
+		});
+
+		await testDbState.db.insert(boatPricingProfile).values({
+			id: "profile-min-duration-guard",
+			boatId: "boat-min-duration-guard",
+			name: "Base",
+			currency: "RUB",
+			baseHourlyPriceCents: 10_000,
+			isDefault: true,
+			validFrom: new Date("2026-01-01T00:00:00.000Z"),
+		});
+
+		await testDbState.db.insert(boatMinimumDurationRule).values({
+			id: "rule-min-duration-guard",
+			boatId: "boat-min-duration-guard",
+			name: "Yacht minimum 5h",
+			startHour: 0,
+			startMinute: 0,
+			endHour: 24,
+			endMinute: 0,
+			minimumDurationMinutes: 300,
+			daysOfWeek: null,
+			isActive: true,
+		});
+
+		const includeUnavailableResult = await call(
+			bookingRouter.availabilityPublic,
+			{
+				startsAt: new Date("2026-03-18T07:00:00.000Z"),
+				endsAt: new Date("2026-03-18T09:00:00.000Z"),
+				passengers: 2,
+				includeUnavailable: true,
+				withSlots: true,
+			},
+			{ context: publicContext }
+		);
+
+		expect(includeUnavailableResult.items).toHaveLength(1);
+		expect(includeUnavailableResult.items[0]?.available).toBe(false);
+		expect(includeUnavailableResult.items[0]?.slots?.length).toBeGreaterThan(0);
+		expect(
+			includeUnavailableResult.items[0]?.slots?.every(
+				(slot) => !slot.meetsMinimumDuration
+			)
+		).toBe(true);
+
+		const onlyAvailableResult = await call(
+			bookingRouter.availabilityPublic,
+			{
+				startsAt: new Date("2026-03-18T07:00:00.000Z"),
+				endsAt: new Date("2026-03-18T09:00:00.000Z"),
+				passengers: 2,
+				includeUnavailable: false,
+			},
+			{ context: publicContext }
+		);
+
+		expect(onlyAvailableResult.items).toHaveLength(0);
+	});
+
 	it("supports legacy availability band sort mode", async () => {
 		vi.useFakeTimers();
 		try {
@@ -737,6 +818,64 @@ describe("booking availabilityPublic (integration)", () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+
+	it("getByIdPublic includes active availability block ranges", async () => {
+		await testDbState.db.insert(organization).values({
+			id: "org-1",
+			name: "Org",
+			slug: "org",
+		});
+
+		await testDbState.db.insert(boat).values({
+			id: "boat-with-blocks",
+			organizationId: "org-1",
+			name: "Odyssey 12",
+			slug: "seed-odyssey-12",
+			status: "active",
+			passengerCapacity: 12,
+			minimumHours: 2,
+			minimumNoticeMinutes: 0,
+			workingHoursStart: 10,
+			workingHoursEnd: 22,
+			timezone: "Europe/Moscow",
+		});
+
+		await testDbState.db.insert(boatPricingProfile).values({
+			id: "profile-with-blocks",
+			boatId: "boat-with-blocks",
+			name: "Base",
+			currency: "RUB",
+			baseHourlyPriceCents: 10_000,
+			isDefault: true,
+			validFrom: new Date("2026-01-01T00:00:00.000Z"),
+		});
+
+		await testDbState.db.insert(boatAvailabilityBlock).values({
+			id: "block-maintenance-window",
+			boatId: "boat-with-blocks",
+			source: "maintenance",
+			startsAt: new Date("2026-03-18T09:00:00.000Z"),
+			endsAt: new Date("2026-03-18T13:00:00.000Z"),
+			reason: "Engine diagnostics",
+			isActive: true,
+		});
+
+		const result = await call(
+			bookingRouter.getByIdPublic,
+			{
+				boatId: "boat-with-blocks",
+				date: "2026-03-18",
+				durationHours: 2,
+				passengers: 2,
+			},
+			{ context: publicContext }
+		);
+
+		expect(result.availabilityBlocks).toHaveLength(1);
+		expect(result.availabilityBlocks[0]?.id).toBe("block-maintenance-window");
+		expect(result.availabilityBlocks[0]?.source).toBe("maintenance");
+		expect(result.availabilityBlocks[0]?.reason).toBe("Engine diagnostics");
 	});
 
 	it("getByIdPublic can include inactive boats when includeInactive=true", async () => {

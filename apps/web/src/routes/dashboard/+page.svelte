@@ -183,7 +183,7 @@
 					</span>
 				</div>
 			</Card.Content>
-			<Card.Footer>
+			<Card.Footer class="flex gap-2">
 				{#if hasPro}
 					<Button
 						variant="outline"
@@ -198,6 +198,9 @@
 						Upgrade to Pro
 					</Button>
 				{/if}
+				<Button variant="outline" href={resolve("/dashboard/bookings")}>
+					Managed Bookings
+				</Button>
 			</Card.Footer>
 		</Card.Root>
 
