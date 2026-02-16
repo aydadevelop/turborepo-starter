@@ -464,7 +464,7 @@ describe("booking shift request integration", () => {
 			},
 			{ context: customerContext }
 		);
-		expect(createdRequest.priceDeltaCents).toBe(5_050);
+		expect(createdRequest.priceDeltaCents).toBe(5050);
 		expect(createdRequest.payNowDeltaCents).toBe(50);
 
 		const appliedRequest = await call(

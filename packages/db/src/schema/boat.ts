@@ -215,6 +215,7 @@ export const boatAsset = sqliteTable(
 			.notNull()
 			.default("pending"),
 		reviewNote: text("review_note"),
+		expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
 		...timestamps,
 	},
 	(table) => [
@@ -468,5 +469,29 @@ export const boatPricingRule = sqliteTable(
 		index("boat_pricing_rule_boatId_idx").on(table.boatId),
 		index("boat_pricing_rule_pricingProfileId_idx").on(table.pricingProfileId),
 		index("boat_pricing_rule_priority_idx").on(table.priority),
+	]
+);
+
+export const platformFeeConfig = sqliteTable(
+	"platform_fee_config",
+	{
+		id: text("id").primaryKey(),
+		currency: text("currency").notNull().default("RUB"),
+		affiliateFeePercentage: integer("affiliate_fee_percentage")
+			.notNull()
+			.default(15),
+		taxPercentage: integer("tax_percentage").notNull().default(7),
+		acquiringFeePercentage: integer("acquiring_fee_percentage")
+			.notNull()
+			.default(5),
+		isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+		createdByUserId: text("created_by_user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		...timestamps,
+	},
+	(table) => [
+		index("platform_fee_config_currency_idx").on(table.currency),
+		index("platform_fee_config_isActive_idx").on(table.isActive),
 	]
 );

@@ -15,17 +15,23 @@
 	import { get } from "svelte/store";
 	import { z } from "zod";
 	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import { page } from "$app/stores";
 	import { authClient } from "$lib/auth-client";
+	import PhoneOtpForm from "./PhoneOtpForm.svelte";
+	import TelegramLogin from "./TelegramLogin.svelte";
 
 	let { switchToSignUp } = $props<{ switchToSignUp: () => void }>();
 
+	type AuthMethod = "email" | "phone";
+	let authMethod = $state<AuthMethod>("email");
+
 	const resolvePostAuthRedirect = (candidatePath: string | null): string => {
 		if (!candidatePath) {
-			return "/dashboard";
+			return resolve("/dashboard");
 		}
 		if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
-			return "/dashboard";
+			return resolve("/dashboard");
 		}
 		return candidatePath;
 	};
@@ -48,19 +54,28 @@
 			passkeyPending = true;
 		}
 		try {
+			let signInSucceeded = false;
 			const { error } = await authClient.signIn.passkey({
 				autoFill,
 				fetchOptions: {
-					onSuccess: () => goto(postAuthRedirectPath),
+					onSuccess: () => {
+						signInSucceeded = true;
+						window.location.href = postAuthRedirectPath;
+					},
 				},
 			});
 
+			if (signInSucceeded) return;
+
 			if (error) {
+				// Conditional mediation errors (e.g. ceremony aborted) are expected
+				if (autoFill) return;
 				passkeyError = error.message || "Passkey sign in failed.";
 			}
-		} catch (error) {
-			passkeyError =
-				error instanceof Error ? error.message : "Passkey sign in failed.";
+		} catch {
+			// Conditional mediation can be aborted — don't surface those errors
+			if (autoFill) return;
+			passkeyError = "Passkey sign in failed.";
 		} finally {
 			passkeyPending = false;
 		}
@@ -120,103 +135,130 @@
 			<CardTitle class="text-2xl">Welcome Back</CardTitle>
 			<CardDescription>Sign in to your account</CardDescription>
 		</CardHeader>
-		<CardContent>
-			<form
-				class="space-y-4"
-				onsubmit={(e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					form.handleSubmit();
-				}}
-			>
-				<form.Field name="email">
-					{#snippet children(field)}
-						<div class="space-y-2">
-							<Label for={field.name}>Email</Label>
-							<Input
-								id={field.name}
-								name={field.name}
-								type="email"
-								autocomplete="username webauthn"
-								placeholder="you@example.com"
-								onblur={field.handleBlur}
-								value={field.state.value}
-								oninput={(e: Event) => {
-									const target = e.target as HTMLInputElement;
-									field.handleChange(target.value);
-								}}
-							/>
-							{#if field.state.meta.isTouched}
-								{#each field.state.meta.errors as error}
-									<p class="text-sm text-destructive" role="alert">{error}</p>
-								{/each}
-							{/if}
-						</div>
-					{/snippet}
-				</form.Field>
-
-				<form.Field name="password">
-					{#snippet children(field)}
-						<div class="space-y-2">
-							<Label for={field.name}>Password</Label>
-							<Input
-								id={field.name}
-								name={field.name}
-								type="password"
-								autocomplete="current-password webauthn"
-								placeholder="••••••••"
-								onblur={field.handleBlur}
-								value={field.state.value}
-								oninput={(e: Event) => {
-									const target = e.target as HTMLInputElement;
-									field.handleChange(target.value);
-								}}
-							/>
-							{#if field.state.meta.isTouched}
-								{#each field.state.meta.errors as error}
-									<p class="text-sm text-destructive" role="alert">{error}</p>
-								{/each}
-							{/if}
-						</div>
-					{/snippet}
-				</form.Field>
-
-				<form.Subscribe
-					selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
-				>
-					{#snippet children(state)}
-						<Button
-							type="submit"
-							class="w-full"
-							disabled={!state.canSubmit || state.isSubmitting}
-						>
-							{state.isSubmitting ? "Signing in..." : "Sign In"}
-						</Button>
-					{/snippet}
-				</form.Subscribe>
-
-				<div class="relative py-1">
-					<div class="absolute inset-x-0 top-1/2 border-t border-border"></div>
-					<span
-						class="relative mx-auto block w-fit bg-card px-2 text-xs text-muted-foreground"
-					>
-						or
-					</span>
-				</div>
-
-				<Button
+		<CardContent class="space-y-4">
+			<div class="flex gap-1 rounded-lg bg-muted p-1">
+				<button
 					type="button"
-					variant="outline"
-					class="w-full"
-					disabled={passkeyPending}
-					onclick={() => void handlePasskeySignIn(false)}
+					class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors {authMethod === 'email'
+						? 'bg-background shadow-sm'
+						: 'text-muted-foreground hover:text-foreground'}"
+					onclick={() => (authMethod = "email")}
 				>
-					{passkeyPending ? "Waiting for passkey..." : "Sign In with Passkey"}
-				</Button>
-				{#if passkeyError}
-					<p class="text-sm text-destructive" role="alert">{passkeyError}</p>
-				{/if}
-			</form>
+					Email
+				</button>
+				<button
+					type="button"
+					class="flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors {authMethod === 'phone'
+						? 'bg-background shadow-sm'
+						: 'text-muted-foreground hover:text-foreground'}"
+					onclick={() => (authMethod = "phone")}
+				>
+					Phone
+				</button>
+			</div>
+
+			{#if authMethod === "email"}
+				<form
+					class="space-y-4"
+					onsubmit={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+						form.handleSubmit();
+					}}
+				>
+					<form.Field name="email">
+						{#snippet children(field)}
+							<div class="space-y-2">
+								<Label for={field.name}>Email</Label>
+								<Input
+									id={field.name}
+									name={field.name}
+									type="email"
+									autocomplete="username webauthn"
+									placeholder="you@example.com"
+									onblur={field.handleBlur}
+									value={field.state.value}
+									oninput={(e: Event) => {
+									const target = e.target as HTMLInputElement;
+									field.handleChange(target.value);
+								}}
+								/>
+								{#if field.state.meta.isTouched}
+									{#each field.state.meta.errors as error}
+										<p class="text-sm text-destructive" role="alert">{error}</p>
+									{/each}
+								{/if}
+							</div>
+						{/snippet}
+					</form.Field>
+
+					<form.Field name="password">
+						{#snippet children(field)}
+							<div class="space-y-2">
+								<Label for={field.name}>Password</Label>
+								<Input
+									id={field.name}
+									name={field.name}
+									type="password"
+									autocomplete="current-password webauthn"
+									placeholder="••••••••"
+									onblur={field.handleBlur}
+									value={field.state.value}
+									oninput={(e: Event) => {
+									const target = e.target as HTMLInputElement;
+									field.handleChange(target.value);
+								}}
+								/>
+								{#if field.state.meta.isTouched}
+									{#each field.state.meta.errors as error}
+										<p class="text-sm text-destructive" role="alert">{error}</p>
+									{/each}
+								{/if}
+							</div>
+						{/snippet}
+					</form.Field>
+
+					<form.Subscribe
+						selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
+					>
+						{#snippet children(state)}
+							<Button
+								type="submit"
+								class="w-full"
+								disabled={!state.canSubmit || state.isSubmitting}
+							>
+								{state.isSubmitting ? "Signing in..." : "Sign In"}
+							</Button>
+						{/snippet}
+					</form.Subscribe>
+				</form>
+			{:else}
+				<PhoneOtpForm {postAuthRedirectPath} />
+			{/if}
+
+			<div class="relative py-1">
+				<div class="absolute inset-x-0 top-1/2 border-t border-border"></div>
+				<span
+					class="relative mx-auto block w-fit bg-card px-2 text-xs text-muted-foreground"
+				>
+					or continue with
+				</span>
+			</div>
+
+			<Button
+				type="button"
+				variant="outline"
+				class="w-full"
+				disabled={passkeyPending}
+				onclick={() => void handlePasskeySignIn(false)}
+			>
+				{passkeyPending ? "Waiting for passkey..." : "Sign In with Passkey"}
+			</Button>
+			{#if passkeyError}
+				<p class="text-sm text-destructive" role="alert">{passkeyError}</p>
+			{/if}
+
+			<TelegramLogin {postAuthRedirectPath} />
 		</CardContent>
 		<CardFooter class="justify-center">
 			<Button variant="link" onclick={switchToSignUp}>

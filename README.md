@@ -65,8 +65,6 @@ Create environment files as needed:
 - `npm run build`: Build all workspace packages with Turbo
 - `npm run lint`: Run workspace Biome checks through Turbo
 - `npm run lint:fix`: Apply workspace Biome fixes through Turbo
-- `npm run format-and-lint`: Alias of `npm run lint`
-- `npm run format-and-lint:fix`: Alias of `npm run lint:fix`
 - `npm run check`: Run `lint` and `check-types` together
 - `npm run check-types`: Type-check tasks registered in workspace packages
 - `npm run test`: Run unit tests in packages that define `test`

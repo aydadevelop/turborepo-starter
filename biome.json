@@ -21,6 +21,7 @@
       "!**/.nuxt",
       "!bts.jsonc",
       "!**/.expo",
+      "!**/.alchemy",
       "!**/legacy",
       "!**/playwright-report",
       "!**/.svelte-kit",

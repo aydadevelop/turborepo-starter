@@ -8,6 +8,7 @@
 		CardHeader,
 		CardTitle,
 	} from "@full-stack-cf-app/ui/components/card";
+	import { resolve } from "$app/paths";
 </script>
 
 <div
@@ -37,7 +38,7 @@
 					</p>
 				</CardContent>
 				<CardFooter>
-					<Button href="/login" variant="default">Sign In</Button>
+					<Button href={resolve("/login")} variant="default">Sign In</Button>
 				</CardFooter>
 			</Card>
 
@@ -53,7 +54,9 @@
 					</p>
 				</CardContent>
 				<CardFooter>
-					<Button href="/boats" variant="outline">Browse Boats</Button>
+					<Button href={resolve("/boats")} variant="outline">
+						Browse Boats
+					</Button>
 				</CardFooter>
 			</Card>
 
@@ -69,7 +72,9 @@
 					</p>
 				</CardContent>
 				<CardFooter>
-					<Button href="/dashboard" variant="outline">Go to Dashboard</Button>
+					<Button href={resolve("/dashboard")} variant="outline">
+						Go to Dashboard
+					</Button>
 				</CardFooter>
 			</Card>
 
@@ -85,7 +90,9 @@
 					</p>
 				</CardContent>
 				<CardFooter>
-					<Button href="/todos" variant="secondary">Manage Todos</Button>
+					<Button href={resolve("/todos")} variant="secondary">
+						Manage Todos
+					</Button>
 				</CardFooter>
 			</Card>
 

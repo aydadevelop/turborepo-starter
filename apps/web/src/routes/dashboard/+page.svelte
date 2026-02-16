@@ -4,6 +4,7 @@
 	import { Input } from "@full-stack-cf-app/ui/components/input";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import { orpc } from "$lib/orpc";
 
@@ -36,7 +37,7 @@
 
 	$effect(() => {
 		if (!($sessionQuery.isPending || $sessionQuery.data)) {
-			goto("/login");
+			goto(resolve("/login"));
 		}
 	});
 

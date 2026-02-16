@@ -7,6 +7,7 @@
   ],
   "type": "module",
   "scripts": {
+    "postinstall": "node scripts/patch-deps.mjs",
     "dev": "turbo run dev --filter=@full-stack-cf-app/infra",
     "build": "turbo run build",
     "lint": "turbo run lint",
@@ -23,6 +24,7 @@
     "dev:native": "turbo run dev --filter=native",
     "dev:web": "turbo run dev --filter=web",
     "dev:server": "turbo run dev --filter=@full-stack-cf-app/infra",
+    "dev:tunnel": "ALCHEMY_TUNNEL=1 turbo run dev --filter=@full-stack-cf-app/infra",
     "dev:server:clean": "npm run db:reset:local && npm run dev:server",
     "db:push": "turbo run db:push --filter=@full-stack-cf-app/db",
     "db:migrate": "turbo run db:migrate --filter=@full-stack-cf-app/db",

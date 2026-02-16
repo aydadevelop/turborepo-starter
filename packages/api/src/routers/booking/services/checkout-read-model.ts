@@ -1,9 +1,9 @@
 import type { boat } from "@full-stack-cf-app/db/schema/boat";
-import type { BookingPricingQuote } from "./pricing";
 import {
 	checkoutLineItemLabels,
 	checkoutPolicyTemplates,
 } from "./checkout-read-model.templates";
+import type { BookingPricingQuote } from "./pricing";
 
 interface CheckoutDiscount {
 	normalizedDiscountCode: string;

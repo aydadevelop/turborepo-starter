@@ -11,6 +11,7 @@
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { derived, get } from "svelte/store";
 	import { dev } from "$app/environment";
+	import { resolve } from "$app/paths";
 	import { page } from "$app/stores";
 	import { authClient } from "$lib/auth-client";
 	import { parseBoatIdFromRef } from "$lib/boat-pages";
@@ -216,7 +217,7 @@
 	let requestedDurationHours = $state(2);
 	let requestedPassengers = $state(2);
 	let authBypassEnabled = $state(false);
-	let signInHref = $state("/login");
+	let signInHref: string = $state(resolve("/login"));
 	let devBypassHref = $state("");
 
 	$effect(() => {
@@ -245,7 +246,7 @@
 		const bookingPathWithQuery = bookingPathSearchParams.size
 			? `${currentPage.url.pathname}?${bookingPathSearchParams.toString()}`
 			: currentPage.url.pathname;
-		signInHref = `/login?next=${encodeURIComponent(bookingPathWithQuery)}`;
+		signInHref = `${resolve("/login")}?next=${encodeURIComponent(bookingPathWithQuery)}`;
 
 		const devBypassSearchParams = new URLSearchParams(
 			currentPage.url.searchParams
@@ -399,7 +400,9 @@
 				Generated public profile with pricing and slots.
 			</p>
 		</div>
-		<Button href="/boats" variant="outline">Back to Boat Pages</Button>
+		<Button href={resolve("/boats")} variant="outline">
+			Back to Boat Pages
+		</Button>
 	</div>
 
 	{#if boatId.length === 0}
@@ -699,9 +702,9 @@
 												{#if rule.daysOfWeek && Array.isArray(rule.daysOfWeek) && rule.daysOfWeek.length > 0}
 													{rule.daysOfWeek
 														.map(
-															(d: number) =>
+															(d) =>
 																weekdayLabels[
-																	Math.max(0, Math.min(6, Math.trunc(d)))
+																	Math.max(0, Math.min(6, Math.trunc(d as number)))
 																]
 														)
 														.join(", ")}

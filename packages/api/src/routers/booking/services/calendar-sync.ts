@@ -148,7 +148,7 @@ export const syncCalendarLinkOnBookingUpdate = async (params: {
 	calendarLink?: typeof bookingCalendarLink.$inferSelect | null;
 }): Promise<CalendarSyncResult> => {
 	const calendarLink = params.calendarLink;
-	if (!(calendarLink && calendarLink.externalCalendarId)) {
+	if (!calendarLink?.externalCalendarId) {
 		return {
 			status: "linked",
 			calendarLinkUpdate: {

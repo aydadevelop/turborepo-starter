@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@full-stack-cf-app/config": "*",
+    "@full-stack-cf-app/proxy": "*",
     "alchemy": "^0.82.1",
     "typescript": "^5"
   }

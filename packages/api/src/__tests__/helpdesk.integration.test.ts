@@ -259,8 +259,9 @@ describe("helpdesk router (integration)", () => {
 		);
 
 		expect(highPriorityTicket.dueAt).not.toBeNull();
+		const dueAt = highPriorityTicket.dueAt as Date;
 		const highPrioritySlaMs =
-			highPriorityTicket.dueAt!.getTime() - highPriorityTicket.createdAt.getTime();
+			dueAt.getTime() - highPriorityTicket.createdAt.getTime();
 		expect(highPrioritySlaMs).toBe(8 * oneHourMs);
 
 		const now = new Date();

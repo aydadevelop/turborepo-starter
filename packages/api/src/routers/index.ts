@@ -7,8 +7,10 @@ import {
 	protectedProcedure,
 	publicProcedure,
 } from "../index";
+import { adminRouter } from "./admin/router";
 import { boatRouter } from "./boat/router";
 import { bookingRouter } from "./booking";
+import { consentRouter } from "./consent";
 import { helpdeskRouter } from "./helpdesk";
 import { intakeRouter } from "./intake";
 import { notificationsRouter } from "./notifications";
@@ -73,6 +75,8 @@ export const appRouter = {
 		}),
 	boat: boatRouter,
 	booking: bookingRouter,
+	admin: adminRouter,
+	consent: consentRouter,
 	helpdesk: helpdeskRouter,
 	intake: intakeRouter,
 	notifications: notificationsRouter,

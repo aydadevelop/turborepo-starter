@@ -2,10 +2,17 @@ import { createContext } from "@full-stack-cf-app/api/context";
 import { appRouter } from "@full-stack-cf-app/api/routers/index";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
-import { onError } from "@orpc/server";
+import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import type { MiddlewareHandler } from "hono";
+
+const logServerError = (error: unknown) => {
+	if (error instanceof ORPCError && error.status < 500) {
+		return;
+	}
+	console.error(error);
+};
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
 	plugins: [
@@ -189,19 +196,11 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
 			}),
 		}),
 	],
-	interceptors: [
-		onError((error) => {
-			console.error(error);
-		}),
-	],
+	interceptors: [onError(logServerError)],
 });
 
 export const rpcHandler = new RPCHandler(appRouter, {
-	interceptors: [
-		onError((error) => {
-			console.error(error);
-		}),
-	],
+	interceptors: [onError(logServerError)],
 });
 
 export const rpcMiddleware: MiddlewareHandler = async (c, next) => {

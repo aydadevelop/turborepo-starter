@@ -8,7 +8,8 @@ const runtimeEnv = (import.meta as ImportMeta & { env: Record<string, string> })
 export const env = createEnv({
 	clientPrefix: "PUBLIC_",
 	client: {
-		PUBLIC_SERVER_URL: z.url(),
+		PUBLIC_SERVER_URL: z.string().min(1),
+		PUBLIC_BASE_PATH: z.string().optional(),
 	},
 	runtimeEnv,
 	emptyStringAsUndefined: true,

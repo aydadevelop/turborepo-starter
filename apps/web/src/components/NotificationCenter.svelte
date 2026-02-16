@@ -4,6 +4,7 @@
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { onMount } from "svelte";
 	import { derived } from "svelte/store";
+	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import {
 		countUnreadNotifications,
@@ -330,7 +331,7 @@
 						{#each notifications.slice(0, MAX_ITEMS) as item (item.id)}
 							<li class="border-b border-border/60 last:border-b-0">
 								<a
-									href={item.ctaUrl ?? "/dashboard"}
+									href={item.ctaUrl ?? resolve("/dashboard")}
 									class="block px-4 py-3 transition hover:bg-muted/40"
 									onclick={() => handleNotificationClick(item.id)}
 								>
@@ -363,7 +364,7 @@
 
 				<div class="border-t border-border px-4 py-2">
 					<a
-						href="/dashboard"
+						href={resolve("/dashboard")}
 						class="text-xs font-medium text-muted-foreground transition hover:text-foreground"
 						onclick={closePanel}
 					>

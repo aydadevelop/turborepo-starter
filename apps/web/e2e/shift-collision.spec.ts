@@ -1,15 +1,19 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 const AUTO_SEED_BASELINE = process.env.PLAYWRIGHT_SEED_BASELINE === "1";
 const SERVER_URL = process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:3000";
+const NO_LONGER_AVAILABLE_RE = /no longer available/i;
 const repoRoot = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
 	"../../.."
 );
-const seedScriptPath = path.resolve(repoRoot, "packages/db/scripts/seed-local.mjs");
+const seedScriptPath = path.resolve(
+	repoRoot,
+	"packages/db/scripts/seed-local.mjs"
+);
 
 const OWNER_EMAIL = "boat@boat.com";
 const OWNER_PASSWORD = "boatboat";
@@ -18,13 +22,7 @@ const SHIFT_REASON_TEXT = "Shift to later daytime slot";
 const seedBaselineScenario = () => {
 	execFileSync(
 		"node",
-		[
-			seedScriptPath,
-			"--scenario",
-			"baseline",
-			"--anchor-date",
-			"2026-03-15",
-		],
+		[seedScriptPath, "--scenario", "baseline", "--anchor-date", "2026-03-15"],
 		{
 			cwd: repoRoot,
 			stdio: "pipe",
@@ -100,16 +98,18 @@ test.describe("Shift Collision Flow", () => {
 			.first();
 
 		await expect(shiftListItem).toBeVisible();
-		await expect(shiftListItem.getByText("pending", { exact: false })).toBeVisible();
+		await expect(
+			shiftListItem.getByText("pending", { exact: false })
+		).toBeVisible();
 
 		await shiftListItem.getByRole("button", { name: "Review shift" }).click();
 		await shiftListItem
 			.getByRole("button", { name: "Approve shift", exact: true })
 			.click();
 
-		await expect(shiftListItem.getByText("cancelled", { exact: false })).toBeVisible();
 		await expect(
-			shiftListItem.getByText(/no longer available/i)
+			shiftListItem.getByText("cancelled", { exact: false })
 		).toBeVisible();
+		await expect(shiftListItem.getByText(NO_LONGER_AVAILABLE_RE)).toBeVisible();
 	});
 });

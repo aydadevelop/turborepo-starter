@@ -290,7 +290,7 @@ const collectMigrationSqlFiles = (rootDir) => {
 
 			const isLegacySql = MIGRATION_FILENAME_RE.test(entry.name);
 			const isFolderStyleSql = entry.name === "migration.sql";
-			if (!isLegacySql && !isFolderStyleSql) {
+			if (!(isLegacySql || isFolderStyleSql)) {
 				continue;
 			}
 
@@ -419,12 +419,18 @@ const withCommon = (rows, now) =>
 		...row,
 	}));
 
-const buildBaselineSeedData = ({ anchorDateMs, ownerPasswordHash }) => {
+const buildBaselineSeedData = ({
+	anchorDateMs,
+	ownerPasswordHash,
+	adminPasswordHash,
+}) => {
 	const atUtc = (dayOffset, hour, minute = 0) =>
 		anchorDateMs + dayOffset * DAY_MS + hour * HOUR_MS + minute * 60 * 1000;
 	const now = atUtc(0, 9);
 
 	const organizationId = "seed_org_demo_marina";
+	const adminOrgId = "seed_org_admin";
+	const userAdminId = "seed_user_admin";
 	const userOwnerId = "seed_user_owner_alex";
 	const userManagerId = "seed_user_manager_olga";
 	const userAgentId = "seed_user_agent_nina";
@@ -451,19 +457,37 @@ const buildBaselineSeedData = ({ anchorDateMs, ownerPasswordHash }) => {
 	const seed = {
 		now,
 		atUtc,
-		organization: {
-			id: organizationId,
-			name: "Seed Demo Marina",
-			slug: "seed-demo-marina",
-			logo: null,
-			metadata: toJson({
-				seedNamespace: "seed",
-				timezone: "Europe/Moscow",
-			}),
-			created_at: now,
-		},
+		organizations: [
+			{
+				id: organizationId,
+				name: "Seed Demo Marina",
+				slug: "seed-demo-marina",
+				logo: null,
+				metadata: toJson({
+					seedNamespace: "seed",
+					timezone: "Europe/Moscow",
+				}),
+				created_at: now,
+			},
+			{
+				id: adminOrgId,
+				name: "Admin",
+				slug: "admin",
+				logo: null,
+				metadata: toJson({ seedNamespace: "seed" }),
+				created_at: now,
+			},
+		],
 		users: withCommon(
 			[
+				{
+					id: userAdminId,
+					name: "Admin",
+					email: "admin@admin.com",
+					email_verified: 1,
+					image: null,
+					role: "admin",
+				},
 				{
 					id: userOwnerId,
 					name: "Alex Owner",
@@ -505,6 +529,13 @@ const buildBaselineSeedData = ({ anchorDateMs, ownerPasswordHash }) => {
 		accounts: withCommon(
 			[
 				{
+					id: "seed_account_admin_credential",
+					account_id: userAdminId,
+					provider_id: "credential",
+					user_id: userAdminId,
+					password: adminPasswordHash,
+				},
+				{
 					id: "seed_account_owner_credential",
 					account_id: userOwnerId,
 					provider_id: "credential",
@@ -515,6 +546,13 @@ const buildBaselineSeedData = ({ anchorDateMs, ownerPasswordHash }) => {
 			now
 		),
 		members: [
+			{
+				id: "seed_member_admin",
+				organization_id: adminOrgId,
+				user_id: userAdminId,
+				role: "org_owner",
+				created_at: now,
+			},
 			{
 				id: "seed_member_owner_alex",
 				organization_id: organizationId,
@@ -1528,7 +1566,7 @@ const buildBaselineSeedData = ({ anchorDateMs, ownerPasswordHash }) => {
 
 const applyBookingPressureScenario = (seed) => {
 	const { atUtc, now } = seed;
-	const organizationId = seed.organization.id;
+	const organizationId = seed.organizations[0].id;
 	const userManagerId = "seed_user_manager_olga";
 	const userCustomerId = "seed_user_customer_ivan";
 
@@ -1756,7 +1794,7 @@ const applyBookingPressureScenario = (seed) => {
 
 const applySupportEscalationScenario = (seed) => {
 	const { atUtc, now } = seed;
-	const organizationId = seed.organization.id;
+	const organizationId = seed.organizations[0].id;
 	const userManagerId = "seed_user_manager_olga";
 	const userAgentId = "seed_user_agent_nina";
 	const userCustomerId = "seed_user_customer_ivan";
@@ -2051,9 +2089,18 @@ const applyPricingIntersectionsScenario = (seed) => {
 	});
 };
 
-const buildSeedData = ({ anchorDate, scenario, ownerPasswordHash }) => {
+const buildSeedData = ({
+	anchorDate,
+	scenario,
+	ownerPasswordHash,
+	adminPasswordHash,
+}) => {
 	const anchorDateMs = parseAnchorDate(anchorDate);
-	const seed = buildBaselineSeedData({ anchorDateMs, ownerPasswordHash });
+	const seed = buildBaselineSeedData({
+		anchorDateMs,
+		ownerPasswordHash,
+		adminPasswordHash,
+	});
 
 	if (scenario === "booking-pressure" || scenario === "full") {
 		applyBookingPressureScenario(seed);
@@ -2132,7 +2179,9 @@ const clearSeedNamespace = (sqlite) => {
 };
 
 const writeSeedData = (sqlite, seed) => {
-	upsertRow(sqlite, "organization", ["id"], seed.organization);
+	for (const org of seed.organizations) {
+		upsertRow(sqlite, "organization", ["id"], org);
+	}
 	upsertMany(sqlite, "user", seed.users);
 	upsertMany(sqlite, "account", seed.accounts);
 	upsertMany(sqlite, "member", seed.members);
@@ -2185,11 +2234,13 @@ const main = async () => {
 		sqlite.pragma("foreign_keys = ON");
 		ensureSchemaExists(sqlite);
 		const ownerPasswordHash = await hashPassword("boatboat");
+		const adminPasswordHash = await hashPassword("admin");
 
 		const seed = buildSeedData({
 			anchorDate: options.anchorDate,
 			scenario: options.scenario,
 			ownerPasswordHash,
+			adminPasswordHash,
 		});
 
 		sqlite.transaction(() => {
@@ -2204,10 +2255,11 @@ const main = async () => {
 				`Seeded local database: ${resolvedDbPath}`,
 				`Scenario: ${options.scenario}`,
 				`Anchor date: ${options.anchorDate}`,
-				`Organization: ${seed.organization.slug}`,
+				`Organizations: ${seed.organizations.map((o) => o.slug).join(", ")}`,
 				`Users: ${seed.users.length}, boats: ${seed.boats.length}, bookings: ${seed.bookings.length}, shift requests: ${seed.shiftRequests.length}, affiliate referrals: ${seed.affiliateReferrals.length}, affiliate payouts: ${seed.bookingAffiliatePayouts.length}, pricing rules: ${seed.pricingRules.length}, min-duration rules: ${seed.minimumDurationRules.length}`,
 				`Support tickets: ${seed.supportTickets.length}, inbound: ${seed.inboundMessages.length}, telegram webhook events: ${seed.telegramWebhookEvents.length}`,
 				"Owner login: boat@boat.com / boatboat",
+				"Admin login: admin@admin.com / admin",
 			].join("\n")
 		);
 	} finally {

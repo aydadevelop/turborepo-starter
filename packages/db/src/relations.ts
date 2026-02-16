@@ -9,6 +9,10 @@ export const relations = defineRelations(schema, (r) => ({
 		accounts: r.many.account(),
 		passkeys: r.many.passkey(),
 		memberships: r.many.member(),
+		consents: r.many.userConsent({
+			from: r.user.id,
+			to: r.userConsent.userId,
+		}),
 		actedNotificationEvents: r.many.notificationEvent({
 			from: r.user.id,
 			to: r.notificationEvent.actorUserId,
@@ -675,6 +679,14 @@ export const relations = defineRelations(schema, (r) => ({
 		inboundMessage: r.one.inboundMessage({
 			from: r.telegramWebhookEvent.inboundMessageId,
 			to: r.inboundMessage.id,
+		}),
+	},
+
+	// ── Consent ──────────────────────────────────────────────────────
+	userConsent: {
+		user: r.one.user({
+			from: r.userConsent.userId,
+			to: r.user.id,
 		}),
 	},
 }));

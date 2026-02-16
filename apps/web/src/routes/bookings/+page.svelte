@@ -11,6 +11,7 @@
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { derived } from "svelte/store";
 	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import { orpc } from "$lib/orpc";
 
@@ -103,7 +104,9 @@
 			};
 		}
 	);
-	const managedShiftRequestsQuery = createQuery(managedShiftRequestsQueryOptions);
+	const managedShiftRequestsQuery = createQuery(
+		managedShiftRequestsQueryOptions
+	);
 
 	const myDisputesQuery = createQuery(
 		orpc.booking.disputeListMine.queryOptions({
@@ -204,7 +207,7 @@
 
 	$effect(() => {
 		if (!($sessionQuery.isPending || $sessionQuery.data)) {
-			goto("/login");
+			goto(resolve("/login"));
 		}
 	});
 
@@ -246,7 +249,12 @@
 		}).format(amountCents / 100);
 
 	const formatSignedMoney = (amountCents: number, currency: string): string => {
-		const sign = amountCents > 0 ? "+" : amountCents < 0 ? "-" : "";
+		let sign = "";
+		if (amountCents > 0) {
+			sign = "+";
+		} else if (amountCents < 0) {
+			sign = "-";
+		}
 		return `${sign}${formatMoney(Math.abs(amountCents), currency)}`;
 	};
 
@@ -669,7 +677,10 @@
 	}) => {
 		const currentStartsAt = toDate(bookingItem.startsAt);
 		const currentEndsAt = toDate(bookingItem.endsAt);
-		const durationMs = Math.max(currentEndsAt.getTime() - currentStartsAt.getTime(), 0);
+		const durationMs = Math.max(
+			currentEndsAt.getTime() - currentStartsAt.getTime(),
+			0
+		);
 		const proposedStartsAt = new Date(currentStartsAt.getTime() + HOUR_MS);
 		const proposedEndsAt = new Date(proposedStartsAt.getTime() + durationMs);
 
@@ -724,7 +735,9 @@
 			await refetchBookingState();
 		} catch (error) {
 			actionError =
-				error instanceof Error ? error.message : "Failed to create shift request.";
+				error instanceof Error
+					? error.message
+					: "Failed to create shift request.";
 		} finally {
 			shiftPendingBookingId = null;
 		}
@@ -754,13 +767,17 @@
 				await $reviewShiftRequestManagedMutation.mutateAsync({
 					bookingId,
 					decision,
-					...(shiftReviewNoteDraft.trim() ? { note: shiftReviewNoteDraft.trim() } : {}),
+					...(shiftReviewNoteDraft.trim()
+						? { note: shiftReviewNoteDraft.trim() }
+						: {}),
 				});
 			} else {
 				await $reviewShiftRequestMineMutation.mutateAsync({
 					bookingId,
 					decision,
-					...(shiftReviewNoteDraft.trim() ? { note: shiftReviewNoteDraft.trim() } : {}),
+					...(shiftReviewNoteDraft.trim()
+						? { note: shiftReviewNoteDraft.trim() }
+						: {}),
 				});
 			}
 
@@ -769,7 +786,9 @@
 			await refetchBookingState();
 		} catch (error) {
 			actionError =
-				error instanceof Error ? error.message : "Failed to review shift request.";
+				error instanceof Error
+					? error.message
+					: "Failed to review shift request.";
 		} finally {
 			shiftReviewPendingBookingId = null;
 		}
@@ -1128,7 +1147,9 @@
 
 								{#if shiftRequest.status === "pending" && ((hasManagerAccess && shiftRequest.managerDecision === "pending") || (!hasManagerAccess && shiftRequest.customerDecision === "pending"))}
 									{#if shiftReviewDraftBookingId === shiftRequest.bookingId}
-										<div class="flex flex-col gap-2 md:flex-row md:items-center">
+										<div
+											class="flex flex-col gap-2 md:flex-row md:items-center"
+										>
 											<Input
 												value={shiftReviewNoteDraft}
 												oninput={(event) => {
@@ -1662,7 +1683,7 @@
 									<Button
 										size="sm"
 										variant="outline"
-										href={`/boats/${bookingItem.boatId}?date=${toDateParam(bookingItem.startsAt)}&durationHours=2&passengers=${bookingItem.passengers}`}
+										href={`${resolve("/boats")}/${bookingItem.boatId}?date=${toDateParam(bookingItem.startsAt)}&durationHours=2&passengers=${bookingItem.passengers}`}
 									>
 										Open boat page
 									</Button>
@@ -1717,7 +1738,9 @@
 
 									{#if activeStatuses.has(bookingItem.status)}
 										{#if shiftDraftBookingId === bookingItem.id}
-											<div class="grid w-full gap-2 rounded-md border p-3 md:grid-cols-2">
+											<div
+												class="grid w-full gap-2 rounded-md border p-3 md:grid-cols-2"
+											>
 												<Input
 													type="datetime-local"
 													value={shiftDraftStartsAt}

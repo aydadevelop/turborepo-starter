@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { Button } from "@full-stack-cf-app/ui/components/button";
 	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
+	import { queryClient } from "$lib/orpc";
 
 	const sessionQuery = authClient.useSession();
 
@@ -9,7 +11,8 @@
 		await authClient.signOut({
 			fetchOptions: {
 				onSuccess: () => {
-					goto("/");
+					queryClient.clear();
+					window.location.href = resolve("/");
 				},
 				onError: (error) => {
 					console.error("Sign out failed:", error);
@@ -19,7 +22,7 @@
 	}
 
 	function goToLogin() {
-		goto("/login");
+		goto(resolve("/login"));
 	}
 </script>
 
@@ -35,6 +38,12 @@
 			>
 				{user.name || user.email?.split('@')[0] || 'User'}
 			</span>
+			<a
+				href={resolve("/dashboard/settings")}
+				class="text-sm text-muted-foreground transition hover:text-foreground"
+			>
+				Settings
+			</a>
 			<Button variant="destructive" size="sm" onclick={handleSignOut}>
 				Sign Out
 			</Button>

@@ -1,0 +1,470 @@
+<script lang="ts">
+	import { Badge } from "@full-stack-cf-app/ui/components/badge";
+	import { Button } from "@full-stack-cf-app/ui/components/button";
+	import * as Card from "@full-stack-cf-app/ui/components/card";
+	import { Input } from "@full-stack-cf-app/ui/components/input";
+	import { Separator } from "@full-stack-cf-app/ui/components/separator";
+	import { createQuery } from "@tanstack/svelte-query";
+	import { onMount } from "svelte";
+	import { derived } from "svelte/store";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
+	import { authClient } from "$lib/auth-client";
+	import { queryClient } from "$lib/orpc";
+	import PhoneInput from "../../../components/PhoneInput.svelte";
+
+	const sessionQuery = authClient.useSession();
+
+	$effect(() => {
+		if (!($sessionQuery.isPending || $sessionQuery.data)) {
+			goto(resolve("/login"));
+		}
+	});
+
+	// ---------- Linked accounts ----------
+	const accountsQueryOptions = derived(sessionQuery, ($session) => ({
+		queryKey: ["linked-accounts"],
+		queryFn: async () => {
+			const { data, error } = await authClient.listAccounts();
+			if (error) throw error;
+			return data ?? [];
+		},
+		retry: false,
+		enabled: Boolean($session.data),
+	}));
+	const accountsQuery = createQuery(accountsQueryOptions);
+
+	const hasTelegram = $derived(
+		($accountsQuery.data ?? []).some(
+			(a: { providerId?: string; provider?: string }) =>
+				a.providerId === "telegram" || a.provider === "telegram"
+		)
+	);
+	const hasCredential = $derived(
+		($accountsQuery.data ?? []).some(
+			(a: { providerId?: string; provider?: string }) =>
+				a.providerId === "credential" || a.provider === "credential"
+		)
+	);
+
+	// ---------- Telegram link/unlink ----------
+	let telegramPending = $state(false);
+	let telegramError = $state<string | null>(null);
+	let telegramSuccess = $state<string | null>(null);
+	let telegramWidgetReady = $state(false);
+
+	onMount(() => {
+		authClient
+			.getTelegramConfig()
+			.then((config) => {
+				if (!config.data?.botUsername) return;
+				telegramWidgetReady = true;
+			})
+			.catch(() => {
+				// Telegram plugin not configured — hide widget
+			});
+	});
+
+	const initTelegramLinkWidget = () => {
+		authClient.initTelegramWidget(
+			"telegram-link-widget",
+			{ size: "large", cornerRadius: 8, showUserPhoto: true },
+			async (authData) => {
+				telegramPending = true;
+				telegramError = null;
+				telegramSuccess = null;
+				const result = await authClient.linkTelegram(authData);
+				telegramPending = false;
+				if (result.error) {
+					telegramError = result.error.message || "Failed to link Telegram.";
+					return;
+				}
+				telegramSuccess = "Telegram account linked successfully.";
+				queryClient.invalidateQueries({ queryKey: ["linked-accounts"] });
+			}
+		);
+	};
+
+	let showTelegramWidget = $state(false);
+	$effect(() => {
+		if (showTelegramWidget && telegramWidgetReady) {
+			// Defer to next tick so the DOM element exists
+			queueMicrotask(() => initTelegramLinkWidget());
+		}
+	});
+
+	const handleUnlinkTelegram = async () => {
+		telegramPending = true;
+		telegramError = null;
+		telegramSuccess = null;
+		const result = await authClient.unlinkTelegram();
+		telegramPending = false;
+		if (result.error) {
+			telegramError = result.error.message || "Failed to unlink Telegram.";
+			return;
+		}
+		telegramSuccess = "Telegram account unlinked.";
+		showTelegramWidget = false;
+		queryClient.invalidateQueries({ queryKey: ["linked-accounts"] });
+	};
+
+	// ---------- Phone ----------
+	let phoneStep = $state<"idle" | "enter" | "otp">("idle");
+	let phoneInput = $state("");
+	let phoneUnmasked = $state("");
+	let phoneCode = $state("");
+	let phonePending = $state(false);
+	let phoneError = $state<string | null>(null);
+	let phoneSuccess = $state<string | null>(null);
+
+	const fullPhone = $derived(phoneUnmasked ? `+${phoneUnmasked}` : "");
+
+	const handleSendPhoneOtp = async () => {
+		if (!fullPhone) {
+			phoneError = "Phone number is required.";
+			return;
+		}
+		phonePending = true;
+		phoneError = null;
+		const { error } = await authClient.phoneNumber.sendOtp({
+			phoneNumber: fullPhone,
+		});
+		phonePending = false;
+		if (error) {
+			phoneError = error.message || "Failed to send OTP.";
+			return;
+		}
+		phoneStep = "otp";
+	};
+
+	const handleVerifyPhone = async () => {
+		const trimmedCode = phoneCode.trim();
+		if (!trimmedCode) {
+			phoneError = "Enter the verification code.";
+			return;
+		}
+		phonePending = true;
+		phoneError = null;
+		const { error } = await authClient.phoneNumber.verify({
+			phoneNumber: fullPhone,
+			code: trimmedCode,
+			updatePhoneNumber: true,
+		});
+		phonePending = false;
+		if (error) {
+			phoneError = error.message || "Invalid code.";
+			return;
+		}
+		phoneSuccess = "Phone number updated.";
+		phoneStep = "idle";
+		phoneInput = "";
+		phoneUnmasked = "";
+		phoneCode = "";
+		queryClient.invalidateQueries({ queryKey: ["linked-accounts"] });
+	};
+
+	const cancelPhoneFlow = () => {
+		phoneStep = "idle";
+		phoneInput = "";
+		phoneUnmasked = "";
+		phoneCode = "";
+		phoneError = null;
+		phoneSuccess = null;
+	};
+
+	// ---------- Passkey ----------
+	let passkeyPending = $state(false);
+	let passkeyMessage = $state<string | null>(null);
+	let passkeyError = $state<string | null>(null);
+
+	const registerPasskey = async () => {
+		if (typeof window === "undefined" || !("PublicKeyCredential" in window)) {
+			passkeyError = "Passkeys are not supported in this browser.";
+			passkeyMessage = null;
+			return;
+		}
+
+		const user = $sessionQuery.data?.user;
+		if (!user) {
+			passkeyError = "You must be signed in to register a passkey.";
+			passkeyMessage = null;
+			return;
+		}
+
+		passkeyPending = true;
+		passkeyError = null;
+		passkeyMessage = null;
+		try {
+			const { error } = await authClient.passkey.addPasskey({
+				name: user.email ?? user.name ?? "My passkey",
+			});
+
+			if (error) {
+				passkeyError = error.message || "Failed to register passkey.";
+				return;
+			}
+
+			passkeyMessage = "Passkey registered. You can sign in using passkey now.";
+		} catch (err) {
+			passkeyError =
+				err instanceof Error ? err.message : "Failed to register passkey.";
+		} finally {
+			passkeyPending = false;
+		}
+	};
+
+	// ---------- User info ----------
+	const user = $derived($sessionQuery.data?.user);
+	const phoneNumber = $derived(
+		(user as { phoneNumber?: string } | undefined)?.phoneNumber ?? null
+	);
+	const telegramUsername = $derived(
+		(user as { telegramUsername?: string } | undefined)?.telegramUsername ??
+			null
+	);
+</script>
+
+{#if $sessionQuery.isPending}
+	<div class="flex items-center justify-center min-h-[50vh]">
+		<p class="text-muted-foreground">Loading...</p>
+	</div>
+{:else if !$sessionQuery.data}
+	<div class="flex items-center justify-center min-h-[50vh]">
+		<p class="text-muted-foreground">Redirecting to login...</p>
+	</div>
+{:else}
+	<div class="max-w-2xl mx-auto p-6 space-y-6">
+		<div class="flex items-center justify-between">
+			<h1 class="text-3xl font-bold">Account Settings</h1>
+			<a
+				href={resolve("/dashboard")}
+				class="text-sm text-muted-foreground transition hover:text-foreground"
+			>
+				&larr; Dashboard
+			</a>
+		</div>
+
+		<!-- Profile info -->
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Profile</Card.Title>
+			</Card.Header>
+			<Card.Content class="space-y-3 text-sm">
+				<div class="flex items-center justify-between">
+					<span class="text-muted-foreground">Name</span>
+					<span>{user?.name ?? "—"}</span>
+				</div>
+				<Separator />
+				<div class="flex items-center justify-between">
+					<span class="text-muted-foreground">Email</span>
+					<span>{user?.email ?? "—"}</span>
+				</div>
+				{#if phoneNumber}
+					<Separator />
+					<div class="flex items-center justify-between">
+						<span class="text-muted-foreground">Phone</span>
+						<span>{phoneNumber}</span>
+					</div>
+				{/if}
+			</Card.Content>
+		</Card.Root>
+
+		<!-- Linked Accounts -->
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Linked Accounts</Card.Title>
+				<Card.Description>
+					Manage sign-in methods linked to your account.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content class="space-y-4">
+				{#if $accountsQuery.isPending}
+					<p class="text-sm text-muted-foreground">Loading...</p>
+				{:else}
+					<!-- Email / Password -->
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-2">
+							<span class="text-sm font-medium">Email &amp; Password</span>
+							{#if hasCredential}
+								<Badge variant="secondary">Connected</Badge>
+							{/if}
+						</div>
+						{#if !hasCredential}
+							<span class="text-xs text-muted-foreground">Not set</span>
+						{/if}
+					</div>
+
+					<Separator />
+
+					<!-- Telegram -->
+					<div class="space-y-3">
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-2">
+								<span class="text-sm font-medium">Telegram</span>
+								{#if hasTelegram}
+									<Badge variant="secondary">Connected</Badge>
+									{#if telegramUsername}
+										<span class="text-xs text-muted-foreground"
+											>@{telegramUsername}</span
+										>
+									{/if}
+								{/if}
+							</div>
+							{#if hasTelegram}
+								<Button
+									variant="outline"
+									size="sm"
+									onclick={() => void handleUnlinkTelegram()}
+									disabled={telegramPending}
+								>
+									{telegramPending ? "Unlinking..." : "Unlink"}
+								</Button>
+							{:else if telegramWidgetReady}
+								{#if !showTelegramWidget}
+									<Button
+										variant="outline"
+										size="sm"
+										onclick={() => (showTelegramWidget = true)}
+									>
+										Link Telegram
+									</Button>
+								{/if}
+							{:else}
+								<span class="text-xs text-muted-foreground">Unavailable</span>
+							{/if}
+						</div>
+
+						{#if showTelegramWidget && !hasTelegram && telegramWidgetReady}
+							<div id="telegram-link-widget"></div>
+						{/if}
+
+						{#if telegramPending}
+							<p class="text-sm text-muted-foreground">Processing...</p>
+						{/if}
+						{#if telegramSuccess}
+							<p class="text-sm text-primary">{telegramSuccess}</p>
+						{/if}
+						{#if telegramError}
+							<p class="text-sm text-destructive" role="alert">
+								{telegramError}
+							</p>
+						{/if}
+					</div>
+
+					<Separator />
+
+					<!-- Phone -->
+					<div class="space-y-3">
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-2">
+								<span class="text-sm font-medium">Phone</span>
+								{#if phoneNumber}
+									<Badge variant="secondary">Connected</Badge>
+									<span class="text-xs text-muted-foreground"
+										>{phoneNumber}</span
+									>
+								{/if}
+							</div>
+							{#if phoneStep === "idle"}
+								<Button
+									variant="outline"
+									size="sm"
+									onclick={() => {
+										phoneStep = "enter";
+										phoneSuccess = null;
+										phoneError = null;
+									}}
+								>
+									{phoneNumber ? "Change" : "Set Phone"}
+								</Button>
+							{/if}
+						</div>
+
+						{#if phoneStep === "enter"}
+							<div class="flex gap-2">
+								<PhoneInput
+									bind:value={phoneInput}
+									bind:unmasked={phoneUnmasked}
+									disabled={phonePending}
+									class="flex-1"
+								/>
+								<Button
+									size="sm"
+									onclick={() => void handleSendPhoneOtp()}
+									disabled={phonePending || !phoneUnmasked}
+								>
+									{phonePending ? "Sending..." : "Send OTP"}
+								</Button>
+								<Button variant="ghost" size="sm" onclick={cancelPhoneFlow}>
+									Cancel
+								</Button>
+							</div>
+						{/if}
+
+						{#if phoneStep === "otp"}
+							<p class="text-xs text-muted-foreground">
+								Code sent to <strong>{phoneInput}</strong>
+							</p>
+							<div class="flex gap-2">
+								<Input
+									type="text"
+									inputmode="numeric"
+									placeholder="123456"
+									maxlength={6}
+									bind:value={phoneCode}
+									disabled={phonePending}
+									class="flex-1"
+								/>
+								<Button
+									size="sm"
+									onclick={() => void handleVerifyPhone()}
+									disabled={phonePending || !phoneCode.trim()}
+								>
+									{phonePending ? "Verifying..." : "Verify"}
+								</Button>
+								<Button variant="ghost" size="sm" onclick={cancelPhoneFlow}>
+									Cancel
+								</Button>
+							</div>
+						{/if}
+
+						{#if phoneSuccess}
+							<p class="text-sm text-primary">{phoneSuccess}</p>
+						{/if}
+						{#if phoneError}
+							<p class="text-sm text-destructive" role="alert">{phoneError}</p>
+						{/if}
+					</div>
+				{/if}
+			</Card.Content>
+		</Card.Root>
+
+		<!-- Passkey -->
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Passkey</Card.Title>
+				<Card.Description>
+					Register a passkey to sign in without a password using Face ID, Touch
+					ID, Windows Hello, or a hardware security key.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content class="space-y-3 text-sm text-muted-foreground">
+				{#if passkeyMessage}
+					<p class="text-primary">{passkeyMessage}</p>
+				{/if}
+				{#if passkeyError}
+					<p class="text-destructive">{passkeyError}</p>
+				{/if}
+			</Card.Content>
+			<Card.Footer>
+				<Button
+					variant="outline"
+					onclick={() => void registerPasskey()}
+					disabled={passkeyPending}
+				>
+					{passkeyPending ? "Registering..." : "Register Passkey"}
+				</Button>
+			</Card.Footer>
+		</Card.Root>
+	</div>
+{/if}

@@ -8,3 +8,5 @@ export function cn(...inputs: ClassValue[]) {
 export type WithElementRef<T, E extends HTMLElement = HTMLElement> = T & {
 	ref?: E | null;
 };
+
+export type { WithoutChild, WithoutChildrenOrChild } from "bits-ui";

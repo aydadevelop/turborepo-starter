@@ -5,7 +5,11 @@ import { eq } from "drizzle-orm";
 import z from "zod";
 
 export type BookingActionPolicyAction = "cancellation" | "shift";
-export type BookingActionPolicyActor = "customer" | "owner" | "manager" | "system";
+export type BookingActionPolicyActor =
+	| "customer"
+	| "owner"
+	| "manager"
+	| "system";
 
 interface BookingActionWindowPolicyItem {
 	customerLatestHoursBeforeStart: number;
@@ -109,6 +113,8 @@ const toActorPolicyKey = (actor: BookingActionPolicyActor) => {
 			return "managerLatestHoursBeforeStart" as const;
 		case "system":
 			return "systemLatestHoursBeforeStart" as const;
+		default:
+			throw new Error(`Unknown actor: ${actor satisfies never}`);
 	}
 };
 
@@ -123,7 +129,8 @@ export const assertBookingActionAllowedByWindow = (params: {
 	const hoursUntilStart =
 		(params.bookingStartsAt.getTime() - now.getTime()) / (60 * 60 * 1000);
 	const actorPolicyKey = toActorPolicyKey(params.actor);
-	const minHoursUntilStart = params.policyProfile[params.action][actorPolicyKey];
+	const minHoursUntilStart =
+		params.policyProfile[params.action][actorPolicyKey];
 	if (hoursUntilStart < minHoursUntilStart) {
 		throw new ORPCError("BAD_REQUEST", {
 			message: `${params.action} is no longer allowed for ${params.actor} at this time`,

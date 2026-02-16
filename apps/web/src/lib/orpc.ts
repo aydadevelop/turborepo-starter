@@ -5,7 +5,19 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { QueryCache, QueryClient } from "@tanstack/svelte-query";
 import { PUBLIC_SERVER_URL } from "$env/static/public";
 
-const serverUrl = PUBLIC_SERVER_URL.replace(/\/+$/, "");
+const TRAILING_SLASHES = /\/+$/;
+const ABSOLUTE_URL = /^https?:\/\//;
+
+const serverUrl = PUBLIC_SERVER_URL.replace(TRAILING_SLASHES, "");
+
+function resolveUrl(path: string): string {
+	if (ABSOLUTE_URL.test(path)) {
+		return path;
+	}
+	const origin =
+		typeof window !== "undefined" ? window.location.origin : "http://localhost";
+	return `${origin}${path}`;
+}
 
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({
@@ -16,7 +28,7 @@ export const queryClient = new QueryClient({
 });
 
 export const link = new RPCLink({
-	url: `${serverUrl}/rpc`,
+	url: resolveUrl(`${serverUrl}/rpc`),
 	fetch(url, options) {
 		return fetch(url, {
 			...options,

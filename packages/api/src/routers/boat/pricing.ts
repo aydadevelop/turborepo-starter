@@ -2,6 +2,7 @@ import { db } from "@full-stack-cf-app/db";
 import {
 	boatPricingProfile,
 	boatPricingRule,
+	platformFeeConfig,
 } from "@full-stack-cf-app/db/schema/boat";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, isNull } from "drizzle-orm";
@@ -91,18 +92,30 @@ export const boatPricingRouter = {
 					.where(eq(boatPricingProfile.boatId, input.boatId));
 			}
 
+			const currency = input.currency.toUpperCase();
+			const [activeFeeConfig] = await db
+				.select()
+				.from(platformFeeConfig)
+				.where(
+					and(
+						eq(platformFeeConfig.currency, currency),
+						eq(platformFeeConfig.isActive, true)
+					)
+				)
+				.limit(1);
+
 			return await insertAndReturn(boatPricingProfile, {
 				id: crypto.randomUUID(),
 				boatId: input.boatId,
 				name: input.name,
-				currency: input.currency.toUpperCase(),
+				currency,
 				baseHourlyPriceCents: input.baseHourlyPriceCents,
 				minimumHours: input.minimumHours,
 				depositPercentage: input.depositPercentage,
 				serviceFeePercentage: input.serviceFeePercentage,
-				affiliateFeePercentage: input.affiliateFeePercentage,
-				taxPercentage: input.taxPercentage,
-				acquiringFeePercentage: input.acquiringFeePercentage,
+				affiliateFeePercentage: activeFeeConfig?.affiliateFeePercentage ?? 0,
+				taxPercentage: activeFeeConfig?.taxPercentage ?? 0,
+				acquiringFeePercentage: activeFeeConfig?.acquiringFeePercentage ?? 0,
 				validFrom: input.validFrom ?? new Date(),
 				validTo: input.validTo,
 				isDefault: input.isDefault,

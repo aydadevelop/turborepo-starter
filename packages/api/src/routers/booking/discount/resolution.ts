@@ -6,7 +6,10 @@ import {
 } from "@full-stack-cf-app/db/schema/booking";
 import { ORPCError } from "@orpc/server";
 import { and, count, eq } from "drizzle-orm";
-import { isValidDiscountCode, normalizeDiscountCode } from "../../booking.schemas";
+import {
+	isValidDiscountCode,
+	normalizeDiscountCode,
+} from "../../booking.schemas";
 import type { ResolvedBookingDiscount } from "../helpers";
 
 export const calculateDiscountAmountCents = (params: {

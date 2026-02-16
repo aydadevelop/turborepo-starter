@@ -1,3 +1,4 @@
+import { startTunnel } from "@full-stack-cf-app/proxy";
 import alchemy from "alchemy";
 import {
 	createCloudflareApi,
@@ -147,10 +148,26 @@ const notificationQueue = await Queue("notificationQueue", {
 const devCorsOrigin =
 	"http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176";
 
+// Start ngrok tunnel in local dev when explicitly enabled via ALCHEMY_TUNNEL=1
+const shouldStartTunnel =
+	isLocalDevRuntime && process.env.ALCHEMY_TUNNEL === "1";
+
+// When tunnel is active, configure SvelteKit base path and server URL
+// before alchemy spawns the dev servers
+if (shouldStartTunnel) {
+	process.env.BASE_PATH = "/web";
+}
+
 const getCorsOrigin = (): string => {
 	// Local development - use localhost origins
 	if (!isDeploying) {
-		return process.env.CORS_ORIGIN ?? devCorsOrigin;
+		const base = process.env.CORS_ORIGIN ?? devCorsOrigin;
+		// When tunnel is active, also allow the ngrok domain
+		const ngrokDomain = process.env.NGROK_DOMAIN_NAME;
+		if (shouldStartTunnel && ngrokDomain) {
+			return `${base},https://${ngrokDomain}`;
+		}
+		return base;
 	}
 	// PR previews - allow all origins
 	if (stage.startsWith("pr-")) {
@@ -185,22 +202,29 @@ export const server = await Worker("server", {
 		CORS_ORIGIN: getCorsOrigin(),
 		BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
 		BETTER_AUTH_URL: getAuthUrl(),
-		POLAR_ACCESS_TOKEN: alchemy.secret.env("POLAR_ACCESS_TOKEN", ""),
-		POLAR_SUCCESS_URL: alchemy.env("POLAR_SUCCESS_URL", ""),
-		POLAR_PRODUCT_ID: alchemy.env("POLAR_PRODUCT_ID", ""),
-		TELEGRAM_BOT_TOKEN: alchemy.secret.env("TELEGRAM_BOT_TOKEN", ""),
-		TELEGRAM_BOT_API_BASE_URL: alchemy.env("TELEGRAM_BOT_API_BASE_URL", ""),
+		POLAR_ACCESS_TOKEN: alchemy.secret.env(
+			"POLAR_ACCESS_TOKEN",
+			process.env.POLAR_ACCESS_TOKEN || ""
+		),
+		POLAR_SUCCESS_URL: process.env.POLAR_SUCCESS_URL || "",
+		POLAR_PRODUCT_ID: process.env.POLAR_PRODUCT_ID || "",
+		TELEGRAM_BOT_TOKEN: alchemy.secret.env(
+			"TELEGRAM_BOT_TOKEN",
+			process.env.TELEGRAM_BOT_TOKEN || ""
+		),
+		TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME || "",
+		TELEGRAM_BOT_API_BASE_URL: process.env.TELEGRAM_BOT_API_BASE_URL || "",
 		GOOGLE_CALENDAR_CREDENTIALS_JSON: alchemy.secret.env(
 			"GOOGLE_CALENDAR_CREDENTIALS_JSON",
-			""
+			process.env.GOOGLE_CALENDAR_CREDENTIALS_JSON || ""
 		),
 		GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN: alchemy.secret.env(
 			"GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN",
-			""
+			process.env.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN || ""
 		),
 		CALENDAR_SYNC_TASK_TOKEN: alchemy.secret.env(
 			"CALENDAR_SYNC_TASK_TOKEN",
-			""
+			process.env.CALENDAR_SYNC_TASK_TOKEN || ""
 		),
 	},
 	dev: { port: 3000 },
@@ -216,8 +240,11 @@ export const notifications = await Worker("notifications", {
 		CORS_ORIGIN: getCorsOrigin(),
 		BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
 		BETTER_AUTH_URL: getAuthUrl(),
-		TELEGRAM_BOT_TOKEN: alchemy.secret.env("TELEGRAM_BOT_TOKEN", ""),
-		TELEGRAM_BOT_API_BASE_URL: alchemy.env("TELEGRAM_BOT_API_BASE_URL", ""),
+		TELEGRAM_BOT_TOKEN: alchemy.secret.env(
+			"TELEGRAM_BOT_TOKEN",
+			process.env.TELEGRAM_BOT_TOKEN || ""
+		),
+		TELEGRAM_BOT_API_BASE_URL: process.env.TELEGRAM_BOT_API_BASE_URL || "",
 	},
 	eventSources: [
 		{
@@ -242,7 +269,10 @@ export const web = shouldStartWeb
 			cwd: "../../apps/web",
 			...cloudflareApiOptions,
 			bindings: {
-				PUBLIC_SERVER_URL: server.url!,
+				// When tunnel is active, use relative /server so browser API calls
+				// go through the ngrok origin (same-origin → /server/rpc)
+				PUBLIC_SERVER_URL: shouldStartTunnel ? "/server" : server.url!,
+				PUBLIC_BASE_PATH: shouldStartTunnel ? "/web" : "",
 			},
 		})
 	: undefined;
@@ -252,6 +282,25 @@ if (web) {
 }
 console.log(`Server -> ${server.url}`);
 console.log(`Notify -> ${notifications.url}`);
+
+if (shouldStartTunnel) {
+	// Set NGROK_AUTHTOKEN for the SDK (it reads this specific env var)
+	process.env.NGROK_AUTHTOKEN ??= process.env.NGROK_AUTH_TOKEN;
+
+	try {
+		const tunnelUrl = await startTunnel({
+			upstreams: {
+				web: web?.url,
+				server: server.url!,
+				notifications: notifications.url!,
+			},
+			ngrokDomain: process.env.NGROK_DOMAIN_NAME || undefined,
+		});
+		console.log(`Tunnel -> ${tunnelUrl}`);
+	} catch (err) {
+		console.error("[infra] ngrok tunnel failed to start:", err);
+	}
+}
 
 await app.finalize();
 

@@ -17,6 +17,16 @@ export const user = sqliteTable("user", {
 		.default(false)
 		.notNull(),
 	image: text("image"),
+	phoneNumber: text("phone_number").unique(),
+	phoneNumberVerified: integer("phone_number_verified", {
+		mode: "boolean",
+	}).default(false),
+	telegramId: text("telegram_id"),
+	telegramUsername: text("telegram_username"),
+	role: text("role").default("user"),
+	banned: integer("banned", { mode: "boolean" }).default(false),
+	banReason: text("ban_reason"),
+	banExpires: integer("ban_expires", { mode: "timestamp_ms" }),
 	...timestamps,
 });
 
@@ -29,6 +39,7 @@ export const session = sqliteTable(
 		...timestamps,
 		ipAddress: text("ip_address"),
 		userAgent: text("user_agent"),
+		impersonatedBy: text("impersonated_by"),
 		activeOrganizationId: text("active_organization_id"),
 		userId: text("user_id")
 			.notNull()
@@ -57,6 +68,8 @@ export const account = sqliteTable(
 		}),
 		scope: text("scope"),
 		password: text("password"),
+		telegramId: text("telegram_id"),
+		telegramUsername: text("telegram_username"),
 		...timestamps,
 	},
 	(table) => [index("account_userId_idx").on(table.userId)]

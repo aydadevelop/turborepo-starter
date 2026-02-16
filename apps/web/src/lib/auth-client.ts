@@ -1,12 +1,35 @@
 import { passkeyClient } from "@better-auth/passkey/client";
 import { polarClient } from "@polar-sh/better-auth";
-import { organizationClient } from "better-auth/client/plugins";
+import {
+	adminClient,
+	organizationClient,
+	phoneNumberClient,
+} from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/svelte";
+import { telegramClient } from "better-auth-telegram/client";
 import { PUBLIC_SERVER_URL } from "$env/static/public";
 
-const serverUrl = PUBLIC_SERVER_URL.replace(/\/+$/, "");
+const TRAILING_SLASHES = /\/+$/;
+const ABSOLUTE_URL = /^https?:\/\//;
+
+function resolveServerUrl(): string {
+	const raw = PUBLIC_SERVER_URL.replace(TRAILING_SLASHES, "");
+	if (ABSOLUTE_URL.test(raw)) {
+		return raw;
+	}
+	const origin =
+		typeof window !== "undefined" ? window.location.origin : "http://localhost";
+	return `${origin}${raw}`;
+}
 
 export const authClient = createAuthClient({
-	baseURL: serverUrl,
-	plugins: [organizationClient(), polarClient(), passkeyClient()],
+	baseURL: resolveServerUrl(),
+	plugins: [
+		adminClient(),
+		organizationClient(),
+		polarClient(),
+		passkeyClient(),
+		phoneNumberClient(),
+		telegramClient(),
+	],
 });

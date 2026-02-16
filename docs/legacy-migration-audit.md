@@ -121,18 +121,22 @@ The legacy codebase contains all listed business areas:
 
 ## Parity Matrix (Legacy -> Current)
 
+Updated: 2026-02-16
+
 | Domain | Parity status | Missing focus |
 | --- | --- | --- |
 | 1) Boat management | Partial | Media pipeline hardening, approval workflows, role-guard depth tests |
-| 2) Booking | Substantial | Public single-boat detail endpoint with slots, time-slot generation wired into availability search, available-filter metadata, date+duration input mode, payment-intent lifecycle, refund policy engine |
-| 3) Calendar maintenance | Partial | Watch renewal worker, webhook failure recovery, additional providers |
-| 4) Helpdesk | Partial | SLA timers, escalation automation, deeper lifecycle regression coverage |
-| 5) Incoming requests | Partial | Provider adapters (Telegram/Avito/Sputnik), replay fixtures, routing heuristics |
-| 6) Telegram notifications/webhooks | Partial | Callback route hardening, signature validation, operator interaction flows |
-| 7) AI auto-response | Not started | Tool-governed orchestration + fallback + eval regression |
-| 8) Rental frontend | Not started | UI for browse/availability/checkout (API layer substantially ready), mini-app boundary |
-| 9) Management frontend | Not started | Role-aware operations UI + permission matrix UI tests |
-| 10) Affiliate + landing pages | Not started | Attribution/commission model + referral tracking + content pipeline |
+| 2) Booking | Substantial | Payment-intent lifecycle, refund policy engine |
+| 3) Calendar maintenance | **NOT COMPLETE** | Calendar webhook full lifecycle untested end-to-end (watch → push → sync → booking conflict detect), watch renewal under real failure modes, secondary providers |
+| 4) Helpdesk / tickets | **NOT COMPLETE** | Ticket system lifecycle not battle-tested (create → assign → escalate → close → rate), Telegram forum topic threading, label management, operator callbacks |
+| 5) Incoming requests (social webhooks) | **NOT COMPLETE** | Avito webhook adapter + signature verification, Telegram bot webhook routes (user + operator), Sputnik/email adapter — none implemented in new stack |
+| 6) Telegram notifications + callbacks | **NOT COMPLETE** | Outbound notification delivery to Telegram (queue → send → retry), callback button handler (with idempotency guards to prevent duplicate action processing), payment alert callbacks, rating prompt flow |
+| 7) Payment webhooks | **NOT COMPLETE** | YooKassa + CloudPayments webhook handlers, signature verification, idempotent status transitions, refund orchestration — none implemented |
+| 8) Rate limiting | **NOT COMPLETE** | Legacy has KV-based per-bucket rate limiter; new stack has no rate limiting middleware at all |
+| 9) AI auto-response | Not started | Tool-governed orchestration + fallback + eval regression |
+| 10) Rental frontend | Not started | UI for browse/availability/checkout (API layer substantially ready), mini-app boundary |
+| 11) Management frontend | Not started | Role-aware operations UI + permission matrix UI tests |
+| 12) Affiliate + landing pages | Not started | Attribution/commission model + referral tracking + content pipeline |
 
 ## Domain-by-Domain Missing Subtasks (Legacy -> Current)
 
@@ -211,7 +215,7 @@ Missing subtasks:
 - [ ] Extend refund/dispute policy engine with richer reason taxonomy, explicit actor permission matrix, and evidence attachment workflow.
 - [x] Add availability-band sorting strategy as a `sortBy` option (port legacy 4-band algorithm when needed for fairness rotation).
 
-### 3) Calendar maintenance (adapter + webhook + fallback polling)
+### 3) Calendar maintenance (adapter + webhook + fallback polling) — **UNDER-TESTED**
 
 Legacy evidence:
 
@@ -225,15 +229,22 @@ Current status:
 - Internal polling sync endpoint retained as fallback.
 - Connection watch metadata persisted (`watchChannelId`, `watchResourceId`, `watchExpiresAt`, `syncToken`).
 - Watch renewal and dead-letter management endpoints are available for operations.
+- **⚠ Full lifecycle not tested:** watch registration → Google push notification → incremental sync → booking conflict detection → notification emission has NOT been tested end-to-end.
+- **⚠ Token invalidation path untested:** legacy had explicit `syncToken` reset on 410 Gone — new stack recovery behavior unverified.
+- **⚠ Watch renewal under failure:** what happens when renewal fails, channel expires, events arrive after expiry — no test coverage.
 
 Missing subtasks:
 
 - [x] Add automatic watch renewal scheduler for expiring channels (safe lead-time renew strategy).
 - [x] Add dead-letter/error recovery strategy for webhook processing failures.
 - [x] Add idempotency guard for duplicate webhook notifications across retries.
-- [ ] Add secondary provider adapters (Outlook/iCal) behind the existing adapter contract.
+- [ ] **P1** Add end-to-end integration test: register watch → receive webhook push → incremental sync → detect booking overlap → emit event.
+- [ ] **P1** Add test coverage for sync token invalidation (410 Gone) and automatic retry with full sync fallback.
+- [ ] **P2** Add test for watch renewal failure → graceful degradation to polling fallback.
+- [ ] **P2** Add test for webhook events arriving after channel expiry → dead-letter → manual recovery.
+- [ ] **P3** Add secondary provider adapters (Outlook/iCal) behind the existing adapter contract.
 
-### 4) Help desk / support tickets
+### 4) Help desk / support tickets — **NOT BATTLE-TESTED**
 
 Legacy evidence:
 
@@ -244,6 +255,11 @@ Legacy evidence:
 Current status:
 
 - Baseline migrated (ticket and message schema + org-scoped lifecycle contracts).
+- SLA timers and basic escalation are defined.
+- **⚠ Ticket lifecycle not battle-tested:** create → assign → label → escalate → close → rate flow has no integration test.
+- **⚠ Telegram forum threading not migrated:** legacy uses `TelegramSupportService` with `threadMap`, `awaitingReason`, `forwardedMessageIdsByTopic` Maps for real-time operator workflows — this entire interaction layer is absent.
+- **⚠ Operator callback routing absent:** legacy handles compact callback_data (`{"a":"label","u":123}`) for assign/bump/info/close/escalate/hide/rate actions — not implemented.
+- **⚠ Duplicate action guards absent:** operator could click "close" button twice — legacy has partial guards (forwardedMessageIds dedup) but not full idempotency on state transitions.
 
 Missing subtasks:
 
@@ -251,48 +267,137 @@ Missing subtasks:
 - [x] Implement support router/service contracts baseline (create, assign, status updates, threaded messages).
 - [x] Add role-based operator controls aligned with Better Auth org permissions.
 - [x] Add SLA timers and escalation automation.
-- [ ] Add Hook to AI first line answers/categorizations (context aware, proper guards, faq)
 - [x] Add regression tests for ticket threading and closure/escalation edge cases.
+- [ ] **P1** Add integration test for full ticket lifecycle: create → assign → message thread → escalate → close with reason → star rating.
+- [ ] **P1** Add idempotent state transition guards (e.g., close already-closed ticket returns success without side effects, no duplicate notifications).
+- [ ] **P2** Implement Telegram forum topic management for operator support (topic create/reopen/close, message forwarding between user DM and forum thread).
+- [ ] **P2** Implement operator callback routing for Telegram inline keyboard actions (assign, label, bump, escalate, close, rate).
+- [ ] **P2** Add label management endpoints (bug, question, payment, new) with operator permission guards.
+- [ ] **P3** Add Hook to AI first line answers/categorizations (context aware, proper guards, faq).
 
-### 5) Incoming requests (Avito, Telegram, Sputnik/email)
+### 5) Incoming requests (Avito, Telegram, Sputnik/email) — **ADAPTERS NOT IMPLEMENTED**
 
 Legacy evidence:
 
 - `legacy/cf-boat-api/src/services/messaging/channels/AvitoChannelProvider.ts`
 - `legacy/cf-boat-api/src/services/messaging/channels/TelegramChannelProvider.ts`
 - `legacy/cf-boat-api/src/services/messaging/ingestion/email/adapters/SputnikAdapter.ts`
+- `legacy/cf-boat-api/src/routes/messagingRoutes.ts` (webhook routes for Telegram/Avito)
+- `legacy/cf-boat-api/src/utils/telegramAuth.ts` (HMAC-SHA256 signature verification)
 
 Current status:
 
 - Baseline migrated (canonical envelope + idempotent dedupe + processing endpoints).
+- **⚠ No channel adapter implementations exist in new stack.** Only schema and contracts — zero working webhook receivers.
+- **⚠ Avito webhook missing:** legacy has Bearer token verification, dedupeKey construction (`${chatId}:${messageId}`), envelope normalization — none migrated.
+- **⚠ Telegram webhook missing:** legacy uses grammY `webhookCallback()` with bot command handlers (/start, /mybookings, /faq, /myid, /contact), callback_query routing, and operator support bot — none migrated.
+- **⚠ Signature verification absent:** Telegram HMAC-SHA256 validation (`validateTelegramData()`) and Avito Bearer token check both need explicit implementation.
+- **⚠ Identity resolution not migrated:** legacy maps external channel IDs to internal user records (cross-channel linking) — needed for ticket/conversation correlation.
 
 Missing subtasks:
 
 - [x] Define canonical inbound message envelope and identity mapping in new stack.
 - [x] Add dedupe/idempotency and replay-safe ingestion baseline.
-- [ ] Implement channel adapters incrementally (Telegram first, then Avito, then email/Sputnik).
-- [ ] Add integration test fixtures per provider webhook/payload shape.
+- [ ] **P1** Implement Telegram user bot webhook route with grammY adapter (receive updates, command routing, callback_query dispatch).
+- [ ] **P1** Add Telegram webhook signature verification (grammY built-in + custom HMAC-SHA256 for WebApp/Login Widget data).
+- [ ] **P1** Implement Avito webhook route with Bearer token verification and envelope normalization.
+- [ ] **P2** Implement Telegram operator support bot webhook route (forum topic management, message relay, operator callbacks).
+- [ ] **P2** Implement identity resolution service (map Telegram userId / Avito chatId to internal Better Auth user, create linked accounts).
+- [ ] **P2** Add outbound channel providers (TelegramChannelProvider, AvitoChannelProvider) for reply delivery.
+- [ ] **P3** Implement email/Sputnik adapter for inbound email processing.
+- [ ] **P3** Add integration test fixtures per provider webhook/payload shape (replay recorded webhook payloads).
 
-### 6) Telegram notifications + webhook callbacks
+### 6) Telegram notifications + webhook callbacks — **DELIVERY NOT IMPLEMENTED**
 
 Legacy evidence:
 
 - `legacy/cf-boat-api/src/routes/messagingRoutes.ts`
 - `legacy/cf-boat-api/src/services/notification/NotificationService.ts`
+- `legacy/cf-boat-api/src/services/notification/channels.ts`
+- `legacy/cf-boat-api/src/services/messaging/ingestion/telegram/TelegramWebhookService.ts`
 
 Current status:
 
-- Baseline migrated (notification lifecycle + delivery audit fields + webhook event registry).
+- Notification event/intent/delivery schema migrated.
+- In-app notification provider implemented.
+- Notification processor framework (`packages/notifications/src/processor.ts`) exists with `NotificationProvider` interface.
+- **⚠ No Telegram delivery provider implemented.** Schema tracks `telegram` as a channel, but no code actually sends messages via Telegram Bot API.
+- **⚠ Callback button handler not implemented.** Legacy handles interactive inline keyboard callbacks (payment confirm/help, cancellation rules, FAQ details) with `paymentAlertActionCache` for duplicate prevention — nothing equivalent exists.
+- **⚠ Notification template rendering absent.** Legacy `NotificationService` builds rich messages with buttons (url + callbackData), location, contact request, Telegram HTML sanitization (`<br>` removal), CDN image wrapping, and photo send with text fallback on failure.
+- **⚠ Rating prompt flow absent.** Legacy sends star-rating inline keyboard after ticket closure and collects operator feedback — not migrated.
 
 Missing subtasks:
 
 - [x] Implement Telegram notification queue + processing lifecycle in new API layer.
 - [x] Add audit trail for outbound notification delivery and retries.
 - [x] Add idempotent webhook event registry for Telegram updates.
-- [ ] Implement Telegram bot webhook route set (user and operator callbacks).
-- [ ] Add callback signature/auth hardening.
+- [ ] **P1** Implement `TelegramNotificationProvider` (send text/photo via Bot API, inline keyboard buttons, HTML sanitization, CDN image wrapping, photo-fail-to-text fallback).
+- [ ] **P1** Implement callback_query handler with **strong idempotency guards**: cache processed `{action}:{messageId}:{entityId}` keys to prevent duplicate state transitions on button re-clicks.
+- [ ] **P1** Add payment alert callback handler (`PAYMENT_CONFIRM:<bookingId>`, `PAYMENT_HELP:<bookingId>`) with idempotent booking status transition.
+- [ ] **P2** Implement notification template system (booking created, payment received, cancellation confirmed, refund processed, reminder sequence — 24h, 1h, FAQ, policy, phone).
+- [ ] **P2** Add rating prompt flow: send inline keyboard after ticket close → collect star rating → persist to ticket.
+- [ ] **P2** Add Telegram bot webhook route for user-facing bot (user callbacks, command handlers) and operator support bot (operator callbacks).
+- [ ] **P3** Add operator notification flows (new ticket alert, escalation alert, message relay to forum topic).
 
-### 7) AI auto-response with tools
+### 7) Payment webhooks + provider integration — **NOT IMPLEMENTED**
+
+Legacy evidence:
+
+- `legacy/cf-boat-api/src/routes/paymentRoutes.ts`
+- `legacy/cf-boat-api/src/services/PaymentService/PaymentService.ts`
+- `legacy/cf-boat-api/src/services/PaymentService/YookassaProvider.ts`
+- `legacy/cf-boat-api/src/services/PaymentService/CloudPaymentsProvider.ts`
+- `legacy/cf-boat-api/src/services/PaymentService/WebhookHandler.ts`
+
+Current status:
+
+- Payment status fields exist on booking schema (`paymentStatus`, `paymentAttemptStatus`).
+- No payment provider integration exists in new stack.
+- **⚠ No webhook handlers.** Legacy has CloudPayments webhooks (`/check`, `/pay`, `/fail`, `/confirm`, `/refund`, `/cancel`) and YooKassa webhook (`/webhook/yookassa`) with provider-specific authentication — nothing migrated.
+- **⚠ No idempotent payment transitions.** Legacy checks `paymentRecord.status === "succeeded"` before processing and uses `Idempotence-Key` headers for YooKassa — no equivalent guards exist.
+- **⚠ No refund orchestration.** Legacy auto-refunds cancelled bookings with old payments, uses idempotent refund keys (`yookassa-refund-${bookingId}-${Date.now()}`).
+- **⚠ No external payment creation.** Legacy `GET /create/:provider` initiates payment sessions with provider-specific parameters.
+
+Missing subtasks:
+
+- [ ] **P1** Design payment provider adapter interface (create session, verify webhook, handle status transition, initiate refund).
+- [ ] **P1** Implement YooKassa provider: webhook authentication, payment.succeeded/cancelled events, idempotent status transitions, `Idempotence-Key` for creation/refund.
+- [ ] **P1** Implement CloudPayments provider: webhook authentication, check/pay/fail/refund handlers, idempotent duplicate prevention.
+- [ ] **P1** Add webhook route with provider dispatch and signature verification.
+- [ ] **P1** Add idempotent payment status state machine (pending → succeeded, pending → failed; reject invalid transitions, allow re-processing of same terminal state).
+- [ ] **P2** Implement refund orchestration: cancellation → refund initiation → provider refund → status update → notification emission.
+- [ ] **P2** Add payment creation endpoint with provider abstraction (reserve/capture model).
+- [ ] **P2** Add reconciliation/audit trail for payment lifecycle (every state change persisted with timestamp + provider reference).
+- [ ] **P3** Add payment expiration timer (auto-cancel unpaid bookings after configurable window).
+
+### 8) Rate limiting — **NOT IMPLEMENTED**
+
+Legacy evidence:
+
+- `legacy/cf-boat-api/src/middleware/rateLimitMiddleware.ts`
+
+Current status:
+
+- **⚠ No rate limiting exists in new stack at all.**
+- Legacy has configurable per-bucket rate limiting using KV storage with:
+  - Configurable `limit` and `window` per route
+  - Custom `identify` function (default: IP from CF headers / X-Forwarded-For)
+  - Custom `bucket` function (default: route path)
+  - KV key format: `rl:{bucket}:{id}` with TTL = window
+  - 429 response with `Retry-After` header
+  - Graceful failure (rate limiter errors don't block requests)
+- Critical routes that need rate limiting: webhook endpoints, auth endpoints, payment creation, public search/availability.
+
+Missing subtasks:
+
+- [ ] **P1** Implement rate limiting middleware for Hono with KV/D1-backed counter (or Cloudflare Rate Limiting API if available).
+- [ ] **P1** Apply rate limits to all webhook endpoints (Telegram, Avito, payment providers) — prevents replay/flood attacks.
+- [ ] **P1** Apply rate limits to auth endpoints (login, register, verify) — prevents brute force.
+- [ ] **P2** Apply rate limits to public API endpoints (availability search, quote, booking creation) — prevents scraping/abuse.
+- [ ] **P2** Add per-org rate limiting for management API endpoints.
+- [ ] **P3** Add configurable rate limit profiles (different limits per endpoint category).
+
+### 9) AI auto-response with tools
 
 Legacy evidence:
 
@@ -309,7 +414,7 @@ Missing subtasks:
 - [ ] Add deterministic fallback path when LLM/tool calls fail.
 - [ ] Add eval-style regression suite for high-risk intents (pricing, cancellation, support escalation).
 
-### 8) Rental frontend (web + Telegram mini app)
+### 10) Rental frontend (web + Telegram mini app)
 
 Legacy evidence:
 
@@ -327,7 +432,7 @@ Missing subtasks:
 - [ ] Add Telegram mini-app adapter boundary (init data, launch params, auth bootstrap).
 - [ ] Add end-to-end regression suite for booking happy path and overlap rejection.
 
-### 9) Management frontend
+### 11) Management frontend
 
 Legacy evidence:
 
@@ -345,7 +450,7 @@ Missing subtasks:
 - [ ] Add operational pages for boat setup, pricing rules, calendar connections, and booking operations.
 - [ ] Add permission matrix UI tests against Better Auth roles.
 
-### 10) Affiliate service + static landing pages
+### 12) Affiliate service + static landing pages
 
 Legacy evidence:
 
@@ -363,22 +468,108 @@ Missing subtasks:
 - [ ] Add referral/partner tracking on booking pipeline.
 - [ ] Recreate static/legal/marketing page pipeline in current frontend with content governance.
 
-## Current Priority Order (Updated)
+## Current Priority Order (Updated 2026-02-16)
 
-1. Complete booking production parity: filter/read model, payment/refund policy hardening, and edge-case pricing coverage.
-2. Finish calendar reliability: watch renewal worker + webhook failure recovery + adapter contract hardening.
-3. Deepen helpdesk/intake/telegram baseline into provider-grade workflows (channel adapters, secure webhooks, SLA automation).
-4. Add end-to-end regression pack for the core journey:
-   - create org
-   - assign manager
-   - create boat
-   - configure pricing
-   - connect calendar
-   - sync events
-   - reject overlap booking
-   - complete valid booking path.
+Priority reordered to reflect **actual production gaps** — domains marked NOT COMPLETE above are where live traffic will break or behave incorrectly.
 
-## Checkpoint (2026-02-09)
+### Priority 1: Payment webhooks + provider integration (Domain 7)
+
+**Why first:** Without payment processing, no revenue flows. This is the hard blocker for going live.
+
+Tasks (TDD order):
+
+1. Design payment provider adapter interface with typed webhook event schema.
+2. Implement YooKassa provider with webhook authentication + idempotent status state machine.
+3. Implement CloudPayments provider with all webhook handlers.
+4. Add webhook dispatch route with signature verification.
+5. Add refund orchestration (cancellation → provider refund → status update → notification).
+6. Integration test: create payment → receive webhook → update booking status → emit notification.
+7. Integration test: duplicate webhook → idempotent no-op.
+8. Integration test: cancel booking → auto-refund → provider refund call → status update.
+
+### Priority 2: Rate limiting (Domain 8)
+
+**Why second:** Every public endpoint is unprotected. Webhook floods, brute-force auth, API scraping — all possible today.
+
+Tasks (TDD order):
+
+1. Implement rate limit middleware (KV-backed counter, configurable per-route, 429 + Retry-After).
+2. Apply to auth endpoints (login, register, verify).
+3. Apply to all webhook receivers (Telegram, Avito, payment).
+4. Apply to public search/availability/quote/booking endpoints.
+5. Test: exceed limit → 429 response → retry after window → success.
+6. Test: rate limiter storage failure → request proceeds (graceful degradation).
+
+### Priority 3: Social + payment webhook receivers (Domain 5)
+
+**Why third:** Once payments work and rate limiting protects us, need to receive and route real webhook traffic from Telegram/Avito.
+
+Tasks (TDD order):
+
+1. Implement Telegram user bot webhook route (grammY adapter, command routing, callback_query dispatch).
+2. Add Telegram HMAC-SHA256 signature verification for WebApp/Login Widget data.
+3. Implement Avito webhook route with Bearer token verification + envelope normalization + dedupeKey.
+4. Implement identity resolution (map external IDs → Better Auth users).
+5. Test: receive Telegram update → normalize → dedupe → create inbound message.
+6. Test: receive Avito webhook → verify token → normalize → dedupe → create inbound message.
+7. Test: duplicate webhook → idempotent skip.
+8. Test: invalid signature → reject with 401.
+
+### Priority 4: Telegram notification delivery + callback guards (Domain 6)
+
+**Why fourth:** After receiving messages, need to send responses and handle button interactions without double-processing.
+
+Tasks (TDD order):
+
+1. Implement `TelegramNotificationProvider` (Bot API send, HTML sanitization, photo fallback, inline keyboards).
+2. Implement callback_query handler with idempotency cache (`{action}:{messageId}:{entityId}`).
+3. Add payment alert callbacks (PAYMENT_CONFIRM/PAYMENT_HELP) with booking status guard.
+4. Implement notification templates (booking created, payment received, cancellation, reminders).
+5. Test: queue notification → send via Telegram → mark delivered → audit trail.
+6. Test: send photo fails → retry as text → success.
+7. Test: click callback button twice → first processes, second is no-op.
+8. Test: click payment confirm on already-confirmed booking → no-op with success response.
+
+### Priority 5: Calendar webhook full lifecycle (Domain 3)
+
+**Why fifth:** Infrastructure exists but is under-tested. Real Google Calendar pushes could silently fail.
+
+Tasks (TDD order):
+
+1. Integration test: register watch → receive push notification → incremental sync → detect conflict.
+2. Test: sync token invalidated (410 Gone) → full sync fallback.
+3. Test: watch channel expired → event arrives → dead-letter → recovery path.
+4. Test: watch renewal failure → degradation to polling.
+
+### Priority 6: Ticket system battle-testing (Domain 4)
+
+**Why sixth:** Schema and contracts exist but lifecycle never tested under real conditions.
+
+Tasks (TDD order):
+
+1. Integration test: create ticket → assign operator → message thread → escalate → close with reason → rate.
+2. Test: close already-closed ticket → idempotent success, no duplicate notification.
+3. Test: assign ticket to operator without permission → reject.
+4. Implement Telegram forum topic integration (topic create/reopen, message relay, operator callbacks).
+5. Add label management with operator permission guards.
+
+### Priority 7: Booking payment integration (Domain 2 remaining)
+
+Tasks (TDD order):
+
+1. Wire payment-intent lifecycle into booking flow (pending → awaiting_payment → confirmed).
+2. Add booking expiration timer (auto-cancel unpaid after configurable window).
+3. Extend refund policy engine with reason taxonomy + evidence attachments.
+
+### Priority 8–12: Remaining domains
+
+8. AI orchestration (Domain 9) — tool interfaces, fallback, eval suite.
+9. Rental frontend (Domain 10) — browse → availability → booking UI.
+10. Management frontend (Domain 11) — role-aware operations.
+11. Affiliate + landing (Domain 12) — commission model, content pipeline.
+12. Boat management hardening (Domain 1) — media pipeline, approval workflows.
+
+## Checkpoint (2026-02-16)
 
 Completed in current stack:
 
@@ -386,14 +577,22 @@ Completed in current stack:
 - [x] Booking lifecycle tables and API surfaces for cancellation requests, disputes, and refunds.
 - [x] Discount code application snapshot and validation in booking flow.
 - [x] API/DB automated tests for booking lifecycle baseline.
+- [x] Calendar adapter + webhook endpoint + watch renewal + dead-letter infrastructure.
+- [x] Notification event/intent/delivery schema + in-app provider + processor framework.
+- [x] Helpdesk ticket/message schema + org-scoped lifecycle contracts.
+- [x] Inbound message envelope + dedupe/idempotency baseline.
+- [x] Slot engine + pricing engine as pure functions with full test coverage.
 
-Still open before production use:
+**Critical gaps identified (domains marked NOT COMPLETE):**
 
-- [ ] Payment-provider settlement/capture/refund orchestration and reconciliation.
-- [ ] Booking filter/search parity from legacy.
-- [ ] Additional calendar providers and production ops playbooks.
-- [ ] End-to-end regression suite over org -> boat -> pricing -> calendar -> booking flow.
-- [ ] Channel adapter integration tests and secure Telegram callback flows.
+- [ ] **Payment webhooks** — zero provider integration, no webhook handlers, no refund orchestration.
+- [ ] **Rate limiting** — no middleware at all, all endpoints unprotected.
+- [ ] **Social webhooks** — Telegram and Avito webhook receivers not implemented, no signature verification.
+- [ ] **Telegram delivery** — notification queue exists but nothing sends to Telegram, no callback button handling, no duplicate-click guards.
+- [ ] **Calendar lifecycle** — infrastructure exists but full webhook→sync→conflict path never tested end-to-end.
+- [ ] **Ticket system** — schema exists but lifecycle never battle-tested, Telegram forum threading absent.
+
+Approach: TDD, one domain at a time, following priority order above. Each domain gets integration tests before implementation is considered complete.
 
 ## Migration Strategy (Better Auth First)
 

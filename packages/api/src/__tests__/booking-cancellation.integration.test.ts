@@ -456,10 +456,7 @@ describe("booking cancellation policy integration", () => {
 				.select()
 				.from(bookingCancellationRequest)
 				.where(
-					eq(
-						bookingCancellationRequest.bookingId,
-						"booking-customer-too-late"
-					)
+					eq(bookingCancellationRequest.bookingId, "booking-customer-too-late")
 				);
 			expect(requests).toHaveLength(0);
 		} finally {

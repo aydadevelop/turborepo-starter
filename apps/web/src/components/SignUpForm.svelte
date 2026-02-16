@@ -14,6 +14,7 @@
 	import { get } from "svelte/store";
 	import { z } from "zod";
 	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
 	import { page } from "$app/stores";
 	import { authClient } from "$lib/auth-client";
 
@@ -21,10 +22,10 @@
 
 	const resolvePostAuthRedirect = (candidatePath: string | null): string => {
 		if (!candidatePath) {
-			return "/dashboard";
+			return resolve("/dashboard");
 		}
 		if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
-			return "/dashboard";
+			return resolve("/dashboard");
 		}
 		return candidatePath;
 	};
