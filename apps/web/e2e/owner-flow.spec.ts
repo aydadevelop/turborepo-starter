@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@libsql/client";
 import { expect, type Page, test } from "@playwright/test";
+import { url } from "./helpers";
 
 const SERVER_URL = process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:3000";
 const D1_DATABASE_DIR = path.resolve(
@@ -184,7 +185,7 @@ test.describe("Owner Flow", () => {
 		const ownerEmail = `owner-${runId}@e2e.local`;
 		const ownerPassword = `Passw0rd!${runId}`;
 
-		await page.goto("/");
+		await page.goto(url("/"));
 
 		const signUpResult = await browserRequest(page, {
 			path: "/api/auth/sign-up/email",
@@ -216,7 +217,7 @@ test.describe("Owner Flow", () => {
 			userId: signUpPayload.user.id,
 		});
 
-		await page.goto("/dashboard");
+		await page.goto(url("/dashboard"));
 
 		await expect(page).toHaveURL(DASHBOARD_URL_RE);
 		await expect(
@@ -245,7 +246,7 @@ test.describe("Owner Flow", () => {
 		expect(permissionData.json?.role).toBe("org_owner");
 
 		await page.goto(
-			"/boats/seed_boat_aurora--seed-aurora-8?date=2026-03-16&durationHours=2&passengers=2"
+			url("/boats/seed_boat_aurora--seed-aurora-8?date=2026-03-16&durationHours=2&passengers=2")
 		);
 		await expect(page.getByText(`Signed in as ${ownerEmail}`)).toBeVisible();
 	});

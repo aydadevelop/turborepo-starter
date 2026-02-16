@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { url } from "./helpers";
 
-const BOATS_URL =
-	"/boats?date=2026-03-16&startHour=10&durationHours=2&passengers=2";
+const BOATS_URL = url(
+	"/boats?date=2026-03-16&startHour=10&durationHours=2&passengers=2"
+);
 const BOATS_FOUND_TEXT_RE = /boats found/i;
 const AURORA_BOAT_URL_RE =
 	/\/boats\/seed_boat_aurora--seed-aurora-8\?date=2026-03-16&durationHours=2&passengers=2$/;

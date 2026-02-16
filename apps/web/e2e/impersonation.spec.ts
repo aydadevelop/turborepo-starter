@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@libsql/client";
 import { expect, type Page, test } from "@playwright/test";
+import { url } from "./helpers";
 
 const SERVER_URL = process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:3000";
 const D1_DATABASE_DIR = path.resolve(
@@ -216,7 +217,7 @@ test.describe("Impersonation & Org Switching", () => {
 		const runId = uniqueId();
 
 		// ── Sign up admin user ──
-		await page.goto("/");
+		await page.goto(url("/"));
 		const adminEmail = `admin-${runId}@e2e.local`;
 		const adminSignUp = await browserRequest(page, {
 			path: "/api/auth/sign-up/email",
@@ -272,7 +273,7 @@ test.describe("Impersonation & Org Switching", () => {
 		});
 
 		// ── Navigate to admin users page ──
-		await page.goto("/admin/users");
+		await page.goto(url("/admin/users"));
 		await expect(
 			page.getByRole("heading", { name: "Users", exact: true })
 		).toBeVisible();

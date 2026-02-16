@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
+import { url } from "./helpers";
 
 const AUTO_SEED_BASELINE = process.env.PLAYWRIGHT_SEED_BASELINE === "1";
 const SERVER_URL = process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:3000";
@@ -31,7 +32,7 @@ const seedBaselineScenario = () => {
 };
 
 const signInAsSeededOwner = async (page: Page) => {
-	await page.goto("/");
+	await page.goto(url("/"));
 
 	const signInResult = await page.evaluate(
 		async ({ email, password, serverUrl }) => {
@@ -86,7 +87,7 @@ test.describe("Shift Collision Flow", () => {
 		page,
 	}) => {
 		await signInAsSeededOwner(page);
-		await page.goto("/bookings");
+		await page.goto(url("/bookings"));
 
 		await expect(
 			page.getByRole("heading", { name: "Shift Requests Review", exact: true })
