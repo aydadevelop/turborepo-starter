@@ -10,6 +10,7 @@
 	} from "@full-stack-cf-app/ui/components/card";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { derived } from "svelte/store";
+	import { resolve } from "$app/paths";
 	import { page } from "$app/stores";
 	import { buildBoatPageRef } from "$lib/boat-pages";
 	import { orpc } from "$lib/orpc";
@@ -133,7 +134,7 @@
 			durationHours: String(valueDurationHours),
 			passengers: String(valuePassengers),
 		});
-		return `/boats?${params.toString()}`;
+		return `${resolve("/boats")}?${params.toString()}`;
 	};
 
 	const availabilityQueryOptions = derived(page, ($page) => {
@@ -168,7 +169,7 @@
 			durationHours: String(durationHours),
 			passengers: String(passengers),
 		});
-		return `/boats/${boatRef}?${params.toString()}`;
+		return `${resolve("/boats")}/${boatRef}?${params.toString()}`;
 	};
 </script>
 
