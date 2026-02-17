@@ -60,7 +60,7 @@ function sanitizeParts(parts: unknown[]): UIMessage["parts"] {
 			}
 		}
 		return part;
-	});
+	}) as UIMessage["parts"];
 }
 
 const requireAuth = o.middleware(({ context, next }) => {
@@ -144,7 +144,7 @@ export const assistantRouter = {
 						// Build a map of tool results by toolCallId
 						const resultMap = new Map<string, unknown>();
 						for (const tr of step.toolResults) {
-							resultMap.set(tr.toolCallId, tr.result);
+							resultMap.set(tr.toolCallId, tr.output);
 						}
 
 						for (const tc of step.toolCalls) {
@@ -153,7 +153,7 @@ export const assistantRouter = {
 									type: `tool-${tc.toolName}`,
 									toolCallId: tc.toolCallId,
 									state: "output-available",
-									input: tc.args,
+									input: tc.input,
 									output: resultMap.get(tc.toolCallId),
 								});
 							} else {
@@ -161,7 +161,7 @@ export const assistantRouter = {
 									type: `tool-${tc.toolName}`,
 									toolCallId: tc.toolCallId,
 									state: "input-available",
-									input: tc.args,
+									input: tc.input,
 								});
 							}
 						}
