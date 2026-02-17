@@ -73,14 +73,18 @@
 {:else}
 	<div class="mx-auto flex h-full max-w-3xl flex-col p-4">
 		<ChatContainerRoot class="flex-1">
-			<ChatContainerContent class="space-y-4 p-4">
+			<ChatContainerContent class="space-y-4 p-4 min-w-full">
 				{#each chat.messages as message (message.id)}
 					{@const textContent = message.parts
 						.filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
 						.map((p) => p.text)
 						.join("")}
 					{@const toolParts = message.parts.filter(isToolUIPart)}
-					<Message class={message.role === "user" ? "justify-end" : ""}>
+					<Message
+						class="flex-col {message.role === 'user'
+							? 'items-end'
+							: 'items-start'}"
+					>
 						{#if message.role === "assistant"}
 							{#if textContent}
 								<MessageContent
