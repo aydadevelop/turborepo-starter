@@ -5,6 +5,7 @@
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
 	import { orpc } from "$lib/orpc";
 
@@ -37,7 +38,9 @@
 
 	$effect(() => {
 		if (!($sessionQuery.isPending || $sessionQuery.data)) {
-			goto(resolve("/login"));
+			goto(
+				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+			);
 		}
 	});
 

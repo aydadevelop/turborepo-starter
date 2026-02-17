@@ -9,6 +9,7 @@
 	import { derived } from "svelte/store";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
 	import { queryClient } from "$lib/orpc";
 	import PhoneInput from "../../../components/PhoneInput.svelte";
@@ -17,7 +18,9 @@
 
 	$effect(() => {
 		if (!($sessionQuery.isPending || $sessionQuery.data)) {
-			goto(resolve("/login"));
+			goto(
+				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+			);
 		}
 	});
 

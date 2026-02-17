@@ -1601,7 +1601,10 @@ const buildBaselineSeedData = ({
 					chat_id: "seed_chat_booking_inquiry",
 					role: "user",
 					parts: toJson([
-						{ type: "text", text: "Are there any boats available this Saturday afternoon?" },
+						{
+							type: "text",
+							text: "Are there any boats available this Saturday afternoon?",
+						},
 					]),
 					attachments: toJson([]),
 				},
@@ -1618,8 +1621,16 @@ const buildBaselineSeedData = ({
 							state: "result",
 							result: {
 								available: [
-									{ boatId: "seed_boat_aurora", name: "Aurora", slots: ["14:00-18:00"] },
-									{ boatId: "seed_boat_odyssey", name: "Odyssey", slots: ["13:00-17:00", "15:00-19:00"] },
+									{
+										boatId: "seed_boat_aurora",
+										name: "Aurora",
+										slots: ["14:00-18:00"],
+									},
+									{
+										boatId: "seed_boat_odyssey",
+										name: "Odyssey",
+										slots: ["13:00-17:00", "15:00-19:00"],
+									},
 								],
 							},
 						},
@@ -1635,7 +1646,10 @@ const buildBaselineSeedData = ({
 					chat_id: "seed_chat_booking_inquiry",
 					role: "user",
 					parts: toJson([
-						{ type: "text", text: "How much would Aurora be for 6 people from 14:00 to 18:00?" },
+						{
+							type: "text",
+							text: "How much would Aurora be for 6 people from 14:00 to 18:00?",
+						},
 					]),
 					attachments: toJson([]),
 				},
@@ -1648,9 +1662,19 @@ const buildBaselineSeedData = ({
 							type: "tool-invocation",
 							toolCallId: "seed_tc_calc_price_1",
 							toolName: "calculatePrice",
-							args: { boatId: "seed_boat_aurora", startTime: "2026-03-21T14:00:00Z", endTime: "2026-03-21T18:00:00Z", passengers: 6 },
+							args: {
+								boatId: "seed_boat_aurora",
+								startTime: "2026-03-21T14:00:00Z",
+								endTime: "2026-03-21T18:00:00Z",
+								passengers: 6,
+							},
 							state: "result",
-							result: { basePrice: 12_000, weekendSurcharge: 2400, total: 14_400, currency: "RUB" },
+							result: {
+								basePrice: 12_000,
+								weekendSurcharge: 2400,
+								total: 14_400,
+								currency: "RUB",
+							},
 						},
 						{
 							type: "text",
@@ -1665,7 +1689,10 @@ const buildBaselineSeedData = ({
 					chat_id: "seed_chat_pricing_help",
 					role: "user",
 					parts: toJson([
-						{ type: "text", text: "I need to plan a corporate event for 20 people next Friday evening. What are my options?" },
+						{
+							type: "text",
+							text: "I need to plan a corporate event for 20 people next Friday evening. What are my options?",
+						},
 					]),
 					attachments: toJson([]),
 				},
@@ -1704,9 +1731,24 @@ const buildBaselineSeedData = ({
 							state: "result",
 							result: {
 								boats: [
-									{ name: "Aurora", status: "active", bookingsToday: 1, nextBooking: "14:00" },
-									{ name: "Odyssey", status: "active", bookingsToday: 0, nextBooking: null },
-									{ name: "Night Shift", status: "active", bookingsToday: 1, nextBooking: "20:00" },
+									{
+										name: "Aurora",
+										status: "active",
+										bookingsToday: 1,
+										nextBooking: "14:00",
+									},
+									{
+										name: "Odyssey",
+										status: "active",
+										bookingsToday: 0,
+										nextBooking: null,
+									},
+									{
+										name: "Night Shift",
+										status: "active",
+										bookingsToday: 1,
+										nextBooking: "20:00",
+									},
 								],
 							},
 						},

@@ -1,13 +1,13 @@
 import { getContext, setContext } from "svelte";
 
-export type PromptInputSchema = {
+export interface PromptInputSchema {
 	isLoading?: boolean;
 	value?: string;
 	onValueChange?: (value: string) => void;
 	maxHeight?: number | string;
 	onSubmit?: () => void;
 	disabled?: boolean;
-};
+}
 
 export class PromptInputClass {
 	isLoading = $state(false);

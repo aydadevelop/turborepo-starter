@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { url } from "./helpers";
 
+const NEW_CHAT_BUTTON_NAME = /new chat/i;
+const CHAT_URL_PATTERN = /\/chat\/[\w-]+/;
+const ASK_ABOUT_BOATS_PLACEHOLDER = /ask about boats/i;
+
 test.describe("Chat Page", () => {
 	test("loads chat landing page", async ({ page }) => {
 		await page.goto(url("/chat"));
@@ -26,10 +30,10 @@ test.describe("Chat Page", () => {
 		await page.goto(url("/chat"));
 
 		// Click "Start a new conversation" button on landing
-		await page.getByRole("button", { name: /new chat/i }).click();
+		await page.getByRole("button", { name: NEW_CHAT_BUTTON_NAME }).click();
 
 		// Should navigate to a chat page with a UUID
-		await expect(page).toHaveURL(/\/chat\/[\w-]+/);
+		await expect(page).toHaveURL(CHAT_URL_PATTERN);
 	});
 
 	test("creates a new chat from sidebar", async ({ page }) => {
@@ -39,7 +43,7 @@ test.describe("Chat Page", () => {
 		await page.locator("aside").getByRole("button").first().click();
 
 		// Should navigate to a chat page
-		await expect(page).toHaveURL(/\/chat\/[\w-]+/);
+		await expect(page).toHaveURL(CHAT_URL_PATTERN);
 	});
 });
 
@@ -47,12 +51,14 @@ test.describe("Chat Conversation", () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto(url("/chat"));
 		// Create a new chat
-		await page.getByRole("button", { name: /new chat/i }).click();
-		await expect(page).toHaveURL(/\/chat\/[\w-]+/);
+		await page.getByRole("button", { name: NEW_CHAT_BUTTON_NAME }).click();
+		await expect(page).toHaveURL(CHAT_URL_PATTERN);
 	});
 
 	test("displays prompt input area", async ({ page }) => {
-		await expect(page.getByPlaceholder(/ask about boats/i)).toBeVisible();
+		await expect(
+			page.getByPlaceholder(ASK_ABOUT_BOATS_PLACEHOLDER)
+		).toBeVisible();
 	});
 
 	test("has a send button that is disabled when input is empty", async ({
@@ -66,7 +72,7 @@ test.describe("Chat Conversation", () => {
 	});
 
 	test("enables send button when text is entered", async ({ page }) => {
-		const textarea = page.getByPlaceholder(/ask about boats/i);
+		const textarea = page.getByPlaceholder(ASK_ABOUT_BOATS_PLACEHOLDER);
 		await textarea.fill("Hello");
 
 		// The send button should now be enabled
@@ -78,7 +84,7 @@ test.describe("Chat Conversation", () => {
 	});
 
 	test("sends a message and shows it in the chat", async ({ page }) => {
-		const textarea = page.getByPlaceholder(/ask about boats/i);
+		const textarea = page.getByPlaceholder(ASK_ABOUT_BOATS_PLACEHOLDER);
 		await textarea.fill("Hello, what boats do you have?");
 		await textarea.press("Enter");
 

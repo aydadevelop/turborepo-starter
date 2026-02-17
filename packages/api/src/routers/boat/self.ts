@@ -216,7 +216,10 @@ export const boatSelfRouter = {
 		.output(boatOutputSchema)
 		.handler(async ({ context, input }) => {
 			const { organizationId } = context.activeMembership;
-			const managedBoat = await requireManagedBoat(input.boatId, organizationId);
+			const managedBoat = await requireManagedBoat(
+				input.boatId,
+				organizationId
+			);
 
 			if (input.dockId) {
 				await requireManagedDock(input.dockId, organizationId);
@@ -309,7 +312,10 @@ export const boatSelfRouter = {
 		.output(successOutputSchema)
 		.handler(async ({ context, input }) => {
 			const { organizationId } = context.activeMembership;
-			const managedBoat = await requireManagedBoat(input.boatId, organizationId);
+			const managedBoat = await requireManagedBoat(
+				input.boatId,
+				organizationId
+			);
 
 			await db
 				.update(boat)

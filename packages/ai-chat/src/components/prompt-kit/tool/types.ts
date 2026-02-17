@@ -7,11 +7,11 @@ export type ToolState =
 	| "output-error"
 	| "output-denied";
 
-export type ToolPart = {
+export interface ToolPart {
 	type: string;
 	state: ToolState;
 	input?: Record<string, unknown>;
 	output?: Record<string, unknown>;
 	toolCallId?: string;
 	errorText?: string;
-};
+}

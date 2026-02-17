@@ -2,6 +2,7 @@
 	import { Button } from "@full-stack-cf-app/ui/components/button";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
 	import { queryClient } from "$lib/orpc";
 
@@ -22,7 +23,9 @@
 	}
 
 	function goToLogin() {
-		goto(resolve("/login"));
+		goto(
+			`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+		);
 	}
 </script>
 

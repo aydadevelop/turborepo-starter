@@ -11,7 +11,15 @@ import {
 	createTestDatabase,
 } from "@full-stack-cf-app/db/test";
 import { eq, sql } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 
 const testDbState = createTestDatabase();
 
@@ -29,7 +37,7 @@ const { syncManagedBookingLifecycleFromExternalEvent } = await import(
 );
 
 const queueStub = {
-	send: vi.fn(async () => {}),
+	send: vi.fn(async () => undefined),
 };
 
 const seedBase = () => {

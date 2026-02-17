@@ -2,17 +2,13 @@
 	import { cn } from "@full-stack-cf-app/ui/lib/utils";
 	import type { Snippet } from "svelte";
 	import type { HTMLAttributes } from "svelte/elements";
-	import {
-		MessageClass,
-		type MessageSchema,
-		setMessageContext,
-	} from "./message-context.svelte.js";
+	import { MessageClass, setMessageContext } from "./message-context.svelte.js";
 
 	let {
 		class: className,
 		children,
 		...restProps
-	}: MessageSchema & {
+	}: {
 		class?: string;
 		children: Snippet;
 	} & HTMLAttributes<HTMLDivElement> = $props();

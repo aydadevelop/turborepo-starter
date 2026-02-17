@@ -128,7 +128,9 @@
         "**/schema/index.ts",
         "**/env/src/server.ts",
         "**/ui/src/index.ts",
-        "**/ui/src/components/**/index.ts"
+        "**/ui/src/components/**/index.ts",
+        "**/ai-chat/src/index.ts",
+        "**/ai-chat/src/components/**/index.ts"
       ],
       "linter": {
         "rules": {

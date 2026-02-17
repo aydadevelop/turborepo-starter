@@ -19,7 +19,7 @@
 		class?: string;
 		resize?: ResizeMode;
 		initial?: InitialMode;
-		[key: string]: any;
+		[key: string]: unknown;
 	} = $props();
 
 	const context = setChatContainerContext(
@@ -27,7 +27,7 @@
 		untrack(() => initial)
 	);
 
-	let containerElement: HTMLElement;
+	let containerElement: HTMLElement | null = null;
 
 	watch(
 		() => containerElement,

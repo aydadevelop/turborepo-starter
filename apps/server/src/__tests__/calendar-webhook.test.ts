@@ -13,11 +13,14 @@ vi.mock("@full-stack-cf-app/env/server", () => {
 	};
 });
 
-vi.mock("@full-stack-cf-app/api/calendar/application/calendar-use-cases", () => {
-	return {
-		ingestCalendarWebhook: ingestCalendarWebhookMock,
-	};
-});
+vi.mock(
+	"@full-stack-cf-app/api/calendar/application/calendar-use-cases",
+	() => {
+		return {
+			ingestCalendarWebhook: ingestCalendarWebhookMock,
+		};
+	}
+);
 
 vi.mock("@full-stack-cf-app/api/context", () => {
 	return {

@@ -103,13 +103,13 @@ const formatHourMinute = (
 	return `${toHourLabel(safeHour)}:${String(safeMinute).padStart(2, "0")}`;
 };
 
-type PublicPricingRule = {
+interface PublicPricingRule {
 	ruleType: string;
 	conditionJson: string;
 	adjustmentType: string;
 	adjustmentValue: number;
 	pricingProfileId: string | null;
-};
+}
 
 const formatRuleCondition = (rule: PublicPricingRule): string => {
 	const condition = parseJsonObject(rule.conditionJson);
@@ -205,10 +205,10 @@ const normalizeDurationOptions = (values: number[]): number[] => {
 const buildIdempotencyKey = (): string =>
 	`mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-type BookableSlot = {
+interface BookableSlot {
 	startsAt: Date;
 	endsAt: Date;
-};
+}
 
 export type { BookableSlot, PublicPricingRule };
 export {

@@ -354,7 +354,10 @@ export const syncManagedBookingLifecycleFromExternalEvent = async (params: {
 				title: "Cancellation request created",
 				body: `${boatName}: calendar event was removed`,
 				bookingId: managedBooking.id,
-				userIds: [managedBooking.customerUserId, managedBooking.createdByUserId],
+				userIds: [
+					managedBooking.customerUserId,
+					managedBooking.createdByUserId,
+				],
 			});
 		}
 

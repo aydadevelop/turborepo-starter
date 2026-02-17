@@ -1,5 +1,5 @@
-import type { ChatTransport, UIMessage } from "ai";
 import { eventIteratorToUnproxiedDataStream } from "@orpc/client";
+import type { ChatTransport, UIMessage } from "ai";
 
 // biome-ignore lint/suspicious/noExplicitAny: oRPC ProcedureClient has complex generics
 type ChatProcedure = (...args: any[]) => Promise<AsyncIterable<unknown>>;

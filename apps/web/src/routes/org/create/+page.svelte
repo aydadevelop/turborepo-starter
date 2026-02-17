@@ -5,6 +5,7 @@
 	import { Label } from "@full-stack-cf-app/ui/components/label";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
 	import { client, queryClient } from "$lib/orpc";
 
@@ -19,7 +20,9 @@
 	$effect(() => {
 		if ($sessionQuery.isPending) return;
 		if (!$sessionQuery.data) {
-			goto(resolve("/login"));
+			goto(
+				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+			);
 		}
 	});
 

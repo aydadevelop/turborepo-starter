@@ -23,7 +23,7 @@
 	import { page } from "$app/state";
 	import { assistantClient } from "$lib/assistant";
 
-	const chatId = $derived(page.params.id!);
+	const chatId = $derived(page.params.id ?? "");
 
 	const chatQuery = createQuery({
 		get queryKey() {

@@ -1,15 +1,15 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { db } from "@full-stack-cf-app/db";
 import {
 	assistantChat,
 	assistantMessage,
 } from "@full-stack-cf-app/db/schema/assistant";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { ORPCError, os, streamToEventIterator, type } from "@orpc/server";
 import {
-	type UIMessage,
 	convertToModelMessages,
 	stepCountIs,
 	streamText,
+	type UIMessage,
 } from "ai";
 import { desc, eq } from "drizzle-orm";
 import z from "zod";
@@ -23,12 +23,17 @@ const o = os.$context<AssistantContext>();
 /** Fix legacy tool-invocation parts that were stored without proper state. */
 function sanitizeParts(parts: unknown[]): UIMessage["parts"] {
 	return (parts as UIMessage["parts"]).map((part) => {
-		if ("type" in part && typeof part.type === "string" && part.type.startsWith("tool-")) {
+		if (
+			"type" in part &&
+			typeof part.type === "string" &&
+			part.type.startsWith("tool-")
+		) {
 			const p = part as Record<string, unknown>;
 			// Fix legacy 'tool-invocation' type to proper 'tool-<name>' format
-			const fixedType = part.type === "tool-invocation" && p.toolName
-				? `tool-${p.toolName}`
-				: part.type;
+			const fixedType =
+				part.type === "tool-invocation" && p.toolName
+					? `tool-${p.toolName}`
+					: part.type;
 			// Fix legacy states (call/result from pre-v6 or missing state)
 			if (!p.state || p.state === "call" || p.state === "partial-call") {
 				return {
@@ -72,10 +77,20 @@ const requireAuth = o.middleware(({ context, next }) => {
 
 const authenticatedProcedure = o.use(requireAuth);
 
+const requireUserId = (context: AssistantContext): string => {
+	const userId = context.session?.user?.id;
+	if (!userId) {
+		throw new ORPCError("UNAUTHORIZED");
+	}
+	return userId;
+};
+
 export const assistantRouter = {
 	chat: authenticatedProcedure
 		.input(type<{ chatId: string; messages: UIMessage[] }>())
 		.handler(async ({ input, context }) => {
+			const userId = requireUserId(context);
+
 			// Verify ownership
 			const existing = await db
 				.select({ id: assistantChat.id, userId: assistantChat.userId })
@@ -83,14 +98,14 @@ export const assistantRouter = {
 				.where(eq(assistantChat.id, input.chatId))
 				.get();
 
-			if (!existing || existing.userId !== context.session!.user.id) {
+			if (!existing || existing.userId !== userId) {
 				throw new ORPCError("NOT_FOUND", {
 					message: "Chat not found",
 				});
 			}
 
 			// Save the latest user message before streaming
-			const lastUserMessage = input.messages[input.messages.length - 1];
+			const lastUserMessage = input.messages.at(-1);
 			if (lastUserMessage?.role === "user") {
 				await db
 					.insert(assistantMessage)
@@ -172,7 +187,7 @@ export const assistantRouter = {
 	createChat: authenticatedProcedure
 		.input(z.object({ title: z.string().default("New Chat") }))
 		.handler(async ({ input, context }) => {
-			const userId = context.session!.user.id;
+			const userId = requireUserId(context);
 			const id = crypto.randomUUID();
 
 			await db.insert(assistantChat).values({
@@ -184,8 +199,8 @@ export const assistantRouter = {
 			return { id, title: input.title };
 		}),
 
-	listChats: authenticatedProcedure.handler(async ({ context }) => {
-		const userId = context.session!.user.id;
+	listChats: authenticatedProcedure.handler(({ context }) => {
+		const userId = requireUserId(context);
 
 		return db
 			.select({
@@ -202,7 +217,7 @@ export const assistantRouter = {
 	getChat: authenticatedProcedure
 		.input(z.object({ chatId: z.string() }))
 		.handler(async ({ input, context }) => {
-			const userId = context.session!.user.id;
+			const userId = requireUserId(context);
 
 			const chatRecord = await db
 				.select()
@@ -236,7 +251,7 @@ export const assistantRouter = {
 	deleteChat: authenticatedProcedure
 		.input(z.object({ chatId: z.string() }))
 		.handler(async ({ input, context }) => {
-			const userId = context.session!.user.id;
+			const userId = requireUserId(context);
 
 			const chatRecord = await db
 				.select({ id: assistantChat.id, userId: assistantChat.userId })
@@ -250,9 +265,7 @@ export const assistantRouter = {
 				});
 			}
 
-			await db
-				.delete(assistantChat)
-				.where(eq(assistantChat.id, input.chatId));
+			await db.delete(assistantChat).where(eq(assistantChat.id, input.chatId));
 
 			return { success: true };
 		}),
@@ -260,7 +273,7 @@ export const assistantRouter = {
 	updateChatTitle: authenticatedProcedure
 		.input(z.object({ chatId: z.string(), title: z.string() }))
 		.handler(async ({ input, context }) => {
-			const userId = context.session!.user.id;
+			const userId = requireUserId(context);
 
 			const chatRecord = await db
 				.select({ id: assistantChat.id, userId: assistantChat.userId })

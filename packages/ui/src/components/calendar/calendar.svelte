@@ -7,7 +7,22 @@
 	import { Calendar as CalendarPrimitive } from "bits-ui";
 	import type { Snippet } from "svelte";
 	import type { ButtonVariant } from "../button/button.svelte";
-	import * as Calendar from "./index.js";
+	import {
+		Caption,
+		Cell,
+		Day,
+		Grid,
+		GridBody,
+		GridHead,
+		GridRow,
+		HeadCell,
+		Header,
+		Month,
+		Months,
+		Nav,
+		NextButton,
+		PrevButton,
+	} from "./index.js";
 
 	let {
 		ref = $bindable(null),
@@ -62,15 +77,15 @@ get along, so we shut typescript up by casting `value` to `never`.
 	{...restProps}
 >
 	{#snippet children({ months, weekdays })}
-		<Calendar.Months>
-			<Calendar.Nav>
-				<Calendar.PrevButton variant={buttonVariant} />
-				<Calendar.NextButton variant={buttonVariant} />
-			</Calendar.Nav>
+		<Months>
+			<Nav>
+				<PrevButton variant={buttonVariant} />
+				<NextButton variant={buttonVariant} />
+			</Nav>
 			{#each months as month, monthIndex (month)}
-				<Calendar.Month>
-					<Calendar.Header>
-						<Calendar.Caption
+				<Month>
+					<Header>
+						<Caption
 							{captionLayout}
 							months={monthsProp}
 							{monthFormat}
@@ -81,36 +96,36 @@ get along, so we shut typescript up by casting `value` to `never`.
 							{locale}
 							{monthIndex}
 						/>
-					</Calendar.Header>
-					<Calendar.Grid>
-						<Calendar.GridHead>
-							<Calendar.GridRow class="select-none">
+					</Header>
+					<Grid>
+						<GridHead>
+							<GridRow class="select-none">
 								{#each weekdays as weekday (weekday)}
-									<Calendar.HeadCell>{weekday.slice(0, 2)}</Calendar.HeadCell>
+									<HeadCell>{weekday.slice(0, 2)}</HeadCell>
 								{/each}
-							</Calendar.GridRow>
-						</Calendar.GridHead>
-						<Calendar.GridBody>
+							</GridRow>
+						</GridHead>
+						<GridBody>
 							{#each month.weeks as weekDates (weekDates)}
-								<Calendar.GridRow class="mt-2 w-full">
+								<GridRow class="mt-2 w-full">
 									{#each weekDates as date (date)}
-										<Calendar.Cell {date} month={month.value}>
+										<Cell {date} month={month.value}>
 											{#if day}
 												{@render day({
 													day: date,
 													outsideMonth: !isEqualMonth(date, month.value),
 												})}
 											{:else}
-												<Calendar.Day />
+												<Day />
 											{/if}
-										</Calendar.Cell>
+										</Cell>
 									{/each}
-								</Calendar.GridRow>
+								</GridRow>
 							{/each}
-						</Calendar.GridBody>
-					</Calendar.Grid>
-				</Calendar.Month>
+						</GridBody>
+					</Grid>
+				</Month>
 			{/each}
-		</Calendar.Months>
+		</Months>
 	{/snippet}
 </CalendarPrimitive.Root>

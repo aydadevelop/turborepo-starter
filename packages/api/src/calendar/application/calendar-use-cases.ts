@@ -73,7 +73,9 @@ export const ingestCalendarWebhook = async (params: {
 				? (result.processedEvents ?? undefined)
 				: undefined,
 		nextSyncToken:
-			"nextSyncToken" in result ? (result.nextSyncToken ?? undefined) : undefined,
+			"nextSyncToken" in result
+				? (result.nextSyncToken ?? undefined)
+				: undefined,
 		recoveredFromExpiredToken:
 			"recoveredFromExpiredToken" in result
 				? (result.recoveredFromExpiredToken ?? undefined)

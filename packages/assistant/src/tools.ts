@@ -1,9 +1,8 @@
+import type { AppRouterClient } from "@full-stack-cf-app/api/routers";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { tool } from "ai";
 import z from "zod";
-
-import type { AppRouterClient } from "@full-stack-cf-app/api/routers";
 
 const createServerClient = (params: {
 	serverUrl: string;
@@ -150,8 +149,7 @@ export const createAssistantTools = (params: {
 					})),
 					pricing: result.pricingQuote
 						? {
-								estimatedTotal:
-									result.pricingQuote.estimatedTotalPriceCents,
+								estimatedTotal: result.pricingQuote.estimatedTotalPriceCents,
 								currency: result.pricingQuote.currency,
 								basePrice: result.pricingQuote.estimatedBasePriceCents,
 							}
@@ -178,9 +176,7 @@ export const createAssistantTools = (params: {
 					),
 				endsAt: z
 					.string()
-					.describe(
-						"End time in ISO 8601 format (e.g. 2026-03-15T13:00:00Z)"
-					),
+					.describe("End time in ISO 8601 format (e.g. 2026-03-15T13:00:00Z)"),
 				passengers: z.number().int().min(1).describe("Number of passengers"),
 				discountCode: z
 					.string()
@@ -225,8 +221,7 @@ export const createAssistantTools = (params: {
 						totalPrice:
 							result.pricingQuoteAfterDiscount.estimatedTotalPriceCents,
 						payNow: result.pricingQuoteAfterDiscount.estimatedPayNowCents,
-						payLater:
-							result.pricingQuoteAfterDiscount.estimatedPayLaterCents,
+						payLater: result.pricingQuoteAfterDiscount.estimatedPayLaterCents,
 					},
 				};
 			},

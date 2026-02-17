@@ -17,7 +17,9 @@
 	$effect(() => {
 		if ($sessionQuery.isPending || $canManageQuery.isPending) return;
 		if (!$sessionQuery.data) {
-			goto(resolve("/login"));
+			goto(
+				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+			);
 			return;
 		}
 		if (!$canManageQuery.data?.canManageOrganization) {

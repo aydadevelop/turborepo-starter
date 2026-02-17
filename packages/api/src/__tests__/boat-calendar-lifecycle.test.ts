@@ -1,11 +1,22 @@
 import { organization } from "@full-stack-cf-app/db/schema/auth";
-import { boat, boatCalendarConnection } from "@full-stack-cf-app/db/schema/boat";
+import {
+	boat,
+	boatCalendarConnection,
+} from "@full-stack-cf-app/db/schema/boat";
 import {
 	clearTestDatabase,
 	createTestDatabase,
 } from "@full-stack-cf-app/db/test";
 import { eq, sql } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 
 const testDbState = createTestDatabase();
 

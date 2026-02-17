@@ -14,8 +14,8 @@ class ChatContainerContext {
 	#intersectionObserver: IntersectionObserver | null = null;
 	#sentinel: HTMLElement | null = null;
 	#userHasScrolled = $state(false);
-	#resizeMode: ResizeMode = "smooth";
-	#initialMode: InitialMode = "instant";
+	readonly #resizeMode: ResizeMode;
+	readonly #initialMode: InitialMode;
 	#isInitialized = false;
 
 	isAtBottom = $derived(this.#isAtBottom);
@@ -43,7 +43,9 @@ class ChatContainerContext {
 	}
 
 	scrollToBottom = (behavior?: ScrollBehavior) => {
-		if (!this.#element) return;
+		if (!this.#element) {
+			return;
+		}
 
 		// Use initial mode for first scroll, then use provided behavior or resize mode
 		let scrollBehavior: ScrollBehavior;
@@ -62,8 +64,10 @@ class ChatContainerContext {
 		});
 	};
 
-	#handleScroll = () => {
-		if (!this.#element) return;
+	readonly #handleScroll = () => {
+		if (!this.#element) {
+			return;
+		}
 
 		const { scrollTop, scrollHeight, clientHeight } = this.#element;
 		const threshold = 50;
@@ -79,7 +83,9 @@ class ChatContainerContext {
 	};
 
 	#setupObservers() {
-		if (!this.#element) return;
+		if (!this.#element) {
+			return;
+		}
 
 		this.#createSentinel();
 
@@ -139,7 +145,9 @@ class ChatContainerContext {
 	}
 
 	#createSentinel() {
-		if (!this.#element) return;
+		if (!this.#element) {
+			return;
+		}
 
 		this.#sentinel = document.createElement("div");
 		this.#sentinel.style.height = "1px";
@@ -152,7 +160,9 @@ class ChatContainerContext {
 	}
 
 	#checkScrollPosition() {
-		if (!this.#element) return;
+		if (!this.#element) {
+			return;
+		}
 
 		const { scrollTop, scrollHeight, clientHeight } = this.#element;
 		const threshold = 50;

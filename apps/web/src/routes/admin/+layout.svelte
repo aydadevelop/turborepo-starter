@@ -11,7 +11,9 @@
 		if ($sessionQuery.isPending) return;
 		const user = $sessionQuery.data?.user;
 		if (!user) {
-			goto(resolve("/login"));
+			goto(
+				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+			);
 			return;
 		}
 		if ((user as { role?: string }).role !== "admin") {
