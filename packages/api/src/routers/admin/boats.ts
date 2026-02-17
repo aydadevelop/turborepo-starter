@@ -8,6 +8,7 @@ import {
 	boatDock,
 	calendarProviderValues,
 } from "@full-stack-cf-app/db/schema/boat";
+import { env } from "@full-stack-cf-app/env/server";
 import { ORPCError } from "@orpc/server";
 import {
 	and,
@@ -22,7 +23,11 @@ import {
 } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
 import z from "zod";
-import { initialSyncCalendarConnection } from "../../calendar/application/calendar-use-cases";
+import {
+	initialSyncCalendarConnection,
+	startGoogleWatch,
+	stopGoogleWatch,
+} from "../../calendar/application/calendar-use-cases";
 import { boatCalendarConnectionOutputSchema } from "../../contracts/boat";
 import {
 	optionalTrimmedString,
@@ -436,5 +441,114 @@ export const adminBoatsRouter = {
 				);
 				return connection;
 			});
+		}),
+
+	startWebhook: adminProcedure
+		.route({ summary: "Start Google Calendar push notification watch" })
+		.input(
+			z.object({
+				boatId: z.string().trim().min(1),
+				webhookUrl: z.url(),
+			})
+		)
+		.output(
+			z.object({
+				started: z.number(),
+				errors: z.array(
+					z.object({ connectionId: z.string(), message: z.string() })
+				),
+			})
+		)
+		.handler(async ({ input }) => {
+			const webhookUrl = input.webhookUrl;
+
+			const connections = await db
+				.select()
+				.from(boatCalendarConnection)
+				.where(eq(boatCalendarConnection.boatId, input.boatId));
+
+			if (connections.length === 0) {
+				throw new ORPCError("NOT_FOUND", {
+					message: "No calendar connections found for this boat",
+				});
+			}
+
+			let started = 0;
+			const errors: { connectionId: string; message: string }[] = [];
+
+			for (const conn of connections) {
+				const outcome = await startGoogleWatch({
+					connectionId: conn.id,
+					webhookUrl,
+					channelToken: env.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN || undefined,
+				});
+
+				if (outcome.kind === "ok") {
+					started += 1;
+				} else {
+					errors.push({
+						connectionId: conn.id,
+						message:
+							"message" in outcome
+								? (outcome.message as string)
+								: "Unknown error",
+					});
+				}
+			}
+
+			return { started, errors };
+		}),
+
+	stopWebhook: adminProcedure
+		.route({ summary: "Stop Google Calendar push notification watch" })
+		.input(
+			z.object({
+				boatId: z.string().trim().min(1),
+			})
+		)
+		.output(
+			z.object({
+				stopped: z.number(),
+				errors: z.array(
+					z.object({ connectionId: z.string(), message: z.string() })
+				),
+			})
+		)
+		.handler(async ({ input }) => {
+			const connections = await db
+				.select()
+				.from(boatCalendarConnection)
+				.where(eq(boatCalendarConnection.boatId, input.boatId));
+
+			const withWatch = connections.filter((c) => c.watchChannelId);
+
+			if (withWatch.length === 0) {
+				throw new ORPCError("NOT_FOUND", {
+					message: "No active webhooks found for this boat",
+				});
+			}
+
+			let stopped = 0;
+			const errors: { connectionId: string; message: string }[] = [];
+
+			for (const conn of withWatch) {
+				const outcome = await stopGoogleWatch({
+					connectionId: conn.id,
+				});
+
+				if (outcome.kind === "ok") {
+					stopped += 1;
+				} else {
+					errors.push({
+						connectionId: conn.id,
+						message:
+							"message" in outcome
+								? (outcome.message as string)
+								: "Unknown error",
+					});
+				}
+			}
+
+			return { stopped, errors };
 		}),
 };

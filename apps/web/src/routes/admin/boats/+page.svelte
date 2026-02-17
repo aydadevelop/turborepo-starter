@@ -54,10 +54,29 @@
 		})
 	);
 
+	const startWebhookMutation = createMutation(
+		orpc.admin.boats.startWebhook.mutationOptions({
+			onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
+		})
+	);
+
+	const stopWebhookMutation = createMutation(
+		orpc.admin.boats.stopWebhook.mutationOptions({
+			onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
+		})
+	);
+
 	let connectDialogOpen = $state(false);
 	let connectBoatId = $state("");
 	let connectBoatName = $state("");
 	let connectCalendarId = $state("");
+	let webhookBaseUrl = $state("");
+
+	const webhookUrl = $derived(
+		webhookBaseUrl
+			? `${webhookBaseUrl.replace(/\/$/, "")}/webhooks/calendar/google`
+			: ""
+	);
 
 	const openConnectDialog = (boatId: string, boatName: string) => {
 		connectBoatId = boatId;
@@ -107,6 +126,17 @@
 				{status}
 			</Button>
 		{/each}
+	</div>
+
+	<div class="flex items-center gap-2">
+		<Input
+			placeholder="Webhook base URL (e.g. https://example.ngrok-free.app/server)"
+			bind:value={webhookBaseUrl}
+			class="max-w-lg font-mono text-xs"
+		/>
+		{#if webhookUrl}
+			<span class="text-xs text-muted-foreground truncate">{webhookUrl}</span>
+		{/if}
 	</div>
 
 	<Card.Root>
@@ -176,13 +206,54 @@
 									{#if b.calendarCount === 0}
 										<span class="text-sm text-muted-foreground">—</span>
 									{:else if b.webhookActiveCount === b.calendarCount}
-										<Badge variant="default">Active</Badge>
+										<div class="flex items-center gap-2">
+											<Badge variant="default">Active</Badge>
+											<Button
+												variant="ghost"
+												size="sm"
+												disabled={$stopWebhookMutation.isPending}
+												onclick={() =>
+													$stopWebhookMutation.mutate({
+														boatId: b.id,
+													})}
+											>
+												Stop
+											</Button>
+										</div>
 									{:else if b.webhookActiveCount > 0}
-										<Badge variant="secondary">
-											{b.webhookActiveCount}/{b.calendarCount}
-										</Badge>
+										<div class="flex items-center gap-2">
+											<Badge variant="secondary">
+												{b.webhookActiveCount}/{b.calendarCount}
+											</Badge>
+											<Button
+												variant="ghost"
+												size="sm"
+												disabled={$startWebhookMutation.isPending || !webhookUrl}
+												onclick={() =>
+													$startWebhookMutation.mutate({
+														boatId: b.id,
+														webhookUrl,
+													})}
+											>
+												Start All
+											</Button>
+										</div>
 									{:else}
-										<Badge variant="destructive">Inactive</Badge>
+										<div class="flex items-center gap-2">
+											<Badge variant="destructive">Inactive</Badge>
+											<Button
+												variant="ghost"
+												size="sm"
+												disabled={$startWebhookMutation.isPending || !webhookUrl}
+												onclick={() =>
+													$startWebhookMutation.mutate({
+														boatId: b.id,
+														webhookUrl,
+													})}
+											>
+												Start
+											</Button>
+										</div>
 									{/if}
 								</Table.Cell>
 								<Table.Cell>

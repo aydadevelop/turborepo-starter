@@ -13,6 +13,8 @@ build
 .env.*
 !.env.example
 .dev.vars
+
+# Secrets (sensitive credentials and keys)
 apps/server/.secrets/
 
 # IDEs and editors

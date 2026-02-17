@@ -2,5 +2,5 @@
 @import "@full-stack-cf-app/tailwind-config";
 
 /* Scan monorepo UI package for Tailwind classes /ui/ and /chat-ui/ */ 
-@source "../../../packages/ui/src/**/*.{ts,tsx}";
-
+@source "../../../packages/ui/src/**/*.{svelte,svelte.ts,ts}";
+@source "../../../packages/ai-chat/src/**/*.{svelte,svelte.ts,ts}";
