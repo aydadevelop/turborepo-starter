@@ -31,12 +31,22 @@ const defaultCredentialsPath: string =
 
 const credentialsPath: string =
 	process.env.GOOGLE_CALENDAR_CREDENTIALS_PATH ?? defaultCredentialsPath;
+
+// Test Calendar 1: full edit access
 const fullAccessCalendarId =
 	process.env.GOOGLE_CALENDAR_TEST_FULL_ACCESS_ID ??
-	"c49761117c02099560fda595adc795ae21bc03df82a440c266865967c099e5e0@group.calendar.google.com";
+	"f67805343fd4dd701344b0fafa5f8569582083a465088be2367bc6884fce8680@group.calendar.google.com";
+
+// Test Calendar 2: secondary full-access calendar for multi-boat tests
+const secondaryCalendarId =
+	process.env.GOOGLE_CALENDAR_TEST_SECONDARY_ID ??
+	"df062f183d177cbfbf098483a890fee0e5878ea038d03dd96ec1e285d1fb83ef@group.calendar.google.com";
+
+// Test Calendar 3: visibility-only access (read-only)
 const readOnlyCalendarId =
 	process.env.GOOGLE_CALENDAR_TEST_READ_ONLY_ID ??
 	"03ffc22988f8023adf80cb636b45013fe2a9f38e6b1275a46052fc34dc5a4370@group.calendar.google.com";
+
 const noAccessCalendarId =
 	process.env.GOOGLE_CALENDAR_TEST_NO_ACCESS_ID ??
 	"f43a00d530e21e2e472823e1dc9b78664f2dac9b676b3f0e768891644cad8270@group.calendar.google.com";
@@ -200,6 +210,93 @@ describe.skipIf(!isNetworkTestRun)("google calendar adapter (network)", () => {
 					event.externalEventId.length > 0
 			)
 		).toBe(true);
+	});
+
+	it("creates and deletes events on the secondary calendar", async () => {
+		const eventId = `codexsec${Date.now()}`;
+		const startsAt = new Date(Date.now() + 120 * 60 * 1000);
+		const endsAt = new Date(startsAt.getTime() + 30 * 60 * 1000);
+
+		const createdEvent = await adapter.upsertEvent({
+			externalCalendarId: secondaryCalendarId,
+			externalEventId: eventId,
+			title: "Secondary Calendar Test",
+			startsAt,
+			endsAt,
+			timezone: "UTC",
+			metadata: { source: "codex-integration-test" },
+		});
+
+		createdEvents.push({
+			calendarId: secondaryCalendarId,
+			eventId: createdEvent.externalEventId,
+		});
+
+		expect(createdEvent.externalEventId).toBeTruthy();
+
+		await adapter.deleteEvent({
+			externalCalendarId: secondaryCalendarId,
+			externalEventId: createdEvent.externalEventId,
+		});
+
+		const eventIndex = createdEvents.findIndex(
+			(event) =>
+				event.calendarId === secondaryCalendarId &&
+				event.eventId === createdEvent.externalEventId
+		);
+		if (eventIndex >= 0) {
+			createdEvents.splice(eventIndex, 1);
+		}
+	}, 20_000);
+
+	it("lists events on the secondary calendar", async () => {
+		const timeMin = new Date(Date.now() - 3 * 60 * 60 * 1000);
+		const timeMax = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+		const result = await adapter.listEvents({
+			externalCalendarId: secondaryCalendarId,
+			timeMin,
+			timeMax,
+			maxResults: 25,
+		});
+
+		expect(Array.isArray(result.events)).toBe(true);
+	});
+
+	it("can read busy intervals on visibility-only calendar", async () => {
+		const startsAt = new Date(Date.now() + 4 * 60 * 60 * 1000);
+		const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
+
+		const busyIntervals = await adapter.listBusyIntervals({
+			externalCalendarId: readOnlyCalendarId,
+			from: startsAt,
+			to: endsAt,
+		});
+
+		expect(Array.isArray(busyIntervals)).toBe(true);
+	});
+
+	it("fails to create events on visibility-only calendar", async () => {
+		const startsAt = new Date(Date.now() + 5 * 60 * 60 * 1000);
+		const endsAt = new Date(startsAt.getTime() + 30 * 60 * 1000);
+
+		try {
+			await adapter.upsertEvent({
+				externalCalendarId: readOnlyCalendarId,
+				title: "Should Fail - Visibility Only",
+				startsAt,
+				endsAt,
+				timezone: "UTC",
+			});
+			throw new Error(
+				"Expected upsertEvent to fail on visibility-only calendar"
+			);
+		} catch (error) {
+			expect(error).toBeInstanceOf(GoogleCalendarApiError);
+			if (error instanceof GoogleCalendarApiError) {
+				expect([401, 403]).toContain(error.status);
+			}
+		}
 	});
 });
 

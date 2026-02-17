@@ -246,7 +246,9 @@ test.describe("Owner Flow", () => {
 		expect(permissionData.json?.role).toBe("org_owner");
 
 		await page.goto(
-			url("/boats/seed_boat_aurora--seed-aurora-8?date=2026-03-16&durationHours=2&passengers=2")
+			url(
+				"/boats/seed_boat_aurora--seed-aurora-8?date=2026-03-16&durationHours=2&passengers=2"
+			)
 		);
 		await expect(page.getByText(`Signed in as ${ownerEmail}`)).toBeVisible();
 	});

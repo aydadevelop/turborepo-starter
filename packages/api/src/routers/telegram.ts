@@ -9,12 +9,6 @@ import { createTelegramNotificationDispatchMessage } from "@full-stack-cf-app/no
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import z from "zod";
-
-import { organizationPermissionProcedure } from "../index";
-import {
-	requireActiveMembership,
-	requireSessionUserId,
-} from "./shared/auth-utils";
 import {
 	listManagedTelegramNotificationsInputSchema,
 	listManagedTelegramWebhookEventsInputSchema,
@@ -23,7 +17,12 @@ import {
 	registerManagedTelegramWebhookEventInputSchema,
 	telegramNotificationOutputSchema,
 	telegramWebhookEventOutputSchema,
-} from "./telegram.schemas";
+} from "../contracts/telegram";
+import { organizationPermissionProcedure } from "../index";
+import {
+	requireActiveMembership,
+	requireSessionUserId,
+} from "./shared/auth-utils";
 
 const requireManagedTelegramNotification = async (params: {
 	notificationId: string;

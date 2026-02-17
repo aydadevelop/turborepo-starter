@@ -4,17 +4,17 @@ import { ORPCError } from "@orpc/server";
 import { and, desc, eq, getTableColumns, or } from "drizzle-orm";
 import z from "zod";
 import {
-	organizationPermissionProcedure,
-	protectedProcedure,
-} from "../../index";
-import {
 	bookingDisputeOutputSchema,
 	createBookingDisputeInputSchema,
 	listManagedBookingDisputesInputSchema,
 	listMineBookingDisputesInputSchema,
 	reviewBookingDisputeInputSchema,
-} from "../booking.schemas";
-import { successOutputSchema } from "../shared/schema-utils";
+} from "../../contracts/booking";
+import { successOutputSchema } from "../../contracts/shared";
+import {
+	organizationPermissionProcedure,
+	protectedProcedure,
+} from "../../index";
 import {
 	requireActiveMembership,
 	requireCustomerBookingAccess,

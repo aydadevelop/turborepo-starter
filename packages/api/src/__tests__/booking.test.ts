@@ -21,7 +21,7 @@ import {
 	requestBookingRefundInputSchema,
 	reviewBookingCancellationInputSchema,
 	upsertManagedDiscountCodeInputSchema,
-} from "../routers/booking.schemas";
+} from "../contracts/booking";
 
 describe("booking router schemas", () => {
 	it("normalizes discount codes", () => {

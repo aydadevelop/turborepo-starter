@@ -8,18 +8,18 @@ import { ORPCError } from "@orpc/server";
 import { and, desc, eq, getTableColumns, or } from "drizzle-orm";
 import z from "zod";
 import {
-	organizationPermissionProcedure,
-	protectedProcedure,
-} from "../../../index";
-import { buildRecipients, formatRefundAmount } from "../../../lib/event-bus";
-import {
 	bookingCancellationRequestOutputSchema,
 	listManagedBookingCancellationRequestsInputSchema,
 	listMineBookingCancellationRequestsInputSchema,
 	requestBookingCancellationInputSchema,
 	reviewBookingCancellationInputSchema,
-} from "../../booking.schemas";
-import { successOutputSchema } from "../../shared/schema-utils";
+} from "../../../contracts/booking";
+import { successOutputSchema } from "../../../contracts/shared";
+import {
+	organizationPermissionProcedure,
+	protectedProcedure,
+} from "../../../index";
+import { buildRecipients, formatRefundAmount } from "../../../lib/event-bus";
 import {
 	requireActiveMembership,
 	requireCustomerBookingAccess,
@@ -363,7 +363,7 @@ export const cancellationBookingRouter = {
 						],
 						title: "Booking cancelled",
 						body: `${managedBoat?.name ?? "Boat booking"}: ${managedBooking.startsAt.toISOString()} - ${managedBooking.endsAt.toISOString()}`,
-						ctaUrl: `/bookings`,
+						ctaUrl: "/bookings",
 						severity: "warning",
 						metadata: { bookingId: managedBooking.id },
 					}),
@@ -397,7 +397,7 @@ export const cancellationBookingRouter = {
 							],
 							title: "Refund processed",
 							body: `${boatName}: ${formattedAmount} refunded`,
-							ctaUrl: `/bookings`,
+							ctaUrl: "/bookings",
 							severity: "success",
 							metadata: {
 								bookingId: managedBooking.id,

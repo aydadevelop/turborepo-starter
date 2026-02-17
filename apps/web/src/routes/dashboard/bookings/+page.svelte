@@ -8,10 +8,10 @@
 		CardTitle,
 	} from "@full-stack-cf-app/ui/components/card";
 	import { Input } from "@full-stack-cf-app/ui/components/input";
-	import { PUBLIC_CLOUDPAYMENTS_PUBLIC_ID } from "$env/static/public";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import { env as publicEnv } from "$env/dynamic/public";
 	import { authClient } from "$lib/auth-client";
 	import { orpc } from "$lib/orpc";
 
@@ -379,9 +379,7 @@
 			await refetchAll();
 		} catch (error) {
 			actionError =
-				error instanceof Error
-					? error.message
-					: "Failed to review escalation.";
+				error instanceof Error ? error.message : "Failed to review escalation.";
 		} finally {
 			reviewPendingBookingId = null;
 		}
@@ -471,7 +469,7 @@
 	const startPayment = async (
 		bookingItem: (typeof managedBookings)[number]
 	) => {
-		const cpPublicId = PUBLIC_CLOUDPAYMENTS_PUBLIC_ID || undefined;
+		const cpPublicId = publicEnv.PUBLIC_CLOUDPAYMENTS_PUBLIC_ID || undefined;
 		if (!cpPublicId) {
 			actionError = "CloudPayments is not configured";
 			return;
@@ -491,7 +489,9 @@
 
 			const amountUnits = result.paymentAttempt.amountCents / 100;
 
-			const widget = new (window as unknown as { cp: CpNamespace }).cp.CloudPayments();
+			const widget = new (
+				window as unknown as { cp: CpNamespace }
+			).cp.CloudPayments();
 			const widgetResult = await widget.start({
 				publicTerminalId: cpPublicId,
 				description: `Booking #${bookingItem.id.slice(0, 8)}`,
@@ -516,8 +516,7 @@
 
 			await refetchAll();
 		} catch (error) {
-			actionError =
-				error instanceof Error ? error.message : "Payment failed";
+			actionError = error instanceof Error ? error.message : "Payment failed";
 		} finally {
 			payPendingBookingId = null;
 		}
@@ -625,9 +624,7 @@
 					<ul class="space-y-3">
 						{#each pendingEscalations as escalation (escalation.id)}
 							<li class="space-y-2 rounded-md border p-3">
-								<div
-									class="flex flex-wrap items-start justify-between gap-2"
-								>
+								<div class="flex flex-wrap items-start justify-between gap-2">
 									<div>
 										<p class="text-sm font-medium text-foreground">
 											Booking #{escalation.bookingId.slice(0, 8)}
@@ -649,9 +646,7 @@
 								</div>
 
 								{#if reviewDraftBookingId === escalation.bookingId}
-									<div
-										class="flex flex-col gap-2 md:flex-row md:items-center"
-									>
+									<div class="flex flex-col gap-2 md:flex-row md:items-center">
 										<Input
 											value={reviewNoteDraft}
 											oninput={(event) => {
@@ -720,9 +715,7 @@
 			</CardHeader>
 			<CardContent class="space-y-3">
 				{#if $managedShiftRequestsQuery.isPending}
-					<p class="text-sm text-muted-foreground">
-						Loading shift requests...
-					</p>
+					<p class="text-sm text-muted-foreground">Loading shift requests...</p>
 				{:else if $managedShiftRequestsQuery.error}
 					<p class="text-sm text-destructive">
 						Failed to load shift requests:
@@ -731,16 +724,12 @@
 							: "Unknown error"}
 					</p>
 				{:else if ($managedShiftRequestsQuery.data ?? []).length === 0}
-					<p class="text-sm text-muted-foreground">
-						No shift requests yet.
-					</p>
+					<p class="text-sm text-muted-foreground">No shift requests yet.</p>
 				{:else}
 					<ul class="space-y-3">
 						{#each $managedShiftRequestsQuery.data ?? [] as shiftRequest (shiftRequest.id)}
 							<li class="space-y-2 rounded-md border p-3">
-								<div
-									class="flex flex-wrap items-start justify-between gap-2"
-								>
+								<div class="flex flex-wrap items-start justify-between gap-2">
 									<div class="space-y-1">
 										<p class="text-sm font-medium text-foreground">
 											Booking #{shiftRequest.bookingId.slice(0, 8)}
@@ -884,9 +873,7 @@
 					<ul class="space-y-3">
 						{#each managedAffiliatePayouts as payout (payout.payoutId)}
 							<li class="rounded-md border p-3">
-								<div
-									class="flex flex-wrap items-start justify-between gap-3"
-								>
+								<div class="flex flex-wrap items-start justify-between gap-3">
 									<div class="space-y-1">
 										<p class="text-sm font-medium text-foreground">
 											{payout.bookingRef} · {payout.boatName}
@@ -1016,9 +1003,7 @@
 							{@const shiftRequest = shiftRequestByBookingId.get(bookingItem.id)}
 							{@const escalation = escalationRequestByBookingId.get(bookingItem.id)}
 							<li class="space-y-3 rounded-md border p-3">
-								<div
-									class="flex flex-wrap items-start justify-between gap-3"
-								>
+								<div class="flex flex-wrap items-start justify-between gap-3">
 									<div class="space-y-1">
 										<p class="text-sm font-medium text-foreground">
 											Booking #{bookingItem.id.slice(0, 8)}

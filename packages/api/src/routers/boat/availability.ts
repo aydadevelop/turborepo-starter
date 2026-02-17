@@ -6,12 +6,6 @@ import {
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, gt, lt } from "drizzle-orm";
 import z from "zod";
-
-import { organizationPermissionProcedure } from "../../index";
-import { insertAndReturn } from "../../lib/db-helpers";
-import { requireSessionUserId } from "../shared/auth-utils";
-import { successOutputSchema } from "../shared/schema-utils";
-import { requireCalendarConnectionForBoat, requireManagedBoat } from "./access";
 import {
 	boatAvailabilityBlockOutputSchema,
 	boatAvailabilityRuleOutputSchema,
@@ -20,7 +14,12 @@ import {
 	listBoatAvailabilityBlocksInputSchema,
 	listBoatAvailabilityRulesInputSchema,
 	replaceBoatAvailabilityRulesInputSchema,
-} from "./schemas";
+} from "../../contracts/boat";
+import { successOutputSchema } from "../../contracts/shared";
+import { organizationPermissionProcedure } from "../../index";
+import { insertAndReturn } from "../../lib/db-helpers";
+import { requireSessionUserId } from "../shared/auth-utils";
+import { requireCalendarConnectionForBoat, requireManagedBoat } from "./access";
 
 export const boatAvailabilityRouter = {
 	ruleList: organizationPermissionProcedure({

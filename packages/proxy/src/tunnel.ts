@@ -13,6 +13,7 @@ export interface TunnelOptions {
 		web?: string;
 		server: string;
 		notifications: string;
+		assistant: string;
 	};
 	/** Local port for the reverse proxy (default: 4040) */
 	proxyPort?: number;
@@ -31,6 +32,7 @@ export function startTunnel(opts: TunnelOptions): Promise<string> {
 	const routes: TunnelRoute[] = [
 		{ prefix: "/server", target: opts.upstreams.server },
 		{ prefix: "/notifications", target: opts.upstreams.notifications },
+		{ prefix: "/assistant", target: opts.upstreams.assistant },
 	];
 	if (opts.upstreams.web) {
 		routes.unshift({ prefix: "/web", target: opts.upstreams.web });

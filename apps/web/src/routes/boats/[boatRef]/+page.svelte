@@ -8,12 +8,12 @@
 		CardHeader,
 		CardTitle,
 	} from "@full-stack-cf-app/ui/components/card";
-	import { PUBLIC_CLOUDPAYMENTS_PUBLIC_ID } from "$env/static/public";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { derived, get } from "svelte/store";
 	import { dev } from "$app/environment";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/stores";
+	import { env as publicEnv } from "$env/dynamic/public";
 	import { authClient } from "$lib/auth-client";
 	import { parseBoatIdFromRef } from "$lib/boat-pages";
 	import { orpc } from "$lib/orpc";
@@ -82,7 +82,9 @@
 		source
 			.split("_")
 			.map((part) =>
-				part.length > 0 ? `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}` : part
+				part.length > 0
+					? `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`
+					: part
 			)
 			.join(" ");
 	const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -349,7 +351,7 @@
 	let cpPendingSlotKey = $state<string | null>(null);
 	let cpMessage = $state<string | null>(null);
 	let cpError = $state<string | null>(null);
-	const cpPublicId = PUBLIC_CLOUDPAYMENTS_PUBLIC_ID || undefined;
+	const cpPublicId = publicEnv.PUBLIC_CLOUDPAYMENTS_PUBLIC_ID || undefined;
 
 	const bookAndPayWithMock = async (slot: BookableSlot) => {
 		const user = $sessionQuery.data?.user;
@@ -461,7 +463,9 @@
 			});
 
 			const amountUnits = paymentResult.paymentAttempt.amountCents / 100;
-			const widget = new (window as unknown as { cp: CpNamespace }).cp.CloudPayments();
+			const widget = new (
+				window as unknown as { cp: CpNamespace }
+			).cp.CloudPayments();
 			const widgetResult = await widget.start({
 				publicTerminalId: cpPublicId,
 				description: `Booking #${bookingResult.booking.id.slice(0, 8)}`,
@@ -887,9 +891,7 @@
 											<td class="py-2 font-mono text-xs">
 												{formatDateTimeIsoUtc(block.endsAt)}
 											</td>
-											<td class="py-2">
-												{block.reason ?? "—"}
-											</td>
+											<td class="py-2">{block.reason ?? "—"}</td>
 										</tr>
 									{/each}
 								</tbody>

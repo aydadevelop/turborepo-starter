@@ -1,7 +1,8 @@
 import { passkeyClient } from "@better-auth/passkey/client";
-// import { polarClient } from "@polar-sh/better-auth";
+import { polarClient } from "@polar-sh/better-auth";
 import {
 	adminClient,
+	anonymousClient,
 	organizationClient,
 	phoneNumberClient,
 } from "better-auth/client/plugins";
@@ -27,8 +28,9 @@ export const authClient = createAuthClient({
 	basePath: "/",
 	plugins: [
 		adminClient(),
+		anonymousClient(),
 		organizationClient(),
-		// polarClient(),
+		polarClient(),
 		passkeyClient(),
 		phoneNumberClient(),
 		telegramClient(),

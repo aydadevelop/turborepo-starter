@@ -15,10 +15,9 @@ import { ORPCError } from "@orpc/server";
 import { and, count, desc, eq, gte, like, lte, type SQL } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
 import z from "zod";
-
+import { successOutputSchema } from "../../contracts/shared";
 import { adminProcedure } from "../../lib/admin";
 import { buildUpdatePayload } from "../../lib/db-helpers";
-import { successOutputSchema } from "../shared/schema-utils";
 import { paginatedOutput, paginationInput } from "./shared";
 
 const bookingOutputSchema = createSelectSchema(booking);

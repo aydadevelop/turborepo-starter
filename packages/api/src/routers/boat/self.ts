@@ -13,11 +13,6 @@ import {
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import z from "zod";
-
-import { organizationPermissionProcedure } from "../../index";
-import { buildUpdatePayload, insertAndReturn } from "../../lib/db-helpers";
-import { successOutputSchema } from "../shared/schema-utils";
-import { requireManagedBoat, requireManagedDock } from "./access";
 import {
 	archiveManagedBoatInputSchema,
 	boatOutputSchema,
@@ -28,7 +23,11 @@ import {
 	listManagedBoatsInputSchema,
 	normalizeBoatSlug,
 	updateManagedBoatInputSchema,
-} from "./schemas";
+} from "../../contracts/boat";
+import { successOutputSchema } from "../../contracts/shared";
+import { organizationPermissionProcedure } from "../../index";
+import { buildUpdatePayload, insertAndReturn } from "../../lib/db-helpers";
+import { requireManagedBoat, requireManagedDock } from "./access";
 
 export const boatSelfRouter = {
 	listManaged: organizationPermissionProcedure({

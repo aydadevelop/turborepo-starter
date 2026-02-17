@@ -28,8 +28,6 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
-import { publicProcedure } from "../../index";
-import { buildRecipients } from "../../lib/event-bus";
 import {
 	availabilityPublicOutputSchema,
 	checkoutReadModelPublicOutputSchema,
@@ -41,14 +39,9 @@ import {
 	getPublicCheckoutReadModelInputSchema,
 	listPublicBoatAvailabilityInputSchema,
 	quotePublicOutputSchema,
-} from "../booking.schemas";
-import {
-	createManagedBookingRecord,
-	ensureNoAvailabilityBlockOverlap,
-	ensureNoBookingOverlap,
-	resolveActivePricingProfile,
-	resolvePrimaryCalendarLinkInput,
-} from "./core";
+} from "../../contracts/booking";
+import { publicProcedure } from "../../index";
+import { buildRecipients } from "../../lib/event-bus";
 import { resolveBookingDiscount } from "./discount/resolution";
 import {
 	blockingBookingStatuses,
@@ -59,14 +52,21 @@ import {
 	resolveAffiliateReferralFromContext,
 } from "./services/affiliate";
 import { sortByAvailabilityBands } from "./services/availability-ranking";
+import { resolvePrimaryCalendarLinkInput } from "./services/calendar-link";
 import { ensureNoExternalCalendarOverlap } from "./services/calendar-sync";
 import { buildCheckoutReadModel } from "./services/checkout-read-model";
 import { enqueueBookingExpirationCheck } from "./services/expiration";
+import {
+	ensureNoAvailabilityBlockOverlap,
+	ensureNoBookingOverlap,
+} from "./services/overlap";
 import {
 	type BoatPricingRule,
 	buildBookingPricingQuote,
 	estimateBookingSubtotalCentsFromProfile,
 } from "./services/pricing";
+import { resolveActivePricingProfile } from "./services/pricing-profile";
+import { createManagedBookingRecord } from "./services/record";
 import {
 	annotateSlotMinimumDuration,
 	type BusyInterval,
@@ -363,12 +363,12 @@ const violatesMinimumDurationRules = (params: {
 
 	const requestedDurationMinutes = Math.max(
 		30,
-		Math.round(
-			(params.endsAt.getTime() - params.startsAt.getTime()) / 60_000
-		)
+		Math.round((params.endsAt.getTime() - params.startsAt.getTime()) / 60_000)
 	);
 
-	return requestedDurationMinutes < requestedSlot.requiredMinimumDurationMinutes;
+	return (
+		requestedDurationMinutes < requestedSlot.requiredMinimumDurationMinutes
+	);
 };
 
 const buildBusyIntervalsByBoatId = (
@@ -513,7 +513,8 @@ const scoreCandidate = (
 
 	const bookingBusyIntervals = bookingBusyByBoatId.get(candidateBoat.id) ?? [];
 	const blockBusyIntervals = blockBusyByBoatId.get(candidateBoat.id) ?? [];
-	const minimumDurationRules = minDurationRulesByBoatId.get(candidateBoat.id) ?? [];
+	const minimumDurationRules =
+		minDurationRulesByBoatId.get(candidateBoat.id) ?? [];
 	const isDurationInvalid = violatesMinimumDurationRules({
 		candidateBoat,
 		startsAt,
@@ -1462,7 +1463,7 @@ export const publicBookingRouter = {
 					userIds: [quote.sessionUserId],
 					title: "Booking created",
 					body: `${quote.publicBoat.name}: ${created.booking.startsAt.toISOString()} - ${created.booking.endsAt.toISOString()}`,
-					ctaUrl: `/bookings`,
+					ctaUrl: "/bookings",
 					metadata: { bookingId: created.booking.id },
 				});
 				if (recipients.length > 0) {

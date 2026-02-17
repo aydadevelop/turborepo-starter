@@ -5,11 +5,11 @@ const envState = {
 	GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN: "",
 };
 
-const syncCalendarConnectionsByProviderMock = vi.fn();
-const startCalendarConnectionWatchMock = vi.fn();
-const stopCalendarConnectionWatchMock = vi.fn();
-const renewExpiringCalendarWatchesMock = vi.fn();
-const listCalendarWebhookDeadLettersMock = vi.fn();
+const syncGoogleCalendarMock = vi.fn();
+const startGoogleWatchMock = vi.fn();
+const stopGoogleWatchMock = vi.fn();
+const renewGoogleWatchesMock = vi.fn();
+const listGoogleDeadLettersMock = vi.fn();
 
 vi.mock("@full-stack-cf-app/env/server", () => {
 	return {
@@ -17,50 +17,65 @@ vi.mock("@full-stack-cf-app/env/server", () => {
 	};
 });
 
-vi.mock("@full-stack-cf-app/api/calendar/sync/connection-sync", () => {
-	return {
-		listCalendarWebhookDeadLetters: listCalendarWebhookDeadLettersMock,
-		renewExpiringCalendarWatches: renewExpiringCalendarWatchesMock,
-		syncCalendarConnectionsByProvider: syncCalendarConnectionsByProviderMock,
-		startCalendarConnectionWatch: startCalendarConnectionWatchMock,
-		stopCalendarConnectionWatch: stopCalendarConnectionWatchMock,
-	};
-});
+vi.mock(
+	"@full-stack-cf-app/api/calendar/application/calendar-use-cases",
+	() => {
+		return {
+			syncGoogleCalendar: syncGoogleCalendarMock,
+			startGoogleWatch: startGoogleWatchMock,
+			stopGoogleWatch: stopGoogleWatchMock,
+			renewGoogleWatches: renewGoogleWatchesMock,
+			listGoogleDeadLetters: listGoogleDeadLettersMock,
+		};
+	}
+);
 
 describe("calendarInternalRoutes", () => {
 	beforeEach(() => {
 		envState.CALENDAR_SYNC_TASK_TOKEN = "";
 		envState.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN = "";
 
-		syncCalendarConnectionsByProviderMock.mockReset();
-		startCalendarConnectionWatchMock.mockReset();
-		stopCalendarConnectionWatchMock.mockReset();
-		renewExpiringCalendarWatchesMock.mockReset();
-		listCalendarWebhookDeadLettersMock.mockReset();
+		syncGoogleCalendarMock.mockReset();
+		startGoogleWatchMock.mockReset();
+		stopGoogleWatchMock.mockReset();
+		renewGoogleWatchesMock.mockReset();
+		listGoogleDeadLettersMock.mockReset();
 
-		syncCalendarConnectionsByProviderMock.mockResolvedValue({
-			processedConnections: 1,
-			createdBlocks: 0,
-			updatedBlocks: 0,
-			deletedBlocks: 0,
-			errors: [],
+		syncGoogleCalendarMock.mockResolvedValue({
+			kind: "ok",
+			provider: "google",
+			totalConnections: 1,
+			results: [],
 		});
-		startCalendarConnectionWatchMock.mockResolvedValue({
-			channelId: "channel-1",
-			resourceId: "resource-1",
-			expiresAt: Date.now() + 3_600_000,
+		startGoogleWatchMock.mockResolvedValue({
+			kind: "ok",
+			connectionId: "connection-1",
+			provider: "google",
+			watch: {
+				channelId: "channel-1",
+				resourceId: "resource-1",
+				expirationAt: new Date(Date.now() + 3_600_000),
+			},
 		});
-		stopCalendarConnectionWatchMock.mockResolvedValue({
+		stopGoogleWatchMock.mockResolvedValue({
+			kind: "ok",
+			connectionId: "connection-1",
+			provider: "google",
 			stopped: true,
 		});
-		renewExpiringCalendarWatchesMock.mockResolvedValue({
+		renewGoogleWatchesMock.mockResolvedValue({
+			kind: "ok",
 			provider: "google",
 			renewBeforeSeconds: 21_600,
 			totalCandidates: 1,
 			renewedCount: 1,
 			results: [],
 		});
-		listCalendarWebhookDeadLettersMock.mockResolvedValue([]);
+		listGoogleDeadLettersMock.mockResolvedValue({
+			kind: "ok",
+			total: 0,
+			items: [],
+		});
 	});
 
 	it("returns 404 when calendar sync token is not configured", async () => {
@@ -79,7 +94,7 @@ describe("calendarInternalRoutes", () => {
 		expect(await response.json()).toEqual({
 			error: "Calendar sync task token is not configured",
 		});
-		expect(syncCalendarConnectionsByProviderMock).not.toHaveBeenCalled();
+		expect(syncGoogleCalendarMock).not.toHaveBeenCalled();
 	});
 
 	it("returns 401 when bearer token is invalid", async () => {
@@ -100,7 +115,7 @@ describe("calendarInternalRoutes", () => {
 
 		expect(response.status).toBe(401);
 		expect(await response.json()).toEqual({ error: "Unauthorized" });
-		expect(syncCalendarConnectionsByProviderMock).not.toHaveBeenCalled();
+		expect(syncGoogleCalendarMock).not.toHaveBeenCalled();
 	});
 
 	it("returns 400 for invalid watch-start payload", async () => {
@@ -122,7 +137,7 @@ describe("calendarInternalRoutes", () => {
 		);
 
 		expect(response.status).toBe(400);
-		expect(startCalendarConnectionWatchMock).not.toHaveBeenCalled();
+		expect(startGoogleWatchMock).not.toHaveBeenCalled();
 	});
 
 	it("validates watch-start payload and applies default ttl", async () => {
@@ -148,7 +163,7 @@ describe("calendarInternalRoutes", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(startCalendarConnectionWatchMock).toHaveBeenCalledWith({
+		expect(startGoogleWatchMock).toHaveBeenCalledWith({
 			connectionId: "connection-1",
 			webhookUrl: "https://example.com/webhook",
 			channelToken: "shared-token",
@@ -177,7 +192,7 @@ describe("calendarInternalRoutes", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(stopCalendarConnectionWatchMock).toHaveBeenCalledWith({
+		expect(stopGoogleWatchMock).toHaveBeenCalledWith({
 			connectionId: "connection-1",
 		});
 	});
@@ -204,8 +219,7 @@ describe("calendarInternalRoutes", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(renewExpiringCalendarWatchesMock).toHaveBeenCalledWith({
-			provider: "google",
+		expect(renewGoogleWatchesMock).toHaveBeenCalledWith({
 			webhookUrl: "https://example.com/webhook",
 			channelToken: "shared-token",
 			ttlSeconds: 86_400,
@@ -215,12 +229,11 @@ describe("calendarInternalRoutes", () => {
 
 	it("returns webhook dead letters", async () => {
 		envState.CALENDAR_SYNC_TASK_TOKEN = "sync-token";
-		listCalendarWebhookDeadLettersMock.mockResolvedValueOnce([
-			{
-				id: "event-1",
-				status: "failed",
-			},
-		]);
+		listGoogleDeadLettersMock.mockResolvedValueOnce({
+			kind: "ok",
+			total: 1,
+			items: [{ id: "event-1", status: "failed" }],
+		});
 		const { calendarInternalRoutes } = await import(
 			"../routes/calendar-internal"
 		);
@@ -236,8 +249,7 @@ describe("calendarInternalRoutes", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(listCalendarWebhookDeadLettersMock).toHaveBeenCalledWith({
-			provider: "google",
+		expect(listGoogleDeadLettersMock).toHaveBeenCalledWith({
 			limit: 10,
 		});
 		expect(await response.json()).toEqual({

@@ -76,6 +76,7 @@ export const relations = defineRelations(schema, (r) => ({
 			from: r.user.id,
 			to: r.invitation.inviterId,
 		}),
+		assistantChats: r.many.assistantChat(),
 	},
 
 	session: {
@@ -679,6 +680,22 @@ export const relations = defineRelations(schema, (r) => ({
 		inboundMessage: r.one.inboundMessage({
 			from: r.telegramWebhookEvent.inboundMessageId,
 			to: r.inboundMessage.id,
+		}),
+	},
+
+	// ── Assistant ────────────────────────────────────────────────────
+	assistantChat: {
+		user: r.one.user({
+			from: r.assistantChat.userId,
+			to: r.user.id,
+		}),
+		messages: r.many.assistantMessage(),
+	},
+
+	assistantMessage: {
+		chat: r.one.assistantChat({
+			from: r.assistantMessage.chatId,
+			to: r.assistantChat.id,
 		}),
 	},
 

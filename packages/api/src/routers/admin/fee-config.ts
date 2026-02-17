@@ -3,11 +3,10 @@ import { platformFeeConfig } from "@full-stack-cf-app/db/schema/boat";
 import { and, eq } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
 import z from "zod";
-
+import { successOutputSchema } from "../../contracts/shared";
 import { adminProcedure } from "../../lib/admin";
 import { insertAndReturn } from "../../lib/db-helpers";
 import { requireSessionUserId } from "../shared/auth-utils";
-import { successOutputSchema } from "../shared/schema-utils";
 
 const platformFeeConfigOutputSchema = createSelectSchema(platformFeeConfig);
 

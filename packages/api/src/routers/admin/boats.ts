@@ -4,19 +4,32 @@ import {
 	boat,
 	boatAsset,
 	boatAssetReviewStatusValues,
+	boatCalendarConnection,
 	boatDock,
+	calendarProviderValues,
 } from "@full-stack-cf-app/db/schema/boat";
 import { ORPCError } from "@orpc/server";
-import { and, count, desc, eq, isNull, like, or, type SQL } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	isNull,
+	like,
+	or,
+	type SQL,
+	sql,
+} from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
 import z from "zod";
-
-import { adminProcedure } from "../../lib/admin";
-import { buildUpdatePayload } from "../../lib/db-helpers";
+import { initialSyncCalendarConnection } from "../../calendar/application/calendar-use-cases";
+import { boatCalendarConnectionOutputSchema } from "../../contracts/boat";
 import {
 	optionalTrimmedString,
 	successOutputSchema,
-} from "../shared/schema-utils";
+} from "../../contracts/shared";
+import { adminProcedure } from "../../lib/admin";
+import { buildUpdatePayload, insertAndReturn } from "../../lib/db-helpers";
 import { paginatedOutput, paginationInput } from "./shared";
 
 const boatOutputSchema = createSelectSchema(boat);
@@ -42,6 +55,12 @@ export const adminBoatsRouter = {
 			paginatedOutput(
 				boatOutputSchema.extend({
 					organizationName: z.string().optional(),
+					calendarCount: z.number(),
+					calendarSyncStatus: z
+						.enum(["none", "idle", "syncing", "error", "disabled"])
+						.nullable(),
+					calendarLastSyncedAt: z.date().nullable(),
+					webhookActiveCount: z.number(),
 				})
 			)
 		)
@@ -67,11 +86,49 @@ export const adminBoatsRouter = {
 			}
 			const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+			const calendarCountSq = db
+				.select({
+					boatId: boatCalendarConnection.boatId,
+					calendarCount: sql<number>`count(*)`.as("calendar_count"),
+					hasError:
+						sql<number>`sum(case when ${boatCalendarConnection.syncStatus} = 'error' then 1 else 0 end)`.as(
+							"has_error"
+						),
+					hasSyncing:
+						sql<number>`sum(case when ${boatCalendarConnection.syncStatus} = 'syncing' then 1 else 0 end)`.as(
+							"has_syncing"
+						),
+					allDisabled:
+						sql<number>`min(case when ${boatCalendarConnection.syncStatus} = 'disabled' then 1 else 0 end)`.as(
+							"all_disabled"
+						),
+					lastSyncedAt: sql<
+						number | null
+					>`max(${boatCalendarConnection.lastSyncedAt})`.as("last_synced_at"),
+					webhookActiveCount:
+						sql<number>`sum(case when ${boatCalendarConnection.watchChannelId} is not null and ${boatCalendarConnection.watchExpiresAt} > ${Date.now()} then 1 else 0 end)`.as(
+							"webhook_active_count"
+						),
+				})
+				.from(boatCalendarConnection)
+				.groupBy(boatCalendarConnection.boatId)
+				.as("cal");
+
 			const [rows, countRows] = await Promise.all([
 				db
-					.select({ boat, organizationName: organization.name })
+					.select({
+						boat,
+						organizationName: organization.name,
+						calendarCount: calendarCountSq.calendarCount,
+						hasError: calendarCountSq.hasError,
+						hasSyncing: calendarCountSq.hasSyncing,
+						allDisabled: calendarCountSq.allDisabled,
+						calendarLastSyncedAt: calendarCountSq.lastSyncedAt,
+						webhookActiveCount: calendarCountSq.webhookActiveCount,
+					})
 					.from(boat)
 					.leftJoin(organization, eq(organization.id, boat.organizationId))
+					.leftJoin(calendarCountSq, eq(calendarCountSq.boatId, boat.id))
 					.where(where)
 					.orderBy(desc(boat.createdAt))
 					.limit(input.limit)
@@ -79,10 +136,33 @@ export const adminBoatsRouter = {
 				db.select({ value: count() }).from(boat).where(where),
 			]);
 
+			const deriveSyncStatus = (row: (typeof rows)[number]) => {
+				const cnt = row.calendarCount ?? 0;
+				if (cnt === 0) {
+					return "none" as const;
+				}
+				if ((row.hasError ?? 0) > 0) {
+					return "error" as const;
+				}
+				if ((row.hasSyncing ?? 0) > 0) {
+					return "syncing" as const;
+				}
+				if ((row.allDisabled ?? 0) === 1) {
+					return "disabled" as const;
+				}
+				return "idle" as const;
+			};
+
 			return {
 				items: rows.map((r) => ({
 					...r.boat,
 					organizationName: r.organizationName ?? undefined,
+					calendarCount: r.calendarCount ?? 0,
+					calendarSyncStatus: deriveSyncStatus(r),
+					calendarLastSyncedAt: r.calendarLastSyncedAt
+						? new Date(r.calendarLastSyncedAt)
+						: null,
+					webhookActiveCount: r.webhookActiveCount ?? 0,
 				})),
 				total: countRows[0]?.value ?? 0,
 			};
@@ -302,5 +382,59 @@ export const adminBoatsRouter = {
 				})),
 				total: countRows[0]?.value ?? 0,
 			};
+		}),
+
+	// ── Calendar connections (admin) ────────────────────────
+
+	connectCalendar: adminProcedure
+		.route({ summary: "Connect a Google Calendar to a boat" })
+		.input(
+			z.object({
+				boatId: z.string().trim().min(1),
+				provider: z.enum(calendarProviderValues).default("google"),
+				externalCalendarId: z.string().trim().min(1),
+				isPrimary: z.boolean().default(true),
+			})
+		)
+		.output(boatCalendarConnectionOutputSchema)
+		.handler(async ({ input }) => {
+			const [existing] = await db
+				.select({ id: boat.id })
+				.from(boat)
+				.where(eq(boat.id, input.boatId))
+				.limit(1);
+
+			if (!existing) {
+				throw new ORPCError("NOT_FOUND", { message: "Boat not found" });
+			}
+
+			if (input.isPrimary) {
+				await db
+					.update(boatCalendarConnection)
+					.set({ isPrimary: false, updatedAt: new Date() })
+					.where(eq(boatCalendarConnection.boatId, input.boatId));
+			}
+
+			const connectionId = crypto.randomUUID();
+
+			return await insertAndReturn(boatCalendarConnection, {
+				id: connectionId,
+				boatId: input.boatId,
+				provider: input.provider,
+				externalCalendarId: input.externalCalendarId,
+				isPrimary: input.isPrimary,
+				syncStatus: "idle",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			}).then((connection) => {
+				initialSyncCalendarConnection({ connectionId: connection.id }).catch(
+					(error) =>
+						console.error(
+							`Background initial sync failed for connection ${connection.id}`,
+							error
+						)
+				);
+				return connection;
+			});
 		}),
 };

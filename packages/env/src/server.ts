@@ -21,6 +21,8 @@ const stringEnvVars = {
 	CALENDAR_SYNC_TASK_TOKEN: cfEnv.CALENDAR_SYNC_TASK_TOKEN,
 	CLOUDPAYMENTS_PUBLIC_ID: cfEnv.CLOUDPAYMENTS_PUBLIC_ID,
 	CLOUDPAYMENTS_API_SECRET: cfEnv.CLOUDPAYMENTS_API_SECRET,
+	OPEN_ROUTER_API_KEY: cfEnv.OPEN_ROUTER_API_KEY,
+	AI_MODEL: cfEnv.AI_MODEL,
 };
 
 // Validate and export typed environment variables
@@ -45,6 +47,8 @@ export const env = {
 			CALENDAR_SYNC_TASK_TOKEN: z.string().default(""),
 			CLOUDPAYMENTS_PUBLIC_ID: z.string().default(""),
 			CLOUDPAYMENTS_API_SECRET: z.string().default(""),
+			OPEN_ROUTER_API_KEY: z.string().default(""),
+			AI_MODEL: z.string().default(""),
 		},
 		runtimeEnv: stringEnvVars,
 		emptyStringAsUndefined: false, // Keep empty strings for optional vars

@@ -3,14 +3,13 @@ import { boatAmenity } from "@full-stack-cf-app/db/schema/boat";
 import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
 import z from "zod";
-
-import { organizationPermissionProcedure } from "../../index";
-import { requireManagedBoat } from "./access";
 import {
 	boatAmenityOutputSchema,
 	boatIdInputSchema,
 	replaceBoatAmenitiesInputSchema,
-} from "./schemas";
+} from "../../contracts/boat";
+import { organizationPermissionProcedure } from "../../index";
+import { requireManagedBoat } from "./access";
 
 export const boatAmenityRouter = {
 	list: organizationPermissionProcedure({

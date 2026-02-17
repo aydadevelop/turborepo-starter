@@ -1,39 +1,12 @@
 import { db } from "@full-stack-cf-app/db";
-import {
-	boat,
-	boatAvailabilityBlock,
-	boatCalendarConnection,
-	boatPricingProfile,
-} from "@full-stack-cf-app/db/schema/boat";
+import { boat } from "@full-stack-cf-app/db/schema/boat";
 import {
 	booking,
 	bookingCalendarLink,
 	bookingDiscountApplication,
-	bookingDiscountCode,
 } from "@full-stack-cf-app/db/schema/booking";
 import { ORPCError } from "@orpc/server";
-import {
-	and,
-	asc,
-	count,
-	desc,
-	eq,
-	gt,
-	inArray,
-	isNull,
-	lt,
-	lte,
-	ne,
-	or,
-	sql,
-} from "drizzle-orm";
-import { getCalendarAdapter } from "../../calendar/adapters/registry";
-import {
-	organizationPermissionProcedure,
-	protectedProcedure,
-} from "../../index";
-import { buildRecipients, formatRefundAmount } from "../../lib/event-bus";
-import { enqueueBookingExpirationCheck } from "./services/expiration";
+import { and, asc, count, desc, eq, gt, lt, sql } from "drizzle-orm";
 import {
 	cancelManagedBookingInputSchema,
 	createManagedBookingInputSchema,
@@ -44,18 +17,19 @@ import {
 	listManagedBookingsOutputSchema,
 	listMineBookingsInputSchema,
 	listMineBookingsOutputSchema,
-} from "../booking.schemas";
-import { successOutputSchema } from "../shared/schema-utils";
+} from "../../contracts/booking";
+import { successOutputSchema } from "../../contracts/shared";
+import {
+	organizationPermissionProcedure,
+	protectedProcedure,
+} from "../../index";
+import { buildRecipients, formatRefundAmount } from "../../lib/event-bus";
 import {
 	applyCancellationPolicyAndRefund,
 	assertCancellationPolicyReasonInput,
 } from "./cancellation/policy.service";
 import { resolveBookingDiscount } from "./discount/resolution";
 import {
-	blockingBookingStatuses,
-	type CreateManagedBookingCalendarLinkInput,
-	type CreateManagedBookingInput,
-	type ResolvedBookingDiscount,
 	requireActiveMembership,
 	requireManagedBoat,
 	requireManagedBooking,
@@ -70,327 +44,13 @@ import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
 import {
 	cancelBookingAndSync,
 	ensureNoExternalCalendarOverlap,
-	syncCalendarLinkOnBookingCreate,
 } from "./services/calendar-sync";
-
-const getSqliteErrorMessage = (error: unknown): string => {
-	if (error instanceof Error) {
-		return error.message;
-	}
-	if (typeof error === "string") {
-		return error;
-	}
-	return "";
-};
-
-export const ensureNoBookingOverlap = async (params: {
-	organizationId: string;
-	boatId: string;
-	startsAt: Date;
-	endsAt: Date;
-}) => {
-	const [overlappingBooking] = await db
-		.select({ id: booking.id })
-		.from(booking)
-		.where(
-			and(
-				eq(booking.organizationId, params.organizationId),
-				eq(booking.boatId, params.boatId),
-				inArray(booking.status, blockingBookingStatuses),
-				lt(booking.startsAt, params.endsAt),
-				gt(booking.endsAt, params.startsAt)
-			)
-		)
-		.limit(1);
-
-	if (overlappingBooking) {
-		throw new ORPCError("BAD_REQUEST", {
-			message: "Boat is already booked for the selected time range",
-		});
-	}
-};
-
-export const ensureNoAvailabilityBlockOverlap = async (params: {
-	boatId: string;
-	startsAt: Date;
-	endsAt: Date;
-}) => {
-	const [overlappingBlock] = await db
-		.select({ id: boatAvailabilityBlock.id })
-		.from(boatAvailabilityBlock)
-		.where(
-			and(
-				eq(boatAvailabilityBlock.boatId, params.boatId),
-				eq(boatAvailabilityBlock.isActive, true),
-				lt(boatAvailabilityBlock.startsAt, params.endsAt),
-				gt(boatAvailabilityBlock.endsAt, params.startsAt)
-			)
-		)
-		.limit(1);
-
-	if (overlappingBlock) {
-		throw new ORPCError("BAD_REQUEST", {
-			message: "Boat is unavailable for the selected time range",
-		});
-	}
-};
-
-export const resolveActivePricingProfile = async (params: {
-	boatId: string;
-	startsAt: Date;
-}) => {
-	const [activeProfile] = await db
-		.select()
-		.from(boatPricingProfile)
-		.where(
-			and(
-				eq(boatPricingProfile.boatId, params.boatId),
-				isNull(boatPricingProfile.archivedAt),
-				lte(boatPricingProfile.validFrom, params.startsAt),
-				or(
-					isNull(boatPricingProfile.validTo),
-					gt(boatPricingProfile.validTo, params.startsAt)
-				)
-			)
-		)
-		.orderBy(
-			desc(boatPricingProfile.isDefault),
-			desc(boatPricingProfile.validFrom)
-		)
-		.limit(1);
-
-	if (!activeProfile) {
-		throw new ORPCError("BAD_REQUEST", {
-			message: "Boat has no active pricing profile",
-		});
-	}
-
-	return activeProfile;
-};
-
-export const resolvePrimaryCalendarLinkInput = async (params: {
-	boatId: string;
-}): Promise<CreateManagedBookingCalendarLinkInput> => {
-	const [primaryConnection] = await db
-		.select()
-		.from(boatCalendarConnection)
-		.where(
-			and(
-				eq(boatCalendarConnection.boatId, params.boatId),
-				eq(boatCalendarConnection.isPrimary, true),
-				ne(boatCalendarConnection.syncStatus, "disabled")
-			)
-		)
-		.limit(1);
-
-	if (primaryConnection) {
-		const adapter = getCalendarAdapter(primaryConnection.provider);
-		if (!adapter) {
-			return {
-				boatCalendarConnectionId: undefined,
-				provider: "manual",
-				externalCalendarId: undefined,
-				externalEventId: `booking-${crypto.randomUUID()}`,
-				iCalUid: undefined,
-				externalEventVersion: undefined,
-				syncedAt: undefined,
-			};
-		}
-
-		return {
-			boatCalendarConnectionId: primaryConnection.id,
-			provider: primaryConnection.provider,
-			externalCalendarId: primaryConnection.externalCalendarId,
-			externalEventId: `booking-${crypto.randomUUID()}`,
-			iCalUid: undefined,
-			externalEventVersion: undefined,
-			syncedAt: undefined,
-		};
-	}
-
-	return {
-		boatCalendarConnectionId: undefined,
-		provider: "manual",
-		externalCalendarId: undefined,
-		externalEventId: `booking-${crypto.randomUUID()}`,
-		iCalUid: undefined,
-		externalEventVersion: undefined,
-		syncedAt: undefined,
-	};
-};
-
-export const createManagedBookingRecord = async (params: {
-	input: CreateManagedBookingInput;
-	organizationId: string;
-	sessionUserId?: string;
-	boatName: string;
-	resolvedDiscount: ResolvedBookingDiscount | null;
-	calendarLink: CreateManagedBookingCalendarLinkInput;
-	totalPriceCentsOverride?: number;
-}) => {
-	const bookingId = crypto.randomUUID();
-	const discountAmountCents = params.resolvedDiscount?.discountAmountCents ?? 0;
-	const fallbackTotalPriceCents = Math.max(
-		params.input.basePriceCents - discountAmountCents,
-		0
-	);
-	const totalPriceCents =
-		params.totalPriceCentsOverride !== undefined
-			? Math.max(params.totalPriceCentsOverride, 0)
-			: fallbackTotalPriceCents;
-	try {
-		await db.insert(booking).values({
-			id: bookingId,
-			organizationId: params.organizationId,
-			boatId: params.input.boatId,
-			customerUserId: params.input.customerUserId,
-			createdByUserId: params.sessionUserId,
-			source: params.input.source,
-			status: params.input.status,
-			paymentStatus: params.input.paymentStatus,
-			calendarSyncStatus: "pending",
-			startsAt: params.input.startsAt,
-			endsAt: params.input.endsAt,
-			passengers: params.input.passengers,
-			contactName: params.input.contactName,
-			contactPhone: params.input.contactPhone,
-			contactEmail: params.input.contactEmail,
-			timezone: params.input.timezone,
-			basePriceCents: params.input.basePriceCents,
-			discountAmountCents,
-			totalPriceCents,
-			currency: params.input.currency.toUpperCase(),
-			notes: params.input.notes,
-			specialRequests: params.input.specialRequests,
-			externalRef: params.input.externalRef,
-			metadata: params.input.metadata,
-			createdAt: new Date(),
-			updatedAt: new Date(),
-		});
-	} catch (error) {
-		const message = getSqliteErrorMessage(error);
-		if (message.includes("BOOKING_OVERLAP")) {
-			throw new ORPCError("BAD_REQUEST", {
-				message: "Boat is already booked for the selected time range",
-			});
-		}
-		if (message.includes("BOOKING_INVALID_RANGE")) {
-			throw new ORPCError("BAD_REQUEST", {
-				message: "Booking start must be before end",
-			});
-		}
-		throw error;
-	}
-
-	try {
-		await db.insert(bookingCalendarLink).values({
-			id: crypto.randomUUID(),
-			bookingId,
-			boatCalendarConnectionId: params.calendarLink.boatCalendarConnectionId,
-			provider: params.calendarLink.provider,
-			externalCalendarId: params.calendarLink.externalCalendarId,
-			externalEventId: params.calendarLink.externalEventId,
-			iCalUid: params.calendarLink.iCalUid,
-			externalEventVersion: params.calendarLink.externalEventVersion,
-			syncedAt: params.calendarLink.syncedAt,
-			syncError: null,
-			createdAt: new Date(),
-			updatedAt: new Date(),
-		});
-	} catch {
-		await db.delete(booking).where(eq(booking.id, bookingId));
-		throw new ORPCError("BAD_REQUEST", {
-			message: "Failed to attach calendar link for booking",
-		});
-	}
-
-	const calendarSyncResult = await syncCalendarLinkOnBookingCreate({
-		bookingId,
-		organizationId: params.organizationId,
-		boatId: params.input.boatId,
-		boatName: params.boatName,
-		source: params.input.source,
-		startsAt: params.input.startsAt,
-		endsAt: params.input.endsAt,
-		timezone: params.input.timezone,
-		contactName: params.input.contactName,
-		notes: params.input.notes,
-		calendarLink: params.calendarLink,
-	});
-
-	await db
-		.update(booking)
-		.set({
-			calendarSyncStatus: calendarSyncResult.status,
-			updatedAt: new Date(),
-		})
-		.where(eq(booking.id, bookingId));
-
-	await db
-		.update(bookingCalendarLink)
-		.set({
-			...calendarSyncResult.calendarLinkUpdate,
-			updatedAt: new Date(),
-		})
-		.where(eq(bookingCalendarLink.bookingId, bookingId));
-
-	let createdDiscountApplication:
-		| typeof bookingDiscountApplication.$inferSelect
-		| null = null;
-	if (params.resolvedDiscount) {
-		const discountApplicationId = crypto.randomUUID();
-		await db.insert(bookingDiscountApplication).values({
-			id: discountApplicationId,
-			bookingId,
-			discountCodeId: params.resolvedDiscount.discountCodeId,
-			code: params.resolvedDiscount.normalizedDiscountCode,
-			discountType: params.resolvedDiscount.discountType,
-			discountValue: params.resolvedDiscount.discountValue,
-			appliedAmountCents: params.resolvedDiscount.discountAmountCents,
-			appliedAt: new Date(),
-		});
-
-		await db
-			.update(bookingDiscountCode)
-			.set({
-				usageCount: sql`${bookingDiscountCode.usageCount} + 1`,
-				updatedAt: new Date(),
-			})
-			.where(
-				eq(bookingDiscountCode.id, params.resolvedDiscount.discountCodeId)
-			);
-
-		const [selectedDiscountApplication] = await db
-			.select()
-			.from(bookingDiscountApplication)
-			.where(eq(bookingDiscountApplication.id, discountApplicationId))
-			.limit(1);
-
-		createdDiscountApplication = selectedDiscountApplication ?? null;
-	}
-
-	const [createdBooking] = await db
-		.select()
-		.from(booking)
-		.where(eq(booking.id, bookingId))
-		.limit(1);
-
-	if (!createdBooking) {
-		throw new ORPCError("INTERNAL_SERVER_ERROR");
-	}
-
-	const [createdCalendarLink] = await db
-		.select()
-		.from(bookingCalendarLink)
-		.where(eq(bookingCalendarLink.bookingId, bookingId))
-		.limit(1);
-
-	return {
-		booking: createdBooking,
-		calendarLink: createdCalendarLink,
-		discountApplication: createdDiscountApplication,
-	};
-};
+import { enqueueBookingExpirationCheck } from "./services/expiration";
+import {
+	ensureNoAvailabilityBlockOverlap,
+	ensureNoBookingOverlap,
+} from "./services/overlap";
+import { createManagedBookingRecord } from "./services/record";
 
 export const coreBookingRouter = {
 	listMine: protectedProcedure
@@ -621,7 +281,7 @@ export const coreBookingRouter = {
 					userIds: [input.customerUserId, sessionUserId],
 					title: "Booking created",
 					body: `${managedBoat.name}: ${created.booking.startsAt.toISOString()} - ${created.booking.endsAt.toISOString()}`,
-					ctaUrl: `/bookings`,
+					ctaUrl: "/bookings",
 					metadata: { bookingId: created.booking.id },
 				}),
 			});
@@ -719,7 +379,7 @@ export const coreBookingRouter = {
 						],
 						title: "Booking cancelled",
 						body: `${managedBoat?.name ?? "Boat booking"}: ${managedBooking.startsAt.toISOString()} - ${managedBooking.endsAt.toISOString()}`,
-						ctaUrl: `/bookings`,
+						ctaUrl: "/bookings",
 						severity: "warning",
 						metadata: { bookingId: managedBooking.id },
 					}),
@@ -753,7 +413,7 @@ export const coreBookingRouter = {
 							],
 							title: "Refund processed",
 							body: `${boatName}: ${formattedAmount} refunded`,
-							ctaUrl: `/bookings`,
+							ctaUrl: "/bookings",
 							severity: "success",
 							metadata: {
 								bookingId: managedBooking.id,

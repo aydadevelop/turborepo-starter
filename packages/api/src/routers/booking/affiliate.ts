@@ -8,17 +8,17 @@ import { booking } from "@full-stack-cf-app/db/schema/booking";
 import { ORPCError } from "@orpc/server";
 import { and, asc, count, desc, eq, gt, lt } from "drizzle-orm";
 import {
-	organizationPermissionProcedure,
-	protectedProcedure,
-} from "../../index";
-import {
 	listAffiliateBookingsInputSchema,
 	listAffiliateBookingsOutputSchema,
 	listManagedAffiliatePayoutsInputSchema,
 	listManagedAffiliatePayoutsOutputSchema,
 	processManagedAffiliatePayoutInputSchema,
-} from "../booking.schemas";
-import { successOutputSchema } from "../shared/schema-utils";
+} from "../../contracts/booking";
+import { successOutputSchema } from "../../contracts/shared";
+import {
+	organizationPermissionProcedure,
+	protectedProcedure,
+} from "../../index";
 import { requireActiveMembership } from "./helpers";
 import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
 

@@ -3,15 +3,19 @@ import { boatCalendarConnection } from "@full-stack-cf-app/db/schema/boat";
 import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
 import z from "zod";
-
+import {
+	initialSyncCalendarConnection,
+	resyncCalendarConnection,
+} from "../../calendar/application/calendar-use-cases";
+import {
+	boatCalendarConnectionOutputSchema,
+	boatIdInputSchema,
+	listBoatCalendarConnectionsInputSchema,
+	upsertBoatCalendarConnectionInputSchema,
+} from "../../contracts/boat";
 import { organizationPermissionProcedure } from "../../index";
 import { insertAndReturn } from "../../lib/db-helpers";
 import { requireCalendarConnectionForBoat, requireManagedBoat } from "./access";
-import {
-	boatCalendarConnectionOutputSchema,
-	listBoatCalendarConnectionsInputSchema,
-	upsertBoatCalendarConnectionInputSchema,
-} from "./schemas";
 
 export const boatCalendarRouter = {
 	list: organizationPermissionProcedure({
@@ -107,6 +111,46 @@ export const boatCalendarRouter = {
 				isPrimary: input.isPrimary,
 				createdAt: new Date(),
 				updatedAt: new Date(),
+			}).then((connection) => {
+				initialSyncCalendarConnection({ connectionId: connection.id }).catch(
+					(error) =>
+						console.error(
+							`Background initial sync failed for connection ${connection.id}`,
+							error
+						)
+				);
+				return connection;
 			});
+		}),
+
+	resync: organizationPermissionProcedure({
+		boat: ["update"],
+	})
+		.route({
+			summary: "Manually re-sync a calendar connection",
+		})
+		.input(
+			boatIdInputSchema.extend({
+				connectionId: z.string().trim().min(1),
+			})
+		)
+		.handler(async ({ context, input }) => {
+			await requireManagedBoat(
+				input.boatId,
+				context.activeMembership.organizationId
+			);
+			await requireCalendarConnectionForBoat(input.connectionId, input.boatId);
+
+			const outcome = await resyncCalendarConnection({
+				connectionId: input.connectionId,
+			});
+
+			if (outcome.kind === "error") {
+				throw new ORPCError("INTERNAL_SERVER_ERROR", {
+					message: outcome.message,
+				});
+			}
+
+			return outcome;
 		}),
 };

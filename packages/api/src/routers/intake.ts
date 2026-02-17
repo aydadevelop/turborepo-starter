@@ -6,14 +6,13 @@ import {
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import z from "zod";
-
-import { organizationPermissionProcedure } from "../index";
 import {
 	inboundMessageOutputSchema,
 	ingestInboundMessageInputSchema,
 	listManagedInboundMessagesInputSchema,
 	processManagedInboundMessageInputSchema,
-} from "./intake.schemas";
+} from "../contracts/intake";
+import { organizationPermissionProcedure } from "../index";
 import { requireActiveMembership } from "./shared/auth-utils";
 
 const normalizeDedupeKey = (params: {

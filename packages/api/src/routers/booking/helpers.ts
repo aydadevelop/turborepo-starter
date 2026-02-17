@@ -12,13 +12,12 @@ import {
 import { ORPCError } from "@orpc/server";
 import { eq, sql } from "drizzle-orm";
 import type z from "zod";
-
+import type { createManagedBookingInputSchema } from "../../contracts/booking";
 import { requireManaged } from "../../lib/db-helpers";
 import {
 	requireCalendarConnectionForBoat,
 	requireManagedBoat as requireManagedBoatImpl,
 } from "../boat/access";
-import type { createManagedBookingInputSchema } from "../booking.schemas";
 import {
 	requireActiveMembership as requireActiveMembershipImpl,
 	requireSessionUserId as requireSessionUserIdImpl,

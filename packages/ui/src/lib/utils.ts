@@ -9,4 +9,8 @@ export type WithElementRef<T, E extends HTMLElement = HTMLElement> = T & {
 	ref?: E | null;
 };
 
-export type { WithoutChild, WithoutChildrenOrChild } from "bits-ui";
+export type {
+	WithoutChild,
+	WithoutChildren,
+	WithoutChildrenOrChild,
+} from "bits-ui";

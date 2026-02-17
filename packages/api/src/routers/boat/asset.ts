@@ -3,16 +3,15 @@ import { boatAsset } from "@full-stack-cf-app/db/schema/boat";
 import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 import z from "zod";
-
-import { organizationPermissionProcedure } from "../../index";
-import { insertAndReturn } from "../../lib/db-helpers";
-import { requireSessionUserId } from "../shared/auth-utils";
-import { requireManagedBoat } from "./access";
 import {
 	boatAssetOutputSchema,
 	createBoatAssetInputSchema,
 	listBoatAssetsInputSchema,
-} from "./schemas";
+} from "../../contracts/boat";
+import { organizationPermissionProcedure } from "../../index";
+import { insertAndReturn } from "../../lib/db-helpers";
+import { requireSessionUserId } from "../shared/auth-utils";
+import { requireManagedBoat } from "./access";
 
 export const boatAssetRouter = {
 	list: organizationPermissionProcedure({

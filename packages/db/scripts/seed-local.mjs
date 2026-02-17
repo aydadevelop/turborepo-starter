@@ -364,6 +364,8 @@ const ensureSchemaExists = (sqlite) => {
 		"telegram_notification",
 		"telegram_webhook_event",
 		"todo",
+		"assistant_chat",
+		"assistant_message",
 	];
 
 	applyMigrationsIfNeeded(sqlite, requiredTables);
@@ -781,13 +783,15 @@ const buildBaselineSeedData = ({
 					id: "seed_calendar_aurora_primary",
 					boat_id: boatAuroraId,
 					provider: "google",
-					external_calendar_id: "seed-aurora-bookings@demo.local",
+					external_calendar_id:
+						"f67805343fd4dd701344b0fafa5f8569582083a465088be2367bc6884fce8680@group.calendar.google.com",
 					sync_token: null,
 					watch_channel_id: null,
 					watch_resource_id: null,
 					watch_expires_at: null,
 					last_synced_at: now,
 					sync_status: "idle",
+					sync_retry_count: 0,
 					last_error: null,
 					is_primary: 1,
 				},
@@ -795,13 +799,15 @@ const buildBaselineSeedData = ({
 					id: "seed_calendar_odyssey_primary",
 					boat_id: boatOdysseyId,
 					provider: "google",
-					external_calendar_id: "seed-odyssey-bookings@demo.local",
+					external_calendar_id:
+						"df062f183d177cbfbf098483a890fee0e5878ea038d03dd96ec1e285d1fb83ef@group.calendar.google.com",
 					sync_token: null,
 					watch_channel_id: null,
 					watch_resource_id: null,
 					watch_expires_at: null,
 					last_synced_at: now,
 					sync_status: "idle",
+					sync_retry_count: 0,
 					last_error: null,
 					is_primary: 1,
 				},
@@ -809,13 +815,15 @@ const buildBaselineSeedData = ({
 					id: "seed_calendar_night_shift_primary",
 					boat_id: boatNightShiftId,
 					provider: "google",
-					external_calendar_id: "seed-night-shift-bookings@demo.local",
+					external_calendar_id:
+						"03ffc22988f8023adf80cb636b45013fe2a9f38e6b1275a46052fc34dc5a4370@group.calendar.google.com",
 					sync_token: null,
 					watch_channel_id: null,
 					watch_resource_id: null,
 					watch_expires_at: null,
 					last_synced_at: now,
 					sync_status: "idle",
+					sync_retry_count: 0,
 					last_error: null,
 					is_primary: 1,
 				},
@@ -1294,7 +1302,8 @@ const buildBaselineSeedData = ({
 					booking_id: bookingConfirmedId,
 					boat_calendar_connection_id: "seed_calendar_aurora_primary",
 					provider: "google",
-					external_calendar_id: "seed-aurora-bookings@demo.local",
+					external_calendar_id:
+						"f67805343fd4dd701344b0fafa5f8569582083a465088be2367bc6884fce8680@group.calendar.google.com",
 					external_event_id: "seed-evt-aurora-1001",
 					ical_uid: "seed-evt-aurora-1001@demo.local",
 					external_event_version: "1",
@@ -1306,7 +1315,8 @@ const buildBaselineSeedData = ({
 					booking_id: bookingPendingId,
 					boat_calendar_connection_id: "seed_calendar_odyssey_primary",
 					provider: "google",
-					external_calendar_id: "seed-odyssey-bookings@demo.local",
+					external_calendar_id:
+						"df062f183d177cbfbf098483a890fee0e5878ea038d03dd96ec1e285d1fb83ef@group.calendar.google.com",
 					external_event_id: "seed-evt-odyssey-2204",
 					ical_uid: "seed-evt-odyssey-2204@demo.local",
 					external_event_version: "1",
@@ -1318,7 +1328,8 @@ const buildBaselineSeedData = ({
 					booking_id: bookingCompletedId,
 					boat_calendar_connection_id: "seed_calendar_aurora_primary",
 					provider: "google",
-					external_calendar_id: "seed-aurora-bookings@demo.local",
+					external_calendar_id:
+						"f67805343fd4dd701344b0fafa5f8569582083a465088be2367bc6884fce8680@group.calendar.google.com",
 					external_event_id: "seed-evt-aurora-legacy-77",
 					ical_uid: "seed-evt-aurora-legacy-77@demo.local",
 					external_event_version: "4",
@@ -1559,6 +1570,156 @@ const buildBaselineSeedData = ({
 			{ id: 900_002, text: "Verify calendar links health", completed: 0 },
 			{ id: 900_003, text: "Check booking overlap alerts", completed: 1 },
 		],
+		assistantChats: withCommon(
+			[
+				{
+					id: "seed_chat_booking_inquiry",
+					title: "Boat availability this weekend",
+					user_id: userCustomerId,
+					visibility: "private",
+				},
+				{
+					id: "seed_chat_pricing_help",
+					title: "Pricing for large group event",
+					user_id: userCustomerId,
+					visibility: "private",
+				},
+				{
+					id: "seed_chat_owner_fleet",
+					title: "Fleet status overview",
+					user_id: userOwnerId,
+					visibility: "private",
+				},
+			],
+			now
+		),
+		assistantMessages: withCommon(
+			[
+				// Chat 1: Booking inquiry
+				{
+					id: "seed_msg_booking_1",
+					chat_id: "seed_chat_booking_inquiry",
+					role: "user",
+					parts: toJson([
+						{ type: "text", text: "Are there any boats available this Saturday afternoon?" },
+					]),
+					attachments: toJson([]),
+				},
+				{
+					id: "seed_msg_booking_2",
+					chat_id: "seed_chat_booking_inquiry",
+					role: "assistant",
+					parts: toJson([
+						{
+							type: "tool-invocation",
+							toolCallId: "seed_tc_check_avail_1",
+							toolName: "checkAvailability",
+							args: { date: "2026-03-21", timeOfDay: "afternoon" },
+							state: "result",
+							result: {
+								available: [
+									{ boatId: "seed_boat_aurora", name: "Aurora", slots: ["14:00-18:00"] },
+									{ boatId: "seed_boat_odyssey", name: "Odyssey", slots: ["13:00-17:00", "15:00-19:00"] },
+								],
+							},
+						},
+						{
+							type: "text",
+							text: "Great news! There are two boats available this Saturday afternoon:\n\n1. **Aurora** — available from 14:00 to 18:00\n2. **Odyssey** — available from 13:00 to 17:00 or 15:00 to 19:00\n\nWould you like to book one of these? I can also check pricing for your group size.",
+						},
+					]),
+					attachments: toJson([]),
+				},
+				{
+					id: "seed_msg_booking_3",
+					chat_id: "seed_chat_booking_inquiry",
+					role: "user",
+					parts: toJson([
+						{ type: "text", text: "How much would Aurora be for 6 people from 14:00 to 18:00?" },
+					]),
+					attachments: toJson([]),
+				},
+				{
+					id: "seed_msg_booking_4",
+					chat_id: "seed_chat_booking_inquiry",
+					role: "assistant",
+					parts: toJson([
+						{
+							type: "tool-invocation",
+							toolCallId: "seed_tc_calc_price_1",
+							toolName: "calculatePrice",
+							args: { boatId: "seed_boat_aurora", startTime: "2026-03-21T14:00:00Z", endTime: "2026-03-21T18:00:00Z", passengers: 6 },
+							state: "result",
+							result: { basePrice: 12000, weekendSurcharge: 2400, total: 14400, currency: "RUB" },
+						},
+						{
+							type: "text",
+							text: "For Aurora on Saturday from 14:00 to 18:00 with 6 passengers:\n\n- Base price: ₽12,000\n- Weekend surcharge (20%): ₽2,400\n- **Total: ₽14,400**\n\nShall I create a booking for you?",
+						},
+					]),
+					attachments: toJson([]),
+				},
+				// Chat 2: Pricing help
+				{
+					id: "seed_msg_pricing_1",
+					chat_id: "seed_chat_pricing_help",
+					role: "user",
+					parts: toJson([
+						{ type: "text", text: "I need to plan a corporate event for 20 people next Friday evening. What are my options?" },
+					]),
+					attachments: toJson([]),
+				},
+				{
+					id: "seed_msg_pricing_2",
+					chat_id: "seed_chat_pricing_help",
+					role: "assistant",
+					parts: toJson([
+						{
+							type: "text",
+							text: "For a corporate event with 20 guests on a Friday evening, I'd recommend the **Night Shift** — it accommodates up to 25 passengers and has evening availability.\n\nLet me check the pricing and availability for you.",
+						},
+					]),
+					attachments: toJson([]),
+				},
+				// Chat 3: Owner fleet overview
+				{
+					id: "seed_msg_fleet_1",
+					chat_id: "seed_chat_owner_fleet",
+					role: "user",
+					parts: toJson([
+						{ type: "text", text: "Show me the status of all my boats today." },
+					]),
+					attachments: toJson([]),
+				},
+				{
+					id: "seed_msg_fleet_2",
+					chat_id: "seed_chat_owner_fleet",
+					role: "assistant",
+					parts: toJson([
+						{
+							type: "tool-invocation",
+							toolCallId: "seed_tc_fleet_status_1",
+							toolName: "getFleetStatus",
+							args: { date: "2026-03-15" },
+							state: "result",
+							result: {
+								boats: [
+									{ name: "Aurora", status: "active", bookingsToday: 1, nextBooking: "14:00" },
+									{ name: "Odyssey", status: "active", bookingsToday: 0, nextBooking: null },
+									{ name: "Night Shift", status: "active", bookingsToday: 1, nextBooking: "20:00" },
+								],
+							},
+						},
+						{
+							type: "text",
+							text: "Here's your fleet status for today:\n\n| Boat | Status | Bookings Today | Next Booking |\n|------|--------|---------------|-------------|\n| Aurora | Active | 1 | 14:00 |\n| Odyssey | Active | 0 | — |\n| Night Shift | Active | 1 | 20:00 |\n\nAll boats are operational. Aurora and Night Shift each have one booking scheduled.",
+						},
+					]),
+					attachments: toJson([]),
+				},
+			],
+			now
+		),
 	};
 
 	return seed;
@@ -1644,7 +1805,8 @@ const applyBookingPressureScenario = (seed) => {
 			booking_id: "seed_booking_aurora_overlap_confirmed",
 			boat_calendar_connection_id: "seed_calendar_aurora_primary",
 			provider: "google",
-			external_calendar_id: "seed-aurora-bookings@demo.local",
+			external_calendar_id:
+				"f67805343fd4dd701344b0fafa5f8569582083a465088be2367bc6884fce8680@group.calendar.google.com",
 			external_event_id: "seed-evt-aurora-overlap-1",
 			ical_uid: "seed-evt-aurora-overlap-1@demo.local",
 			external_event_version: "1",
@@ -1658,7 +1820,8 @@ const applyBookingPressureScenario = (seed) => {
 			booking_id: "seed_booking_odyssey_cancelled",
 			boat_calendar_connection_id: "seed_calendar_odyssey_primary",
 			provider: "google",
-			external_calendar_id: "seed-odyssey-bookings@demo.local",
+			external_calendar_id:
+				"df062f183d177cbfbf098483a890fee0e5878ea038d03dd96ec1e285d1fb83ef@group.calendar.google.com",
 			external_event_id: "seed-evt-odyssey-cancelled-1",
 			ical_uid: "seed-evt-odyssey-cancelled-1@demo.local",
 			external_event_version: "2",
@@ -2119,6 +2282,8 @@ const buildSeedData = ({
 
 const clearSeedNamespace = (sqlite) => {
 	const prefixedTables = [
+		"assistant_message",
+		"assistant_chat",
 		"telegram_webhook_event",
 		"inbound_message",
 		"telegram_notification",
@@ -2214,6 +2379,8 @@ const writeSeedData = (sqlite, seed) => {
 		["telegram_notification", seed.telegramNotifications],
 		["telegram_webhook_event", seed.telegramWebhookEvents],
 		["todo", seed.todos],
+		["assistant_chat", seed.assistantChats],
+		["assistant_message", seed.assistantMessages],
 	];
 
 	for (const [table, rows] of rowGroups) {
@@ -2244,10 +2411,62 @@ const main = async () => {
 		});
 
 		sqlite.transaction(() => {
+			// Temporarily drop overlap/range triggers so seed can insert intentional collision test data
+			const triggerNames = [
+				"booking_validate_range_insert",
+				"booking_validate_range_update",
+				"booking_no_overlap_insert",
+				"booking_no_overlap_update",
+			];
+			for (const name of triggerNames) {
+				sqlite.exec(`DROP TRIGGER IF EXISTS ${name}`);
+			}
+
 			if (!options.append) {
 				clearSeedNamespace(sqlite);
 			}
 			writeSeedData(sqlite, seed);
+
+			// Re-create triggers after seeding
+			sqlite.exec(`
+				CREATE TRIGGER booking_validate_range_insert
+				BEFORE INSERT ON booking
+				BEGIN
+				  SELECT CASE WHEN NEW.starts_at >= NEW.ends_at
+				    THEN RAISE(ABORT, 'BOOKING_INVALID_RANGE: starts_at must be before ends_at') END;
+				END;
+
+				CREATE TRIGGER booking_validate_range_update
+				BEFORE UPDATE ON booking
+				WHEN NEW.starts_at >= NEW.ends_at
+				BEGIN
+				  SELECT RAISE(ABORT, 'BOOKING_INVALID_RANGE: starts_at must be before ends_at');
+				END;
+
+				CREATE TRIGGER booking_no_overlap_insert
+				BEFORE INSERT ON booking
+				WHEN NEW.status NOT IN ('cancelled', 'no_show')
+				BEGIN
+				  SELECT CASE WHEN EXISTS (
+				    SELECT 1 FROM booking
+				    WHERE boat_id = NEW.boat_id AND id != NEW.id
+				      AND status NOT IN ('cancelled', 'no_show')
+				      AND starts_at < NEW.ends_at AND ends_at > NEW.starts_at
+				  ) THEN RAISE(ABORT, 'BOOKING_OVERLAP: overlapping booking exists for this boat') END;
+				END;
+
+				CREATE TRIGGER booking_no_overlap_update
+				BEFORE UPDATE ON booking
+				WHEN NEW.status NOT IN ('cancelled', 'no_show')
+				BEGIN
+				  SELECT CASE WHEN EXISTS (
+				    SELECT 1 FROM booking
+				    WHERE boat_id = NEW.boat_id AND id != NEW.id
+				      AND status NOT IN ('cancelled', 'no_show')
+				      AND starts_at < NEW.ends_at AND ends_at > NEW.starts_at
+				  ) THEN RAISE(ABORT, 'BOOKING_OVERLAP: overlapping booking exists for this boat') END;
+				END;
+			`);
 		})();
 
 		console.log(

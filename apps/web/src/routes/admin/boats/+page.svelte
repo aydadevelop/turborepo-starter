@@ -2,7 +2,9 @@
 	import { Badge } from "@full-stack-cf-app/ui/components/badge";
 	import { Button } from "@full-stack-cf-app/ui/components/button";
 	import * as Card from "@full-stack-cf-app/ui/components/card";
+	import * as Dialog from "@full-stack-cf-app/ui/components/dialog";
 	import { Input } from "@full-stack-cf-app/ui/components/input";
+	import { Label } from "@full-stack-cf-app/ui/components/label";
 	import * as Table from "@full-stack-cf-app/ui/components/table";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { derived, writable } from "svelte/store";
@@ -40,6 +42,29 @@
 			onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
 		})
 	);
+
+	const connectCalendarMutation = createMutation(
+		orpc.admin.boats.connectCalendar.mutationOptions({
+			onSuccess: () => {
+				connectDialogOpen = false;
+				connectCalendarId = "";
+				connectBoatId = "";
+				queryClient.invalidateQueries({ queryKey: ["admin"] });
+			},
+		})
+	);
+
+	let connectDialogOpen = $state(false);
+	let connectBoatId = $state("");
+	let connectBoatName = $state("");
+	let connectCalendarId = $state("");
+
+	const openConnectDialog = (boatId: string, boatName: string) => {
+		connectBoatId = boatId;
+		connectBoatName = boatName;
+		connectCalendarId = "";
+		connectDialogOpen = true;
+	};
 
 	const totalPages = $derived(
 		Math.max(1, Math.ceil(($boatsQuery.data?.total ?? 0) / limit))
@@ -97,6 +122,8 @@
 							<Table.Head>Name</Table.Head>
 							<Table.Head>Organization</Table.Head>
 							<Table.Head>Status</Table.Head>
+							<Table.Head>Calendar</Table.Head>
+							<Table.Head>Webhook</Table.Head>
 							<Table.Head>Approved</Table.Head>
 							<Table.Head class="w-28">Actions</Table.Head>
 						</Table.Row>
@@ -114,6 +141,49 @@
 									>
 										{b.status}
 									</Badge>
+								</Table.Cell>
+								<Table.Cell>
+									<div class="flex items-center gap-2">
+										{#if b.calendarSyncStatus === "none"}
+											<Badge variant="outline">No calendar</Badge>
+										{:else if b.calendarSyncStatus === "error"}
+											<Badge variant="destructive">
+												{b.calendarCount} · Error
+											</Badge>
+										{:else if b.calendarSyncStatus === "syncing"}
+											<Badge variant="secondary">
+												{b.calendarCount} · Syncing
+											</Badge>
+										{:else if b.calendarSyncStatus === "disabled"}
+											<Badge variant="outline">
+												{b.calendarCount} · Disabled
+											</Badge>
+										{:else}
+											<Badge variant="default">
+												{b.calendarCount} connected
+											</Badge>
+										{/if}
+										<Button
+											variant="ghost"
+											size="sm"
+											onclick={() => openConnectDialog(b.id, b.name)}
+										>
+											+ Add
+										</Button>
+									</div>
+								</Table.Cell>
+								<Table.Cell>
+									{#if b.calendarCount === 0}
+										<span class="text-sm text-muted-foreground">—</span>
+									{:else if b.webhookActiveCount === b.calendarCount}
+										<Badge variant="default">Active</Badge>
+									{:else if b.webhookActiveCount > 0}
+										<Badge variant="secondary">
+											{b.webhookActiveCount}/{b.calendarCount}
+										</Badge>
+									{:else}
+										<Badge variant="destructive">Inactive</Badge>
+									{/if}
 								</Table.Cell>
 								<Table.Cell>
 									{#if b.approvedAt}
@@ -141,7 +211,7 @@
 						{:else}
 							<Table.Row>
 								<Table.Cell
-									colspan={5}
+									colspan={7}
 									class="text-center text-muted-foreground"
 								>
 									No boats found.
@@ -180,4 +250,45 @@
 			</div>
 		</div>
 	{/if}
+
+	<Dialog.Root bind:open={connectDialogOpen}>
+		<Dialog.Content>
+			<Dialog.Header>
+				<Dialog.Title>Connect Calendar</Dialog.Title>
+				<Dialog.Description>
+					Connect a Google Calendar to <strong>{connectBoatName}</strong>.
+				</Dialog.Description>
+			</Dialog.Header>
+			<div class="space-y-4 py-4">
+				<div class="space-y-2">
+					<Label for="calendarId">Google Calendar ID</Label>
+					<Input
+						id="calendarId"
+						placeholder="abc123@group.calendar.google.com"
+						bind:value={connectCalendarId}
+					/>
+				</div>
+				{#if $connectCalendarMutation.isError}
+					<p class="text-sm text-destructive">
+						{$connectCalendarMutation.error?.message ?? "Failed to connect calendar."}
+					</p>
+				{/if}
+			</div>
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (connectDialogOpen = false)}>
+					Cancel
+				</Button>
+				<Button
+					disabled={!connectCalendarId.trim() || $connectCalendarMutation.isPending}
+					onclick={() =>
+						$connectCalendarMutation.mutate({
+							boatId: connectBoatId,
+							externalCalendarId: connectCalendarId.trim(),
+						})}
+				>
+					{$connectCalendarMutation.isPending ? "Connecting..." : "Connect"}
+				</Button>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
 </div>

@@ -107,9 +107,7 @@ const inlineNotificationQueueProducer: NotificationQueueProducer = {
 
 		const parsedMessage = notificationQueueMessageSchema.safeParse(message);
 		if (!parsedMessage.success) {
-			throw new Error(
-				"Inline notification queue: unsupported message kind"
-			);
+			throw new Error("Inline notification queue: unsupported message kind");
 		}
 
 		const processor = await getInlineNotificationProcessor();

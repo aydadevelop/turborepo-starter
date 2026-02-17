@@ -248,6 +248,7 @@ export const boatCalendarConnection = sqliteTable(
 		syncStatus: text("sync_status", { enum: calendarSyncStatusValues })
 			.notNull()
 			.default("idle"),
+		syncRetryCount: integer("sync_retry_count").notNull().default(0),
 		lastError: text("last_error"),
 		isPrimary: integer("is_primary", { mode: "boolean" })
 			.notNull()

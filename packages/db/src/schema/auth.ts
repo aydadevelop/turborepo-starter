@@ -24,6 +24,7 @@ export const user = sqliteTable("user", {
 	telegramId: text("telegram_id"),
 	telegramUsername: text("telegram_username"),
 	role: text("role").default("user"),
+	isAnonymous: integer("is_anonymous", { mode: "boolean" }).default(false),
 	banned: integer("banned", { mode: "boolean" }).default(false),
 	banReason: text("ban_reason"),
 	banExpires: integer("ban_expires", { mode: "timestamp_ms" }),

@@ -1,6 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
 import type { PaymentWebhookAdapter } from "@full-stack-cf-app/api/payments/webhooks";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const registerMock = vi.fn();
 const getAdapterMock = vi.fn();
@@ -27,7 +26,7 @@ vi.mock("@full-stack-cf-app/api/payments/webhooks", () => {
 });
 
 const sampleNotification = {
-	TransactionId: 12345,
+	TransactionId: 12_345,
 	Amount: 1000,
 	Currency: "RUB",
 	Status: "Completed",
@@ -37,7 +36,14 @@ const createMockAdapter = (
 	overrides: Partial<PaymentWebhookAdapter> = {}
 ): PaymentWebhookAdapter => ({
 	provider: "cloudpayments",
-	supportedWebhookTypes: new Set(["check", "pay", "fail", "confirm", "refund", "cancel"]),
+	supportedWebhookTypes: new Set([
+		"check",
+		"pay",
+		"fail",
+		"confirm",
+		"refund",
+		"cancel",
+	]),
 	authenticateWebhook: vi.fn(),
 	parseWebhookBody: vi.fn().mockResolvedValue(sampleNotification),
 	processWebhook: vi.fn().mockResolvedValue({ code: 0 }),
@@ -55,9 +61,7 @@ describe("paymentWebhookRoutes", () => {
 
 	it("returns 404 for unknown provider", async () => {
 		getAdapterMock.mockReturnValue(null);
-		const { paymentWebhookRoutes } = await import(
-			"../routes/payment-webhook"
-		);
+		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
 		const response = await paymentWebhookRoutes.request(
 			"/api/payments/webhook/unknown/check",
@@ -65,13 +69,13 @@ describe("paymentWebhookRoutes", () => {
 		);
 
 		expect(response.status).toBe(404);
-		expect(await response.json()).toEqual({ error: "Unknown payment provider" });
+		expect(await response.json()).toEqual({
+			error: "Unknown payment provider",
+		});
 	});
 
 	it("returns 404 for unknown webhook type", async () => {
-		const { paymentWebhookRoutes } = await import(
-			"../routes/payment-webhook"
-		);
+		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
 		const response = await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/unknown",
@@ -93,9 +97,7 @@ describe("paymentWebhookRoutes", () => {
 		});
 		getAdapterMock.mockReturnValue(mockAdapter);
 
-		const { paymentWebhookRoutes } = await import(
-			"../routes/payment-webhook"
-		);
+		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
 		const response = await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/check",
@@ -111,15 +113,13 @@ describe("paymentWebhookRoutes", () => {
 			"@full-stack-cf-app/api/payments/webhooks"
 		);
 		mockAdapter = createMockAdapter({
-			parseWebhookBody: vi.fn().mockRejectedValue(
-				new WebhookPayloadError("Unsupported Content-Type")
-			),
+			parseWebhookBody: vi
+				.fn()
+				.mockRejectedValue(new WebhookPayloadError("Unsupported Content-Type")),
 		});
 		getAdapterMock.mockReturnValue(mockAdapter);
 
-		const { paymentWebhookRoutes } = await import(
-			"../routes/payment-webhook"
-		);
+		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
 		const response = await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/pay",
@@ -138,9 +138,7 @@ describe("paymentWebhookRoutes", () => {
 		});
 		getAdapterMock.mockReturnValue(mockAdapter);
 
-		const { paymentWebhookRoutes } = await import(
-			"../routes/payment-webhook"
-		);
+		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
 		const response = await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/pay",
@@ -152,9 +150,7 @@ describe("paymentWebhookRoutes", () => {
 	});
 
 	it("returns 200 with code 0 for successful processing", async () => {
-		const { paymentWebhookRoutes } = await import(
-			"../routes/payment-webhook"
-		);
+		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
 		const response = await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/check",
@@ -171,9 +167,7 @@ describe("paymentWebhookRoutes", () => {
 		});
 		getAdapterMock.mockReturnValue(mockAdapter);
 
-		const { paymentWebhookRoutes } = await import(
-			"../routes/payment-webhook"
-		);
+		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
 		const response = await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/pay",
@@ -185,14 +179,23 @@ describe("paymentWebhookRoutes", () => {
 	});
 
 	it("passes correct webhook type to adapter", async () => {
-		const { paymentWebhookRoutes } = await import(
-			"../routes/payment-webhook"
-		);
+		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
-		for (const type of ["check", "pay", "fail", "confirm", "refund", "cancel"]) {
+		for (const type of [
+			"check",
+			"pay",
+			"fail",
+			"confirm",
+			"refund",
+			"cancel",
+		]) {
 			(mockAdapter.processWebhook as ReturnType<typeof vi.fn>).mockClear();
-			(mockAdapter.parseWebhookBody as ReturnType<typeof vi.fn>).mockResolvedValue(sampleNotification);
-			(mockAdapter.processWebhook as ReturnType<typeof vi.fn>).mockResolvedValue({ code: 0 });
+			(
+				mockAdapter.parseWebhookBody as ReturnType<typeof vi.fn>
+			).mockResolvedValue(sampleNotification);
+			(
+				mockAdapter.processWebhook as ReturnType<typeof vi.fn>
+			).mockResolvedValue({ code: 0 });
 
 			await paymentWebhookRoutes.request(
 				`/api/payments/webhook/cloudpayments/${type}`,
@@ -207,9 +210,7 @@ describe("paymentWebhookRoutes", () => {
 	});
 
 	it("calls authenticateWebhook with the request", async () => {
-		const { paymentWebhookRoutes } = await import(
-			"../routes/payment-webhook"
-		);
+		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
 		await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/check",
@@ -222,9 +223,7 @@ describe("paymentWebhookRoutes", () => {
 	});
 
 	it("looks up adapter by provider param", async () => {
-		const { paymentWebhookRoutes } = await import(
-			"../routes/payment-webhook"
-		);
+		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
 		await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/check",

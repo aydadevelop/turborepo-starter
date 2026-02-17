@@ -69,14 +69,16 @@ const seedBase = () => {
 			paymentStatus: "unpaid",
 			startsAt: new Date("2026-03-01T10:00:00Z"),
 			endsAt: new Date("2026-03-01T13:00:00Z"),
-			basePriceCents: 100000,
-			totalPriceCents: 100000,
+			basePriceCents: 100_000,
+			totalPriceCents: 100_000,
 			currency: "RUB",
 		})
 		.run();
 };
 
-const seedAttempt = (overrides: Partial<typeof bookingPaymentAttempt.$inferInsert> = {}) => {
+const seedAttempt = (
+	overrides: Partial<typeof bookingPaymentAttempt.$inferInsert> = {}
+) => {
 	testDbState.db
 		.insert(bookingPaymentAttempt)
 		.values({
@@ -86,11 +88,38 @@ const seedAttempt = (overrides: Partial<typeof bookingPaymentAttempt.$inferInser
 			provider: "cloudpayments",
 			idempotencyKey: "key-1",
 			status: "initiated",
-			amountCents: 100000,
+			amountCents: 100_000,
 			currency: "RUB",
 			...overrides,
 		})
 		.run();
+};
+
+const expectDefined = <T>(value: T | undefined, message: string): T => {
+	if (value === undefined) {
+		throw new Error(message);
+	}
+	return value;
+};
+
+const loadAttempt = () => {
+	const [attempt] = testDbState.db
+		.select()
+		.from(bookingPaymentAttempt)
+		.where(eq(bookingPaymentAttempt.id, "attempt-1"))
+		.all();
+
+	return expectDefined(attempt, "Expected payment attempt to exist");
+};
+
+const loadBooking = () => {
+	const [bookingRow] = testDbState.db
+		.select()
+		.from(booking)
+		.where(eq(booking.id, "booking-1"))
+		.all();
+
+	return expectDefined(bookingRow, "Expected booking row to exist");
 };
 
 // ---------------------------------------------------------------------------
@@ -138,7 +167,7 @@ describe("authenticateWebhook", () => {
 describe("parseWebhookBody", () => {
 	it("parses JSON body", async () => {
 		const body = {
-			TransactionId: 12345,
+			TransactionId: 12_345,
 			Amount: 1000,
 			Currency: "RUB",
 			Status: "Completed",
@@ -152,7 +181,7 @@ describe("parseWebhookBody", () => {
 
 		const result = await adapter.parseWebhookBody(request);
 
-		expect(result.TransactionId).toBe(12345);
+		expect(result.TransactionId).toBe(12_345);
 		expect(result.Amount).toBe(1000);
 		expect(result.Currency).toBe("RUB");
 		expect(result.Status).toBe("Completed");
@@ -175,7 +204,7 @@ describe("parseWebhookBody", () => {
 
 		const result = await adapter.parseWebhookBody(request);
 
-		expect(result.TransactionId).toBe(12345);
+		expect(result.TransactionId).toBe(12_345);
 		expect(result.Amount).toBe(1000);
 		expect(result.TestMode).toBe(true);
 	});
@@ -210,7 +239,7 @@ describe("processWebhook", () => {
 	describe("check", () => {
 		it("returns code 10 when no attempt is found", async () => {
 			const result = await adapter.processWebhook("check", {
-				TransactionId: 99999,
+				TransactionId: 99_999,
 				Amount: 1000,
 				Currency: "RUB",
 				Status: "Created",
@@ -223,7 +252,7 @@ describe("processWebhook", () => {
 			seedAttempt();
 
 			const result = await adapter.processWebhook("check", {
-				TransactionId: 12345,
+				TransactionId: 12_345,
 				Amount: 1000,
 				Currency: "RUB",
 				Status: "Created",
@@ -242,7 +271,7 @@ describe("processWebhook", () => {
 			seedAttempt();
 
 			const result = await adapter.processWebhook("check", {
-				TransactionId: 12345,
+				TransactionId: 12_345,
 				Amount: 1000,
 				Currency: "RUB",
 				Status: "Created",
@@ -256,7 +285,7 @@ describe("processWebhook", () => {
 			seedAttempt({ status: "captured" });
 
 			const result = await adapter.processWebhook("check", {
-				TransactionId: 12345,
+				TransactionId: 12_345,
 				Amount: 1000,
 				Currency: "RUB",
 				Status: "Created",
@@ -270,19 +299,14 @@ describe("processWebhook", () => {
 			seedAttempt();
 
 			await adapter.processWebhook("check", {
-				TransactionId: 12345,
+				TransactionId: 12_345,
 				Amount: 1000,
 				Currency: "RUB",
 				Status: "Created",
 				InvoiceId: "booking-1",
 			});
 
-			const [attempt] = testDbState.db
-				.select()
-				.from(bookingPaymentAttempt)
-				.where(eq(bookingPaymentAttempt.id, "attempt-1"))
-				.all();
-
+			const attempt = loadAttempt();
 			expect(attempt.providerIntentId).toBe("12345");
 		});
 	});
@@ -292,8 +316,8 @@ describe("processWebhook", () => {
 			seedAttempt({ providerIntentId: "12345" });
 
 			const result = await adapter.processWebhook("pay", {
-				TransactionId: 12345,
-				Amount: 100000,
+				TransactionId: 12_345,
+				Amount: 100_000,
 				Currency: "RUB",
 				Status: "Completed",
 				InvoiceId: "booking-1",
@@ -301,20 +325,12 @@ describe("processWebhook", () => {
 
 			expect(result.code).toBe(0);
 
-			const [attempt] = testDbState.db
-				.select()
-				.from(bookingPaymentAttempt)
-				.where(eq(bookingPaymentAttempt.id, "attempt-1"))
-				.all();
+			const attempt = loadAttempt();
 			expect(attempt.status).toBe("captured");
 			expect(attempt.processedAt).toBeTruthy();
 
 			// Booking should be confirmed (payment sync + status transition)
-			const [bookingRow] = testDbState.db
-				.select()
-				.from(booking)
-				.where(eq(booking.id, "booking-1"))
-				.all();
+			const bookingRow = loadBooking();
 			expect(bookingRow.paymentStatus).toBe("paid");
 			expect(bookingRow.status).toBe("confirmed");
 		});
@@ -323,8 +339,8 @@ describe("processWebhook", () => {
 			seedAttempt({ status: "captured", providerIntentId: "12345" });
 
 			const result = await adapter.processWebhook("pay", {
-				TransactionId: 12345,
-				Amount: 100000,
+				TransactionId: 12_345,
+				Amount: 100_000,
 				Currency: "RUB",
 				Status: "Completed",
 			});
@@ -334,8 +350,8 @@ describe("processWebhook", () => {
 
 		it("returns code 0 when attempt not found", async () => {
 			const result = await adapter.processWebhook("pay", {
-				TransactionId: 99999,
-				Amount: 100000,
+				TransactionId: 99_999,
+				Amount: 100_000,
 				Currency: "RUB",
 				Status: "Completed",
 			});
@@ -347,8 +363,8 @@ describe("processWebhook", () => {
 			seedAttempt({ providerIntentId: "12345" });
 
 			const result = await adapter.processWebhook("confirm", {
-				TransactionId: 12345,
-				Amount: 100000,
+				TransactionId: 12_345,
+				Amount: 100_000,
 				Currency: "RUB",
 				Status: "Completed",
 				InvoiceId: "booking-1",
@@ -356,11 +372,7 @@ describe("processWebhook", () => {
 
 			expect(result.code).toBe(0);
 
-			const [attempt] = testDbState.db
-				.select()
-				.from(bookingPaymentAttempt)
-				.where(eq(bookingPaymentAttempt.id, "attempt-1"))
-				.all();
+			const attempt = loadAttempt();
 			expect(attempt.status).toBe("captured");
 		});
 	});
@@ -370,8 +382,8 @@ describe("processWebhook", () => {
 			seedAttempt({ providerIntentId: "12345" });
 
 			const result = await adapter.processWebhook("fail", {
-				TransactionId: 12345,
-				Amount: 100000,
+				TransactionId: 12_345,
+				Amount: 100_000,
 				Currency: "RUB",
 				Status: "Declined",
 				Reason: "Insufficient funds",
@@ -380,11 +392,7 @@ describe("processWebhook", () => {
 
 			expect(result.code).toBe(0);
 
-			const [attempt] = testDbState.db
-				.select()
-				.from(bookingPaymentAttempt)
-				.where(eq(bookingPaymentAttempt.id, "attempt-1"))
-				.all();
+			const attempt = loadAttempt();
 			expect(attempt.status).toBe("failed");
 			expect(attempt.failureReason).toBe("Insufficient funds");
 		});
@@ -393,18 +401,14 @@ describe("processWebhook", () => {
 			seedAttempt({ providerIntentId: "12345" });
 
 			await adapter.processWebhook("fail", {
-				TransactionId: 12345,
-				Amount: 100000,
+				TransactionId: 12_345,
+				Amount: 100_000,
 				Currency: "RUB",
 				Status: "Declined",
 				StatusCode: 5051,
 			});
 
-			const [attempt] = testDbState.db
-				.select()
-				.from(bookingPaymentAttempt)
-				.where(eq(bookingPaymentAttempt.id, "attempt-1"))
-				.all();
+			const attempt = loadAttempt();
 			expect(attempt.failureReason).toBe("Declined (code: 5051)");
 		});
 
@@ -412,19 +416,15 @@ describe("processWebhook", () => {
 			seedAttempt({ status: "captured", providerIntentId: "12345" });
 
 			const result = await adapter.processWebhook("fail", {
-				TransactionId: 12345,
-				Amount: 100000,
+				TransactionId: 12_345,
+				Amount: 100_000,
 				Currency: "RUB",
 				Status: "Declined",
 			});
 
 			expect(result.code).toBe(0);
 
-			const [attempt] = testDbState.db
-				.select()
-				.from(bookingPaymentAttempt)
-				.where(eq(bookingPaymentAttempt.id, "attempt-1"))
-				.all();
+			const attempt = loadAttempt();
 			expect(attempt.status).toBe("captured");
 		});
 
@@ -432,18 +432,14 @@ describe("processWebhook", () => {
 			seedAttempt({ providerIntentId: "12345" });
 
 			await adapter.processWebhook("cancel", {
-				TransactionId: 12345,
-				Amount: 100000,
+				TransactionId: 12_345,
+				Amount: 100_000,
 				Currency: "RUB",
 				Status: "Cancelled",
 				Reason: "User cancelled",
 			});
 
-			const [attempt] = testDbState.db
-				.select()
-				.from(bookingPaymentAttempt)
-				.where(eq(bookingPaymentAttempt.id, "attempt-1"))
-				.all();
+			const attempt = loadAttempt();
 			expect(attempt.status).toBe("failed");
 			expect(attempt.failureReason).toBe("User cancelled");
 		});
@@ -454,27 +450,19 @@ describe("processWebhook", () => {
 			seedAttempt({ status: "captured", providerIntentId: "12345" });
 
 			const result = await adapter.processWebhook("refund", {
-				TransactionId: 12345,
-				Amount: 100000,
+				TransactionId: 12_345,
+				Amount: 100_000,
 				Currency: "RUB",
 				Status: "Refunded",
 			});
 
 			expect(result.code).toBe(0);
 
-			const [attempt] = testDbState.db
-				.select()
-				.from(bookingPaymentAttempt)
-				.where(eq(bookingPaymentAttempt.id, "attempt-1"))
-				.all();
+			const attempt = loadAttempt();
 			expect(attempt.status).toBe("refunded");
 
 			// Booking payment status should reflect refund
-			const [bookingRow] = testDbState.db
-				.select()
-				.from(booking)
-				.where(eq(booking.id, "booking-1"))
-				.all();
+			const bookingRow = loadBooking();
 			expect(["refunded", "unpaid"]).toContain(bookingRow.paymentStatus);
 		});
 
@@ -482,19 +470,15 @@ describe("processWebhook", () => {
 			seedAttempt({ providerIntentId: "12345" });
 
 			const result = await adapter.processWebhook("refund", {
-				TransactionId: 12345,
-				Amount: 100000,
+				TransactionId: 12_345,
+				Amount: 100_000,
 				Currency: "RUB",
 				Status: "Refunded",
 			});
 
 			expect(result.code).toBe(0);
 
-			const [attempt] = testDbState.db
-				.select()
-				.from(bookingPaymentAttempt)
-				.where(eq(bookingPaymentAttempt.id, "attempt-1"))
-				.all();
+			const attempt = loadAttempt();
 			expect(attempt.status).toBe("initiated");
 		});
 
@@ -502,8 +486,8 @@ describe("processWebhook", () => {
 			seedAttempt({ status: "refunded", providerIntentId: "12345" });
 
 			const result = await adapter.processWebhook("refund", {
-				TransactionId: 12345,
-				Amount: 100000,
+				TransactionId: 12_345,
+				Amount: 100_000,
 				Currency: "RUB",
 				Status: "Refunded",
 			});

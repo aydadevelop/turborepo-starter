@@ -5,10 +5,7 @@ import { createBookingExpirationCheckMessage } from "@full-stack-cf-app/notifica
 import { and, eq, inArray, lte } from "drizzle-orm";
 
 import type { NotificationQueueProducer } from "../../../context";
-import {
-	EventBus,
-	buildRecipients,
-} from "../../../lib/event-bus";
+import { buildRecipients, EventBus } from "../../../lib/event-bus";
 import { applyCancellationPolicyAndRefund } from "../cancellation/policy.service";
 import { cancelBookingAndSync } from "./calendar-sync";
 
@@ -106,10 +103,7 @@ export const expireBookingIfUnpaid = async (
 			windowText: `${start} – ${end}`,
 		},
 		recipients: buildRecipients({
-			userIds: [
-				targetBooking.customerUserId,
-				targetBooking.createdByUserId,
-			],
+			userIds: [targetBooking.customerUserId, targetBooking.createdByUserId],
 			title: "Booking expired",
 			body: `${boatName}: ${start} – ${end} was cancelled due to payment timeout`,
 			ctaUrl: "/bookings",

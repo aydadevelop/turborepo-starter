@@ -1,10 +1,11 @@
 import {
-	listCalendarWebhookDeadLetters,
-	renewExpiringCalendarWatches,
-	startCalendarConnectionWatch,
-	stopCalendarConnectionWatch,
-	syncCalendarConnectionsByProvider,
-} from "@full-stack-cf-app/api/calendar/sync/connection-sync";
+	listGoogleDeadLetters,
+	renewGoogleWatches,
+	retryFailedGoogleSyncs,
+	startGoogleWatch,
+	stopGoogleWatch,
+	syncGoogleCalendar,
+} from "@full-stack-cf-app/api/calendar/application/calendar-use-cases";
 import { env } from "@full-stack-cf-app/env/server";
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
@@ -85,21 +86,28 @@ const validateCalendarWatchRenewPayload = validator("json", (value, c) => {
 	return parsed.data;
 });
 
+const mapOutcomeToResponse = (
+	outcome: { kind: string },
+	successStatus: 200 | 202 = 200
+) => {
+	if (outcome.kind === "error" && "message" in outcome) {
+		return {
+			status: 500 as const,
+			body: { error: (outcome as { message: string }).message },
+		};
+	}
+	const { kind: _, ...rest } = outcome;
+	return { status: successStatus, body: { ok: true, ...rest } };
+};
+
 export const calendarInternalRoutes = new Hono();
 
 calendarInternalRoutes.use("/internal/calendar/*", calendarTaskAuthMiddleware);
 
 calendarInternalRoutes.post("/internal/calendar/sync/google", async (c) => {
-	try {
-		const result = await syncCalendarConnectionsByProvider("google");
-		return c.json({
-			ok: true,
-			...result,
-		});
-	} catch (error) {
-		console.error("Failed to run Google calendar polling sync", error);
-		return c.json({ error: "Failed to run calendar polling sync" }, 500);
-	}
+	const outcome = await syncGoogleCalendar();
+	const { status, body } = mapOutcomeToResponse(outcome);
+	return c.json(body, status);
 });
 
 calendarInternalRoutes.post(
@@ -108,21 +116,15 @@ calendarInternalRoutes.post(
 	async (c) => {
 		const payload = c.req.valid("json");
 
-		try {
-			const result = await startCalendarConnectionWatch({
-				connectionId: payload.connectionId,
-				webhookUrl: payload.webhookUrl,
-				channelToken: env.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN || undefined,
-				ttlSeconds: payload.ttlSeconds,
-			});
-			return c.json({
-				ok: true,
-				...result,
-			});
-		} catch (error) {
-			console.error("Failed to start Google calendar watch", error);
-			return c.json({ error: "Failed to start calendar watch" }, 500);
-		}
+		const outcome = await startGoogleWatch({
+			connectionId: payload.connectionId,
+			webhookUrl: payload.webhookUrl,
+			channelToken: env.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN || undefined,
+			ttlSeconds: payload.ttlSeconds,
+		});
+
+		const { status, body } = mapOutcomeToResponse(outcome);
+		return c.json(body, status);
 	}
 );
 
@@ -132,18 +134,12 @@ calendarInternalRoutes.post(
 	async (c) => {
 		const payload = c.req.valid("json");
 
-		try {
-			const result = await stopCalendarConnectionWatch({
-				connectionId: payload.connectionId,
-			});
-			return c.json({
-				ok: true,
-				...result,
-			});
-		} catch (error) {
-			console.error("Failed to stop Google calendar watch", error);
-			return c.json({ error: "Failed to stop calendar watch" }, 500);
-		}
+		const outcome = await stopGoogleWatch({
+			connectionId: payload.connectionId,
+		});
+
+		const { status, body } = mapOutcomeToResponse(outcome);
+		return c.json(body, status);
 	}
 );
 
@@ -153,22 +149,15 @@ calendarInternalRoutes.post(
 	async (c) => {
 		const payload = c.req.valid("json");
 
-		try {
-			const result = await renewExpiringCalendarWatches({
-				provider: "google",
-				webhookUrl: payload.webhookUrl,
-				channelToken: env.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN || undefined,
-				ttlSeconds: payload.ttlSeconds,
-				renewBeforeSeconds: payload.renewBeforeSeconds,
-			});
-			return c.json({
-				ok: true,
-				...result,
-			});
-		} catch (error) {
-			console.error("Failed to renew Google calendar watches", error);
-			return c.json({ error: "Failed to renew calendar watches" }, 500);
-		}
+		const outcome = await renewGoogleWatches({
+			webhookUrl: payload.webhookUrl,
+			channelToken: env.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN || undefined,
+			ttlSeconds: payload.ttlSeconds,
+			renewBeforeSeconds: payload.renewBeforeSeconds,
+		});
+
+		const { status, body } = mapOutcomeToResponse(outcome);
+		return c.json(body, status);
 	}
 );
 
@@ -181,22 +170,17 @@ calendarInternalRoutes.get(
 			return c.json({ error: "Invalid query: limit must be a number" }, 400);
 		}
 
-		try {
-			const deadLetters = await listCalendarWebhookDeadLetters({
-				provider: "google",
-				limit,
-			});
-			return c.json({
-				ok: true,
-				total: deadLetters.length,
-				items: deadLetters,
-			});
-		} catch (error) {
-			console.error("Failed to list calendar webhook dead letters", error);
-			return c.json(
-				{ error: "Failed to list calendar webhook dead letters" },
-				500
-			);
-		}
+		const outcome = await listGoogleDeadLetters({ limit });
+		const { status, body } = mapOutcomeToResponse(outcome);
+		return c.json(body, status);
+	}
+);
+
+calendarInternalRoutes.post(
+	"/internal/calendar/sync/google/retry",
+	async (c) => {
+		const outcome = await retryFailedGoogleSyncs();
+		const { status, body } = mapOutcomeToResponse(outcome);
+		return c.json(body, status);
 	}
 );

@@ -8,6 +8,12 @@
     "./*": {
       "default": "./src/*.ts"
     },
+    "./contracts": {
+      "default": "./src/contracts/index.ts"
+    },
+    "./contracts/*": {
+      "default": "./src/contracts/*.ts"
+    },
     "./payments/webhooks": {
       "default": "./src/payments/webhooks/index.ts"
     },

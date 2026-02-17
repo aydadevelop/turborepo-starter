@@ -7,10 +7,6 @@ import {
 import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import z from "zod";
-
-import { organizationPermissionProcedure } from "../index";
-import { insertAndReturn, requireManaged } from "../lib/db-helpers";
-import { buildRecipients } from "../lib/event-bus";
 import {
 	assignManagedSupportTicketInputSchema,
 	createManagedSupportTicketInputSchema,
@@ -23,7 +19,10 @@ import {
 	sweepManagedSupportTicketSlaInputSchema,
 	sweepManagedSupportTicketSlaOutputSchema,
 	updateManagedSupportTicketStatusInputSchema,
-} from "./helpdesk.schemas";
+} from "../contracts/helpdesk";
+import { organizationPermissionProcedure } from "../index";
+import { insertAndReturn, requireManaged } from "../lib/db-helpers";
+import { buildRecipients } from "../lib/event-bus";
 import { requireSessionUserId } from "./shared/auth-utils";
 
 const supportTicketSlaEscalationStatuses = [

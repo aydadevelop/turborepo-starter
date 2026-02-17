@@ -110,6 +110,7 @@ if (isDeployCommand) {
 	await Promise.all([
 		disableWorkerPreviewUrls(`${appName}-server-${stage}`),
 		disableWorkerPreviewUrls(`${appName}-notifications-${stage}`),
+		disableWorkerPreviewUrls(`${appName}-assistant-${stage}`),
 		disableWorkerPreviewUrls(`${appName}-web-${stage}`),
 	]);
 }
@@ -226,11 +227,16 @@ export const server = await Worker("server", {
 			"CALENDAR_SYNC_TASK_TOKEN",
 			process.env.CALENDAR_SYNC_TASK_TOKEN || ""
 		),
-		CLOUDPAYMENTS_PUBLIC_ID: process.env.CLOUDPAYMENTS_PUBLIC_ID || process.env.PUBLIC_CLOUDPAYMENTS_PUBLIC_ID || "",
+		CLOUDPAYMENTS_PUBLIC_ID:
+			process.env.CLOUDPAYMENTS_PUBLIC_ID ||
+			process.env.PUBLIC_CLOUDPAYMENTS_PUBLIC_ID ||
+			"",
 		CLOUDPAYMENTS_API_SECRET: alchemy.secret.env(
 			"CLOUDPAYMENTS_API_SECRET",
 			process.env.CLOUDPAYMENTS_API_SECRET || ""
 		),
+		OPEN_ROUTER_API_KEY: process.env.OPEN_ROUTER_API_KEY || "",
+		AI_MODEL: process.env.AI_MODEL || "",
 	},
 	dev: { port: 3000 },
 });
@@ -267,6 +273,25 @@ export const notifications = await Worker("notifications", {
 	dev: { port: 3001 },
 });
 
+export const assistant = await Worker("assistant", {
+	cwd: "../../apps/assistant",
+	entrypoint: "src/index.ts",
+	compatibility: "node",
+	...cloudflareApiOptions,
+	bindings: {
+		DB: db,
+		CORS_ORIGIN: getCorsOrigin(),
+		BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
+		BETTER_AUTH_URL: getAuthUrl(),
+		OPEN_ROUTER_API_KEY: alchemy.secret.env(
+			"OPEN_ROUTER_API_KEY",
+			process.env.OPEN_ROUTER_API_KEY || ""
+		),
+		AI_MODEL: process.env.AI_MODEL || "openai/gpt-4o",
+	},
+	dev: { port: 3002 },
+});
+
 const shouldStartWeb = process.env.ALCHEMY_SKIP_WEB !== "1";
 
 export const web = shouldStartWeb
@@ -277,6 +302,7 @@ export const web = shouldStartWeb
 				// When tunnel is active, use relative /server so browser API calls
 				// go through the ngrok origin (same-origin → /server/rpc)
 				PUBLIC_SERVER_URL: shouldStartTunnel ? "/server" : server.url!,
+				PUBLIC_ASSISTANT_URL: shouldStartTunnel ? "/assistant" : assistant.url!,
 				PUBLIC_BASE_PATH: shouldStartTunnel ? "/web" : "",
 				PUBLIC_CLOUDPAYMENTS_PUBLIC_ID:
 					process.env.PUBLIC_CLOUDPAYMENTS_PUBLIC_ID || "",
@@ -288,6 +314,7 @@ if (web) {
 	console.log(`Web    -> ${web.url}`);
 }
 console.log(`Server -> ${server.url}`);
+console.log(`Assist -> ${assistant.url}`);
 console.log(`Notify -> ${notifications.url}`);
 
 if (shouldStartTunnel) {
@@ -300,6 +327,7 @@ if (shouldStartTunnel) {
 				web: web?.url,
 				server: server.url!,
 				notifications: notifications.url!,
+				assistant: assistant.url!,
 			},
 			ngrokDomain: process.env.NGROK_DOMAIN_NAME || undefined,
 		});
@@ -324,6 +352,13 @@ if (isDeployCommand) {
 		),
 		api.post(
 			`/accounts/${api.accountId}/workers/scripts/${appName}-notifications-${stage}/subdomain`,
+			{
+				enabled: true,
+				previews_enabled: false,
+			}
+		),
+		api.post(
+			`/accounts/${api.accountId}/workers/scripts/${appName}-assistant-${stage}/subdomain`,
 			{
 				enabled: true,
 				previews_enabled: false,

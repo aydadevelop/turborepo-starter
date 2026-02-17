@@ -7,10 +7,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { syncBookingPaymentStatusFromAttempts } from "../../../routers/booking/helpers";
 import { WebhookAuthError, WebhookPayloadError } from "../errors";
-import type {
-	PaymentWebhookAdapter,
-	PaymentWebhookResult,
-} from "../types";
+import type { PaymentWebhookAdapter, PaymentWebhookResult } from "../types";
 
 // ---------------------------------------------------------------------------
 // CloudPayments webhook types
@@ -84,6 +81,39 @@ const NUMERIC_FIELDS = new Set([
 	"OriginalTransactionId",
 ]);
 
+const parseFormValue = (key: string, value: unknown): unknown => {
+	if (key === "TestMode") {
+		return value === "1" || value === "true";
+	}
+
+	if (NUMERIC_FIELDS.has(key)) {
+		return Number(value);
+	}
+
+	if (key === "Data" && typeof value === "string" && value) {
+		try {
+			return JSON.parse(value);
+		} catch {
+			return value;
+		}
+	}
+
+	return value;
+};
+
+const parseFormEncodedBody = async (
+	request: Request
+): Promise<CloudPaymentsNotification> => {
+	const formData = await request.formData();
+	const raw: Record<string, unknown> = {};
+
+	for (const [key, value] of formData.entries()) {
+		raw[key] = parseFormValue(key, value);
+	}
+
+	return cloudPaymentsNotificationSchema.parse(raw);
+};
+
 const parseBody = async (
 	request: Request
 ): Promise<CloudPaymentsNotification> => {
@@ -95,26 +125,7 @@ const parseBody = async (
 	}
 
 	if (contentType.includes("application/x-www-form-urlencoded")) {
-		const formData = await request.formData();
-		const raw: Record<string, unknown> = {};
-
-		for (const [key, value] of formData.entries()) {
-			if (key === "TestMode") {
-				raw[key] = value === "1" || value === "true";
-			} else if (NUMERIC_FIELDS.has(key)) {
-				raw[key] = Number(value);
-			} else if (key === "Data" && typeof value === "string" && value) {
-				try {
-					raw[key] = JSON.parse(value);
-				} catch {
-					raw[key] = value;
-				}
-			} else {
-				raw[key] = value;
-			}
-		}
-
-		return cloudPaymentsNotificationSchema.parse(raw);
+		return parseFormEncodedBody(request);
 	}
 
 	throw new WebhookPayloadError(
@@ -272,7 +283,7 @@ const processFailOrCancel = async (
 
 const processRefund = async (
 	notification: CloudPaymentsNotification,
-	transactionId: string
+	_transactionId: string
 ): Promise<PaymentWebhookResult> => {
 	const attempt = await findAttempt(notification);
 
@@ -388,11 +399,11 @@ export class CloudPaymentsWebhookAdapter implements PaymentWebhookAdapter {
 		throw new WebhookAuthError("Missing authentication");
 	}
 
-	async parseWebhookBody(request: Request): Promise<CloudPaymentsNotification> {
+	parseWebhookBody(request: Request): Promise<CloudPaymentsNotification> {
 		return parseBody(request);
 	}
 
-	async processWebhook(
+	processWebhook(
 		webhookType: string,
 		payload: unknown
 	): Promise<PaymentWebhookResult> {
@@ -411,7 +422,7 @@ export class CloudPaymentsWebhookAdapter implements PaymentWebhookAdapter {
 			case "refund":
 				return processRefund(notification, transactionId);
 			default:
-				return { code: 0 };
+				return Promise.resolve({ code: 0 });
 		}
 	}
 }

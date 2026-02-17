@@ -9,7 +9,7 @@ import { and, count, eq } from "drizzle-orm";
 import {
 	isValidDiscountCode,
 	normalizeDiscountCode,
-} from "../../booking.schemas";
+} from "../../../contracts/booking";
 import type { ResolvedBookingDiscount } from "../helpers";
 
 export const calculateDiscountAmountCents = (params: {

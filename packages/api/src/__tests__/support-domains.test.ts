@@ -5,16 +5,16 @@ import {
 	createManagedSupportTicketMessageInputSchema,
 	sweepManagedSupportTicketSlaInputSchema,
 	updateManagedSupportTicketStatusInputSchema,
-} from "../routers/helpdesk.schemas";
+} from "../contracts/helpdesk";
 import {
 	ingestInboundMessageInputSchema,
 	processManagedInboundMessageInputSchema,
-} from "../routers/intake.schemas";
+} from "../contracts/intake";
 import {
 	processManagedTelegramNotificationInputSchema,
 	queueManagedTelegramNotificationInputSchema,
 	registerManagedTelegramWebhookEventInputSchema,
-} from "../routers/telegram.schemas";
+} from "../contracts/telegram";
 
 describe("support and intake schemas", () => {
 	it("accepts managed support ticket creation payload", () => {

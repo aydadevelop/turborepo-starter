@@ -60,6 +60,7 @@
 		{ to: resolve("/"), label: "Home" },
 		{ to: resolve("/boats"), label: "Boats" },
 		{ to: resolve("/bookings"), label: "Bookings" },
+		{ to: resolve("/chat"), label: "Chat" },
 		{ to: resolve("/dashboard"), label: "Dashboard" },
 	]);
 </script>

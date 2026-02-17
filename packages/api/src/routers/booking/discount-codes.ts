@@ -3,7 +3,6 @@ import { bookingDiscountCode } from "@full-stack-cf-app/db/schema/booking";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import z from "zod";
-import { organizationPermissionProcedure } from "../../index";
 import {
 	discountCodeOutputSchema,
 	isValidDiscountCode,
@@ -11,8 +10,9 @@ import {
 	normalizeDiscountCode,
 	setManagedDiscountCodeActiveInputSchema,
 	upsertManagedDiscountCodeInputSchema,
-} from "../booking.schemas";
-import { successOutputSchema } from "../shared/schema-utils";
+} from "../../contracts/booking";
+import { successOutputSchema } from "../../contracts/shared";
+import { organizationPermissionProcedure } from "../../index";
 import {
 	requireActiveMembership,
 	requireManagedBoat,

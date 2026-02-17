@@ -4,8 +4,7 @@ const envState = {
 	GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN: "",
 };
 
-const syncCalendarConnectionByWebhookMock = vi.fn();
-const getCalendarAdapterMock = vi.fn();
+const ingestCalendarWebhookMock = vi.fn();
 
 vi.mock("@full-stack-cf-app/env/server", () => {
 	return {
@@ -13,40 +12,27 @@ vi.mock("@full-stack-cf-app/env/server", () => {
 	};
 });
 
-vi.mock("@full-stack-cf-app/api/calendar/sync/connection-sync", () => {
+vi.mock("@full-stack-cf-app/api/calendar/application/calendar-use-cases", () => {
 	return {
-		syncCalendarConnectionByWebhook: syncCalendarConnectionByWebhookMock,
-	};
-});
-
-vi.mock("@full-stack-cf-app/api/calendar/adapters/registry", () => {
-	return {
-		getCalendarAdapter: getCalendarAdapterMock,
+		ingestCalendarWebhook: ingestCalendarWebhookMock,
 	};
 });
 
 describe("calendarWebhookRoutes", () => {
 	beforeEach(() => {
 		envState.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN = "";
-		syncCalendarConnectionByWebhookMock.mockReset();
-		getCalendarAdapterMock.mockReset();
-		getCalendarAdapterMock.mockReturnValue({
-			parseWebhookNotification: vi.fn(() => ({
-				channelId: "channel-1",
-				resourceId: "resource-1",
-				resourceState: "exists",
-				channelToken: "token-1",
-			})),
-		});
-		syncCalendarConnectionByWebhookMock.mockResolvedValue({
-			matched: true,
-			duplicate: false,
+		ingestCalendarWebhookMock.mockReset();
+		ingestCalendarWebhookMock.mockResolvedValue({
+			kind: "accepted",
 			webhookEventId: "event-1",
+			matched: true,
 		});
 	});
 
 	it("returns 202 when google adapter is not configured", async () => {
-		getCalendarAdapterMock.mockReturnValue({});
+		ingestCalendarWebhookMock.mockResolvedValueOnce({
+			kind: "adapter_not_configured",
+		});
 		const { calendarWebhookRoutes } = await import(
 			"../routes/calendar-webhook"
 		);
@@ -67,6 +53,9 @@ describe("calendarWebhookRoutes", () => {
 
 	it("returns 401 when shared token does not match", async () => {
 		envState.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN = "expected-token";
+		ingestCalendarWebhookMock.mockResolvedValueOnce({
+			kind: "unauthorized",
+		});
 		const { calendarWebhookRoutes } = await import(
 			"../routes/calendar-webhook"
 		);
@@ -85,10 +74,10 @@ describe("calendarWebhookRoutes", () => {
 	});
 
 	it("returns 200 for duplicate webhook deliveries", async () => {
-		syncCalendarConnectionByWebhookMock.mockResolvedValueOnce({
-			matched: true,
-			duplicate: true,
+		ingestCalendarWebhookMock.mockResolvedValueOnce({
+			kind: "duplicate",
 			webhookEventId: "event-1",
+			matched: true,
 			previousStatus: "processed",
 		});
 		const { calendarWebhookRoutes } = await import(

@@ -1,4 +1,5 @@
 export * from "./affiliate";
+export * from "./assistant";
 export * from "./auth";
 export * from "./boat";
 export * from "./booking";

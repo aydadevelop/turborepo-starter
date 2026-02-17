@@ -7,12 +7,6 @@ import {
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import z from "zod";
-
-import { organizationPermissionProcedure } from "../../index";
-import { insertAndReturn } from "../../lib/db-helpers";
-import { requireSessionUserId } from "../shared/auth-utils";
-import { successOutputSchema } from "../shared/schema-utils";
-import { requireManagedBoat } from "./access";
 import {
 	boatPricingProfileOutputSchema,
 	boatPricingRuleOutputSchema,
@@ -22,7 +16,12 @@ import {
 	listBoatPricingProfilesInputSchema,
 	listBoatPricingRulesInputSchema,
 	setDefaultBoatPricingProfileInputSchema,
-} from "./schemas";
+} from "../../contracts/boat";
+import { successOutputSchema } from "../../contracts/shared";
+import { organizationPermissionProcedure } from "../../index";
+import { insertAndReturn } from "../../lib/db-helpers";
+import { requireSessionUserId } from "../shared/auth-utils";
+import { requireManagedBoat } from "./access";
 
 export const boatPricingRouter = {
 	profileList: organizationPermissionProcedure({

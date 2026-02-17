@@ -1,10 +1,5 @@
 import { db } from "@full-stack-cf-app/db";
-import {
-	boat,
-	boatAvailabilityBlock,
-	boatPricingProfile,
-	boatPricingRule,
-} from "@full-stack-cf-app/db/schema/boat";
+import { boat, boatPricingRule } from "@full-stack-cf-app/db/schema/boat";
 import {
 	booking,
 	bookingCalendarLink,
@@ -15,24 +10,8 @@ import {
 } from "@full-stack-cf-app/db/schema/booking";
 import { notificationsPusher } from "@full-stack-cf-app/notifications/pusher";
 import { ORPCError } from "@orpc/server";
-import {
-	and,
-	desc,
-	eq,
-	getTableColumns,
-	gt,
-	inArray,
-	isNull,
-	lt,
-	lte,
-	ne,
-	or,
-} from "drizzle-orm";
+import { and, desc, eq, getTableColumns, or } from "drizzle-orm";
 import z from "zod";
-import {
-	organizationPermissionProcedure,
-	protectedProcedure,
-} from "../../index";
 import {
 	bookingShiftRequestOutputSchema,
 	createBookingShiftRequestInputSchema,
@@ -40,10 +19,13 @@ import {
 	listMineBookingShiftRequestsInputSchema,
 	reviewBookingShiftRequestManagedInputSchema,
 	reviewBookingShiftRequestMineInputSchema,
-} from "../booking.schemas";
+} from "../../contracts/booking";
+import {
+	organizationPermissionProcedure,
+	protectedProcedure,
+} from "../../index";
 import { resolveBookingDiscount } from "./discount/resolution";
 import {
-	blockingBookingStatuses,
 	requireActiveMembership,
 	requireCustomerBookingAccess,
 	requireManagedBooking,
@@ -57,9 +39,14 @@ import {
 import { reconcileAffiliatePayoutForBooking } from "./services/affiliate";
 import { syncCalendarLinkOnBookingUpdate } from "./services/calendar-sync";
 import {
+	ensureNoAvailabilityBlockOverlap,
+	ensureNoBookingOverlapExcluding,
+} from "./services/overlap";
+import {
 	buildBookingPricingQuote,
 	estimateBookingSubtotalCentsFromProfile,
 } from "./services/pricing";
+import { resolveActivePricingProfile } from "./services/pricing-profile";
 
 const terminalBookingStatuses = new Set(["cancelled", "completed", "no_show"]);
 const MIN_PAYMENT_ADJUSTMENT_CENTS = 100;
@@ -98,60 +85,6 @@ const normalizePaymentAdjustmentDeltaCents = (rawDeltaCents: number) => {
 	return rawDeltaCents;
 };
 
-const ensureNoBookingOverlapExcluding = async (params: {
-	organizationId: string;
-	boatId: string;
-	startsAt: Date;
-	endsAt: Date;
-	excludedBookingId: string;
-}) => {
-	const [overlappingBooking] = await db
-		.select({ id: booking.id })
-		.from(booking)
-		.where(
-			and(
-				eq(booking.organizationId, params.organizationId),
-				eq(booking.boatId, params.boatId),
-				ne(booking.id, params.excludedBookingId),
-				inArray(booking.status, blockingBookingStatuses),
-				lt(booking.startsAt, params.endsAt),
-				gt(booking.endsAt, params.startsAt)
-			)
-		)
-		.limit(1);
-
-	if (overlappingBooking) {
-		throw new ORPCError("BAD_REQUEST", {
-			message: "Boat is already booked for the selected time range",
-		});
-	}
-};
-
-const ensureNoAvailabilityBlockOverlap = async (params: {
-	boatId: string;
-	startsAt: Date;
-	endsAt: Date;
-}) => {
-	const [overlappingBlock] = await db
-		.select({ id: boatAvailabilityBlock.id })
-		.from(boatAvailabilityBlock)
-		.where(
-			and(
-				eq(boatAvailabilityBlock.boatId, params.boatId),
-				eq(boatAvailabilityBlock.isActive, true),
-				lt(boatAvailabilityBlock.startsAt, params.endsAt),
-				gt(boatAvailabilityBlock.endsAt, params.startsAt)
-			)
-		)
-		.limit(1);
-
-	if (overlappingBlock) {
-		throw new ORPCError("BAD_REQUEST", {
-			message: "Boat is unavailable for the selected time range",
-		});
-	}
-};
-
 const isShiftAvailabilityConflictError = (error: unknown): boolean => {
 	if (!(error instanceof ORPCError)) {
 		return false;
@@ -165,39 +98,6 @@ const isShiftAvailabilityConflictError = (error: unknown): boolean => {
 		error.message === "Boat is already booked for the selected time range" ||
 		error.message === "Boat is unavailable for the selected time range"
 	);
-};
-
-const resolveActivePricingProfile = async (params: {
-	boatId: string;
-	startsAt: Date;
-}) => {
-	const [activeProfile] = await db
-		.select()
-		.from(boatPricingProfile)
-		.where(
-			and(
-				eq(boatPricingProfile.boatId, params.boatId),
-				isNull(boatPricingProfile.archivedAt),
-				lte(boatPricingProfile.validFrom, params.startsAt),
-				or(
-					isNull(boatPricingProfile.validTo),
-					gt(boatPricingProfile.validTo, params.startsAt)
-				)
-			)
-		)
-		.orderBy(
-			desc(boatPricingProfile.isDefault),
-			desc(boatPricingProfile.validFrom)
-		)
-		.limit(1);
-
-	if (!activeProfile) {
-		throw new ORPCError("BAD_REQUEST", {
-			message: "Boat has no active pricing profile",
-		});
-	}
-
-	return activeProfile;
 };
 
 const resolveInitiatorRole = (params: {

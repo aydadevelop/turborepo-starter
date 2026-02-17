@@ -119,6 +119,7 @@ const applyExternalEventToAvailabilityBlock = async (params: {
 const listChangedEvents = async (params: {
 	connection: typeof boatCalendarConnection.$inferSelect;
 	forceFullSync: boolean;
+	initialTimeMin?: Date;
 }) => {
 	const adapter = getCalendarAdapter(params.connection.provider);
 	if (!adapter?.listEvents) {
@@ -146,9 +147,10 @@ const listChangedEvents = async (params: {
 			syncToken,
 			timeMin:
 				syncToken === undefined
-					? new Date(
+					? (params.initialTimeMin ??
+						new Date(
 							Date.now() - DEFAULT_SYNC_LOOKBACK_DAYS * 24 * 60 * 60 * 1000
-						)
+						))
 					: undefined,
 			pageToken,
 		});
@@ -166,7 +168,8 @@ const listChangedEvents = async (params: {
 };
 
 const syncConnectionRecord = async (
-	connection: typeof boatCalendarConnection.$inferSelect
+	connection: typeof boatCalendarConnection.$inferSelect,
+	options?: { initialTimeMin?: Date }
 ) => {
 	const startedAt = new Date();
 
@@ -187,6 +190,7 @@ const syncConnectionRecord = async (
 			listResult = await listChangedEvents({
 				connection,
 				forceFullSync: false,
+				initialTimeMin: options?.initialTimeMin,
 			});
 		} catch (error) {
 			if (!(connection.syncToken && isExpiredSyncTokenError(error))) {
@@ -196,6 +200,7 @@ const syncConnectionRecord = async (
 			listResult = await listChangedEvents({
 				connection,
 				forceFullSync: true,
+				initialTimeMin: options?.initialTimeMin,
 			});
 		}
 
@@ -214,6 +219,7 @@ const syncConnectionRecord = async (
 				syncToken: listResult.nextSyncToken ?? null,
 				lastSyncedAt: syncedAt,
 				syncStatus: "idle",
+				syncRetryCount: 0,
 				lastError: null,
 				updatedAt: syncedAt,
 			})
@@ -232,6 +238,7 @@ const syncConnectionRecord = async (
 			.update(boatCalendarConnection)
 			.set({
 				syncStatus: "error",
+				syncRetryCount: connection.syncRetryCount + 1,
 				lastError: toSyncErrorMessage(error),
 				updatedAt: failedAt,
 			})
@@ -387,7 +394,10 @@ const finalizeWebhookEvent = async (params: {
 		.where(eq(calendarWebhookEvent.id, params.eventId));
 };
 
-export const syncCalendarConnectionById = async (connectionId: string) => {
+export const syncCalendarConnectionById = async (
+	connectionId: string,
+	options?: { initialTimeMin?: Date }
+) => {
 	const connection = await getCalendarConnectionById(connectionId);
 
 	if (connection.syncStatus === "disabled") {
@@ -401,7 +411,7 @@ export const syncCalendarConnectionById = async (connectionId: string) => {
 		};
 	}
 
-	return syncConnectionRecord(connection);
+	return syncConnectionRecord(connection, options);
 };
 
 export const syncCalendarConnectionByWebhook = async (params: {
@@ -705,5 +715,82 @@ export const stopCalendarConnectionWatch = async (params: {
 		connectionId: connection.id,
 		provider: connection.provider,
 		stopped: true,
+	};
+};
+
+const RETRY_BASE_DELAY_MS = 60_000; // 1 minute
+const RETRY_MAX_DELAY_MS = 3_600_000; // 1 hour
+const RETRY_MAX_ATTEMPTS = 10;
+
+const computeRetryDelay = (retryCount: number) =>
+	Math.min(RETRY_BASE_DELAY_MS * 2 ** retryCount, RETRY_MAX_DELAY_MS);
+
+export const retryFailedCalendarSyncs = async (params: {
+	provider: CalendarProvider;
+}) => {
+	const now = Date.now();
+
+	const errorConnections = await db
+		.select()
+		.from(boatCalendarConnection)
+		.where(
+			and(
+				eq(boatCalendarConnection.provider, params.provider),
+				eq(boatCalendarConnection.syncStatus, "error")
+			)
+		);
+
+	const eligible = errorConnections.filter((c) => {
+		if (c.syncRetryCount >= RETRY_MAX_ATTEMPTS) {
+			return false;
+		}
+		const delay = computeRetryDelay(c.syncRetryCount);
+		const updatedAtMs = c.updatedAt?.getTime() ?? 0;
+		return now - updatedAtMs >= delay;
+	});
+
+	const results: Array<
+		| {
+				connectionId: string;
+				provider: CalendarProvider;
+				retried: true;
+				processedEvents: number;
+		  }
+		| {
+				connectionId: string;
+				provider: CalendarProvider;
+				retried: false;
+				error: string;
+				retryCount: number;
+		  }
+	> = [];
+
+	for (const connection of eligible) {
+		try {
+			const result = await syncConnectionRecord(connection);
+			results.push({
+				connectionId: connection.id,
+				provider: connection.provider,
+				retried: true,
+				processedEvents: result.processedEvents,
+			});
+		} catch (error) {
+			results.push({
+				connectionId: connection.id,
+				provider: connection.provider,
+				retried: false,
+				error: toSyncErrorMessage(error),
+				retryCount: connection.syncRetryCount + 1,
+			});
+		}
+	}
+
+	return {
+		provider: params.provider,
+		totalErrorConnections: errorConnections.length,
+		eligibleCount: eligible.length,
+		retriedCount: results.filter((r) => r.retried).length,
+		maxedOutCount: errorConnections.length - eligible.length,
+		results,
 	};
 };

@@ -3,6 +3,8 @@ import { url } from "./helpers";
 
 const SERVER_URL = process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:3000";
 const BOAT_ID = "seed_boat_aurora--seed-aurora-8";
+const PAYMENT_WIDGET_OR_MESSAGE_RE = /payment|cloudpayments|not configured/i;
+const MOCK_PAYMENT_CAPTURED_RE = /mock payment captured/i;
 
 const uniqueId = () =>
 	`${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -27,9 +29,7 @@ const browserRequest = async (
 			const response = await fetch(`${serverUrl}${path}`, {
 				method,
 				credentials: "include",
-				headers: body
-					? { "content-type": "application/json" }
-					: undefined,
+				headers: body ? { "content-type": "application/json" } : undefined,
 				body: body ? JSON.stringify(body) : undefined,
 			});
 
@@ -88,18 +88,20 @@ const createUnpaidBooking = async (page: Page) => {
 		},
 	});
 
-	expect(
-		result.ok,
-		`createPublic booking failed: ${result.text}`
-	).toBe(true);
+	expect(result.ok, `createPublic booking failed: ${result.text}`).toBe(true);
 
 	const data = result.json as {
-		json?: { booking?: { id: string; totalPriceCents: number; currency: string } };
+		json?: {
+			booking?: { id: string; totalPriceCents: number; currency: string };
+		};
 	};
 	const booking = data.json?.booking;
 	expect(booking?.id).toBeTruthy();
+	if (!booking?.id) {
+		throw new Error(`Missing booking payload: ${result.text}`);
+	}
 
-	return booking!;
+	return booking;
 };
 
 test.describe("CloudPayments Payment", () => {
@@ -129,7 +131,7 @@ test.describe("CloudPayments Payment", () => {
 		// the widget will open. Otherwise we get a configuration error.
 		// Either outcome proves the payment flow is wired up correctly.
 		const hasWidgetOrMessage = page
-			.getByText(/payment|cloudpayments|not configured/i)
+			.getByText(PAYMENT_WIDGET_OR_MESSAGE_RE)
 			.first();
 		await expect(hasWidgetOrMessage).toBeVisible({ timeout: 10_000 });
 	});
@@ -142,9 +144,7 @@ test.describe("CloudPayments Payment", () => {
 
 		// Navigate to boat page and use Book & Mock Pay to create a paid booking
 		await page.goto(
-			url(
-				`/boats/${BOAT_ID}?date=2026-04-20&durationHours=2&passengers=2`
-			)
+			url(`/boats/${BOAT_ID}?date=2026-04-20&durationHours=2&passengers=2`)
 		);
 		await expect(
 			page.getByText(`Signed in as ${customerEmail}`, { exact: true })
@@ -156,9 +156,9 @@ test.describe("CloudPayments Payment", () => {
 		await expect(mockPayButton).toBeVisible();
 		await mockPayButton.click();
 
-		await expect(
-			page.getByText(/mock payment captured/i)
-		).toBeVisible({ timeout: 10_000 });
+		await expect(page.getByText(MOCK_PAYMENT_CAPTURED_RE)).toBeVisible({
+			timeout: 10_000,
+		});
 
 		// Navigate to bookings and verify Pay button is NOT shown
 		await page.goto(url("/bookings"));
@@ -176,7 +176,9 @@ test.describe("CloudPayments Payment", () => {
 		await page.goto(url("/"));
 
 		const cpScriptLoaded = await page.evaluate(() => {
-			return typeof (window as unknown as Record<string, unknown>).cp !== "undefined";
+			return (
+				typeof (window as unknown as Record<string, unknown>).cp !== "undefined"
+			);
 		});
 
 		expect(cpScriptLoaded).toBe(true);

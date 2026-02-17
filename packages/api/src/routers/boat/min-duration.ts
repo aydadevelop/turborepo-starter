@@ -3,18 +3,17 @@ import { boatMinimumDurationRule } from "@full-stack-cf-app/db/schema/boat";
 import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 import z from "zod";
-
-import { organizationPermissionProcedure } from "../../index";
-import { buildUpdatePayload, insertAndReturn } from "../../lib/db-helpers";
-import { successOutputSchema } from "../shared/schema-utils";
-import { requireManagedBoat } from "./access";
 import {
 	boatMinimumDurationRuleOutputSchema,
 	createBoatMinimumDurationRuleInputSchema,
 	deleteBoatMinimumDurationRuleInputSchema,
 	listBoatMinimumDurationRulesInputSchema,
 	updateBoatMinimumDurationRuleInputSchema,
-} from "./schemas";
+} from "../../contracts/boat";
+import { successOutputSchema } from "../../contracts/shared";
+import { organizationPermissionProcedure } from "../../index";
+import { buildUpdatePayload, insertAndReturn } from "../../lib/db-helpers";
+import { requireManagedBoat } from "./access";
 
 export const boatMinDurationRouter = {
 	list: organizationPermissionProcedure({

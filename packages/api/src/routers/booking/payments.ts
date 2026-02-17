@@ -7,16 +7,16 @@ import { ORPCError } from "@orpc/server";
 import { and, desc, eq, getTableColumns, or, sql } from "drizzle-orm";
 import z from "zod";
 import {
-	organizationPermissionProcedure,
-	protectedProcedure,
-} from "../../index";
-import {
 	bookingPaymentAttemptOutputSchema,
 	createBookingPaymentAttemptInputSchema,
 	listManagedBookingPaymentAttemptsInputSchema,
 	listMineBookingPaymentAttemptsInputSchema,
 	processManagedBookingPaymentAttemptInputSchema,
-} from "../booking.schemas";
+} from "../../contracts/booking";
+import {
+	organizationPermissionProcedure,
+	protectedProcedure,
+} from "../../index";
 import {
 	requireActiveMembership,
 	requireCustomerBookingAccess,
@@ -48,6 +48,7 @@ export const paymentBookingRouter = {
 				paymentAttempt: bookingPaymentAttemptOutputSchema,
 			})
 		)
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Payment attempt creation keeps validation and state transitions in a single transactional flow.
 		.handler(async ({ context, input }) => {
 			const sessionUserId = requireSessionUserId(context);
 			const customerBooking = await requireCustomerBookingAccess({

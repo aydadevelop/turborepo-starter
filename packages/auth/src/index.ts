@@ -6,7 +6,7 @@ import { checkout, polar, portal } from "@polar-sh/better-auth";
 import type { BetterAuthPlugin } from "better-auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { admin, openAPI, phoneNumber } from "better-auth/plugins";
+import { admin, anonymous, openAPI, phoneNumber } from "better-auth/plugins";
 import { organization } from "better-auth/plugins/organization";
 import { telegram } from "better-auth-telegram";
 import { asc, eq } from "drizzle-orm";
@@ -32,6 +32,7 @@ const passkeyRpId =
 // Only enable Polar plugin if access token is configured
 const plugins: BetterAuthPlugin[] = [
 	admin(),
+	anonymous(),
 	openAPI({ disableDefaultReference: true }),
 	passkey({
 		rpID: passkeyRpId,
