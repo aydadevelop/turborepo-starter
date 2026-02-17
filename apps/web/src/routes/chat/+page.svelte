@@ -1,27 +1,10 @@
 <script lang="ts">
 	import { Button } from "@full-stack-cf-app/ui/components/button";
 	import MessageSquarePlus from "@lucide/svelte/icons/message-square-plus";
-	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import { assistantClient } from "$lib/assistant";
-	import { authClient } from "$lib/auth-client";
+	import type { CreateMutationResult } from "@tanstack/svelte-query";
+	import { getContext } from "svelte";
 
-	const queryClient = useQueryClient();
-	const sessionQuery = authClient.useSession();
-
-	const createChatMutation = createMutation({
-		async mutationFn(title: string) {
-			if (!$sessionQuery.data) {
-				await authClient.signIn.anonymous();
-			}
-			return assistantClient.createChat({ title });
-		},
-		onSuccess(data) {
-			queryClient.invalidateQueries({ queryKey: ["assistant", "chats"] });
-			goto(resolve(`/chat/${data.id}`));
-		},
-	});
+	const createChatMutation = getContext<CreateMutationResult<{ id: string; title: string }, Error, string>>("createChatMutation");
 </script>
 
 <div class="flex h-full flex-col items-center justify-center gap-4 p-8">

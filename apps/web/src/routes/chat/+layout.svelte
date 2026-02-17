@@ -3,6 +3,7 @@
 	import MessageSquarePlus from "@lucide/svelte/icons/message-square-plus";
 	import Trash2 from "@lucide/svelte/icons/trash-2";
 	import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
+	import { setContext } from "svelte";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/stores";
@@ -59,6 +60,8 @@
 	});
 
 	const activeChatId = $derived($page.params.id);
+
+	setContext("createChatMutation", createChatMutation);
 </script>
 
 <div class="flex h-[calc(100svh-4rem)]">
