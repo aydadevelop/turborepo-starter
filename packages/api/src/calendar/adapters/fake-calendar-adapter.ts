@@ -14,6 +14,7 @@ interface FakeCalendarEventRecord {
 	endsAt: Date;
 	timezone: string;
 	description?: string;
+	presentation?: CalendarEventInput["presentation"];
 	metadata?: Record<string, string>;
 	iCalUid?: string;
 	version?: string;
@@ -40,6 +41,7 @@ export class FakeCalendarAdapter implements CalendarAdapter {
 			endsAt: input.endsAt,
 			timezone: input.timezone,
 			description: input.description,
+			presentation: input.presentation,
 			metadata: input.metadata,
 			iCalUid: existing?.iCalUid ?? `${externalEventId}@fake-calendar`,
 			version,

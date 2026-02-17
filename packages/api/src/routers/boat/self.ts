@@ -10,6 +10,7 @@ import {
 	boatPricingProfile,
 	boatPricingRule,
 } from "@full-stack-cf-app/db/schema/boat";
+import { env } from "@full-stack-cf-app/env/server";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import z from "zod";
@@ -28,6 +29,7 @@ import { successOutputSchema } from "../../contracts/shared";
 import { organizationPermissionProcedure } from "../../index";
 import { buildUpdatePayload, insertAndReturn } from "../../lib/db-helpers";
 import { requireManagedBoat, requireManagedDock } from "./access";
+import { reconcileBoatCalendarConnectionsOnStateChange } from "./services/calendar-lifecycle";
 
 export const boatSelfRouter = {
 	listManaged: organizationPermissionProcedure({
@@ -214,7 +216,7 @@ export const boatSelfRouter = {
 		.output(boatOutputSchema)
 		.handler(async ({ context, input }) => {
 			const { organizationId } = context.activeMembership;
-			await requireManagedBoat(input.boatId, organizationId);
+			const managedBoat = await requireManagedBoat(input.boatId, organizationId);
 
 			if (input.dockId) {
 				await requireManagedDock(input.dockId, organizationId);
@@ -274,6 +276,24 @@ export const boatSelfRouter = {
 				throw new ORPCError("INTERNAL_SERVER_ERROR");
 			}
 
+			try {
+				await reconcileBoatCalendarConnectionsOnStateChange({
+					boatId: managedBoat.id,
+					previousStatus: managedBoat.status,
+					previousIsActive: managedBoat.isActive,
+					nextStatus: updatedBoat.status,
+					nextIsActive: updatedBoat.isActive,
+					webhookUrl: env.GOOGLE_CALENDAR_WEBHOOK_URL || undefined,
+					webhookChannelToken:
+						env.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN || undefined,
+				});
+			} catch (error) {
+				console.error(
+					`Failed to reconcile calendar lifecycle for boat ${managedBoat.id} after update`,
+					error
+				);
+			}
+
 			return updatedBoat;
 		}),
 
@@ -289,7 +309,7 @@ export const boatSelfRouter = {
 		.output(successOutputSchema)
 		.handler(async ({ context, input }) => {
 			const { organizationId } = context.activeMembership;
-			await requireManagedBoat(input.boatId, organizationId);
+			const managedBoat = await requireManagedBoat(input.boatId, organizationId);
 
 			await db
 				.update(boat)
@@ -305,6 +325,21 @@ export const boatSelfRouter = {
 						eq(boat.organizationId, organizationId)
 					)
 				);
+
+			try {
+				await reconcileBoatCalendarConnectionsOnStateChange({
+					boatId: managedBoat.id,
+					previousStatus: managedBoat.status,
+					previousIsActive: managedBoat.isActive,
+					nextStatus: "inactive",
+					nextIsActive: false,
+				});
+			} catch (error) {
+				console.error(
+					`Failed to reconcile calendar lifecycle for boat ${managedBoat.id} on archive`,
+					error
+				);
+			}
 
 			return { success: true };
 		}),

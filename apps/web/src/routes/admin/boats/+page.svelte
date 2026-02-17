@@ -16,26 +16,26 @@
 	const currentOffset = writable(0);
 	const limit = 20;
 
-	const queryOptions = derived(
-		[search, statusFilter, pendingOnly, currentOffset],
-		([$search, $statusFilter, $pendingOnly, $currentOffset]) =>
-			orpc.admin.boats.list.queryOptions({
-				input: {
-					limit,
-					offset: $currentOffset,
-					search: $search || undefined,
-					status:
-						($statusFilter as
-							| "draft"
-							| "active"
-							| "maintenance"
-							| "inactive") || undefined,
-					onlyPendingApproval: $pendingOnly,
-				},
-			})
+	const boatsQuery = createQuery(
+		derived(
+			[search, statusFilter, pendingOnly, currentOffset],
+			([$search, $statusFilter, $pendingOnly, $currentOffset]) =>
+				orpc.admin.boats.list.queryOptions({
+					input: {
+						limit,
+						offset: $currentOffset,
+						search: $search || undefined,
+						status:
+							($statusFilter as
+								| "draft"
+								| "active"
+								| "maintenance"
+								| "inactive") || undefined,
+						onlyPendingApproval: $pendingOnly,
+					},
+				})
+		)
 	);
-
-	const boatsQuery = createQuery(queryOptions);
 
 	const approveMutation = createMutation(
 		orpc.admin.boats.approveBoat.mutationOptions({

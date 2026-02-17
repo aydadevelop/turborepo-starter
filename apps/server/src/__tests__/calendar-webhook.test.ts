@@ -5,6 +5,7 @@ const envState = {
 };
 
 const ingestCalendarWebhookMock = vi.fn();
+const createContextMock = vi.fn();
 
 vi.mock("@full-stack-cf-app/env/server", () => {
 	return {
@@ -18,10 +19,20 @@ vi.mock("@full-stack-cf-app/api/calendar/application/calendar-use-cases", () => 
 	};
 });
 
+vi.mock("@full-stack-cf-app/api/context", () => {
+	return {
+		createContext: createContextMock,
+	};
+});
+
 describe("calendarWebhookRoutes", () => {
 	beforeEach(() => {
 		envState.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN = "";
 		ingestCalendarWebhookMock.mockReset();
+		createContextMock.mockReset();
+		createContextMock.mockResolvedValue({
+			notificationQueue: undefined,
+		});
 		ingestCalendarWebhookMock.mockResolvedValue({
 			kind: "accepted",
 			webhookEventId: "event-1",

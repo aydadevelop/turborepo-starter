@@ -1,10 +1,9 @@
 import { db } from "@full-stack-cf-app/db";
 import { boat } from "@full-stack-cf-app/db/schema/boat";
 import { booking } from "@full-stack-cf-app/db/schema/booking";
-import { createBookingExpirationCheckMessage } from "@full-stack-cf-app/notifications/contracts";
 import { and, eq, inArray, lte } from "drizzle-orm";
-
 import type { NotificationQueueProducer } from "../../../context";
+import { createBookingExpirationCheckMessage } from "../../../contracts/booking-lifecycle-queue";
 import { buildRecipients, EventBus } from "../../../lib/event-bus";
 import { applyCancellationPolicyAndRefund } from "../cancellation/policy.service";
 import { cancelBookingAndSync } from "./calendar-sync";

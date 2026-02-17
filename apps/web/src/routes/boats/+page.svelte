@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Button } from "@full-stack-cf-app/ui/components/button";
+	import { Calendar } from "@full-stack-cf-app/ui/components/calendar";
 	import {
 		Card,
 		CardContent,
@@ -8,10 +9,19 @@
 		CardHeader,
 		CardTitle,
 	} from "@full-stack-cf-app/ui/components/card";
+	import * as Popover from "@full-stack-cf-app/ui/components/popover";
+	import {
+		CalendarDate,
+		type DateValue,
+		getLocalTimeZone,
+	} from "@internationalized/date";
+	import CalendarIcon from "@lucide/svelte/icons/calendar";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived } from "svelte/store";
+	import { untrack } from "svelte";
+	import { writable } from "svelte/store";
+	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { page } from "$app/stores";
+	import { page } from "$app/state";
 	import { buildBoatPageRef } from "$lib/boat-pages";
 	import { orpc } from "$lib/orpc";
 
@@ -101,26 +111,27 @@
 		};
 	};
 
-	let date = defaultDate;
-	let startHour = 10;
-	let durationHours = 2;
-	let passengers = 2;
-	let startsAt = new Date(`${date}T${toHourLabel(startHour)}:00:00`);
-	let endsAt = new Date(startsAt.getTime() + durationHours * 60 * 60 * 1000);
-	let availabilityWindowLabel = `${date} ${toHourLabel(startHour)}:00-${toHourLabel(
-		endsAt.getHours()
-	)}:00 local`;
+	const parsedSearch = $derived(parseBoatsSearchState(page.url.searchParams));
+	const date = $derived(parsedSearch.date);
+	const startHour = $derived(parsedSearch.startHour);
+	const durationHours = $derived(parsedSearch.durationHours);
+	const passengers = $derived(parsedSearch.passengers);
+	const startsAt = $derived(parsedSearch.startsAt);
+	const endsAt = $derived(parsedSearch.endsAt);
+	const availabilityWindowLabel = $derived(
+		parsedSearch.availabilityWindowLabel
+	);
 
-	$: {
-		const parsed = parseBoatsSearchState($page.url.searchParams);
-		date = parsed.date;
-		startHour = parsed.startHour;
-		durationHours = parsed.durationHours;
-		passengers = parsed.passengers;
-		startsAt = parsed.startsAt;
-		endsAt = parsed.endsAt;
-		availabilityWindowLabel = parsed.availabilityWindowLabel;
-	}
+	const calendarValue = $derived.by(() => {
+		const [y, m, d] = date.split("-").map(Number);
+		return new CalendarDate(y, m, d);
+	});
+
+	const onDateSelect = (v: DateValue | undefined) => {
+		if (!v) return;
+		const iso = `${v.year}-${String(v.month).padStart(2, "0")}-${String(v.day).padStart(2, "0")}`;
+		goto(toBoatsQueryHref(iso, startHour, durationHours, passengers));
+	};
 
 	const toBoatsQueryHref = (
 		valueDate: string,
@@ -137,8 +148,8 @@
 		return `${resolve("/boats")}?${params.toString()}`;
 	};
 
-	const availabilityQueryOptions = derived(page, ($page) => {
-		const parsed = parseBoatsSearchState($page.url.searchParams);
+	const availabilityOpts = $derived.by(() => {
+		const parsed = parseBoatsSearchState(page.url.searchParams);
 		return orpc.booking.availabilityPublic.queryOptions({
 			input: {
 				startsAt: parsed.startsAt,
@@ -159,8 +170,11 @@
 			},
 		});
 	});
-
-	const availabilityQuery = createQuery(availabilityQueryOptions);
+	const availabilityOptsStore = writable(untrack(() => availabilityOpts));
+	$effect(() => {
+		availabilityOptsStore.set(availabilityOpts);
+	});
+	const availabilityQuery = createQuery(availabilityOptsStore);
 
 	const toBoatDetailsHref = (boatId: string, boatSlug: string): string => {
 		const boatRef = buildBoatPageRef(boatId, boatSlug);
@@ -179,7 +193,25 @@
 		<p class="text-sm text-muted-foreground">
 			Generated from public availability for {availabilityWindowLabel}.
 		</p>
-		<div class="flex flex-wrap gap-2 pt-2">
+		<div class="flex flex-wrap items-center gap-2 pt-2">
+			<Popover.Root>
+				<Popover.Trigger>
+					{#snippet child({ props })}
+						<Button {...props} variant="outline" class="gap-2">
+							<CalendarIcon class="size-4" />
+							{date}
+						</Button>
+					{/snippet}
+				</Popover.Trigger>
+				<Popover.Content class="w-auto p-0" align="start">
+					<Calendar
+						type="single"
+						value={calendarValue}
+						onValueChange={onDateSelect}
+						initialFocus
+					/>
+				</Popover.Content>
+			</Popover.Root>
 			<Button
 				href={toBoatsQueryHref(date, startHour, 1, passengers)}
 				variant={durationHours === 1 ? "secondary" : "outline"}

@@ -8,6 +8,14 @@ export const calendarAdapterProviderValues = [
 export type CalendarAdapterProvider =
 	(typeof calendarAdapterProviderValues)[number];
 
+export const calendarEventPresentationValues = [
+	"default",
+	"prebooking",
+	"confirmed",
+] as const;
+export type CalendarEventPresentation =
+	(typeof calendarEventPresentationValues)[number];
+
 export interface CalendarEventInput {
 	externalCalendarId: string;
 	externalEventId?: string;
@@ -16,6 +24,7 @@ export interface CalendarEventInput {
 	endsAt: Date;
 	timezone: string;
 	description?: string;
+	presentation?: CalendarEventPresentation;
 	metadata?: Record<string, string>;
 }
 

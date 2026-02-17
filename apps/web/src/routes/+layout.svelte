@@ -2,7 +2,7 @@
 	import { QueryClientProvider } from "@tanstack/svelte-query";
 	import { SvelteQueryDevtools } from "@tanstack/svelte-query-devtools";
 	import { browser } from "$app/environment";
-	import { page } from "$app/stores";
+	import { page } from "$app/state";
 	import "../app.css";
 	import { queryClient } from "$lib/orpc";
 	import Header from "../components/Header.svelte";
@@ -67,7 +67,7 @@
 		}
 
 		for (const key of affiliateQueryKeys) {
-			const rawValue = $page.url.searchParams.get(key);
+			const rawValue = page.url.searchParams.get(key);
 			if (!rawValue) {
 				continue;
 			}

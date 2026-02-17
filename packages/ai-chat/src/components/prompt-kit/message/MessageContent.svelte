@@ -17,11 +17,11 @@
 		children?: Snippet;
 	} & HTMLAttributes<HTMLDivElement> = $props();
 
-	const baseClass = "whitespace-normal break-words rounded-lg bg-secondary p-2 text-foreground";
-	const classNames = $derived(cn(
-		markdown ? `prose ${baseClass}` : baseClass,
-		className
-	));
+	const baseClass =
+		"whitespace-normal break-words rounded-lg bg-secondary p-2 text-foreground";
+	const classNames = $derived(
+		cn(markdown ? `prose ${baseClass}` : baseClass, className)
+	);
 </script>
 
 {#if markdown && content}

@@ -13,15 +13,13 @@
 	const currentOffset = writable(0);
 	const limit = 20;
 
-	const queryOptions = derived(
-		[search, currentOffset],
-		([$search, $currentOffset]) =>
+	const orgsQuery = createQuery(
+		derived([search, currentOffset], ([$search, $currentOffset]) =>
 			orpc.admin.organizations.listOrgs.queryOptions({
 				input: { limit, offset: $currentOffset, search: $search || undefined },
 			})
+		)
 	);
-
-	const orgsQuery = createQuery(queryOptions);
 
 	const totalPages = $derived(
 		Math.max(1, Math.ceil(($orgsQuery.data?.total ?? 0) / limit))

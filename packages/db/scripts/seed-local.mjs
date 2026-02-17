@@ -1650,7 +1650,7 @@ const buildBaselineSeedData = ({
 							toolName: "calculatePrice",
 							args: { boatId: "seed_boat_aurora", startTime: "2026-03-21T14:00:00Z", endTime: "2026-03-21T18:00:00Z", passengers: 6 },
 							state: "result",
-							result: { basePrice: 12000, weekendSurcharge: 2400, total: 14400, currency: "RUB" },
+							result: { basePrice: 12_000, weekendSurcharge: 2400, total: 14_400, currency: "RUB" },
 						},
 						{
 							type: "text",

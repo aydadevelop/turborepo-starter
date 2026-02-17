@@ -13,6 +13,20 @@
 	import { resolve } from "$app/paths";
 	import { env as publicEnv } from "$env/dynamic/public";
 	import { authClient } from "$lib/auth-client";
+	import {
+		formatBookingRange,
+		formatDateTime,
+		formatMoney,
+		formatSignedMoney,
+		toDateParam,
+	} from "$lib/booking-format";
+	import {
+		affiliatePayoutStatusClass,
+		bookingStatusClass,
+		escalationStatusClass,
+		paymentStatusClass,
+		shiftStatusClass,
+	} from "$lib/booking-status";
 	import { orpc } from "$lib/orpc";
 
 	interface CpWidget {
@@ -101,56 +115,6 @@
 		Boolean($canManageOrganizationQuery.data?.canManageOrganization)
 	);
 
-	const toDate = (value: Date | string): Date =>
-		value instanceof Date ? value : new Date(value);
-
-	const formatBookingRange = (
-		startsAt: Date | string,
-		endsAt: Date | string
-	): string => {
-		const start = toDate(startsAt);
-		const end = toDate(endsAt);
-		return `${new Intl.DateTimeFormat("en-US", {
-			dateStyle: "medium",
-			timeStyle: "short",
-		}).format(start)} - ${new Intl.DateTimeFormat("en-US", {
-			dateStyle: "medium",
-			timeStyle: "short",
-		}).format(end)}`;
-	};
-
-	const formatDateTime = (value: Date | string): string => {
-		const date = toDate(value);
-		return new Intl.DateTimeFormat("en-US", {
-			dateStyle: "medium",
-			timeStyle: "short",
-		}).format(date);
-	};
-
-	const formatMoney = (amountCents: number, currency: string): string =>
-		new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency,
-			maximumFractionDigits: 2,
-		}).format(amountCents / 100);
-
-	const formatSignedMoney = (amountCents: number, currency: string): string => {
-		let sign = "";
-		if (amountCents > 0) {
-			sign = "+";
-		} else if (amountCents < 0) {
-			sign = "-";
-		}
-		return `${sign}${formatMoney(Math.abs(amountCents), currency)}`;
-	};
-
-	const toDateParam = (value: Date | string): string => {
-		const date = toDate(value);
-		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-			date.getDate()
-		).padStart(2, "0")}`;
-	};
-
 	const bookingStatusOptions = [
 		"all",
 		"pending",
@@ -168,75 +132,6 @@
 		"confirmed",
 		"in_progress",
 	]);
-
-	const bookingStatusClass = (status: string): string => {
-		switch (status) {
-			case "cancelled":
-				return "bg-rose-100 text-rose-700";
-			case "completed":
-				return "bg-emerald-100 text-emerald-700";
-			case "confirmed":
-			case "in_progress":
-				return "bg-sky-100 text-sky-700";
-			default:
-				return "bg-muted text-muted-foreground";
-		}
-	};
-
-	const paymentStatusClass = (status: string): string => {
-		switch (status) {
-			case "refunded":
-				return "bg-amber-100 text-amber-700";
-			case "paid":
-				return "bg-emerald-100 text-emerald-700";
-			case "partially_paid":
-				return "bg-sky-100 text-sky-700";
-			case "failed":
-				return "bg-rose-100 text-rose-700";
-			default:
-				return "bg-muted text-muted-foreground";
-		}
-	};
-
-	const escalationStatusClass = (status: string): string => {
-		switch (status) {
-			case "requested":
-				return "bg-amber-100 text-amber-700";
-			case "approved":
-				return "bg-emerald-100 text-emerald-700";
-			case "rejected":
-				return "bg-rose-100 text-rose-700";
-			default:
-				return "bg-muted text-muted-foreground";
-		}
-	};
-
-	const affiliatePayoutStatusClass = (status: string): string => {
-		switch (status) {
-			case "paid":
-				return "bg-emerald-100 text-emerald-700";
-			case "eligible":
-				return "bg-sky-100 text-sky-700";
-			case "voided":
-				return "bg-rose-100 text-rose-700";
-			default:
-				return "bg-amber-100 text-amber-700";
-		}
-	};
-
-	const shiftStatusClass = (status: string): string => {
-		switch (status) {
-			case "applied":
-				return "bg-emerald-100 text-emerald-700";
-			case "rejected":
-			case "cancelled":
-				return "bg-rose-100 text-rose-700";
-			case "pending":
-				return "bg-amber-100 text-amber-700";
-			default:
-				return "bg-muted text-muted-foreground";
-		}
-	};
 
 	const managedBookings = $derived($managedBookingsQuery.data?.items ?? []);
 	const totalBookings = $derived($managedBookingsQuery.data?.total ?? 0);

@@ -9,14 +9,31 @@
 		CardTitle,
 	} from "@full-stack-cf-app/ui/components/card";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
-	import { derived, get } from "svelte/store";
+	import { untrack } from "svelte";
+	import { writable } from "svelte/store";
 	import { dev } from "$app/environment";
 	import { resolve } from "$app/paths";
-	import { page } from "$app/stores";
+	import { page } from "$app/state";
 	import { env as publicEnv } from "$env/dynamic/public";
 	import { authClient } from "$lib/auth-client";
 	import { parseBoatIdFromRef } from "$lib/boat-pages";
 	import { orpc } from "$lib/orpc";
+	import BoatBlockedRangesCard from "./BoatBlockedRangesCard.svelte";
+	import BoatMinDurationRulesCard from "./BoatMinDurationRulesCard.svelte";
+	import BoatPricingRulesCard from "./BoatPricingRulesCard.svelte";
+	import BoatSlotsCard from "./BoatSlotsCard.svelte";
+	import {
+		areDurationsEqual,
+		type BookableSlot,
+		buildIdempotencyKey,
+		clamp,
+		formatDurationLabel,
+		formatMoneyRu,
+		normalizeDurationHours,
+		normalizeDurationOptions,
+		toLocalIsoDate,
+		toSlotKey,
+	} from "./boat-page-utils";
 
 	interface CpWidget {
 		start(params: Record<string, unknown>): Promise<{ success: boolean }>;
@@ -25,251 +42,40 @@
 		CloudPayments: new () => CpWidget;
 	}
 
-	const clamp = (value: number, min: number, max: number): number =>
-		Math.min(Math.max(value, min), max);
-	const roundHalf = (value: number): number => Math.round(value * 2) / 2;
-	const normalizeDurationHours = (
-		value: string | null,
-		fallback = 2
-	): number => {
-		const parsed = Number.parseFloat(value ?? "");
-		if (!Number.isFinite(parsed)) {
-			return fallback;
-		}
-		return clamp(roundHalf(parsed), 0.5, 24);
-	};
-	const toLocalIsoDate = (value: Date): string =>
-		`${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(
-			value.getDate()
-		).padStart(2, "0")}`;
-	const toHourLabel = (value: number): string => `${value}`.padStart(2, "0");
-	const formatDurationLabel = (value: number): string =>
-		Number.isInteger(value) ? `${value}h` : `${value.toFixed(1)}h`;
-	const formatDateTimeInZone = (value: Date, timeZone: string): string =>
-		new Intl.DateTimeFormat("en-GB", {
-			day: "2-digit",
-			month: "short",
-			year: "numeric",
-			hour: "2-digit",
-			minute: "2-digit",
-			hour12: false,
-			timeZone,
-			timeZoneName: "short",
-		}).format(value);
-	const formatDateTimeIsoUtc = (value: Date): string => value.toISOString();
-	const formatDateTimeUtc = (value: Date): string =>
-		new Intl.DateTimeFormat("en-GB", {
-			dateStyle: "medium",
-			timeStyle: "short",
-			timeZone: "UTC",
-		}).format(value);
-	const formatMoney = (cents: number, currency: string): string =>
-		new Intl.NumberFormat("ru-RU", {
-			style: "currency",
-			currency,
-			maximumFractionDigits: 0,
-		}).format(cents / 100);
-	const formatPricingDeltaLabel = (label: string | null): string => {
-		if (!label) {
-			return "—";
-		}
-		if (label.startsWith("+") || label.startsWith("-")) {
-			return label;
-		}
-		return `+${label}`;
-	};
-	const formatBlockSourceLabel = (source: string): string =>
-		source
-			.split("_")
-			.map((part) =>
-				part.length > 0
-					? `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`
-					: part
-			)
-			.join(" ");
-	const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-	const parseJsonObject = (raw: string): Record<string, unknown> => {
-		try {
-			const parsed = JSON.parse(raw) as unknown;
-			if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-				return parsed as Record<string, unknown>;
-			}
-			return {};
-		} catch {
-			return {};
-		}
-	};
-	const asNumber = (value: unknown): number | null =>
-		typeof value === "number" && Number.isFinite(value) ? value : null;
-	const asNumberArray = (value: unknown): number[] =>
-		Array.isArray(value)
-			? value.filter((item): item is number => typeof item === "number")
-			: [];
-	const formatHourMinute = (
-		hourValue: unknown,
-		minuteValue: unknown,
-		fallbackHour = 0
-	): string => {
-		const hour = asNumber(hourValue);
-		const minute = asNumber(minuteValue);
-		const safeHour =
-			hour !== null
-				? Math.max(0, Math.min(24, Math.trunc(hour)))
-				: fallbackHour;
-		const safeMinute =
-			minute !== null ? Math.max(0, Math.min(59, Math.trunc(minute))) : 0;
-		return `${toHourLabel(safeHour)}:${String(safeMinute).padStart(2, "0")}`;
-	};
-	type PublicPricingRule = {
-		ruleType: string;
-		conditionJson: string;
-		adjustmentType: string;
-		adjustmentValue: number;
-		pricingProfileId: string | null;
-	};
-	const formatRuleCondition = (rule: PublicPricingRule): string => {
-		const condition = parseJsonObject(rule.conditionJson);
-
-		switch (rule.ruleType) {
-			case "time_window": {
-				const from = formatHourMinute(
-					condition.startHour,
-					condition.startMinute,
-					0
-				);
-				const to = formatHourMinute(condition.endHour, condition.endMinute, 0);
-				const days = asNumberArray(condition.daysOfWeek)
-					.map(
-						(day) => weekdayLabels[Math.max(0, Math.min(6, Math.trunc(day)))]
-					)
-					.join(", ");
-				return days.length > 0
-					? `${from} -> ${to} (${days})`
-					: `${from} -> ${to}`;
-			}
-			case "duration_discount": {
-				const minHours = asNumber(condition.minHours);
-				const maxHours = asNumber(condition.maxHours);
-				if (minHours !== null && maxHours !== null) {
-					return `${minHours}h-${maxHours}h`;
-				}
-				if (minHours !== null) {
-					return `>= ${minHours}h`;
-				}
-				if (maxHours !== null) {
-					return `<= ${maxHours}h`;
-				}
-				return "Any duration";
-			}
-			case "passenger_surcharge": {
-				const includedPassengers = asNumber(condition.includedPassengers);
-				return includedPassengers !== null
-					? `Above ${Math.trunc(includedPassengers)} passengers`
-					: "Passenger threshold";
-			}
-			case "weekend_surcharge": {
-				const weekendDays = asNumberArray(condition.weekendDays);
-				if (weekendDays.length === 0) {
-					return "Weekend";
-				}
-				return weekendDays
-					.map(
-						(day) => weekdayLabels[Math.max(0, Math.min(6, Math.trunc(day)))]
-					)
-					.join(", ");
-			}
-			case "holiday_surcharge":
-				return "Holiday calendar";
-			case "custom":
-				return Object.keys(condition).length > 0
-					? JSON.stringify(condition)
-					: "Custom condition";
-			default:
-				return Object.keys(condition).length > 0
-					? JSON.stringify(condition)
-					: "n/a";
-		}
-	};
-	const formatRuleAdjustment = (
-		rule: Pick<PublicPricingRule, "adjustmentType" | "adjustmentValue">,
-		currency: string
-	): string => {
-		let sign = "";
-		if (rule.adjustmentValue > 0) {
-			sign = "+";
-		} else if (rule.adjustmentValue < 0) {
-			sign = "-";
-		}
-		const absValue = Math.abs(rule.adjustmentValue);
-		if (rule.adjustmentType === "percentage") {
-			return `${sign}${absValue}%`;
-		}
-		return `${sign}${formatMoney(absValue, currency)}`;
-	};
-	const toSlotKey = (startsAt: Date, endsAt: Date): string =>
-		`${startsAt.toISOString()}-${endsAt.toISOString()}`;
-	const areDurationsEqual = (left: number, right: number): boolean =>
-		Math.abs(left - right) < 0.001;
-	const normalizeDurationOptions = (values: number[]): number[] => {
-		const fromApi = values
-			.map((value) => clamp(roundHalf(value), 0.5, 24))
-			.filter((value) => Number.isFinite(value));
-		const merged = fromApi.length > 0 ? fromApi : [1, 1.5, 2, 3, 4];
-		return Array.from(new Set(merged)).sort((a, b) => a - b);
-	};
-	const buildIdempotencyKey = (): string =>
-		`mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-	type BookableSlot = {
-		startsAt: Date;
-		endsAt: Date;
-	};
-
 	const defaultDate = toLocalIsoDate(
 		new Date(Date.now() + 24 * 60 * 60 * 1000)
 	);
 	const sessionQuery = authClient.useSession();
 
-	let boatId = $state("");
-	let requestedDate = $state(defaultDate);
-	let requestedDurationHours = $state(2);
-	let requestedPassengers = $state(2);
-	let authBypassEnabled = $state(false);
-	let signInHref: string = $state(resolve("/login"));
-	let devBypassHref = $state("");
-
-	$effect(() => {
-		const currentPage = $page;
-		boatId = parseBoatIdFromRef(currentPage.params.boatRef ?? "");
-		requestedDate = currentPage.url.searchParams.get("date") ?? defaultDate;
-		requestedDurationHours = normalizeDurationHours(
-			currentPage.url.searchParams.get("durationHours"),
-			2
-		);
-		requestedPassengers = clamp(
-			Number.parseInt(
-				currentPage.url.searchParams.get("passengers") ?? "2",
-				10
-			) || 2,
+	const boatId = $derived(parseBoatIdFromRef(page.params.boatRef ?? ""));
+	const requestedDate = $derived(
+		page.url.searchParams.get("date") ?? defaultDate
+	);
+	const requestedDurationHours = $derived(
+		normalizeDurationHours(page.url.searchParams.get("durationHours"), 2)
+	);
+	const requestedPassengers = $derived(
+		clamp(
+			Number.parseInt(page.url.searchParams.get("passengers") ?? "2", 10) || 2,
 			1,
 			500
-		);
-		authBypassEnabled =
-			dev && currentPage.url.searchParams.get("auth") === "dev";
-
-		const bookingPathSearchParams = new URLSearchParams(
-			currentPage.url.searchParams
-		);
+		)
+	);
+	const authBypassEnabled = $derived(
+		dev && page.url.searchParams.get("auth") === "dev"
+	);
+	const signInHref = $derived.by(() => {
+		const bookingPathSearchParams = new URLSearchParams(page.url.searchParams);
 		bookingPathSearchParams.delete("auth");
 		const bookingPathWithQuery = bookingPathSearchParams.size
-			? `${currentPage.url.pathname}?${bookingPathSearchParams.toString()}`
-			: currentPage.url.pathname;
-		signInHref = `${resolve("/login")}?next=${encodeURIComponent(bookingPathWithQuery)}`;
-
-		const devBypassSearchParams = new URLSearchParams(
-			currentPage.url.searchParams
-		);
+			? `${page.url.pathname}?${bookingPathSearchParams.toString()}`
+			: page.url.pathname;
+		return `${resolve("/login")}?next=${encodeURIComponent(bookingPathWithQuery)}`;
+	});
+	const devBypassHref = $derived.by(() => {
+		const devBypassSearchParams = new URLSearchParams(page.url.searchParams);
 		devBypassSearchParams.set("auth", "dev");
-		devBypassHref = `${currentPage.url.pathname}?${devBypassSearchParams.toString()}`;
+		return `${page.url.pathname}?${devBypassSearchParams.toString()}`;
 	});
 
 	const hasBookingAccess = $derived(
@@ -292,23 +98,22 @@
 	const withUpdatedSearchParams = (
 		updates: Record<string, string | number>
 	): string => {
-		const currentPage = get(page);
-		const params = new URLSearchParams(currentPage.url.searchParams);
+		const params = new URLSearchParams(page.url.searchParams);
 		for (const [key, value] of Object.entries(updates)) {
 			params.set(key, String(value));
 		}
-		return `${currentPage.url.pathname}?${params.toString()}`;
+		return `${page.url.pathname}?${params.toString()}`;
 	};
 
-	const boatDetailQueryOptions = derived(page, ($page) => {
-		const pageBoatId = parseBoatIdFromRef($page.params.boatRef ?? "");
-		const pageRequestedDate = $page.url.searchParams.get("date") ?? defaultDate;
+	const boatDetailOpts = $derived.by(() => {
+		const pageBoatId = parseBoatIdFromRef(page.params.boatRef ?? "");
+		const pageRequestedDate = page.url.searchParams.get("date") ?? defaultDate;
 		const pageRequestedDurationHours = normalizeDurationHours(
-			$page.url.searchParams.get("durationHours"),
+			page.url.searchParams.get("durationHours"),
 			2
 		);
 		const pageRequestedPassengers = clamp(
-			Number.parseInt($page.url.searchParams.get("passengers") ?? "2", 10) || 2,
+			Number.parseInt(page.url.searchParams.get("passengers") ?? "2", 10) || 2,
 			1,
 			500
 		);
@@ -334,8 +139,11 @@
 			enabled: pageBoatId.length > 0,
 		};
 	});
-
-	const boatDetailQuery = createQuery(boatDetailQueryOptions);
+	const boatDetailOptsStore = writable(untrack(() => boatDetailOpts));
+	$effect(() => {
+		boatDetailOptsStore.set(boatDetailOpts);
+	});
+	const boatDetailQuery = createQuery(boatDetailOptsStore);
 
 	const createPublicBookingMutation = createMutation(
 		orpc.booking.createPublic.mutationOptions()
@@ -562,7 +370,7 @@
 					{#if $boatDetailQuery.data.pricingQuote}
 						<p>
 							Estimated total ({requestedDurationHours}h):
-							{formatMoney(
+							{formatMoneyRu(
 								$boatDetailQuery.data.pricingQuote.estimatedTotalPriceCents,
 								$boatDetailQuery.data.pricingQuote.currency
 							)}
@@ -577,7 +385,7 @@
 								<div class="flex items-center justify-between">
 									<span>Base subtotal</span>
 									<span>
-										{formatMoney(
+										{formatMoneyRu(
 											$boatDetailQuery.data.pricingQuote.estimatedBasePriceCents,
 											$boatDetailQuery.data.pricingQuote.currency
 										)}
@@ -586,7 +394,7 @@
 								<div class="flex items-center justify-between">
 									<span>Service fee</span>
 									<span>
-										{formatMoney(
+										{formatMoneyRu(
 											$boatDetailQuery.data.pricingQuote.estimatedServiceFeeCents,
 											$boatDetailQuery.data.pricingQuote.currency
 										)}
@@ -595,7 +403,7 @@
 								<div class="flex items-center justify-between">
 									<span>Affiliate fee</span>
 									<span>
-										{formatMoney(
+										{formatMoneyRu(
 											$boatDetailQuery.data.pricingQuote.estimatedAffiliateFeeCents,
 											$boatDetailQuery.data.pricingQuote.currency
 										)}
@@ -604,7 +412,7 @@
 								<div class="flex items-center justify-between">
 									<span>Pay now (platform markup)</span>
 									<span>
-										{formatMoney(
+										{formatMoneyRu(
 											$boatDetailQuery.data.pricingQuote.estimatedPayNowCents,
 											$boatDetailQuery.data.pricingQuote.currency
 										)}
@@ -613,7 +421,7 @@
 								<div class="flex items-center justify-between">
 									<span>Owner settle (pay later)</span>
 									<span>
-										{formatMoney(
+										{formatMoneyRu(
 											$boatDetailQuery.data.pricingQuote.estimatedPayLaterCents,
 											$boatDetailQuery.data.pricingQuote.currency
 										)}
@@ -624,7 +432,7 @@
 								>
 									<span>Total</span>
 									<span>
-										{formatMoney(
+										{formatMoneyRu(
 											$boatDetailQuery.data.pricingQuote.estimatedTotalPriceCents,
 											$boatDetailQuery.data.pricingQuote.currency
 										)}
@@ -715,381 +523,36 @@
 				</CardContent>
 			</Card>
 
-			<Card class="lg:col-span-3">
-				<CardHeader>
-					<CardTitle>Pricing Rules</CardTitle>
-					<CardDescription>
-						Active pricing rules for this boat/date window.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{#if $boatDetailQuery.data.pricingRules.length === 0}
-						<p class="text-sm text-muted-foreground">
-							No active pricing rules for this date.
-						</p>
-					{:else}
-						<div class="overflow-x-auto">
-							<table class="w-full min-w-[900px] text-left text-sm">
-								<thead class="text-muted-foreground">
-									<tr class="border-b border-border">
-										<th class="py-2">Name</th>
-										<th class="py-2">Type</th>
-										<th class="py-2">Scope</th>
-										<th class="py-2">Condition</th>
-										<th class="py-2">Adjustment</th>
-										<th class="py-2">Priority</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each $boatDetailQuery.data.pricingRules as rule (rule.id)}
-										<tr class="border-b border-border/50">
-											<td class="py-2 font-medium text-foreground">
-												{rule.name}
-											</td>
-											<td class="py-2">{rule.ruleType}</td>
-											<td class="py-2">
-												{rule.pricingProfileId ? "Profile" : "Global"}
-											</td>
-											<td class="py-2">{formatRuleCondition(rule)}</td>
-											<td class="py-2">
-												{formatRuleAdjustment(
-													rule,
-													$boatDetailQuery.data.pricingQuote?.currency ?? "RUB"
-												)}
-											</td>
-											<td class="py-2">{rule.priority}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-				</CardContent>
-			</Card>
+			<BoatPricingRulesCard
+				rules={$boatDetailQuery.data.pricingRules}
+				currency={$boatDetailQuery.data.pricingQuote?.currency ?? "RUB"}
+			/>
 
-			<Card class="lg:col-span-3">
-				<CardHeader>
-					<CardTitle>Minimum Duration Rules</CardTitle>
-					<CardDescription>
-						Time windows that require longer minimum bookings.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{#if $boatDetailQuery.data.minimumDurationRules.length === 0}
-						<p class="text-sm text-muted-foreground">
-							No minimum duration rules configured.
-						</p>
-					{:else}
-						<div class="overflow-x-auto">
-							<table class="w-full min-w-[700px] text-left text-sm">
-								<thead class="text-muted-foreground">
-									<tr class="border-b border-border">
-										<th class="py-2">Name</th>
-										<th class="py-2">Window (Local)</th>
-										<th class="py-2">Min Duration</th>
-										<th class="py-2">Days</th>
-										<th class="py-2">Active</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each $boatDetailQuery.data.minimumDurationRules as rule (rule.id)}
-										<tr class="border-b border-border/50">
-											<td class="py-2 font-medium text-foreground">
-												{rule.name}
-											</td>
-											<td class="py-2">
-												{formatHourMinute(rule.startHour, rule.startMinute, 0)}→
-												{formatHourMinute(rule.endHour, rule.endMinute, 0)}
-											</td>
-											<td class="py-2">
-												{rule.minimumDurationMinutes >= 60
-													? `${(rule.minimumDurationMinutes / 60).toFixed(
-															rule.minimumDurationMinutes % 60 === 0 ? 0 : 1
-														)}h`
-													: `${rule.minimumDurationMinutes}m`}
-											</td>
-											<td class="py-2">
-												{#if rule.daysOfWeek && Array.isArray(rule.daysOfWeek) && rule.daysOfWeek.length > 0}
-													{rule.daysOfWeek
-														.map(
-															(d) =>
-																weekdayLabels[
-																	Math.max(0, Math.min(6, Math.trunc(d as number)))
-																]
-														)
-														.join(", ")}
-												{:else}
-													Every day
-												{/if}
-											</td>
-											<td class="py-2">{rule.isActive ? "✓" : "✗"}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-				</CardContent>
-			</Card>
+			<BoatMinDurationRulesCard
+				rules={$boatDetailQuery.data.minimumDurationRules}
+			/>
 
-			<Card class="lg:col-span-3">
-				<CardHeader>
-					<CardTitle>Blocked Date Ranges</CardTitle>
-					<CardDescription>
-						Active maintenance and calendar/manual blocks applied to this boat.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{#if $boatDetailQuery.data.availabilityBlocks.length === 0}
-						<p class="text-sm text-muted-foreground">
-							No active blocked date ranges.
-						</p>
-					{:else}
-						<div class="overflow-x-auto">
-							<table class="w-full min-w-[1100px] text-left text-sm">
-								<thead class="text-muted-foreground">
-									<tr class="border-b border-border">
-										<th class="py-2">Source</th>
-										<th class="py-2">Start (Local)</th>
-										<th class="py-2">End (Local)</th>
-										<th class="py-2">Start (UTC ISO)</th>
-										<th class="py-2">End (UTC ISO)</th>
-										<th class="py-2">Reason</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each $boatDetailQuery.data.availabilityBlocks as block (block.id)}
-										<tr class="border-b border-border/50">
-											<td class="py-2 font-medium text-foreground">
-												{formatBlockSourceLabel(block.source)}
-											</td>
-											<td class="py-2">
-												<div>
-													{formatDateTimeInZone(
-															block.startsAt,
-															$boatDetailQuery.data.boat.timezone
-														)}
-												</div>
-												<div class="text-xs text-muted-foreground">
-													{formatDateTimeUtc(block.startsAt)} UTC
-												</div>
-											</td>
-											<td class="py-2">
-												<div>
-													{formatDateTimeInZone(
-															block.endsAt,
-															$boatDetailQuery.data.boat.timezone
-														)}
-												</div>
-												<div class="text-xs text-muted-foreground">
-													{formatDateTimeUtc(block.endsAt)} UTC
-												</div>
-											</td>
-											<td class="py-2 font-mono text-xs">
-												{formatDateTimeIsoUtc(block.startsAt)}
-											</td>
-											<td class="py-2 font-mono text-xs">
-												{formatDateTimeIsoUtc(block.endsAt)}
-											</td>
-											<td class="py-2">{block.reason ?? "—"}</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-				</CardContent>
-			</Card>
+			<BoatBlockedRangesCard
+				blocks={$boatDetailQuery.data.availabilityBlocks}
+				timezone={$boatDetailQuery.data.boat.timezone}
+			/>
 
-			<Card class="lg:col-span-3">
-				<CardHeader>
-					<CardTitle>Available Slots</CardTitle>
-					<CardDescription>
-						Boat local timestamps ({$boatDetailQuery.data.boat.timezone}),
-						working window
-						{toHourLabel($boatDetailQuery.data.boat.workingHoursStart)}:00-
-						{toHourLabel($boatDetailQuery.data.boat.workingHoursEnd)}:00.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					{#if !$sessionQuery.isPending && !hasBookingAccess}
-						<p class="mb-3 text-xs text-muted-foreground">
-							Slots are visible publicly. Booking actions should require
-							sign-in.
-						</p>
-					{/if}
-					{#if $boatDetailQuery.data.slots.length > 0}
-						{@const firstSlot = $boatDetailQuery.data.slots[0]}
-						{@const lastSlot =
-							$boatDetailQuery.data.slots[
-								$boatDetailQuery.data.slots.length - 1
-							]}
-						<p class="mb-3 text-xs text-muted-foreground">
-							Generated slot window (local):
-							{formatDateTimeInZone(
-								firstSlot.startsAt,
-								$boatDetailQuery.data.boat.timezone
-							)}
-							→
-							{formatDateTimeInZone(
-								lastSlot.endsAt,
-								$boatDetailQuery.data.boat.timezone
-							)}
-						</p>
-					{/if}
-					{#if $boatDetailQuery.data.slots.length === 0}
-						<p class="text-sm text-muted-foreground">
-							No slots available for this date and duration.
-						</p>
-						{#if !$boatDetailQuery.data.pricingQuote}
-							<p class="mt-2 text-xs text-muted-foreground">
-								No active pricing profile for this date, so slots cannot be
-								generated.
-							</p>
-						{/if}
-					{:else}
-						<div class="overflow-x-auto">
-							<table class="w-full min-w-[1300px] text-left text-sm">
-								<thead class="text-muted-foreground">
-									<tr class="border-b border-border">
-										<th class="py-2">Start (Local)</th>
-										<th class="py-2">End (Local)</th>
-										<th class="py-2">Start (UTC ISO)</th>
-										<th class="py-2">End (UTC ISO)</th>
-										<th class="py-2">Duration</th>
-										<th class="py-2">Billed</th>
-										<th class="py-2">Subtotal</th>
-										<th class="py-2">Markup</th>
-										<th class="py-2">Total</th>
-										<th class="py-2">Pay Now</th>
-										<th class="py-2">Owner Settle</th>
-										<th class="py-2">Delta</th>
-										<th class="py-2">Action</th>
-									</tr>
-								</thead>
-								<tbody>
-									{#each $boatDetailQuery.data.slots as slot}
-										<tr
-											class="border-b border-border/50"
-											class:opacity-50={!slot.meetsMinimumDuration}
-										>
-											<td class="py-2">
-												<div>
-													{formatDateTimeInZone(
-															slot.startsAt,
-															$boatDetailQuery.data.boat.timezone
-														)}
-												</div>
-												<div class="text-xs text-muted-foreground">
-													{formatDateTimeUtc(slot.startsAt)} UTC
-												</div>
-											</td>
-											<td class="py-2">
-												<div>
-													{formatDateTimeInZone(
-															slot.endsAt,
-															$boatDetailQuery.data.boat.timezone
-														)}
-												</div>
-												<div class="text-xs text-muted-foreground">
-													{formatDateTimeUtc(slot.endsAt)} UTC
-												</div>
-											</td>
-											<td class="py-2 font-mono text-xs">
-												{formatDateTimeIsoUtc(slot.startsAt)}
-											</td>
-											<td class="py-2 font-mono text-xs">
-												{formatDateTimeIsoUtc(slot.endsAt)}
-											</td>
-											<td class="py-2">
-												{slot.durationMinutes} min
-												{#if !slot.meetsMinimumDuration}
-													<span
-														class="ml-1 inline-block rounded bg-amber-100 px-1 text-[10px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
-													>
-														min
-														{formatDurationLabel(slot.requiredMinimumDurationMinutes / 60)}
-													</span>
-												{/if}
-											</td>
-											<td class="py-2">
-												{formatDurationLabel(slot.estimatedHours)}
-											</td>
-											<td class="py-2">
-												{formatMoney(slot.subtotalCents, slot.currency)}
-											</td>
-											<td class="py-2">
-												{formatMoney(
-														slot.totalPriceCents - slot.subtotalCents,
-														slot.currency
-													)}
-											</td>
-											<td class="py-2">
-												{formatMoney(slot.totalPriceCents, slot.currency)}
-											</td>
-											<td class="py-2">
-												{formatMoney(slot.payNowCents, slot.currency)}
-											</td>
-											<td class="py-2">
-												{formatMoney(slot.payLaterCents, slot.currency)}
-											</td>
-											<td class="py-2">
-												{formatPricingDeltaLabel(slot.discountLabel)}
-											</td>
-											<td class="py-2">
-												{#if !slot.meetsMinimumDuration}
-													<a
-														href={withUpdatedSearchParams({
-															durationHours: slot.requiredMinimumDurationMinutes / 60,
-														})}
-														class="text-xs font-medium text-amber-600 hover:underline dark:text-amber-400"
-													>
-														View from
-														{formatDurationLabel(slot.requiredMinimumDurationMinutes / 60)}
-													</a>
-												{:else if hasSignedInUser}
-													<div class="flex gap-1">
-														{#if cpPublicId}
-															<Button
-																size="sm"
-																data-testid="cp-pay-button"
-																disabled={Boolean(cpPendingSlotKey || mockPaymentPendingSlotKey)}
-																onclick={() => {
-																		void bookAndPayWithCloudPayments(slot);
-																	}}
-															>
-																{cpPendingSlotKey === toSlotKey(slot.startsAt, slot.endsAt)
-																	? "Processing..."
-																	: "Book & Pay"}
-															</Button>
-														{/if}
-														<Button
-															size="sm"
-															variant="outline"
-															disabled={Boolean(mockPaymentPendingSlotKey || cpPendingSlotKey)}
-															onclick={() => {
-																	void bookAndPayWithMock(slot);
-																}}
-														>
-															{mockPaymentPendingSlotKey === toSlotKey(slot.startsAt, slot.endsAt)
-																? "Processing..."
-																: "Book & Mock Pay"}
-														</Button>
-													</div>
-												{:else}
-													<span class="text-xs text-muted-foreground">
-														Sign in to book
-													</span>
-												{/if}
-											</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-				</CardContent>
-			</Card>
+			<BoatSlotsCard
+				slots={$boatDetailQuery.data.slots}
+				timezone={$boatDetailQuery.data.boat.timezone}
+				workingHoursStart={$boatDetailQuery.data.boat.workingHoursStart}
+				workingHoursEnd={$boatDetailQuery.data.boat.workingHoursEnd}
+				hasPricingQuote={Boolean($boatDetailQuery.data.pricingQuote)}
+				{hasBookingAccess}
+				{hasSignedInUser}
+				sessionPending={$sessionQuery.isPending}
+				{cpPublicId}
+				{cpPendingSlotKey}
+				{mockPaymentPendingSlotKey}
+				onBookMock={(slot) => { void bookAndPayWithMock(slot); }}
+				onBookCloudPayments={(slot) => { void bookAndPayWithCloudPayments(slot); }}
+				{withUpdatedSearchParams}
+			/>
 
 			<Card class="lg:col-span-3">
 				<CardHeader>

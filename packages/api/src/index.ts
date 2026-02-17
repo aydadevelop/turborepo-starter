@@ -77,4 +77,5 @@ export interface OrganizationContext extends Context {
 	activeMembership: ActiveOrganizationMembership;
 	eventBus: EventBus;
 	notificationQueue?: NotificationQueueProducer;
+	bookingLifecycleQueue?: NotificationQueueProducer;
 }

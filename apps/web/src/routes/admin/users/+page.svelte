@@ -26,21 +26,21 @@
 	const currentOffset = writable(0);
 	const limit = 20;
 
-	const queryOptions = derived(
-		[search, roleFilter, bannedFilter, currentOffset],
-		([$search, $roleFilter, $bannedFilter, $currentOffset]) =>
-			orpc.admin.organizations.listUsers.queryOptions({
-				input: {
-					limit,
-					offset: $currentOffset,
-					search: $search || undefined,
-					role: $roleFilter || undefined,
-					banned: $bannedFilter,
-				},
-			})
+	const usersQuery = createQuery(
+		derived(
+			[search, roleFilter, bannedFilter, currentOffset],
+			([$search, $roleFilter, $bannedFilter, $currentOffset]) =>
+				orpc.admin.organizations.listUsers.queryOptions({
+					input: {
+						limit,
+						offset: $currentOffset,
+						search: $search || undefined,
+						role: $roleFilter || undefined,
+						banned: $bannedFilter,
+					},
+				})
+		)
 	);
-
-	const usersQuery = createQuery(queryOptions);
 
 	const totalPages = $derived(
 		Math.max(1, Math.ceil(($usersQuery.data?.total ?? 0) / limit))

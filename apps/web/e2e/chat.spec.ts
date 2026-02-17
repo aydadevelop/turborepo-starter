@@ -19,9 +19,7 @@ test.describe("Chat Page", () => {
 
 	test("shows new chat button in sidebar", async ({ page }) => {
 		await page.goto(url("/chat"));
-		await expect(
-			page.locator("aside").getByRole("button")
-		).toBeVisible();
+		await expect(page.locator("aside").getByRole("button")).toBeVisible();
 	});
 
 	test("creates a new chat from landing page", async ({ page }) => {
@@ -54,13 +52,16 @@ test.describe("Chat Conversation", () => {
 	});
 
 	test("displays prompt input area", async ({ page }) => {
-		await expect(
-			page.getByPlaceholder(/ask about boats/i)
-		).toBeVisible();
+		await expect(page.getByPlaceholder(/ask about boats/i)).toBeVisible();
 	});
 
-	test("has a send button that is disabled when input is empty", async ({ page }) => {
-		const sendButton = page.getByRole("button").filter({ has: page.locator("svg") }).last();
+	test("has a send button that is disabled when input is empty", async ({
+		page,
+	}) => {
+		const sendButton = page
+			.getByRole("button")
+			.filter({ has: page.locator("svg") })
+			.last();
 		await expect(sendButton).toBeDisabled();
 	});
 
@@ -69,7 +70,10 @@ test.describe("Chat Conversation", () => {
 		await textarea.fill("Hello");
 
 		// The send button should now be enabled
-		const sendButton = page.getByRole("button").filter({ has: page.locator("svg") }).last();
+		const sendButton = page
+			.getByRole("button")
+			.filter({ has: page.locator("svg") })
+			.last();
 		await expect(sendButton).toBeEnabled();
 	});
 
@@ -79,7 +83,9 @@ test.describe("Chat Conversation", () => {
 		await textarea.press("Enter");
 
 		// User message should appear
-		await expect(page.getByText("Hello, what boats do you have?")).toBeVisible();
+		await expect(
+			page.getByText("Hello, what boats do you have?")
+		).toBeVisible();
 
 		// Should show a loading indicator while streaming
 		await expect(page.locator("[role='log']")).toBeVisible();

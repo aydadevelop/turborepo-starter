@@ -1,5 +1,6 @@
 import type { CalendarProvider } from "@full-stack-cf-app/db/schema/boat";
 
+import type { NotificationQueueProducer } from "../../context";
 import { getCalendarAdapter } from "../adapters/registry";
 import {
 	listCalendarWebhookDeadLetters,
@@ -29,6 +30,7 @@ export const ingestCalendarWebhook = async (params: {
 	provider: CalendarProvider;
 	headers: Headers | Record<string, string | undefined>;
 	sharedToken?: string;
+	notificationQueue?: NotificationQueueProducer;
 }): Promise<IngestWebhookOutcome> => {
 	const adapter = getCalendarAdapter(params.provider);
 	if (!adapter?.parseWebhookNotification) {
@@ -47,6 +49,7 @@ export const ingestCalendarWebhook = async (params: {
 	const result = await syncCalendarConnectionByWebhook({
 		provider: params.provider,
 		notification,
+		notificationQueue: params.notificationQueue,
 	});
 
 	if (result.duplicate) {
@@ -62,11 +65,19 @@ export const ingestCalendarWebhook = async (params: {
 		kind: "accepted",
 		webhookEventId: result.webhookEventId,
 		matched: result.matched,
-		connectionId: result.connectionId,
-		provider: result.provider,
-		processedEvents: result.processedEvents,
-		nextSyncToken: result.nextSyncToken,
-		recoveredFromExpiredToken: result.recoveredFromExpiredToken,
+		connectionId:
+			"connectionId" in result ? (result.connectionId ?? undefined) : undefined,
+		provider: "provider" in result ? (result.provider ?? undefined) : undefined,
+		processedEvents:
+			"processedEvents" in result
+				? (result.processedEvents ?? undefined)
+				: undefined,
+		nextSyncToken:
+			"nextSyncToken" in result ? (result.nextSyncToken ?? undefined) : undefined,
+		recoveredFromExpiredToken:
+			"recoveredFromExpiredToken" in result
+				? (result.recoveredFromExpiredToken ?? undefined)
+				: undefined,
 	};
 };
 

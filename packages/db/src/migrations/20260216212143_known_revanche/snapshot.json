@@ -2,9 +2,7 @@
   "version": "7",
   "dialect": "sqlite",
   "id": "03cbab23-1b9f-4798-9c29-2f50f7718df5",
-  "prevIds": [
-    "5a0fd67f-f070-4cdd-b5ab-3f148ba4217b"
-  ],
+  "prevIds": ["5a0fd67f-f070-4cdd-b5ab-3f148ba4217b"],
   "ddl": [
     {
       "name": "affiliate_referral",
@@ -6301,13 +6299,9 @@
       "table": "todo"
     },
     {
-      "columns": [
-        "affiliate_user_id"
-      ],
+      "columns": ["affiliate_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6316,13 +6310,9 @@
       "table": "affiliate_referral"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6331,13 +6321,9 @@
       "table": "affiliate_referral"
     },
     {
-      "columns": [
-        "booking_id"
-      ],
+      "columns": ["booking_id"],
       "tableTo": "booking",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6346,13 +6332,9 @@
       "table": "booking_affiliate_attribution"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6361,13 +6343,9 @@
       "table": "booking_affiliate_attribution"
     },
     {
-      "columns": [
-        "affiliate_user_id"
-      ],
+      "columns": ["affiliate_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6376,13 +6354,9 @@
       "table": "booking_affiliate_attribution"
     },
     {
-      "columns": [
-        "referral_id"
-      ],
+      "columns": ["referral_id"],
       "tableTo": "affiliate_referral",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6391,13 +6365,9 @@
       "table": "booking_affiliate_attribution"
     },
     {
-      "columns": [
-        "attribution_id"
-      ],
+      "columns": ["attribution_id"],
       "tableTo": "booking_affiliate_attribution",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6406,13 +6376,9 @@
       "table": "booking_affiliate_payout"
     },
     {
-      "columns": [
-        "booking_id"
-      ],
+      "columns": ["booking_id"],
       "tableTo": "booking",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6421,13 +6387,9 @@
       "table": "booking_affiliate_payout"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6436,13 +6398,9 @@
       "table": "booking_affiliate_payout"
     },
     {
-      "columns": [
-        "affiliate_user_id"
-      ],
+      "columns": ["affiliate_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6451,13 +6409,9 @@
       "table": "booking_affiliate_payout"
     },
     {
-      "columns": [
-        "user_id"
-      ],
+      "columns": ["user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6466,13 +6420,9 @@
       "table": "assistant_chat"
     },
     {
-      "columns": [
-        "chat_id"
-      ],
+      "columns": ["chat_id"],
       "tableTo": "assistant_chat",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6481,13 +6431,9 @@
       "table": "assistant_message"
     },
     {
-      "columns": [
-        "user_id"
-      ],
+      "columns": ["user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6496,13 +6442,9 @@
       "table": "account"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6511,13 +6453,9 @@
       "table": "invitation"
     },
     {
-      "columns": [
-        "inviter_id"
-      ],
+      "columns": ["inviter_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6526,13 +6464,9 @@
       "table": "invitation"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6541,13 +6475,9 @@
       "table": "member"
     },
     {
-      "columns": [
-        "user_id"
-      ],
+      "columns": ["user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6556,13 +6486,9 @@
       "table": "member"
     },
     {
-      "columns": [
-        "user_id"
-      ],
+      "columns": ["user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6571,13 +6497,9 @@
       "table": "passkey"
     },
     {
-      "columns": [
-        "user_id"
-      ],
+      "columns": ["user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6586,13 +6508,9 @@
       "table": "session"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6601,13 +6519,9 @@
       "table": "boat"
     },
     {
-      "columns": [
-        "dock_id"
-      ],
+      "columns": ["dock_id"],
       "tableTo": "boat_dock",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6616,13 +6530,9 @@
       "table": "boat"
     },
     {
-      "columns": [
-        "boat_id"
-      ],
+      "columns": ["boat_id"],
       "tableTo": "boat",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6631,13 +6541,9 @@
       "table": "boat_amenity"
     },
     {
-      "columns": [
-        "boat_id"
-      ],
+      "columns": ["boat_id"],
       "tableTo": "boat",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6646,13 +6552,9 @@
       "table": "boat_asset"
     },
     {
-      "columns": [
-        "uploaded_by_user_id"
-      ],
+      "columns": ["uploaded_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6661,13 +6563,9 @@
       "table": "boat_asset"
     },
     {
-      "columns": [
-        "boat_id"
-      ],
+      "columns": ["boat_id"],
       "tableTo": "boat",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6676,13 +6574,9 @@
       "table": "boat_availability_block"
     },
     {
-      "columns": [
-        "calendar_connection_id"
-      ],
+      "columns": ["calendar_connection_id"],
       "tableTo": "boat_calendar_connection",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6691,13 +6585,9 @@
       "table": "boat_availability_block"
     },
     {
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6706,13 +6596,9 @@
       "table": "boat_availability_block"
     },
     {
-      "columns": [
-        "boat_id"
-      ],
+      "columns": ["boat_id"],
       "tableTo": "boat",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6721,13 +6607,9 @@
       "table": "boat_availability_rule"
     },
     {
-      "columns": [
-        "boat_id"
-      ],
+      "columns": ["boat_id"],
       "tableTo": "boat",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6736,13 +6618,9 @@
       "table": "boat_calendar_connection"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6751,13 +6629,9 @@
       "table": "boat_dock"
     },
     {
-      "columns": [
-        "boat_id"
-      ],
+      "columns": ["boat_id"],
       "tableTo": "boat",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6766,13 +6640,9 @@
       "table": "boat_minimum_duration_rule"
     },
     {
-      "columns": [
-        "boat_id"
-      ],
+      "columns": ["boat_id"],
       "tableTo": "boat",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6781,13 +6651,9 @@
       "table": "boat_pricing_profile"
     },
     {
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6796,13 +6662,9 @@
       "table": "boat_pricing_profile"
     },
     {
-      "columns": [
-        "boat_id"
-      ],
+      "columns": ["boat_id"],
       "tableTo": "boat",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6811,13 +6673,9 @@
       "table": "boat_pricing_rule"
     },
     {
-      "columns": [
-        "pricing_profile_id"
-      ],
+      "columns": ["pricing_profile_id"],
       "tableTo": "boat_pricing_profile",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6826,13 +6684,9 @@
       "table": "boat_pricing_rule"
     },
     {
-      "columns": [
-        "calendar_connection_id"
-      ],
+      "columns": ["calendar_connection_id"],
       "tableTo": "boat_calendar_connection",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6841,13 +6695,9 @@
       "table": "calendar_webhook_event"
     },
     {
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6856,13 +6706,9 @@
       "table": "platform_fee_config"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6871,13 +6717,9 @@
       "table": "booking"
     },
     {
-      "columns": [
-        "boat_id"
-      ],
+      "columns": ["boat_id"],
       "tableTo": "boat",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6886,13 +6728,9 @@
       "table": "booking"
     },
     {
-      "columns": [
-        "customer_user_id"
-      ],
+      "columns": ["customer_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6901,13 +6739,9 @@
       "table": "booking"
     },
     {
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6916,13 +6750,9 @@
       "table": "booking"
     },
     {
-      "columns": [
-        "cancelled_by_user_id"
-      ],
+      "columns": ["cancelled_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6931,13 +6761,9 @@
       "table": "booking"
     },
     {
-      "columns": [
-        "booking_id"
-      ],
+      "columns": ["booking_id"],
       "tableTo": "booking",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6946,13 +6772,9 @@
       "table": "booking_calendar_link"
     },
     {
-      "columns": [
-        "boat_calendar_connection_id"
-      ],
+      "columns": ["boat_calendar_connection_id"],
       "tableTo": "boat_calendar_connection",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -6961,13 +6783,9 @@
       "table": "booking_calendar_link"
     },
     {
-      "columns": [
-        "booking_id"
-      ],
+      "columns": ["booking_id"],
       "tableTo": "booking",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6976,13 +6794,9 @@
       "table": "booking_cancellation_request"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -6991,13 +6805,9 @@
       "table": "booking_cancellation_request"
     },
     {
-      "columns": [
-        "requested_by_user_id"
-      ],
+      "columns": ["requested_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7006,13 +6816,9 @@
       "table": "booking_cancellation_request"
     },
     {
-      "columns": [
-        "reviewed_by_user_id"
-      ],
+      "columns": ["reviewed_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7021,13 +6827,9 @@
       "table": "booking_cancellation_request"
     },
     {
-      "columns": [
-        "booking_id"
-      ],
+      "columns": ["booking_id"],
       "tableTo": "booking",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7036,13 +6838,9 @@
       "table": "booking_discount_application"
     },
     {
-      "columns": [
-        "discount_code_id"
-      ],
+      "columns": ["discount_code_id"],
       "tableTo": "booking_discount_code",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7051,13 +6849,9 @@
       "table": "booking_discount_application"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7066,13 +6860,9 @@
       "table": "booking_discount_code"
     },
     {
-      "columns": [
-        "applies_to_boat_id"
-      ],
+      "columns": ["applies_to_boat_id"],
       "tableTo": "boat",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7081,13 +6871,9 @@
       "table": "booking_discount_code"
     },
     {
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7096,13 +6882,9 @@
       "table": "booking_discount_code"
     },
     {
-      "columns": [
-        "booking_id"
-      ],
+      "columns": ["booking_id"],
       "tableTo": "booking",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7111,13 +6893,9 @@
       "table": "booking_dispute"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7126,13 +6904,9 @@
       "table": "booking_dispute"
     },
     {
-      "columns": [
-        "raised_by_user_id"
-      ],
+      "columns": ["raised_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7141,13 +6915,9 @@
       "table": "booking_dispute"
     },
     {
-      "columns": [
-        "resolved_by_user_id"
-      ],
+      "columns": ["resolved_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7156,13 +6926,9 @@
       "table": "booking_dispute"
     },
     {
-      "columns": [
-        "booking_id"
-      ],
+      "columns": ["booking_id"],
       "tableTo": "booking",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7171,13 +6937,9 @@
       "table": "booking_payment_attempt"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7186,13 +6948,9 @@
       "table": "booking_payment_attempt"
     },
     {
-      "columns": [
-        "requested_by_user_id"
-      ],
+      "columns": ["requested_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7201,13 +6959,9 @@
       "table": "booking_payment_attempt"
     },
     {
-      "columns": [
-        "booking_id"
-      ],
+      "columns": ["booking_id"],
       "tableTo": "booking",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7216,13 +6970,9 @@
       "table": "booking_refund"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7231,13 +6981,9 @@
       "table": "booking_refund"
     },
     {
-      "columns": [
-        "requested_by_user_id"
-      ],
+      "columns": ["requested_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7246,13 +6992,9 @@
       "table": "booking_refund"
     },
     {
-      "columns": [
-        "approved_by_user_id"
-      ],
+      "columns": ["approved_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7261,13 +7003,9 @@
       "table": "booking_refund"
     },
     {
-      "columns": [
-        "processed_by_user_id"
-      ],
+      "columns": ["processed_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7276,13 +7014,9 @@
       "table": "booking_refund"
     },
     {
-      "columns": [
-        "booking_id"
-      ],
+      "columns": ["booking_id"],
       "tableTo": "booking",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7291,13 +7025,9 @@
       "table": "booking_shift_request"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7306,13 +7036,9 @@
       "table": "booking_shift_request"
     },
     {
-      "columns": [
-        "requested_by_user_id"
-      ],
+      "columns": ["requested_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7321,13 +7047,9 @@
       "table": "booking_shift_request"
     },
     {
-      "columns": [
-        "customer_decision_by_user_id"
-      ],
+      "columns": ["customer_decision_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7336,13 +7058,9 @@
       "table": "booking_shift_request"
     },
     {
-      "columns": [
-        "manager_decision_by_user_id"
-      ],
+      "columns": ["manager_decision_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7351,13 +7069,9 @@
       "table": "booking_shift_request"
     },
     {
-      "columns": [
-        "rejected_by_user_id"
-      ],
+      "columns": ["rejected_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7366,13 +7080,9 @@
       "table": "booking_shift_request"
     },
     {
-      "columns": [
-        "applied_by_user_id"
-      ],
+      "columns": ["applied_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7381,13 +7091,9 @@
       "table": "booking_shift_request"
     },
     {
-      "columns": [
-        "user_id"
-      ],
+      "columns": ["user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7396,13 +7102,9 @@
       "table": "user_consent"
     },
     {
-      "columns": [
-        "intent_id"
-      ],
+      "columns": ["intent_id"],
       "tableTo": "notification_intent",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7411,13 +7113,9 @@
       "table": "notification_delivery"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7426,13 +7124,9 @@
       "table": "notification_delivery"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7441,13 +7135,9 @@
       "table": "notification_event"
     },
     {
-      "columns": [
-        "actor_user_id"
-      ],
+      "columns": ["actor_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7456,13 +7146,9 @@
       "table": "notification_event"
     },
     {
-      "columns": [
-        "event_id"
-      ],
+      "columns": ["event_id"],
       "tableTo": "notification_event",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7471,13 +7157,9 @@
       "table": "notification_in_app"
     },
     {
-      "columns": [
-        "intent_id"
-      ],
+      "columns": ["intent_id"],
       "tableTo": "notification_intent",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7486,13 +7168,9 @@
       "table": "notification_in_app"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7501,13 +7179,9 @@
       "table": "notification_in_app"
     },
     {
-      "columns": [
-        "user_id"
-      ],
+      "columns": ["user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7516,13 +7190,9 @@
       "table": "notification_in_app"
     },
     {
-      "columns": [
-        "event_id"
-      ],
+      "columns": ["event_id"],
       "tableTo": "notification_event",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7531,13 +7201,9 @@
       "table": "notification_intent"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7546,13 +7212,9 @@
       "table": "notification_intent"
     },
     {
-      "columns": [
-        "recipient_user_id"
-      ],
+      "columns": ["recipient_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7561,13 +7223,9 @@
       "table": "notification_intent"
     },
     {
-      "columns": [
-        "user_id"
-      ],
+      "columns": ["user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7576,13 +7234,9 @@
       "table": "notification_preference"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7591,13 +7245,9 @@
       "table": "notification_preference"
     },
     {
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7606,13 +7256,9 @@
       "table": "notification_preference"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7621,13 +7267,9 @@
       "table": "inbound_message"
     },
     {
-      "columns": [
-        "ticket_id"
-      ],
+      "columns": ["ticket_id"],
       "tableTo": "support_ticket",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7636,13 +7278,9 @@
       "table": "inbound_message"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7651,13 +7289,9 @@
       "table": "support_ticket"
     },
     {
-      "columns": [
-        "booking_id"
-      ],
+      "columns": ["booking_id"],
       "tableTo": "booking",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7666,13 +7300,9 @@
       "table": "support_ticket"
     },
     {
-      "columns": [
-        "customer_user_id"
-      ],
+      "columns": ["customer_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7681,13 +7311,9 @@
       "table": "support_ticket"
     },
     {
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7696,13 +7322,9 @@
       "table": "support_ticket"
     },
     {
-      "columns": [
-        "assigned_to_user_id"
-      ],
+      "columns": ["assigned_to_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7711,13 +7333,9 @@
       "table": "support_ticket"
     },
     {
-      "columns": [
-        "resolved_by_user_id"
-      ],
+      "columns": ["resolved_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7726,13 +7344,9 @@
       "table": "support_ticket"
     },
     {
-      "columns": [
-        "ticket_id"
-      ],
+      "columns": ["ticket_id"],
       "tableTo": "support_ticket",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7741,13 +7355,9 @@
       "table": "support_ticket_message"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7756,13 +7366,9 @@
       "table": "support_ticket_message"
     },
     {
-      "columns": [
-        "author_user_id"
-      ],
+      "columns": ["author_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7771,13 +7377,9 @@
       "table": "support_ticket_message"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
@@ -7786,13 +7388,9 @@
       "table": "telegram_notification"
     },
     {
-      "columns": [
-        "ticket_id"
-      ],
+      "columns": ["ticket_id"],
       "tableTo": "support_ticket",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7801,13 +7399,9 @@
       "table": "telegram_notification"
     },
     {
-      "columns": [
-        "requested_by_user_id"
-      ],
+      "columns": ["requested_by_user_id"],
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7816,13 +7410,9 @@
       "table": "telegram_notification"
     },
     {
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7831,13 +7421,9 @@
       "table": "telegram_webhook_event"
     },
     {
-      "columns": [
-        "inbound_message_id"
-      ],
+      "columns": ["inbound_message_id"],
       "tableTo": "inbound_message",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "nameExplicit": false,
@@ -7846,414 +7432,322 @@
       "table": "telegram_webhook_event"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "affiliate_referral_pk",
       "table": "affiliate_referral",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "booking_affiliate_attribution_pk",
       "table": "booking_affiliate_attribution",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "booking_affiliate_payout_pk",
       "table": "booking_affiliate_payout",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "assistant_chat_pk",
       "table": "assistant_chat",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "assistant_message_pk",
       "table": "assistant_message",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "account_pk",
       "table": "account",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "invitation_pk",
       "table": "invitation",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "member_pk",
       "table": "member",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "organization_pk",
       "table": "organization",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "passkey_pk",
       "table": "passkey",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "session_pk",
       "table": "session",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "user_pk",
       "table": "user",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "verification_pk",
       "table": "verification",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "boat_pk",
       "table": "boat",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "boat_amenity_pk",
       "table": "boat_amenity",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "boat_asset_pk",
       "table": "boat_asset",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "boat_availability_block_pk",
       "table": "boat_availability_block",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "boat_availability_rule_pk",
       "table": "boat_availability_rule",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "boat_calendar_connection_pk",
       "table": "boat_calendar_connection",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "boat_dock_pk",
       "table": "boat_dock",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "boat_minimum_duration_rule_pk",
       "table": "boat_minimum_duration_rule",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "boat_pricing_profile_pk",
       "table": "boat_pricing_profile",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "boat_pricing_rule_pk",
       "table": "boat_pricing_rule",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "calendar_webhook_event_pk",
       "table": "calendar_webhook_event",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "platform_fee_config_pk",
       "table": "platform_fee_config",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "booking_pk",
       "table": "booking",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "booking_calendar_link_pk",
       "table": "booking_calendar_link",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "booking_cancellation_request_pk",
       "table": "booking_cancellation_request",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "booking_discount_application_pk",
       "table": "booking_discount_application",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "booking_discount_code_pk",
       "table": "booking_discount_code",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "booking_dispute_pk",
       "table": "booking_dispute",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "booking_payment_attempt_pk",
       "table": "booking_payment_attempt",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "booking_refund_pk",
       "table": "booking_refund",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "booking_shift_request_pk",
       "table": "booking_shift_request",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "user_consent_pk",
       "table": "user_consent",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "notification_delivery_pk",
       "table": "notification_delivery",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "notification_event_pk",
       "table": "notification_event",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "notification_in_app_pk",
       "table": "notification_in_app",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "notification_intent_pk",
       "table": "notification_intent",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "notification_preference_pk",
       "table": "notification_preference",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "inbound_message_pk",
       "table": "inbound_message",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "support_ticket_pk",
       "table": "support_ticket",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "support_ticket_message_pk",
       "table": "support_ticket_message",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "telegram_notification_pk",
       "table": "telegram_notification",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "telegram_webhook_event_pk",
       "table": "telegram_webhook_event",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "todo_pk",
       "table": "todo",
@@ -10704,27 +10198,21 @@
       "table": "telegram_webhook_event"
     },
     {
-      "columns": [
-        "token"
-      ],
+      "columns": ["token"],
       "nameExplicit": false,
       "name": "session_token_unique",
       "entityType": "uniques",
       "table": "session"
     },
     {
-      "columns": [
-        "email"
-      ],
+      "columns": ["email"],
       "nameExplicit": false,
       "name": "user_email_unique",
       "entityType": "uniques",
       "table": "user"
     },
     {
-      "columns": [
-        "phone_number"
-      ],
+      "columns": ["phone_number"],
       "nameExplicit": false,
       "name": "user_phone_number_unique",
       "entityType": "uniques",

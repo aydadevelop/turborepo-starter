@@ -22,7 +22,10 @@
 		[key: string]: any;
 	} = $props();
 
-	const context = setChatContainerContext(untrack(() => resize), untrack(() => initial));
+	const context = setChatContainerContext(
+		untrack(() => resize),
+		untrack(() => initial)
+	);
 
 	let containerElement: HTMLElement;
 

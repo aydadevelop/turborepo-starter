@@ -1,11 +1,14 @@
 import { db } from "@full-stack-cf-app/db";
+import { boat } from "@full-stack-cf-app/db/schema/boat";
 import {
 	booking,
+	bookingCalendarLink,
 	bookingPaymentAttempt,
 } from "@full-stack-cf-app/db/schema/booking";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { syncBookingPaymentStatusFromAttempts } from "../../../routers/booking/helpers";
+import { syncCalendarLinkOnBookingUpdate } from "../../../routers/booking/services/calendar-sync";
 import { WebhookAuthError, WebhookPayloadError } from "../errors";
 import type { PaymentWebhookAdapter, PaymentWebhookResult } from "../types";
 
@@ -240,6 +243,8 @@ const processPayOrConfirm = async (
 			.where(eq(booking.id, attempt.bookingId));
 	}
 
+	await syncBookingCalendarLifecycleMarker(attempt.bookingId);
+
 	return { code: 0 };
 };
 
@@ -279,6 +284,56 @@ const processFailOrCancel = async (
 	await syncBookingPaymentStatusFromAttempts(attempt.bookingId);
 
 	return { code: 0 };
+};
+
+const syncBookingCalendarLifecycleMarker = async (bookingId: string) => {
+	const [bookingRow] = await db
+		.select()
+		.from(booking)
+		.where(eq(booking.id, bookingId))
+		.limit(1);
+	if (!bookingRow) {
+		return;
+	}
+
+	const [managedCalendarLink] = await db
+		.select()
+		.from(bookingCalendarLink)
+		.where(eq(bookingCalendarLink.bookingId, bookingId))
+		.limit(1);
+	if (!managedCalendarLink) {
+		return;
+	}
+
+	const [boatRow] = await db
+		.select({
+			name: boat.name,
+		})
+		.from(boat)
+		.where(eq(boat.id, bookingRow.boatId))
+		.limit(1);
+
+	const calendarSyncResult = await syncCalendarLinkOnBookingUpdate({
+		managedBooking: bookingRow,
+		boatName: boatRow?.name ?? bookingRow.boatId,
+		calendarLink: managedCalendarLink,
+	});
+
+	await db
+		.update(bookingCalendarLink)
+		.set({
+			...calendarSyncResult.calendarLinkUpdate,
+			updatedAt: new Date(),
+		})
+		.where(eq(bookingCalendarLink.id, managedCalendarLink.id));
+
+	await db
+		.update(booking)
+		.set({
+			calendarSyncStatus: calendarSyncResult.status,
+			updatedAt: new Date(),
+		})
+		.where(eq(booking.id, bookingId));
 };
 
 const processRefund = async (

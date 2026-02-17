@@ -6,6 +6,7 @@ import {
 	calendarWebhookEvent,
 } from "@full-stack-cf-app/db/schema/boat";
 import { and, desc, eq, ne, sql } from "drizzle-orm";
+import type { NotificationQueueProducer } from "../../context";
 
 import { GoogleCalendarApiError } from "../adapters/google-calendar-adapter";
 import { getCalendarAdapter } from "../adapters/registry";
@@ -14,6 +15,7 @@ import type {
 	CalendarWatchChannel,
 	CalendarWebhookNotification,
 } from "../adapters/types";
+import { syncManagedBookingLifecycleFromExternalEvent } from "./booking-lifecycle-sync";
 
 const DEFAULT_SYNC_LOOKBACK_DAYS = 120;
 const DEFAULT_MAX_RESULTS = 250;
@@ -62,6 +64,7 @@ const applyExternalEventToAvailabilityBlock = async (params: {
 	connection: typeof boatCalendarConnection.$inferSelect;
 	event: CalendarEventsResult["events"][number];
 	syncedAt: Date;
+	notificationQueue?: NotificationQueueProducer;
 }) => {
 	const interval = resolveEventInterval(params.event);
 	if (params.event.status === "cancelled" || !interval) {
@@ -77,33 +80,15 @@ const applyExternalEventToAvailabilityBlock = async (params: {
 					eq(boatAvailabilityBlock.externalRef, params.event.externalEventId)
 				)
 			);
-		return;
-	}
-
-	await db
-		.insert(boatAvailabilityBlock)
-		.values({
-			id: crypto.randomUUID(),
-			boatId: params.connection.boatId,
-			calendarConnectionId: params.connection.id,
-			source: "calendar",
-			externalRef: params.event.externalEventId,
-			startsAt: interval.startsAt,
-			endsAt: interval.endsAt,
-			reason: normalizeBlockReason({
-				title: params.event.title,
-				description: params.event.description,
-			}),
-			isActive: true,
-			createdAt: params.syncedAt,
-			updatedAt: params.syncedAt,
-		})
-		.onConflictDoUpdate({
-			target: [
-				boatAvailabilityBlock.calendarConnectionId,
-				boatAvailabilityBlock.externalRef,
-			],
-			set: {
+	} else {
+		await db
+			.insert(boatAvailabilityBlock)
+			.values({
+				id: crypto.randomUUID(),
+				boatId: params.connection.boatId,
+				calendarConnectionId: params.connection.id,
+				source: "calendar",
+				externalRef: params.event.externalEventId,
 				startsAt: interval.startsAt,
 				endsAt: interval.endsAt,
 				reason: normalizeBlockReason({
@@ -111,9 +96,34 @@ const applyExternalEventToAvailabilityBlock = async (params: {
 					description: params.event.description,
 				}),
 				isActive: true,
+				createdAt: params.syncedAt,
 				updatedAt: params.syncedAt,
-			},
-		});
+			})
+			.onConflictDoUpdate({
+				target: [
+					boatAvailabilityBlock.calendarConnectionId,
+					boatAvailabilityBlock.externalRef,
+				],
+				set: {
+					startsAt: interval.startsAt,
+					endsAt: interval.endsAt,
+					reason: normalizeBlockReason({
+						title: params.event.title,
+						description: params.event.description,
+					}),
+					isActive: true,
+					updatedAt: params.syncedAt,
+				},
+			});
+	}
+
+	await syncManagedBookingLifecycleFromExternalEvent({
+		provider: params.connection.provider,
+		externalCalendarId: params.connection.externalCalendarId,
+		event: params.event,
+		syncedAt: params.syncedAt,
+		notificationQueue: params.notificationQueue,
+	});
 };
 
 const listChangedEvents = async (params: {
@@ -169,7 +179,10 @@ const listChangedEvents = async (params: {
 
 const syncConnectionRecord = async (
 	connection: typeof boatCalendarConnection.$inferSelect,
-	options?: { initialTimeMin?: Date }
+	options?: {
+		initialTimeMin?: Date;
+		notificationQueue?: NotificationQueueProducer;
+	}
 ) => {
 	const startedAt = new Date();
 
@@ -210,6 +223,7 @@ const syncConnectionRecord = async (
 				connection,
 				event,
 				syncedAt,
+				notificationQueue: options?.notificationQueue,
 			});
 		}
 
@@ -417,6 +431,7 @@ export const syncCalendarConnectionById = async (
 export const syncCalendarConnectionByWebhook = async (params: {
 	provider: CalendarProvider;
 	notification: CalendarWebhookNotification;
+	notificationQueue?: NotificationQueueProducer;
 }) => {
 	const webhookEvent = await registerWebhookEvent(params);
 	if (webhookEvent.duplicate) {
@@ -455,7 +470,9 @@ export const syncCalendarConnectionByWebhook = async (params: {
 				.where(eq(boatCalendarConnection.id, connection.id));
 		}
 
-		const syncResult = await syncConnectionRecord(connection);
+		const syncResult = await syncConnectionRecord(connection, {
+			notificationQueue: params.notificationQueue,
+		});
 		await finalizeWebhookEvent({
 			eventId: webhookEvent.eventId,
 			status: "processed",

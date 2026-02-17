@@ -135,11 +135,14 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 		if (input.startsAt >= input.endsAt) {
 			throw new Error("Calendar event startsAt must be before endsAt");
 		}
+		const presentation = this.resolvePresentation(input.presentation);
 
 		const payload = {
 			id: input.externalEventId,
 			summary: input.title,
 			description: input.description,
+			status: presentation.status,
+			colorId: presentation.colorId,
 			start: {
 				dateTime: input.startsAt.toISOString(),
 				timeZone: input.timezone,
@@ -349,6 +352,28 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 				? this.parseDateValue(channelExpirationRaw)
 				: undefined,
 		};
+	}
+
+	private resolvePresentation(
+		presentation: CalendarEventInput["presentation"]
+	): {
+		status?: "confirmed" | "tentative" | "cancelled";
+		colorId?: string;
+	} {
+		switch (presentation) {
+			case "prebooking":
+				return {
+					status: "tentative",
+					colorId: "8",
+				};
+			case "confirmed":
+				return {
+					status: "confirmed",
+					colorId: "0",
+				};
+			default:
+				return {};
+		}
 	}
 
 	private async patchOrCreateEvent(

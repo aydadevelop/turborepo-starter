@@ -13,29 +13,28 @@
 	const currentOffset = writable(0);
 	const limit = 20;
 
-	const queryOptions = derived(
-		[search, statusFilter, currentOffset],
-		([$search, $statusFilter, $currentOffset]) => {
-			return orpc.admin.bookings.list.queryOptions({
-				input: {
-					limit,
-					offset: $currentOffset,
-					search: $search || undefined,
-					status: ($statusFilter || undefined) as
-						| undefined
-						| "pending"
-						| "awaiting_payment"
-						| "confirmed"
-						| "in_progress"
-						| "completed"
-						| "cancelled"
-						| "no_show",
-				} as const,
-			});
-		}
+	const bookingsQuery = createQuery(
+		derived(
+			[search, statusFilter, currentOffset],
+			([$search, $statusFilter, $currentOffset]) =>
+				orpc.admin.bookings.list.queryOptions({
+					input: {
+						limit,
+						offset: $currentOffset,
+						search: $search || undefined,
+						status: ($statusFilter || undefined) as
+							| undefined
+							| "pending"
+							| "awaiting_payment"
+							| "confirmed"
+							| "in_progress"
+							| "completed"
+							| "cancelled"
+							| "no_show",
+					} as const,
+				})
+		)
 	);
-
-	const bookingsQuery = createQuery(queryOptions);
 
 	const totalPages = $derived(
 		Math.max(1, Math.ceil(($bookingsQuery.data?.total ?? 0) / limit))

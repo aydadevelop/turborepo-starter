@@ -4,7 +4,10 @@
 	import type { CreateMutationResult } from "@tanstack/svelte-query";
 	import { getContext } from "svelte";
 
-	const createChatMutation = getContext<CreateMutationResult<{ id: string; title: string }, Error, string>>("createChatMutation");
+	const createChatMutation =
+		getContext<
+			CreateMutationResult<{ id: string; title: string }, Error, string>
+		>("createChatMutation");
 </script>
 
 <div class="flex h-full flex-col items-center justify-center gap-4 p-8">

@@ -145,6 +145,26 @@ const notificationQueue = await Queue("notificationQueue", {
 	...cloudflareApiOptions,
 });
 
+const bookingLifecycleDeadLetterQueue = await Queue(
+	"bookingLifecycleDeadLetterQueue",
+	{
+		adopt: true,
+		settings: {
+			messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
+		},
+		...cloudflareApiOptions,
+	}
+);
+
+const bookingLifecycleQueue = await Queue("bookingLifecycleQueue", {
+	adopt: true,
+	dlq: bookingLifecycleDeadLetterQueue,
+	settings: {
+		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
+	},
+	...cloudflareApiOptions,
+});
+
 // Local dev uses localhost ports, deployed stages use their web URL
 const devCorsOrigin =
 	"http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176";
@@ -213,6 +233,7 @@ export const server = await Worker("server", {
 	bindings: {
 		DB: db,
 		NOTIFICATION_QUEUE: notificationQueue,
+		BOOKING_LIFECYCLE_QUEUE: bookingLifecycleQueue,
 		CORS_ORIGIN: getCorsOrigin(),
 		BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
 		BETTER_AUTH_URL: getAuthUrl(),
@@ -252,6 +273,19 @@ export const server = await Worker("server", {
 		OPEN_ROUTER_API_KEY: process.env.OPEN_ROUTER_API_KEY || "",
 		AI_MODEL: process.env.AI_MODEL || "",
 	},
+	eventSources: [
+		{
+			queue: bookingLifecycleQueue,
+			settings: {
+				batchSize: 10,
+				maxConcurrency: 2,
+				maxRetries: 4,
+				maxWaitTimeMs: 1500,
+				retryDelay: 30,
+				deadLetterQueue: bookingLifecycleDeadLetterQueue,
+			},
+		},
+	],
 	dev: { port: 3000 },
 });
 

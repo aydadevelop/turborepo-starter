@@ -23,6 +23,7 @@ import {
 	organizationPermissionProcedure,
 	protectedProcedure,
 } from "../../index";
+import { resolveBookingNotificationUserIds } from "../../lib/booking-notification-recipients";
 import { buildRecipients, formatRefundAmount } from "../../lib/event-bus";
 import {
 	applyCancellationPolicyAndRefund,
@@ -266,6 +267,11 @@ export const coreBookingRouter = {
 				resolvedDiscount,
 				calendarLink: input.calendarLink,
 			});
+			const recipientUserIds = await resolveBookingNotificationUserIds({
+				organizationId: created.booking.organizationId,
+				userIds: [input.customerUserId, sessionUserId],
+				includeBookingManagers: true,
+			});
 			context.eventBus.emit({
 				type: "booking.created",
 				organizationId: created.booking.organizationId,
@@ -278,7 +284,7 @@ export const coreBookingRouter = {
 					windowText: `${managedBoat.name}: ${created.booking.startsAt.toISOString()} - ${created.booking.endsAt.toISOString()}`,
 				},
 				recipients: buildRecipients({
-					userIds: [input.customerUserId, sessionUserId],
+					userIds: recipientUserIds,
 					title: "Booking created",
 					body: `${managedBoat.name}: ${created.booking.startsAt.toISOString()} - ${created.booking.endsAt.toISOString()}`,
 					ctaUrl: "/bookings",
@@ -288,7 +294,7 @@ export const coreBookingRouter = {
 
 			await enqueueBookingExpirationCheck(
 				created.booking.id,
-				context.notificationQueue
+				context.bookingLifecycleQueue ?? context.notificationQueue
 			);
 
 			return created;

@@ -1,13 +1,11 @@
 import { auth } from "@full-stack-cf-app/auth";
 import { db } from "@full-stack-cf-app/db";
 import { member } from "@full-stack-cf-app/db/schema/auth";
-import {
-	bookingExpirationCheckMessageSchema,
-	notificationQueueMessageSchema,
-} from "@full-stack-cf-app/notifications/contracts";
+import { notificationQueueMessageSchema } from "@full-stack-cf-app/notifications/contracts";
 import { and, asc, eq } from "drizzle-orm";
 import type { Context as HonoContext } from "hono";
 
+import { bookingExpirationCheckMessageSchema } from "./contracts/booking-lifecycle-queue";
 import type { EventBus } from "./lib/event-bus";
 
 export interface CreateContextOptions {
@@ -83,28 +81,7 @@ const getInlineNotificationProcessor = () => {
 };
 
 const inlineNotificationQueueProducer: NotificationQueueProducer = {
-	send: async (message, options) => {
-		const expirationMessage =
-			bookingExpirationCheckMessageSchema.safeParse(message);
-		if (expirationMessage.success) {
-			const delayMs = (options?.delaySeconds ?? 0) * 1000;
-			const bookingId = expirationMessage.data.bookingId;
-			setTimeout(async () => {
-				try {
-					const { expireBookingIfUnpaid } = await import(
-						"./routers/booking/services/expiration"
-					);
-					await expireBookingIfUnpaid(bookingId);
-				} catch (error) {
-					console.error(
-						`[inline-expiration] Failed to expire booking ${bookingId}:`,
-						error
-					);
-				}
-			}, delayMs);
-			return;
-		}
-
+	send: async (message) => {
 		const parsedMessage = notificationQueueMessageSchema.safeParse(message);
 		if (!parsedMessage.success) {
 			throw new Error("Inline notification queue: unsupported message kind");
@@ -139,6 +116,35 @@ const inlineNotificationQueueProducer: NotificationQueueProducer = {
 	},
 };
 
+const inlineBookingLifecycleQueueProducer: NotificationQueueProducer = {
+	send: (message, options) => {
+		const expirationMessage =
+			bookingExpirationCheckMessageSchema.safeParse(message);
+		if (!expirationMessage.success) {
+			return Promise.reject(
+				new Error("Inline booking lifecycle queue: unsupported message kind")
+			);
+		}
+
+		const delayMs = (options?.delaySeconds ?? 0) * 1000;
+		const bookingId = expirationMessage.data.bookingId;
+		setTimeout(async () => {
+			try {
+				const { expireBookingIfUnpaid } = await import(
+					"./routers/booking/services/expiration"
+				);
+				await expireBookingIfUnpaid(bookingId);
+			} catch (error) {
+				console.error(
+					`[inline-expiration] Failed to expire booking ${bookingId}:`,
+					error
+				);
+			}
+		}, delayMs);
+		return Promise.resolve();
+	},
+};
+
 export interface Context {
 	session: AuthSession;
 	activeMembership: ActiveOrganizationMembership | null;
@@ -146,6 +152,7 @@ export interface Context {
 	requestHostname: string;
 	requestCookies?: Readonly<Record<string, string>>;
 	notificationQueue?: NotificationQueueProducer;
+	bookingLifecycleQueue?: NotificationQueueProducer;
 	eventBus?: EventBus;
 }
 
@@ -266,18 +273,37 @@ export async function createContext({
 		context as HonoContext & {
 			env?: {
 				NOTIFICATION_QUEUE?: unknown;
+				BOOKING_LIFECYCLE_QUEUE?: unknown;
 			};
 		}
 	).env?.NOTIFICATION_QUEUE;
+	const bookingLifecycleQueueCandidate = (
+		context as HonoContext & {
+			env?: {
+				NOTIFICATION_QUEUE?: unknown;
+				BOOKING_LIFECYCLE_QUEUE?: unknown;
+			};
+		}
+	).env?.BOOKING_LIFECYCLE_QUEUE;
 	const notificationQueue = isNotificationQueueProducer(
 		notificationQueueCandidate
 	)
 		? notificationQueueCandidate
 		: undefined;
+	const bookingLifecycleQueue = isNotificationQueueProducer(
+		bookingLifecycleQueueCandidate
+	)
+		? bookingLifecycleQueueCandidate
+		: undefined;
 	const resolvedNotificationQueue =
 		notificationQueue ??
 		(LOCAL_REQUEST_HOSTNAMES.has(requestHostname)
 			? inlineNotificationQueueProducer
+			: undefined);
+	const resolvedBookingLifecycleQueue =
+		bookingLifecycleQueue ??
+		(LOCAL_REQUEST_HOSTNAMES.has(requestHostname)
+			? inlineBookingLifecycleQueueProducer
 			: undefined);
 
 	return {
@@ -287,5 +313,6 @@ export async function createContext({
 		requestHostname,
 		requestCookies,
 		notificationQueue: resolvedNotificationQueue,
+		bookingLifecycleQueue: resolvedBookingLifecycleQueue,
 	};
 }

@@ -20,16 +20,60 @@ const toSyncErrorMessage = (error: unknown) => {
 	return "Unknown calendar sync error";
 };
 
+const resolveCalendarBookingReference = (bookingId: string) => {
+	const [shortId] = bookingId.split("-");
+	return shortId && shortId.length > 0 ? shortId : bookingId;
+};
+
+const resolveCalendarBookingTitle = (params: {
+	bookingId: string;
+	boatName: string;
+	status: CreateManagedBookingInput["status"];
+	paymentStatus: CreateManagedBookingInput["paymentStatus"];
+}) => {
+	const bookingRef = resolveCalendarBookingReference(params.bookingId);
+	const isPrebookingLifecycle =
+		(params.status === "pending" || params.status === "awaiting_payment") &&
+		params.paymentStatus !== "paid" &&
+		params.paymentStatus !== "partially_paid";
+
+	if (isPrebookingLifecycle) {
+		return `ПБ №${bookingRef} ${params.boatName} (bot)`;
+	}
+
+	return `Занято ${params.boatName} №${bookingRef} (bot)`;
+};
+
+const resolveCalendarBookingPresentation = (params: {
+	bookingId: string;
+	boatName: string;
+	status: CreateManagedBookingInput["status"];
+	paymentStatus: CreateManagedBookingInput["paymentStatus"];
+}) => {
+	const isPrebookingLifecycle =
+		(params.status === "pending" || params.status === "awaiting_payment") &&
+		params.paymentStatus !== "paid" &&
+		params.paymentStatus !== "partially_paid";
+
+	return {
+		title: resolveCalendarBookingTitle(params),
+		presentation: isPrebookingLifecycle
+			? ("prebooking" as const)
+			: ("confirmed" as const),
+	};
+};
+
 export const syncCalendarLinkOnBookingCreate = async (params: {
 	bookingId: string;
 	organizationId: string;
 	boatId: string;
 	boatName: string;
 	source: CreateManagedBookingInput["source"];
+	status: CreateManagedBookingInput["status"];
+	paymentStatus: CreateManagedBookingInput["paymentStatus"];
 	startsAt: Date;
 	endsAt: Date;
 	timezone: string;
-	contactName?: string;
 	notes?: string;
 	calendarLink: CreateManagedBookingCalendarLinkInput;
 }): Promise<CalendarSyncResult> => {
@@ -55,12 +99,17 @@ export const syncCalendarLinkOnBookingCreate = async (params: {
 	}
 
 	try {
+		const presentation = resolveCalendarBookingPresentation({
+			bookingId: params.bookingId,
+			boatName: params.boatName,
+			status: params.status,
+			paymentStatus: params.paymentStatus,
+		});
 		const syncedEvent = await adapter.upsertEvent({
 			externalCalendarId: params.calendarLink.externalCalendarId,
 			externalEventId: params.calendarLink.externalEventId,
-			title: params.contactName
-				? `${params.boatName} booking for ${params.contactName}`
-				: `${params.boatName} booking`,
+			title: presentation.title,
+			presentation: presentation.presentation,
 			startsAt: params.startsAt,
 			endsAt: params.endsAt,
 			timezone: params.timezone,
@@ -70,6 +119,12 @@ export const syncCalendarLinkOnBookingCreate = async (params: {
 				organizationId: params.organizationId,
 				boatId: params.boatId,
 				source: params.source,
+				bookingStatus: params.status,
+				paymentStatus: params.paymentStatus,
+				isPaid: String(
+					params.paymentStatus === "paid" ||
+						params.paymentStatus === "partially_paid"
+				),
 			},
 		});
 
@@ -170,12 +225,17 @@ export const syncCalendarLinkOnBookingUpdate = async (params: {
 	}
 
 	try {
+		const presentation = resolveCalendarBookingPresentation({
+			bookingId: params.managedBooking.id,
+			boatName: params.boatName,
+			status: params.managedBooking.status,
+			paymentStatus: params.managedBooking.paymentStatus,
+		});
 		const syncedEvent = await adapter.upsertEvent({
 			externalCalendarId: calendarLink.externalCalendarId,
 			externalEventId: calendarLink.externalEventId,
-			title: params.managedBooking.contactName
-				? `${params.boatName} booking for ${params.managedBooking.contactName}`
-				: `${params.boatName} booking`,
+			title: presentation.title,
+			presentation: presentation.presentation,
 			startsAt: params.managedBooking.startsAt,
 			endsAt: params.managedBooking.endsAt,
 			timezone: params.managedBooking.timezone,
@@ -185,6 +245,12 @@ export const syncCalendarLinkOnBookingUpdate = async (params: {
 				organizationId: params.managedBooking.organizationId,
 				boatId: params.managedBooking.boatId,
 				source: params.managedBooking.source,
+				bookingStatus: params.managedBooking.status,
+				paymentStatus: params.managedBooking.paymentStatus,
+				isPaid: String(
+					params.managedBooking.paymentStatus === "paid" ||
+						params.managedBooking.paymentStatus === "partially_paid"
+				),
 			},
 		});
 
@@ -255,9 +321,7 @@ export const cancelBookingAndSync = async (params: {
 	cancelledByUserId?: string;
 	reason?: string;
 }) => {
-	if (params.managedBooking.status === "cancelled") {
-		return { success: true };
-	}
+	const isAlreadyCancelled = params.managedBooking.status === "cancelled";
 
 	const [managedCalendarLink] = await db
 		.select()
@@ -265,17 +329,19 @@ export const cancelBookingAndSync = async (params: {
 		.where(eq(bookingCalendarLink.bookingId, params.managedBooking.id))
 		.limit(1);
 
-	await db
-		.update(booking)
-		.set({
-			status: "cancelled",
-			calendarSyncStatus: "pending",
-			cancelledAt: new Date(),
-			cancelledByUserId: params.cancelledByUserId,
-			cancellationReason: params.reason,
-			updatedAt: new Date(),
-		})
-		.where(eq(booking.id, params.managedBooking.id));
+	if (!isAlreadyCancelled) {
+		await db
+			.update(booking)
+			.set({
+				status: "cancelled",
+				calendarSyncStatus: "pending",
+				cancelledAt: new Date(),
+				cancelledByUserId: params.cancelledByUserId,
+				cancellationReason: params.reason,
+				updatedAt: new Date(),
+			})
+			.where(eq(booking.id, params.managedBooking.id));
+	}
 
 	const calendarSyncResult = managedCalendarLink
 		? await syncCalendarLinkOnBookingCancel({

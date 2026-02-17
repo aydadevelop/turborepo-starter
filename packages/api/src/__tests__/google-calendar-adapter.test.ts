@@ -54,6 +54,72 @@ const createGoogleFetchMock = (params: {
 };
 
 describe("google calendar adapter", () => {
+	it("maps semantic presentation to Google status/color", async () => {
+		const requests: Array<{ url: URL; body: unknown }> = [];
+		const adapter = new GoogleCalendarAdapter({
+			credentials: createCredentials(),
+			fetchImpl: createGoogleFetchMock({
+				handleApiRequest: ({ url, init }) => {
+					const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+					requests.push({ url, body });
+					return new Response(
+						JSON.stringify({
+							id: "evt-presentation",
+							status: "confirmed",
+							iCalUID: "evt-presentation@google.com",
+							etag: '"v1"',
+							updated: "2026-06-01T10:00:00.000Z",
+						}),
+						{
+							status: 200,
+							headers: {
+								"Content-Type": "application/json",
+							},
+						}
+					);
+				},
+			}),
+		});
+
+		await adapter.upsertEvent({
+			externalCalendarId: "calendar-1",
+			externalEventId: "evt-1",
+			title: "Prebooking",
+			presentation: "prebooking",
+			startsAt: new Date("2026-06-01T10:00:00.000Z"),
+			endsAt: new Date("2026-06-01T12:00:00.000Z"),
+			timezone: "UTC",
+		});
+
+		await adapter.upsertEvent({
+			externalCalendarId: "calendar-1",
+			externalEventId: "evt-1",
+			title: "Confirmed",
+			presentation: "confirmed",
+			startsAt: new Date("2026-06-01T10:00:00.000Z"),
+			endsAt: new Date("2026-06-01T12:00:00.000Z"),
+			timezone: "UTC",
+		});
+
+		const prebookingRequest = requests[0];
+		if (!prebookingRequest) {
+			throw new Error("Expected prebooking request");
+		}
+		expect(prebookingRequest.body).toMatchObject({
+			status: "tentative",
+			colorId: "8",
+		});
+
+		const confirmedRequest = requests[1];
+		if (!confirmedRequest) {
+			throw new Error("Expected confirmed request");
+		}
+		expect(confirmedRequest.body).toMatchObject({
+			status: "confirmed",
+			colorId: "0",
+		});
+	});
+
 	it("lists events with incremental sync metadata", async () => {
 		const requests: URL[] = [];
 		const adapter = new GoogleCalendarAdapter({

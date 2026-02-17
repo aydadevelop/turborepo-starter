@@ -231,6 +231,10 @@ Current status:
 - Internal polling sync endpoint retained as fallback.
 - Connection watch metadata persisted (`watchChannelId`, `watchResourceId`, `watchExpiresAt`, `syncToken`).
 - Watch renewal and dead-letter management endpoints are available for operations.
+- Boat status lifecycle now reconciles calendar connections:
+  - when boat becomes non-operational (`status !== active` or `isActive=false`) calendar sync is set to `disabled`, and active watch channels are unsubscribed best-effort.
+  - when boat becomes operational again (`status=active` and `isActive=true`) calendar sync is re-enabled (`idle`) and catch-up sync is triggered from the latest sync token.
+  - if webhook URL is configured, watch channels are re-established for providers that support watch.
 - **⚠ Full lifecycle not tested:** watch registration → Google push notification → incremental sync → booking conflict detection → notification emission has NOT been tested end-to-end.
 - **⚠ Token invalidation path untested:** legacy had explicit `syncToken` reset on 410 Gone — new stack recovery behavior unverified.
 - **⚠ Watch renewal under failure:** what happens when renewal fails, channel expires, events arrive after expiry — no test coverage.
@@ -240,11 +244,35 @@ Missing subtasks:
 - [x] Add automatic watch renewal scheduler for expiring channels (safe lead-time renew strategy).
 - [x] Add dead-letter/error recovery strategy for webhook processing failures.
 - [x] Add idempotency guard for duplicate webhook notifications across retries.
+- [x] Define disable/enable lifecycle for boat calendar connections (watch unsubscribe on disable + incremental catch-up sync on re-enable).
 - [ ] **P1** Add end-to-end integration test: register watch → receive webhook push → incremental sync → detect booking overlap → emit event.
 - [ ] **P1** Add test coverage for sync token invalidation (410 Gone) and automatic retry with full sync fallback.
 - [ ] **P2** Add test for watch renewal failure → graceful degradation to polling fallback.
 - [ ] **P2** Add test for webhook events arriving after channel expiry → dead-letter → manual recovery.
 - [ ] **P3** Add secondary provider adapters (Outlook/iCal) behind the existing adapter contract.
+
+Decision notes (2026-02-17):
+
+- Re-enable strategy uses **incremental sync from the last sync token** (not forced full sync) to minimize API load and preserve temporal continuity.
+- Full sync is still reached automatically when token is invalid/expired (Google `410 Gone` fallback path already implemented).
+- Queue is not required for this phase; lifecycle reconciliation runs in request path with per-connection best-effort error isolation. Queue-based orchestration can be added later for very large fleets.
+- Watch re-subscription is conditional:
+  - only when webhook URL is configured;
+  - only for adapters that support `startWatch`;
+  - skipped when an active watch metadata record already exists.
+
+Boundary checklist not fully explored:
+
+- [ ] Secondary providers (`outlook`, `ical`) adapter parity:
+  - inbound lifecycle code is provider-agnostic, but only Google has mature adapter/watch behavior today.
+- [ ] External event deletion for old/terminal bookings:
+  - current behavior intentionally ignores terminal bookings (`cancelled`, `completed`, `no_show`) and does not create new requests.
+- [ ] Out-of-order webhook delivery with rapid event edits:
+  - dedupe exists at message-level; business-level ordering under burst updates still needs adversarial integration tests.
+- [ ] All-day/ambiguous timezone events from providers:
+  - interval parsing exists, but policy validation against booking timezone assumptions needs explicit tests.
+- [ ] Manual calendar connections with stale watch metadata:
+  - lifecycle now clears metadata locally, but no external unsubscribe exists for non-watch-capable adapters.
 
 ### 4) Help desk / support tickets — **NOT BATTLE-TESTED**
 

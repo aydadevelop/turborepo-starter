@@ -41,6 +41,7 @@ import {
 	quotePublicOutputSchema,
 } from "../../contracts/booking";
 import { publicProcedure } from "../../index";
+import { resolveBookingNotificationUserIds } from "../../lib/booking-notification-recipients";
 import { buildRecipients } from "../../lib/event-bus";
 import { resolveBookingDiscount } from "./discount/resolution";
 import {
@@ -1459,8 +1460,13 @@ export const publicBookingRouter = {
 			}
 
 			try {
-				const recipients = buildRecipients({
+				const recipientUserIds = await resolveBookingNotificationUserIds({
+					organizationId: created.booking.organizationId,
 					userIds: [quote.sessionUserId],
+					includeBookingManagers: true,
+				});
+				const recipients = buildRecipients({
+					userIds: recipientUserIds,
 					title: "Booking created",
 					body: `${quote.publicBoat.name}: ${created.booking.startsAt.toISOString()} - ${created.booking.endsAt.toISOString()}`,
 					ctaUrl: "/bookings",
@@ -1486,7 +1492,7 @@ export const publicBookingRouter = {
 
 			await enqueueBookingExpirationCheck(
 				created.booking.id,
-				context.notificationQueue
+				context.bookingLifecycleQueue ?? context.notificationQueue
 			);
 
 			return {

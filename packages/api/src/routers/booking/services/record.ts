@@ -115,10 +115,11 @@ export const createManagedBookingRecord = async (params: {
 		boatId: params.input.boatId,
 		boatName: params.boatName,
 		source: params.input.source,
+		status: params.input.status,
+		paymentStatus: params.input.paymentStatus,
 		startsAt: params.input.startsAt,
 		endsAt: params.input.endsAt,
 		timezone: params.input.timezone,
-		contactName: params.input.contactName,
 		notes: params.input.notes,
 		calendarLink: params.calendarLink,
 	});

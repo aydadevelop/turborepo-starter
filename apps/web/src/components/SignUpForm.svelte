@@ -11,11 +11,10 @@
 	import { Input } from "@full-stack-cf-app/ui/components/input";
 	import { Label } from "@full-stack-cf-app/ui/components/label";
 	import { createForm } from "@tanstack/svelte-form";
-	import { get } from "svelte/store";
 	import { z } from "zod";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { page } from "$app/stores";
+	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
 
 	let { switchToSignIn } = $props<{ switchToSignIn: () => void }>();
@@ -30,9 +29,8 @@
 		return candidatePath;
 	};
 
-	const currentPage = get(page);
-	const postAuthRedirectPath = resolvePostAuthRedirect(
-		currentPage.url.searchParams.get("next")
+	const postAuthRedirectPath = $derived(
+		resolvePostAuthRedirect(page.url.searchParams.get("next"))
 	);
 
 	const validationSchema = z.object({

@@ -12,11 +12,10 @@
 	import { Label } from "@full-stack-cf-app/ui/components/label";
 	import { createForm } from "@tanstack/svelte-form";
 	import { onMount } from "svelte";
-	import { get } from "svelte/store";
 	import { z } from "zod";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { page } from "$app/stores";
+	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
 	import PhoneOtpForm from "./PhoneOtpForm.svelte";
 	import TelegramLogin from "./TelegramLogin.svelte";
@@ -36,9 +35,8 @@
 		return candidatePath;
 	};
 
-	const currentPage = get(page);
-	const postAuthRedirectPath = resolvePostAuthRedirect(
-		currentPage.url.searchParams.get("next")
+	const postAuthRedirectPath = $derived(
+		resolvePostAuthRedirect(page.url.searchParams.get("next"))
 	);
 	let passkeyError = $state<string | null>(null);
 	let passkeyPending = $state(false);

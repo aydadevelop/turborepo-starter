@@ -460,7 +460,10 @@ describe("initialSyncCalendarConnection", () => {
 		const after = new Date();
 
 		const passedTimeMin =
-			syncCalendarConnectionByIdMock.mock.calls[0][1].initialTimeMin;
+			syncCalendarConnectionByIdMock.mock.calls[0]?.[1]?.initialTimeMin;
+		if (!passedTimeMin) {
+			throw new Error("Expected initialTimeMin to be passed");
+		}
 		expect(passedTimeMin.getTime()).toBeGreaterThanOrEqual(before.getTime());
 		expect(passedTimeMin.getTime()).toBeLessThanOrEqual(after.getTime());
 	});

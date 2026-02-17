@@ -18,17 +18,21 @@
 	import ArrowUp from "@lucide/svelte/icons/arrow-up";
 	import Square from "@lucide/svelte/icons/square";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { isToolUIPart } from "ai";
 	import type { UIMessage } from "ai";
-	import { page } from "$app/stores";
+	import { isToolUIPart } from "ai";
+	import { page } from "$app/state";
 	import { assistantClient } from "$lib/assistant";
 
-	const chatId = $derived($page.params.id!);
+	const chatId = $derived(page.params.id!);
 
 	const chatQuery = createQuery({
-		get queryKey() { return ["assistant", "chat", chatId] },
+		get queryKey() {
+			return ["assistant", "chat", chatId];
+		},
 		queryFn: () => assistantClient.getChat({ chatId }),
-		get enabled() { return Boolean(chatId) },
+		get enabled() {
+			return Boolean(chatId);
+		},
 	});
 
 	let chat = $state<Chat | null>(null);
@@ -60,7 +64,7 @@
 	let inputValue = $state("");
 
 	function handleSubmit() {
-		if (!inputValue.trim() || !chat) return;
+		if (!(inputValue.trim() && chat)) return;
 		chat.sendMessage({ text: inputValue });
 		inputValue = "";
 	}
@@ -114,7 +118,9 @@
 								</div>
 							{/if}
 						{:else}
-							<MessageContent class="bg-primary text-primary-foreground max-w-[80%]">
+							<MessageContent
+								class="bg-primary text-primary-foreground max-w-[80%]"
+							>
 								{textContent}
 							</MessageContent>
 						{/if}

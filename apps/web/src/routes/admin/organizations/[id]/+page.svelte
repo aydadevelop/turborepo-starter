@@ -4,40 +4,57 @@
 	import * as Table from "@full-stack-cf-app/ui/components/table";
 	import * as Tabs from "@full-stack-cf-app/ui/components/tabs";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived } from "svelte/store";
+	import { untrack } from "svelte";
+	import { writable } from "svelte/store";
 	import { resolve } from "$app/paths";
-	import { page } from "$app/stores";
+	import { page } from "$app/state";
 	import { orpc } from "$lib/orpc";
 
-	const orgQueryOptions = derived(page, ($page) => {
-		const id = $page.params.id ?? "";
+	const orgOpts = $derived.by(() => {
+		const id = page.params.id ?? "";
 		return orpc.admin.organizations.getOrg.queryOptions({ input: { id } });
 	});
-	const orgQuery = createQuery(orgQueryOptions);
+	const orgOptsStore = writable(untrack(() => orgOpts));
+	$effect(() => {
+		orgOptsStore.set(orgOpts);
+	});
+	const orgQuery = createQuery(orgOptsStore);
 
-	const membersQueryOptions = derived(page, ($page) => {
-		const organizationId = $page.params.id ?? "";
+	const membersOpts = $derived.by(() => {
+		const organizationId = page.params.id ?? "";
 		return orpc.admin.organizations.listMembers.queryOptions({
 			input: { organizationId, limit: 50 },
 		});
 	});
-	const membersQuery = createQuery(membersQueryOptions);
+	const membersOptsStore = writable(untrack(() => membersOpts));
+	$effect(() => {
+		membersOptsStore.set(membersOpts);
+	});
+	const membersQuery = createQuery(membersOptsStore);
 
-	const invitationsQueryOptions = derived(page, ($page) => {
-		const organizationId = $page.params.id ?? "";
+	const invitationsOpts = $derived.by(() => {
+		const organizationId = page.params.id ?? "";
 		return orpc.admin.organizations.listInvitations.queryOptions({
 			input: { organizationId, limit: 50 },
 		});
 	});
-	const invitationsQuery = createQuery(invitationsQueryOptions);
+	const invitationsOptsStore = writable(untrack(() => invitationsOpts));
+	$effect(() => {
+		invitationsOptsStore.set(invitationsOpts);
+	});
+	const invitationsQuery = createQuery(invitationsOptsStore);
 
-	const boatsQueryOptions = derived(page, ($page) => {
-		const organizationId = $page.params.id ?? "";
+	const boatsOpts = $derived.by(() => {
+		const organizationId = page.params.id ?? "";
 		return orpc.admin.boats.list.queryOptions({
 			input: { organizationId, limit: 50 },
 		});
 	});
-	const boatsQuery = createQuery(boatsQueryOptions);
+	const boatsOptsStore = writable(untrack(() => boatsOpts));
+	$effect(() => {
+		boatsOptsStore.set(boatsOpts);
+	});
+	const boatsQuery = createQuery(boatsOptsStore);
 
 	const roleColor = (role: string) => {
 		switch (role) {

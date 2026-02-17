@@ -2,11 +2,15 @@
 	import { Button } from "@full-stack-cf-app/ui/components/button";
 	import MessageSquarePlus from "@lucide/svelte/icons/message-square-plus";
 	import Trash2 from "@lucide/svelte/icons/trash-2";
-	import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
+	import {
+		createMutation,
+		createQuery,
+		useQueryClient,
+	} from "@tanstack/svelte-query";
 	import { setContext } from "svelte";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { page } from "$app/stores";
+	import { page } from "$app/state";
 	import { assistantClient } from "$lib/assistant";
 	import { authClient } from "$lib/auth-client";
 
@@ -49,25 +53,22 @@
 	});
 
 	const deleteChatMutation = createMutation({
-		mutationFn: (chatId: string) =>
-			assistantClient.deleteChat({ chatId }),
+		mutationFn: (chatId: string) => assistantClient.deleteChat({ chatId }),
 		onSuccess() {
 			queryClient.invalidateQueries({ queryKey: ["assistant", "chats"] });
-			if ($page.params.id) {
+			if (page.params.id) {
 				goto(resolve("/chat"));
 			}
 		},
 	});
 
-	const activeChatId = $derived($page.params.id);
+	const activeChatId = $derived(page.params.id);
 
 	setContext("createChatMutation", createChatMutation);
 </script>
 
 <div class="flex h-[calc(100svh-4rem)]">
-	<aside
-		class="flex w-64 shrink-0 flex-col border-r border-border bg-muted/30"
-	>
+	<aside class="flex w-64 shrink-0 flex-col border-r border-border bg-muted/30">
 		<div class="flex items-center justify-between border-b border-border p-3">
 			<h2 class="text-sm font-semibold">Chats</h2>
 			<Button
@@ -83,28 +84,26 @@
 
 		<nav class="flex-1 overflow-y-auto p-2">
 			{#if $chatsQuery.data}
-				{#each $chatsQuery.data as chat (chat.id)}
-					<a
-						href={resolve(`/chat/${chat.id}`)}
-						class="group flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition {activeChatId ===
+				{#each $chatsQuery.data as chat (chat.id)}<a
+					href={resolve(`/chat/${chat.id}`)}
+					class="group flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition {activeChatId ===
 						chat.id
 							? 'bg-accent text-accent-foreground'
 							: 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'}"
-					>
-						<span class="truncate">{chat.title}</span>
-						<button
-							type="button"
-							class="ml-1 hidden shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive group-hover:block"
-							onclick={(e) => {
+				>
+					<span class="truncate">{chat.title}</span>
+					<button
+						type="button"
+						class="ml-1 hidden shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive group-hover:block"
+						onclick={(e) => {
 								e.preventDefault();
 								e.stopPropagation();
 								$deleteChatMutation.mutate(chat.id);
 							}}
-						>
-							<Trash2 class="h-3.5 w-3.5" />
-						</button>
-					</a>
-				{/each}
+					>
+						<Trash2 class="h-3.5 w-3.5" />
+					</button>
+				</a>{/each}
 			{/if}
 
 			{#if $chatsQuery.isLoading}
@@ -121,7 +120,5 @@
 		</nav>
 	</aside>
 
-	<div class="flex-1">
-		{@render children()}
-	</div>
+	<div class="flex-1">{@render children()}</div>
 </div>

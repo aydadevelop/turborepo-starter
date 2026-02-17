@@ -1,14 +1,17 @@
 import { ingestCalendarWebhook } from "@full-stack-cf-app/api/calendar/application/calendar-use-cases";
+import { createContext } from "@full-stack-cf-app/api/context";
 import { env } from "@full-stack-cf-app/env/server";
 import { Hono } from "hono";
 
 export const calendarWebhookRoutes = new Hono();
 
 calendarWebhookRoutes.post("/webhooks/calendar/google", async (c) => {
+	const context = await createContext({ context: c });
 	const outcome = await ingestCalendarWebhook({
 		provider: "google",
 		headers: c.req.raw.headers,
 		sharedToken: env.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN || undefined,
+		notificationQueue: context.notificationQueue,
 	});
 
 	switch (outcome.kind) {

@@ -35,6 +35,7 @@ import {
 } from "../../contracts/shared";
 import { adminProcedure } from "../../lib/admin";
 import { buildUpdatePayload, insertAndReturn } from "../../lib/db-helpers";
+import { reconcileBoatCalendarConnectionsOnStateChange } from "../boat/services/calendar-lifecycle";
 import { paginatedOutput, paginationInput } from "./shared";
 
 const boatOutputSchema = createSelectSchema(boat);
@@ -221,16 +222,41 @@ export const adminBoatsRouter = {
 		.output(successOutputSchema)
 		.handler(async ({ input }) => {
 			const { id, ...fields } = input;
+			const [existingBoat] = await db
+				.select()
+				.from(boat)
+				.where(eq(boat.id, id))
+				.limit(1);
+			if (!existingBoat) {
+				throw new ORPCError("NOT_FOUND", { message: "Boat not found" });
+			}
+
+			const nextStatus = input.status ?? existingBoat.status;
+			const nextIsActive = input.isActive ?? existingBoat.isActive;
 			const payload = buildUpdatePayload(fields);
 
-			const [updated] = await db
+			await db
 				.update(boat)
 				.set(payload)
 				.where(eq(boat.id, id))
 				.returning({ id: boat.id });
 
-			if (!updated) {
-				throw new ORPCError("NOT_FOUND", { message: "Boat not found" });
+			try {
+				await reconcileBoatCalendarConnectionsOnStateChange({
+					boatId: existingBoat.id,
+					previousStatus: existingBoat.status,
+					previousIsActive: existingBoat.isActive,
+					nextStatus,
+					nextIsActive,
+					webhookUrl: env.GOOGLE_CALENDAR_WEBHOOK_URL || undefined,
+					webhookChannelToken:
+						env.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN || undefined,
+				});
+			} catch (error) {
+				console.error(
+					`Failed to reconcile calendar lifecycle for boat ${existingBoat.id} after admin update`,
+					error
+				);
 			}
 
 			return { success: true };
@@ -243,6 +269,15 @@ export const adminBoatsRouter = {
 		.input(z.object({ boatId: z.string().trim().min(1) }))
 		.output(successOutputSchema)
 		.handler(async ({ input }) => {
+			const [existingBoat] = await db
+				.select()
+				.from(boat)
+				.where(eq(boat.id, input.boatId))
+				.limit(1);
+			if (!existingBoat) {
+				throw new ORPCError("NOT_FOUND", { message: "Boat not found" });
+			}
+
 			const [updated] = await db
 				.update(boat)
 				.set({
@@ -257,6 +292,24 @@ export const adminBoatsRouter = {
 				throw new ORPCError("NOT_FOUND", { message: "Boat not found" });
 			}
 
+			try {
+				await reconcileBoatCalendarConnectionsOnStateChange({
+					boatId: existingBoat.id,
+					previousStatus: existingBoat.status,
+					previousIsActive: existingBoat.isActive,
+					nextStatus: "active",
+					nextIsActive: existingBoat.isActive,
+					webhookUrl: env.GOOGLE_CALENDAR_WEBHOOK_URL || undefined,
+					webhookChannelToken:
+						env.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN || undefined,
+				});
+			} catch (error) {
+				console.error(
+					`Failed to reconcile calendar lifecycle for boat ${existingBoat.id} on approval`,
+					error
+				);
+			}
+
 			return { success: true };
 		}),
 
@@ -265,6 +318,15 @@ export const adminBoatsRouter = {
 		.input(z.object({ boatId: z.string().trim().min(1) }))
 		.output(successOutputSchema)
 		.handler(async ({ input }) => {
+			const [existingBoat] = await db
+				.select()
+				.from(boat)
+				.where(eq(boat.id, input.boatId))
+				.limit(1);
+			if (!existingBoat) {
+				throw new ORPCError("NOT_FOUND", { message: "Boat not found" });
+			}
+
 			const [updated] = await db
 				.update(boat)
 				.set({ approvedAt: null, status: "draft", updatedAt: new Date() })
@@ -273,6 +335,21 @@ export const adminBoatsRouter = {
 
 			if (!updated) {
 				throw new ORPCError("NOT_FOUND", { message: "Boat not found" });
+			}
+
+			try {
+				await reconcileBoatCalendarConnectionsOnStateChange({
+					boatId: existingBoat.id,
+					previousStatus: existingBoat.status,
+					previousIsActive: existingBoat.isActive,
+					nextStatus: "draft",
+					nextIsActive: existingBoat.isActive,
+				});
+			} catch (error) {
+				console.error(
+					`Failed to reconcile calendar lifecycle for boat ${existingBoat.id} on approval revoke`,
+					error
+				);
 			}
 
 			return { success: true };

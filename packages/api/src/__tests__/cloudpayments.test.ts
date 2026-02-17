@@ -2,6 +2,7 @@ import { organization } from "@full-stack-cf-app/db/schema/auth";
 import { boat } from "@full-stack-cf-app/db/schema/boat";
 import {
 	booking,
+	bookingCalendarLink,
 	bookingPaymentAttempt,
 } from "@full-stack-cf-app/db/schema/booking";
 import {
@@ -23,6 +24,11 @@ const testDbState = createTestDatabase();
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
+}));
+
+const syncCalendarLinkOnBookingUpdateMock = vi.fn();
+vi.mock("../routers/booking/services/calendar-sync", () => ({
+	syncCalendarLinkOnBookingUpdate: syncCalendarLinkOnBookingUpdateMock,
 }));
 
 const { CloudPaymentsWebhookAdapter } = await import(
@@ -95,6 +101,22 @@ const seedAttempt = (
 		.run();
 };
 
+const seedCalendarLink = (
+	overrides: Partial<typeof bookingCalendarLink.$inferInsert> = {}
+) => {
+	testDbState.db
+		.insert(bookingCalendarLink)
+		.values({
+			id: "calendar-link-1",
+			bookingId: "booking-1",
+			provider: "google",
+			externalCalendarId: "calendar-1",
+			externalEventId: "event-1",
+			...overrides,
+		})
+		.run();
+};
+
 const expectDefined = <T>(value: T | undefined, message: string): T => {
 	if (value === undefined) {
 		throw new Error(message);
@@ -120,6 +142,16 @@ const loadBooking = () => {
 		.all();
 
 	return expectDefined(bookingRow, "Expected booking row to exist");
+};
+
+const loadCalendarLink = () => {
+	const [calendarLink] = testDbState.db
+		.select()
+		.from(bookingCalendarLink)
+		.where(eq(bookingCalendarLink.bookingId, "booking-1"))
+		.all();
+
+	return expectDefined(calendarLink, "Expected calendar link to exist");
 };
 
 // ---------------------------------------------------------------------------
@@ -233,6 +265,11 @@ describe("processWebhook", () => {
 
 	beforeEach(() => {
 		clearTestDatabase(testDbState.db);
+		syncCalendarLinkOnBookingUpdateMock.mockReset();
+		syncCalendarLinkOnBookingUpdateMock.mockResolvedValue({
+			status: "linked",
+			calendarLinkUpdate: {},
+		});
 		seedBase();
 	});
 
@@ -374,6 +411,45 @@ describe("processWebhook", () => {
 
 			const attempt = loadAttempt();
 			expect(attempt.status).toBe("captured");
+		});
+
+		it("re-syncs linked calendar event marker after successful payment", async () => {
+			seedAttempt({ providerIntentId: "12345" });
+			seedCalendarLink();
+			syncCalendarLinkOnBookingUpdateMock.mockResolvedValue({
+				status: "linked",
+				calendarLinkUpdate: {
+					externalEventVersion: "version-2",
+				},
+			});
+
+			await adapter.processWebhook("pay", {
+				TransactionId: 12_345,
+				Amount: 100_000,
+				Currency: "RUB",
+				Status: "Completed",
+				InvoiceId: "booking-1",
+			});
+
+			expect(syncCalendarLinkOnBookingUpdateMock).toHaveBeenCalledTimes(1);
+			expect(syncCalendarLinkOnBookingUpdateMock).toHaveBeenCalledWith(
+				expect.objectContaining({
+					boatName: "Test Boat",
+					managedBooking: expect.objectContaining({
+						id: "booking-1",
+						status: "confirmed",
+						paymentStatus: "paid",
+					}),
+					calendarLink: expect.objectContaining({
+						bookingId: "booking-1",
+						externalCalendarId: "calendar-1",
+						externalEventId: "event-1",
+					}),
+				})
+			);
+
+			const calendarLink = loadCalendarLink();
+			expect(calendarLink.externalEventVersion).toBe("version-2");
 		});
 	});
 

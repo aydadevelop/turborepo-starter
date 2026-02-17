@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { page } from "$app/stores";
+	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
 
 	const { children } = $props();
@@ -30,8 +30,8 @@
 
 	const isActive = (href: string) => {
 		if (href === resolve("/admin"))
-			return $page.url.pathname === resolve("/admin");
-		return $page.url.pathname.startsWith(href);
+			return page.url.pathname === resolve("/admin");
+		return page.url.pathname.startsWith(href);
 	};
 </script>
 

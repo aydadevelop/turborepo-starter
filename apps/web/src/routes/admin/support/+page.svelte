@@ -14,34 +14,33 @@
 	const currentOffset = writable(0);
 	const limit = 20;
 
-	const queryOptions = derived(
-		[search, statusFilter, priorityFilter, currentOffset],
-		([$search, $statusFilter, $priorityFilter, $currentOffset]) => {
-			return orpc.admin.support.listTickets.queryOptions({
-				input: {
-					limit,
-					offset: $currentOffset,
-					search: $search || undefined,
-					status: ($statusFilter || undefined) as
-						| undefined
-						| "open"
-						| "pending_customer"
-						| "pending_operator"
-						| "escalated"
-						| "resolved"
-						| "closed",
-					priority: ($priorityFilter || undefined) as
-						| undefined
-						| "low"
-						| "normal"
-						| "high"
-						| "urgent",
-				} as const,
-			});
-		}
+	const ticketsQuery = createQuery(
+		derived(
+			[search, statusFilter, priorityFilter, currentOffset],
+			([$search, $statusFilter, $priorityFilter, $currentOffset]) =>
+				orpc.admin.support.listTickets.queryOptions({
+					input: {
+						limit,
+						offset: $currentOffset,
+						search: $search || undefined,
+						status: ($statusFilter || undefined) as
+							| undefined
+							| "open"
+							| "pending_customer"
+							| "pending_operator"
+							| "escalated"
+							| "resolved"
+							| "closed",
+						priority: ($priorityFilter || undefined) as
+							| undefined
+							| "low"
+							| "normal"
+							| "high"
+							| "urgent",
+					} as const,
+				})
+		)
 	);
-
-	const ticketsQuery = createQuery(queryOptions);
 
 	const totalPages = $derived(
 		Math.max(1, Math.ceil(($ticketsQuery.data?.total ?? 0) / limit))

@@ -154,6 +154,29 @@
           }
         }
       }
+    },
+    {
+      "includes": ["apps/notifications/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@full-stack-cf-app/api",
+                      "@full-stack-cf-app/api/**"
+                    ],
+                    "message": "Use queue contracts and package boundaries; notifications app must not import API internals."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "extends": ["ultracite/biome/core", "ultracite/biome/svelte"]

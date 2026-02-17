@@ -2,7 +2,7 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { page } from "$app/stores";
+	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
 	import { orpc } from "$lib/orpc";
 
@@ -34,8 +34,8 @@
 
 	const isActive = (href: string) => {
 		if (href === resolve("/org/team"))
-			return $page.url.pathname === resolve("/org/team");
-		return $page.url.pathname.startsWith(href);
+			return page.url.pathname === resolve("/org/team");
+		return page.url.pathname.startsWith(href);
 	};
 </script>
 
