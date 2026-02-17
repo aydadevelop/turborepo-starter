@@ -121,7 +121,7 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 		this.credentials = options.credentials;
 		this.eventsScope = options.eventsScope ?? DEFAULT_EVENTS_SCOPE;
 		this.freeBusyScope = options.freeBusyScope ?? DEFAULT_FREEBUSY_SCOPE;
-		this.fetchImpl = options.fetchImpl ?? fetch;
+		this.fetchImpl = options.fetchImpl ?? ((...args) => fetch(...args));
 		this.requestTimeoutMs = options.requestTimeoutMs ?? 20_000;
 
 		if (!(this.credentials.client_email && this.credentials.private_key)) {

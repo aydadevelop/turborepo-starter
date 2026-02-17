@@ -192,6 +192,19 @@ const getAuthUrl = (): string => {
 	);
 };
 
+const getWebhookUrl = (): string => {
+	if (process.env.GOOGLE_CALENDAR_WEBHOOK_URL) {
+		return process.env.GOOGLE_CALENDAR_WEBHOOK_URL;
+	}
+	if (!isDeploying && shouldStartTunnel && process.env.NGROK_DOMAIN_NAME) {
+		return `https://${process.env.NGROK_DOMAIN_NAME}/server/webhooks/calendar/google`;
+	}
+	if (isDeploying) {
+		return `${getAuthUrl()}/webhooks/calendar/google`;
+	}
+	return "";
+};
+
 export const server = await Worker("server", {
 	cwd: "../../apps/server",
 	entrypoint: "src/index.ts",
@@ -227,6 +240,7 @@ export const server = await Worker("server", {
 			"CALENDAR_SYNC_TASK_TOKEN",
 			process.env.CALENDAR_SYNC_TASK_TOKEN || ""
 		),
+		GOOGLE_CALENDAR_WEBHOOK_URL: getWebhookUrl(),
 		CLOUDPAYMENTS_PUBLIC_ID:
 			process.env.CLOUDPAYMENTS_PUBLIC_ID ||
 			process.env.PUBLIC_CLOUDPAYMENTS_PUBLIC_ID ||

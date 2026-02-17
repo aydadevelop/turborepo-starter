@@ -70,13 +70,6 @@
 	let connectBoatId = $state("");
 	let connectBoatName = $state("");
 	let connectCalendarId = $state("");
-	let webhookBaseUrl = $state("");
-
-	const webhookUrl = $derived(
-		webhookBaseUrl
-			? `${webhookBaseUrl.replace(/\/$/, "")}/webhooks/calendar/google`
-			: ""
-	);
 
 	const openConnectDialog = (boatId: string, boatName: string) => {
 		connectBoatId = boatId;
@@ -126,17 +119,6 @@
 				{status}
 			</Button>
 		{/each}
-	</div>
-
-	<div class="flex items-center gap-2">
-		<Input
-			placeholder="Webhook base URL (e.g. https://example.ngrok-free.app/server)"
-			bind:value={webhookBaseUrl}
-			class="max-w-lg font-mono text-xs"
-		/>
-		{#if webhookUrl}
-			<span class="text-xs text-muted-foreground truncate">{webhookUrl}</span>
-		{/if}
 	</div>
 
 	<Card.Root>
@@ -228,11 +210,10 @@
 											<Button
 												variant="ghost"
 												size="sm"
-												disabled={$startWebhookMutation.isPending || !webhookUrl}
+												disabled={$startWebhookMutation.isPending}
 												onclick={() =>
 													$startWebhookMutation.mutate({
 														boatId: b.id,
-														webhookUrl,
 													})}
 											>
 												Start All
@@ -244,11 +225,10 @@
 											<Button
 												variant="ghost"
 												size="sm"
-												disabled={$startWebhookMutation.isPending || !webhookUrl}
+												disabled={$startWebhookMutation.isPending}
 												onclick={() =>
 													$startWebhookMutation.mutate({
 														boatId: b.id,
-														webhookUrl,
 													})}
 											>
 												Start

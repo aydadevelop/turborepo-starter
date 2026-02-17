@@ -448,7 +448,6 @@ export const adminBoatsRouter = {
 		.input(
 			z.object({
 				boatId: z.string().trim().min(1),
-				webhookUrl: z.url(),
 			})
 		)
 		.output(
@@ -460,7 +459,13 @@ export const adminBoatsRouter = {
 			})
 		)
 		.handler(async ({ input }) => {
-			const webhookUrl = input.webhookUrl;
+			const webhookUrl = env.GOOGLE_CALENDAR_WEBHOOK_URL;
+			if (!webhookUrl) {
+				throw new ORPCError("PRECONDITION_FAILED", {
+					message:
+						"GOOGLE_CALENDAR_WEBHOOK_URL is not configured. Start the tunnel or set the env var.",
+				});
+			}
 
 			const connections = await db
 				.select()

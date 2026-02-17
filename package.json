@@ -12,8 +12,6 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
-    "format-and-lint": "turbo run lint",
-    "format-and-lint:fix": "turbo run lint:fix",
     "check-types": "turbo run check-types",
     "test": "turbo run test",
     "test:watch": "turbo run test:watch",
@@ -43,7 +41,6 @@
     "destroy:test": "npm run destroy -- --stage test",
     "destroy:prod": "npm run destroy -- --stage prod",
     "check": "npm run lint && npm run check-types",
-    "fix": "turbo run lint:fix",
     "ruler:apply": "npx @intellectronica/ruler@latest apply --local-only"
   },
   "dependencies": {
