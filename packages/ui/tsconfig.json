@@ -14,7 +14,8 @@
     "baseUrl": ".",
     "paths": {
       "@full-stack-cf-app/ui/*": ["./src/*"]
-    }
+    },
+    "types": ["node"]
   },
   "include": ["src/**/*"]
 }
