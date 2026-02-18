@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "alchemy dev --stage dev",
+    "dev": "alchemy dev --stage ${STAGE:-dev}",
     "deploy": "alchemy deploy",
     "destroy": "alchemy destroy",
     "check-types": "tsc --noEmit -p tsconfig.json",

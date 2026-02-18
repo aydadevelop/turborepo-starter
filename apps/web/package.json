@@ -30,7 +30,6 @@
     "@orpc/client": "^1.12.2",
     "@orpc/server": "^1.12.2",
     "@orpc/tanstack-query": "^1.12.2",
-    "@polar-sh/better-auth": "^1.6.4",
     "@tanstack/svelte-form": "^1.19.2",
     "@tanstack/svelte-query": "^5.85.3",
     "better-auth": "^1.4.18",

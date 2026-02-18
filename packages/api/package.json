@@ -8,9 +8,6 @@
     "./*": {
       "default": "./src/*.ts"
     },
-    "./contracts": {
-      "default": "./src/contracts/index.ts"
-    },
     "./contracts/*": {
       "default": "./src/contracts/*.ts"
     },

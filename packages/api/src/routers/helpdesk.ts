@@ -7,6 +7,8 @@ import {
 import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import z from "zod";
+import { createChannelRegistry } from "../channels/defaults";
+import { dispatchOutboundReply } from "../channels/dispatch";
 import {
 	assignManagedSupportTicketInputSchema,
 	createManagedSupportTicketInputSchema,
@@ -477,6 +479,28 @@ export const helpdeskRouter = {
 					updatedAt: new Date(),
 				})
 				.where(eq(supportTicket.id, managedTicket.id));
+
+			if (!input.isInternal && input.channel !== "internal") {
+				const registry = createChannelRegistry({
+					notificationQueue: context.notificationQueue,
+				});
+				const dispatchResult = await dispatchOutboundReply(registry, {
+					organizationId: activeMembership.organizationId,
+					requestedByUserId: sessionUserId,
+					ticket: managedTicket,
+					message: createdMessage,
+				});
+
+				if (
+					dispatchResult.dispatched &&
+					dispatchResult.result?.status === "failed"
+				) {
+					console.error(
+						`Outbound dispatch failed for ${dispatchResult.channel}:`,
+						dispatchResult.result.failureReason
+					);
+				}
+			}
 
 			return createdMessage;
 		}),

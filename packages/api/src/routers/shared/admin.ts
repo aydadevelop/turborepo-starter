@@ -3,7 +3,7 @@ import { user } from "@full-stack-cf-app/db/schema/auth";
 import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
 
-import { o, protectedProcedure } from "../index";
+import { o, protectedProcedure } from "../../index";
 
 const requirePlatformAdmin = o.middleware(async ({ context, next }) => {
 	const userId = context.session?.user?.id;

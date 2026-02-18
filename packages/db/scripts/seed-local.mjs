@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
+import { spawnSync } from "node:child_process";
 import {
 	existsSync,
 	mkdirSync,
 	readdirSync,
 	readFileSync,
 	statSync,
+	writeFileSync,
 } from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -25,6 +27,10 @@ const ANCHOR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const TODO_ID_MIN = 900_000;
 const TODO_ID_MAX = 900_999;
+
+const APP_NAME = "full-stack-cf-app";
+const DB_PREFIX = `${APP_NAME}-database`;
+const DEFAULT_STAGE = "dev";
 
 const scenarioCatalog = {
 	baseline:
@@ -115,6 +121,8 @@ const printHelp = () => {
 			`  --scenario <name>           Scenario to seed (default: ${DEFAULT_SCENARIO})`,
 			`  --anchor-date <YYYY-MM-DD>  Stable UTC anchor date (default: ${DEFAULT_ANCHOR_DATE})`,
 			"  --append                    Do not clear prior seed namespace before writing",
+			"  --remote                    Seed a remote D1 database via wrangler (requires --stage)",
+			`  --stage <name>              Remote D1 stage name (default: ${DEFAULT_STAGE})`,
 			"  --list-scenarios            Print available scenario names",
 			"  -h, --help                  Show this help message",
 			"",
@@ -124,6 +132,8 @@ const printHelp = () => {
 			"  npm run db:seed -- --scenario pricing-intersections",
 			"  npm run db:seed -- --scenario full --anchor-date 2026-06-01",
 			"  npm run db:seed -- --db ./tmp/dev.sqlite --scenario support-escalation",
+			"  npm run db:seed -- --remote --stage dev",
+			"  npm run db:seed -- --remote --stage dev --scenario full",
 		].join("\n")
 	);
 };
@@ -142,6 +152,8 @@ const parseArgs = () => {
 		scenario: DEFAULT_SCENARIO,
 		anchorDate: DEFAULT_ANCHOR_DATE,
 		append: false,
+		remote: false,
+		stage: DEFAULT_STAGE,
 	};
 
 	const flagHandlers = {
@@ -158,6 +170,12 @@ const parseArgs = () => {
 		},
 		"--append": () => {
 			result.append = true;
+		},
+		"--remote": () => {
+			result.remote = true;
+		},
+		"--stage": (value) => {
+			result.stage = value;
 		},
 		"--list-scenarios": () => {
 			printScenarios();
@@ -183,6 +201,7 @@ const parseArgs = () => {
 		// Flags that don't take a value
 		if (
 			arg === "--append" ||
+			arg === "--remote" ||
 			arg === "--list-scenarios" ||
 			arg === "--help" ||
 			arg === "-h"
@@ -205,46 +224,21 @@ const parseArgs = () => {
 		);
 	}
 
+	if (result.remote && result.dbPath) {
+		throw new Error("Cannot combine --remote with --db");
+	}
+
 	return {
 		append: result.append,
 		anchorDate: result.anchorDate,
 		dbPath: result.dbPath,
+		remote: result.remote,
 		scenario: result.scenario,
+		stage: result.stage,
 	};
 };
 
 const quote = (identifier) => `"${identifier}"`;
-
-const upsertRow = (sqlite, table, conflictColumns, row) => {
-	const columns = Object.keys(row);
-	const values = columns.map((column) => row[column]);
-	const updateColumns = columns.filter(
-		(column) => !conflictColumns.includes(column)
-	);
-
-	if (updateColumns.length === 0) {
-		throw new Error(
-			`Cannot upsert ${table}: no columns left to update for conflict target ${conflictColumns.join(", ")}`
-		);
-	}
-
-	const statement = `
-		INSERT INTO ${quote(table)} (${columns.map(quote).join(", ")})
-		VALUES (${columns.map(() => "?").join(", ")})
-		ON CONFLICT (${conflictColumns.map(quote).join(", ")})
-		DO UPDATE SET ${updateColumns
-			.map((column) => `${quote(column)} = excluded.${quote(column)}`)
-			.join(", ")};
-	`;
-
-	sqlite.prepare(statement).run(...values);
-};
-
-const upsertMany = (sqlite, table, rows) => {
-	for (const row of rows) {
-		upsertRow(sqlite, table, ["id"], row);
-	}
-};
 
 const getMissingTables = (sqlite, tableNames) => {
 	return tableNames.filter((tableName) => {
@@ -2386,13 +2380,50 @@ const clearSeedNamespace = (sqlite) => {
 };
 
 const writeSeedData = (sqlite, seed) => {
-	for (const org of seed.organizations) {
-		upsertRow(sqlite, "organization", ["id"], org);
+	const statements = collectSeedSql(seed);
+	for (const sql of statements) {
+		sqlite.exec(sql);
 	}
-	upsertMany(sqlite, "user", seed.users);
-	upsertMany(sqlite, "account", seed.accounts);
-	upsertMany(sqlite, "member", seed.members);
-	upsertMany(sqlite, "boat_dock", seed.docks);
+};
+
+const escapeSqlValue = (value) => {
+	if (value === null || value === undefined) {
+		return "NULL";
+	}
+	if (typeof value === "number") {
+		return String(value);
+	}
+	return `'${String(value).replace(/'/g, "''")}'`;
+};
+
+const upsertSql = (table, conflictColumns, row) => {
+	const columns = Object.keys(row);
+	const values = columns.map((column) => escapeSqlValue(row[column]));
+	const updateColumns = columns.filter(
+		(column) => !conflictColumns.includes(column)
+	);
+
+	return `INSERT INTO ${quote(table)} (${columns.map(quote).join(", ")}) VALUES (${values.join(", ")}) ON CONFLICT (${conflictColumns.map(quote).join(", ")}) DO UPDATE SET ${updateColumns.map((column) => `${quote(column)} = excluded.${quote(column)}`).join(", ")};`;
+};
+
+const collectSeedSql = (seed) => {
+	const statements = [];
+
+	for (const org of seed.organizations) {
+		statements.push(upsertSql("organization", ["id"], org));
+	}
+	for (const row of seed.users) {
+		statements.push(upsertSql("user", ["id"], row));
+	}
+	for (const row of seed.accounts) {
+		statements.push(upsertSql("account", ["id"], row));
+	}
+	for (const row of seed.members) {
+		statements.push(upsertSql("member", ["id"], row));
+	}
+	for (const row of seed.docks) {
+		statements.push(upsertSql("boat_dock", ["id"], row));
+	}
 
 	const rowGroups = [
 		["boat", seed.boats],
@@ -2426,12 +2457,153 @@ const writeSeedData = (sqlite, seed) => {
 	];
 
 	for (const [table, rows] of rowGroups) {
-		upsertMany(sqlite, table, rows);
+		for (const row of rows) {
+			statements.push(upsertSql(table, ["id"], row));
+		}
 	}
+
+	return statements;
+};
+
+const collectClearSql = () => {
+	const prefixedTables = [
+		"assistant_message",
+		"assistant_chat",
+		"telegram_webhook_event",
+		"inbound_message",
+		"telegram_notification",
+		"support_ticket_message",
+		"support_ticket",
+		"booking_affiliate_payout",
+		"booking_affiliate_attribution",
+		"booking_refund",
+		"booking_dispute",
+		"booking_cancellation_request",
+		"booking_payment_attempt",
+		"booking_discount_application",
+		"booking_calendar_link",
+		"booking_shift_request",
+		"booking",
+		"affiliate_referral",
+		"booking_discount_code",
+		"boat_pricing_rule",
+		"boat_minimum_duration_rule",
+		"boat_pricing_profile",
+		"boat_availability_block",
+		"boat_calendar_connection",
+		"boat_amenity",
+		"boat_asset",
+		"boat",
+		"boat_dock",
+		"member",
+		"account",
+		"organization",
+		"user",
+	];
+
+	const statements = [];
+	for (const table of prefixedTables) {
+		statements.push(
+			`DELETE FROM ${quote(table)} WHERE ${quote("id")} LIKE 'seed_%';`
+		);
+	}
+	statements.push(
+		`DELETE FROM ${quote("organization")} WHERE ${quote("id")} = 'org_demo_marina';`
+	);
+	for (const legacyUserId of [
+		"user_owner_alex",
+		"user_manager_olga",
+		"user_customer_ivan",
+	]) {
+		statements.push(
+			`DELETE FROM ${quote("user")} WHERE ${quote("id")} = '${legacyUserId}';`
+		);
+	}
+	statements.push(
+		`DELETE FROM ${quote("todo")} WHERE ${quote("id")} >= ${TODO_ID_MIN} AND ${quote("id")} <= ${TODO_ID_MAX};`
+	);
+	return statements;
+};
+
+const runWrangler = (args) => {
+	const result = spawnSync(
+		"npm",
+		["exec", "--workspace", "apps/server", "--", "wrangler", ...args],
+		{
+			stdio: "inherit",
+			env: process.env,
+			cwd: repoRoot,
+		}
+	);
+
+	if (result.error) {
+		throw result.error;
+	}
+	if ((result.status ?? 1) !== 0) {
+		throw new Error(`wrangler exited with code ${result.status}`);
+	}
+};
+
+const seedRemote = async (options) => {
+	const dbName = `${DB_PREFIX}-${options.stage}`;
+	const ownerPasswordHash = await hashPassword("boatboat");
+	const adminPasswordHash = await hashPassword("admin");
+
+	const seed = buildSeedData({
+		anchorDate: options.anchorDate,
+		scenario: options.scenario,
+		ownerPasswordHash,
+		adminPasswordHash,
+	});
+
+	const allStatements = [];
+
+	if (!options.append) {
+		allStatements.push(...collectClearSql());
+	}
+	allStatements.push(...collectSeedSql(seed));
+
+	const tmpDir = path.resolve(repoRoot, "tmp");
+	mkdirSync(tmpDir, { recursive: true });
+	const sqlPath = path.resolve(tmpDir, `seed-remote-${options.stage}.sql`);
+	writeFileSync(sqlPath, allStatements.join("\n"), "utf8");
+
+	console.log(
+		`[seed] Generated ${allStatements.length} statements -> ${sqlPath}`
+	);
+	console.log(`[seed] Executing against remote D1: ${dbName}`);
+
+	runWrangler([
+		"d1",
+		"execute",
+		dbName,
+		"--remote",
+		"--file",
+		sqlPath,
+		"--yes",
+	]);
+
+	console.log(
+		[
+			`Seeded remote database: ${dbName}`,
+			`Scenario: ${options.scenario}`,
+			`Anchor date: ${options.anchorDate}`,
+			`Organizations: ${seed.organizations.map((o) => o.slug).join(", ")}`,
+			`Users: ${seed.users.length}, boats: ${seed.boats.length}, bookings: ${seed.bookings.length}`,
+			"Owner login: boat@boat.com / boatboat",
+			"Admin login: admin@admin.com / admin",
+		].join("\n")
+	);
 };
 
 const main = async () => {
 	const options = parseArgs();
+
+	if (options.remote) {
+		await seedRemote(options);
+		return;
+	}
+
 	const resolvedDbPath = options.dbPath ?? findLocalD1Database();
 	const parentDir = path.dirname(resolvedDbPath);
 	if (!existsSync(parentDir)) {

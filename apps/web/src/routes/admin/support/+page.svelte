@@ -11,13 +11,37 @@
 	const search = writable("");
 	const statusFilter = writable("");
 	const priorityFilter = writable("");
+	const sourceFilter = writable("");
 	const currentOffset = writable(0);
 	const limit = 20;
+	const statusOptions = [
+		"open",
+		"pending_customer",
+		"pending_operator",
+		"escalated",
+		"resolved",
+		"closed",
+	] as const;
+	const priorityOptions = ["low", "normal", "high", "urgent"] as const;
+	const sourceOptions = [
+		"manual",
+		"web",
+		"telegram",
+		"avito",
+		"email",
+		"sputnik",
+	] as const;
 
 	const ticketsQuery = createQuery(
 		derived(
-			[search, statusFilter, priorityFilter, currentOffset],
-			([$search, $statusFilter, $priorityFilter, $currentOffset]) =>
+			[search, statusFilter, priorityFilter, sourceFilter, currentOffset],
+			([
+				$search,
+				$statusFilter,
+				$priorityFilter,
+				$sourceFilter,
+				$currentOffset,
+			]) =>
 				orpc.admin.support.listTickets.queryOptions({
 					input: {
 						limit,
@@ -37,6 +61,14 @@
 							| "normal"
 							| "high"
 							| "urgent",
+						source: ($sourceFilter || undefined) as
+							| undefined
+							| "manual"
+							| "web"
+							| "telegram"
+							| "avito"
+							| "email"
+							| "sputnik",
 					} as const,
 				})
 		)
@@ -72,7 +104,26 @@
 			}}
 			class="max-w-sm"
 		/>
-		{#each ["open", "in_progress", "escalated", "resolved", "closed"] as status (status)}
+		<Button
+			variant="outline"
+			size="sm"
+			disabled={!$statusFilter && !$priorityFilter && !$sourceFilter}
+			onclick={() => {
+				statusFilter.set("");
+				priorityFilter.set("");
+				sourceFilter.set("");
+				currentOffset.set(0);
+			}}
+		>
+			Clear filters
+		</Button>
+	</div>
+
+	<div class="flex flex-wrap items-center gap-2">
+		<span class="text-xs uppercase tracking-wide text-muted-foreground"
+			>Status</span
+		>
+		{#each statusOptions as status (status)}
 			<Button
 				variant={$statusFilter === status ? "default" : "outline"}
 				size="sm"
@@ -82,6 +133,42 @@
 				}}
 			>
 				{status.replace("_", " ")}
+			</Button>
+		{/each}
+	</div>
+
+	<div class="flex flex-wrap items-center gap-2">
+		<span class="text-xs uppercase tracking-wide text-muted-foreground"
+			>Priority</span
+		>
+		{#each priorityOptions as priority (priority)}
+			<Button
+				variant={$priorityFilter === priority ? "default" : "outline"}
+				size="sm"
+				onclick={() => {
+					priorityFilter.set($priorityFilter === priority ? "" : priority);
+					currentOffset.set(0);
+				}}
+			>
+				{priority}
+			</Button>
+		{/each}
+	</div>
+
+	<div class="flex flex-wrap items-center gap-2">
+		<span class="text-xs uppercase tracking-wide text-muted-foreground"
+			>Source</span
+		>
+		{#each sourceOptions as source (source)}
+			<Button
+				variant={$sourceFilter === source ? "default" : "outline"}
+				size="sm"
+				onclick={() => {
+					sourceFilter.set($sourceFilter === source ? "" : source);
+					currentOffset.set(0);
+				}}
+			>
+				{source}
 			</Button>
 		{/each}
 	</div>

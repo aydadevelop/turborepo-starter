@@ -5,7 +5,8 @@ import { createClient } from "@libsql/client";
 import { expect, type Page, test } from "@playwright/test";
 import { url } from "./helpers";
 
-const SERVER_URL = process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:3000";
+const SERVER_URL =
+	process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:43100";
 const D1_DATABASE_DIR = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
 	"../../../.alchemy/miniflare/v3/d1/miniflare-D1DatabaseObject"

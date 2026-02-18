@@ -5,5 +5,7 @@ export default defineConfig({
 	format: "esm",
 	outDir: "./dist",
 	clean: true,
+	minify: true,
 	noExternal: [/@full-stack-cf-app\/.*/],
+	external: ["cloudflare:workers"],
 });

@@ -156,6 +156,17 @@ export interface Context {
 	eventBus?: EventBus;
 }
 
+/**
+ * Narrowed context available in organizationProcedure+ handlers.
+ * activeMembership is guaranteed non-null.
+ */
+export interface OrganizationContext extends Context {
+	activeMembership: ActiveOrganizationMembership;
+	eventBus: EventBus;
+	notificationQueue?: NotificationQueueProducer;
+	bookingLifecycleQueue?: NotificationQueueProducer;
+}
+
 const parseCookiesFromHeader = (
 	cookieHeader: string | null
 ): Readonly<Record<string, string>> => {

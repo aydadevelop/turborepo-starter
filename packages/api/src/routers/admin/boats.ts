@@ -33,9 +33,9 @@ import {
 	optionalTrimmedString,
 	successOutputSchema,
 } from "../../contracts/shared";
-import { adminProcedure } from "../../lib/admin";
 import { buildUpdatePayload, insertAndReturn } from "../../lib/db-helpers";
 import { reconcileBoatCalendarConnectionsOnStateChange } from "../boat/services/calendar-lifecycle";
+import { adminProcedure } from "../shared/admin";
 import { paginatedOutput, paginationInput } from "./shared";
 
 const boatOutputSchema = createSelectSchema(boat);

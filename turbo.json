@@ -26,6 +26,11 @@
     },
     "test:e2e": {
       "dependsOn": ["build"],
+      "env": [
+        "PLAYWRIGHT_BASE_URL",
+        "PLAYWRIGHT_SERVER_URL",
+        "PLAYWRIGHT_ASSISTANT_URL"
+      ],
       "cache": false
     },
     "test:integration:calendar": {
@@ -52,6 +57,19 @@
       "cache": false
     },
     "dev": {
+      "env": [
+        "ALCHEMY_SKIP_WEB",
+        "ALCHEMY_E2E",
+        "STAGE",
+        "SERVER_PORT",
+        "NOTIFICATIONS_PORT",
+        "ASSISTANT_PORT",
+        "PLAYWRIGHT_BASE_URL",
+        "PLAYWRIGHT_SERVER_URL",
+        "PLAYWRIGHT_ASSISTANT_URL",
+        "PUBLIC_SERVER_URL",
+        "PUBLIC_ASSISTANT_URL"
+      ],
       "cache": false,
       "persistent": true
     },

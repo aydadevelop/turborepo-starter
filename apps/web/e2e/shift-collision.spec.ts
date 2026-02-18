@@ -5,7 +5,8 @@ import { expect, type Page, test } from "@playwright/test";
 import { url } from "./helpers";
 
 const AUTO_SEED_BASELINE = process.env.PLAYWRIGHT_SEED_BASELINE === "1";
-const SERVER_URL = process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:3000";
+const SERVER_URL =
+	process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:43100";
 const NO_LONGER_AVAILABLE_RE = /no longer available/i;
 const repoRoot = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),

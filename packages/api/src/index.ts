@@ -1,10 +1,6 @@
 import { ORPCError, os } from "@orpc/server";
 
-import type {
-	ActiveOrganizationMembership,
-	Context,
-	NotificationQueueProducer,
-} from "./context";
+import type { Context } from "./context";
 import { EventBus } from "./lib/event-bus";
 import {
 	hasOrganizationPermission,
@@ -69,13 +65,4 @@ export const organizationPermissionProcedure = (
 	permission: OrganizationPermission
 ) => organizationProcedure.use(requireOrganizationPermission(permission));
 
-/**
- * Narrowed context available in organizationProcedure+ handlers.
- * activeMembership is guaranteed non-null.
- */
-export interface OrganizationContext extends Context {
-	activeMembership: ActiveOrganizationMembership;
-	eventBus: EventBus;
-	notificationQueue?: NotificationQueueProducer;
-	bookingLifecycleQueue?: NotificationQueueProducer;
-}
+export type { OrganizationContext } from "./context";

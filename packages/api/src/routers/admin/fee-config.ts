@@ -4,8 +4,8 @@ import { and, eq } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
 import z from "zod";
 import { successOutputSchema } from "../../contracts/shared";
-import { adminProcedure } from "../../lib/admin";
 import { insertAndReturn } from "../../lib/db-helpers";
+import { adminProcedure } from "../shared/admin";
 import { requireSessionUserId } from "../shared/auth-utils";
 
 const platformFeeConfigOutputSchema = createSelectSchema(platformFeeConfig);

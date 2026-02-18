@@ -67,11 +67,6 @@ const requireAuth = o.middleware(({ context, next }) => {
 	if (!context.session?.user) {
 		throw new ORPCError("UNAUTHORIZED");
 	}
-	if (!context.openRouterApiKey) {
-		throw new ORPCError("PRECONDITION_FAILED", {
-			message: "AI provider not configured",
-		});
-	}
 	return next();
 });
 

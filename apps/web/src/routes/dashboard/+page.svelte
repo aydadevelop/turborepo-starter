@@ -9,7 +9,6 @@
 	import { authClient } from "$lib/auth-client";
 	import { orpc } from "$lib/orpc";
 
-	let customerState = $state<{ activeSubscriptions?: unknown[] } | null>(null);
 	let passkeyPending = $state(false);
 	let passkeyMessage = $state<string | null>(null);
 	let passkeyError = $state<string | null>(null);
@@ -43,18 +42,6 @@
 			);
 		}
 	});
-
-	$effect(() => {
-		if ($sessionQuery.data) {
-			authClient.customer.state().then(({ data }) => {
-				customerState = data;
-			});
-		}
-	});
-
-	const hasPro = $derived(
-		(customerState?.activeSubscriptions?.length ?? 0) > 0
-	);
 
 	const toDate = (value: Date | string): Date => {
 		return value instanceof Date ? value : new Date(value);
@@ -177,30 +164,8 @@
 						{$privateDataQuery.data?.message ?? "Loading..."}
 					</span>
 				</div>
-				<div class="flex items-center justify-between">
-					<span class="text-muted-foreground">Plan</span>
-					<span
-						class={hasPro ? "text-primary font-semibold" : "text-foreground"}
-					>
-						{hasPro ? "Pro" : "Free"}
-					</span>
-				</div>
 			</Card.Content>
 			<Card.Footer class="flex gap-2">
-				{#if hasPro}
-					<Button
-						variant="outline"
-						onclick={async () => await authClient.customer.portal()}
-					>
-						Manage Subscription
-					</Button>
-				{:else}
-					<Button
-						onclick={async () => await authClient.checkout({ slug: "pro" })}
-					>
-						Upgrade to Pro
-					</Button>
-				{/if}
 				<Button variant="outline" href={resolve("/dashboard/bookings")}>
 					Managed Bookings
 				</Button>

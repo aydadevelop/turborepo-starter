@@ -1,7 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
 import { url } from "./helpers";
 
-const SERVER_URL = process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:3000";
+const SERVER_URL =
+	process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:43100";
 const BOAT_ID = "seed_boat_aurora--seed-aurora-8";
 const PAYMENT_WIDGET_OR_MESSAGE_RE = /payment|cloudpayments|not configured/i;
 const MOCK_PAYMENT_CAPTURED_RE = /mock payment captured/i;

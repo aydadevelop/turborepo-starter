@@ -10,8 +10,8 @@ import { and, count, desc, eq, inArray, like, or, type SQL } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
 import z from "zod";
 import { successOutputSchema } from "../../contracts/shared";
-import { adminProcedure } from "../../lib/admin";
 import { buildUpdatePayload } from "../../lib/db-helpers";
+import { adminProcedure } from "../shared/admin";
 import { paginatedOutput, paginationInput } from "./shared";
 
 const organizationOutputSchema = createSelectSchema(organization);

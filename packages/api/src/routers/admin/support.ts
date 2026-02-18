@@ -3,15 +3,16 @@ import { organization, user } from "@full-stack-cf-app/db/schema/auth";
 import {
 	supportTicket,
 	supportTicketPriorityValues,
+	supportTicketSourceValues,
 	supportTicketStatusValues,
 } from "@full-stack-cf-app/db/schema/support";
 import { ORPCError } from "@orpc/server";
-import { and, count, desc, eq, like, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, type SQL, sql } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-orm/zod";
 import z from "zod";
 import { successOutputSchema } from "../../contracts/shared";
-import { adminProcedure } from "../../lib/admin";
 import { buildUpdatePayload } from "../../lib/db-helpers";
+import { adminProcedure } from "../shared/admin";
 import { paginatedOutput, paginationInput } from "./shared";
 
 const ticketOutputSchema = createSelectSchema(supportTicket);
@@ -24,6 +25,7 @@ export const adminSupportRouter = {
 				organizationId: z.string().trim().optional(),
 				status: z.enum(supportTicketStatusValues).optional(),
 				priority: z.enum(supportTicketPriorityValues).optional(),
+				source: z.enum(supportTicketSourceValues).optional(),
 				assignedToUserId: z.string().trim().optional(),
 				search: z.string().trim().optional(),
 			})
@@ -47,13 +49,19 @@ export const adminSupportRouter = {
 			if (input.priority) {
 				conditions.push(eq(supportTicket.priority, input.priority));
 			}
+			if (input.source) {
+				conditions.push(eq(supportTicket.source, input.source));
+			}
 			if (input.assignedToUserId) {
 				conditions.push(
 					eq(supportTicket.assignedToUserId, input.assignedToUserId)
 				);
 			}
 			if (input.search) {
-				conditions.push(like(supportTicket.subject, `%${input.search}%`));
+				const search = `%${input.search.toLowerCase()}%`;
+				conditions.push(
+					sql`(lower(${supportTicket.subject}) like ${search} or lower(coalesce(${supportTicket.description}, '')) like ${search})`
+				);
 			}
 
 			const where = conditions.length > 0 ? and(...conditions) : undefined;

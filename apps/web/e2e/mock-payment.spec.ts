@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { url } from "./helpers";
 
-const SERVER_URL = process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:3000";
+const SERVER_URL =
+	process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:43100";
 const BOAT_URL = url(
 	"/boats/seed_boat_aurora--seed-aurora-8?date=2026-03-20&durationHours=2&passengers=2"
 );

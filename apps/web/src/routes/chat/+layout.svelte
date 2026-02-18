@@ -112,7 +112,7 @@
 				</p>
 			{/if}
 
-			{#if $chatsQuery.data?.length === 0}
+			{#if !$chatsQuery.isLoading && !$chatsQuery.data?.length}
 				<p class="px-2 py-4 text-center text-xs text-muted-foreground">
 					No chats yet
 				</p>

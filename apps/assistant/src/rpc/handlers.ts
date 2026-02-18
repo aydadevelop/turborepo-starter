@@ -1,7 +1,7 @@
 import type { AssistantContext } from "@full-stack-cf-app/assistant/context";
 import { assistantRouter } from "@full-stack-cf-app/assistant/router";
 import { auth } from "@full-stack-cf-app/auth";
-import { env } from "@full-stack-cf-app/env/server";
+import { env } from "@full-stack-cf-app/env/assistant";
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import type { MiddlewareHandler } from "hono";

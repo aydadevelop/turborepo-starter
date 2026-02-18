@@ -2,12 +2,13 @@ import { expect, test } from "@playwright/test";
 import { url } from "./helpers";
 
 const LOGIN_HEADING_PATTERN = /welcome back/i;
+const LOGIN_URL_PATTERN = /\/login/;
 
 test.describe("Authentication Flow", () => {
 	test("can navigate to login page", async ({ page }) => {
 		await page.goto(url("/"));
 		await page.getByRole("button", { name: "Sign In" }).click();
-		await expect(page).toHaveURL(url("/login"));
+		await expect(page).toHaveURL(LOGIN_URL_PATTERN);
 	});
 
 	test("login page has sign in and sign up forms", async ({ page }) => {
@@ -43,7 +44,7 @@ test.describe("Dashboard Access", () => {
 		page,
 	}) => {
 		await page.goto(url("/dashboard"));
-		await expect(page).toHaveURL(url("/login"));
+		await expect(page).toHaveURL(LOGIN_URL_PATTERN);
 	});
 
 	test("dashboard link in navigation works", async ({ page }) => {

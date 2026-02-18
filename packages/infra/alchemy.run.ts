@@ -33,6 +33,7 @@ const stage =
 	(stageIndex !== -1 ? process.argv[stageIndex + 1] : undefined) ??
 	process.env.STAGE ??
 	"dev";
+const isE2E = process.env.ALCHEMY_E2E === "1" || stage === "e2e";
 const appName = "full-stack-cf-app";
 const lifecycleEvent = process.env.npm_lifecycle_event ?? "";
 const isDeployCommand =
@@ -44,9 +45,29 @@ const isDestroyCommand =
 const isDeploying =
 	isDeployCommand || isDestroyCommand || Boolean(process.env.CI);
 const isLocalDevRuntime = !isDeploying;
-const envPath = isDeploying ? ".production" : "";
-config({ path: `../../apps/server/.env${envPath}` });
+
+// Load stage-specific files first, then base defaults.
+// This preserves shell-provided env vars while still allowing stage defaults.
+if (isE2E) {
+	config({ path: "./.env.e2e" });
+}
 config({ path: "./.env" });
+
+if (isDeploying) {
+	config({ path: "../../apps/server/.env.production" });
+} else if (isE2E) {
+	config({ path: "../../apps/server/.env.e2e" });
+}
+config({ path: "../../apps/server/.env" });
+
+if (isE2E) {
+	// Safety rail: never use real Cloudflare account credentials in e2e runs.
+	process.env.CLOUDFLARE_API_TOKEN = "local-e2e-token";
+	process.env.CLOUDFLARE_API_KEY = "";
+	process.env.CLOUDFLARE_ACCOUNT_ID = "local-e2e-account";
+	process.env.CF_ACCOUNT_ID = "local-e2e-account";
+	process.env.BETTER_AUTH_SECRET ??= "e2e-local-auth-secret";
+}
 
 // Alchemy's Worker resource initializes Cloudflare API before local-mode branching.
 // In offline local dev, provide deterministic fallback credentials so no account discovery
@@ -128,7 +149,7 @@ const db = await D1Database("database", {
 	...cloudflareApiOptions,
 });
 
-const notificationDeadLetterQueue = await Queue("notificationDeadLetterQueue", {
+const notificationDeadLetterQueue = await Queue("notification-dlq", {
 	adopt: true,
 	settings: {
 		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
@@ -136,7 +157,7 @@ const notificationDeadLetterQueue = await Queue("notificationDeadLetterQueue", {
 	...cloudflareApiOptions,
 });
 
-const notificationQueue = await Queue("notificationQueue", {
+const notificationQueue = await Queue("notification-queue", {
 	adopt: true,
 	dlq: notificationDeadLetterQueue,
 	settings: {
@@ -145,18 +166,15 @@ const notificationQueue = await Queue("notificationQueue", {
 	...cloudflareApiOptions,
 });
 
-const bookingLifecycleDeadLetterQueue = await Queue(
-	"bookingLifecycleDeadLetterQueue",
-	{
-		adopt: true,
-		settings: {
-			messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
-		},
-		...cloudflareApiOptions,
-	}
-);
+const bookingLifecycleDeadLetterQueue = await Queue("booking-lifecycle-dlq", {
+	adopt: true,
+	settings: {
+		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
+	},
+	...cloudflareApiOptions,
+});
 
-const bookingLifecycleQueue = await Queue("bookingLifecycleQueue", {
+const bookingLifecycleQueue = await Queue("booking-lifecycle-queue", {
 	adopt: true,
 	dlq: bookingLifecycleDeadLetterQueue,
 	settings: {
@@ -164,6 +182,18 @@ const bookingLifecycleQueue = await Queue("bookingLifecycleQueue", {
 	},
 	...cloudflareApiOptions,
 });
+
+const parsePort = (value: string | undefined, fallback: number): number => {
+	if (!value) {
+		return fallback;
+	}
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const serverPort = parsePort(process.env.SERVER_PORT, 3000);
+const notificationsPort = parsePort(process.env.NOTIFICATIONS_PORT, 3001);
+const assistantPort = parsePort(process.env.ASSISTANT_PORT, 3002);
 
 // Local dev uses localhost ports, deployed stages use their web URL
 const devCorsOrigin =
@@ -237,12 +267,6 @@ export const server = await Worker("server", {
 		CORS_ORIGIN: getCorsOrigin(),
 		BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
 		BETTER_AUTH_URL: getAuthUrl(),
-		POLAR_ACCESS_TOKEN: alchemy.secret.env(
-			"POLAR_ACCESS_TOKEN",
-			process.env.POLAR_ACCESS_TOKEN || ""
-		),
-		POLAR_SUCCESS_URL: process.env.POLAR_SUCCESS_URL || "",
-		POLAR_PRODUCT_ID: process.env.POLAR_PRODUCT_ID || "",
 		TELEGRAM_BOT_TOKEN: alchemy.secret.env(
 			"TELEGRAM_BOT_TOKEN",
 			process.env.TELEGRAM_BOT_TOKEN || ""
@@ -270,8 +294,6 @@ export const server = await Worker("server", {
 			"CLOUDPAYMENTS_API_SECRET",
 			process.env.CLOUDPAYMENTS_API_SECRET || ""
 		),
-		OPEN_ROUTER_API_KEY: process.env.OPEN_ROUTER_API_KEY || "",
-		AI_MODEL: process.env.AI_MODEL || "",
 	},
 	eventSources: [
 		{
@@ -286,7 +308,11 @@ export const server = await Worker("server", {
 			},
 		},
 	],
-	dev: { port: 3000 },
+	dev: { port: serverPort },
+	observability: {
+		enabled: true,
+		logs: { enabled: true, invocationLogs: true },
+	},
 });
 
 export const notifications = await Worker("notifications", {
@@ -318,7 +344,11 @@ export const notifications = await Worker("notifications", {
 			},
 		},
 	],
-	dev: { port: 3001 },
+	dev: { port: notificationsPort },
+	observability: {
+		enabled: true,
+		logs: { enabled: true, invocationLogs: true },
+	},
 });
 
 export const assistant = await Worker("assistant", {
@@ -337,7 +367,11 @@ export const assistant = await Worker("assistant", {
 		),
 		AI_MODEL: process.env.AI_MODEL || "openai/gpt-4o",
 	},
-	dev: { port: 3002 },
+	dev: { port: assistantPort },
+	observability: {
+		enabled: true,
+		logs: { enabled: true, invocationLogs: true },
+	},
 });
 
 const shouldStartWeb = process.env.ALCHEMY_SKIP_WEB !== "1";
@@ -354,6 +388,10 @@ export const web = shouldStartWeb
 				PUBLIC_BASE_PATH: shouldStartTunnel ? "/web" : "",
 				PUBLIC_CLOUDPAYMENTS_PUBLIC_ID:
 					process.env.PUBLIC_CLOUDPAYMENTS_PUBLIC_ID || "",
+			},
+			observability: {
+				enabled: true,
+				logs: { enabled: true, invocationLogs: true },
 			},
 		})
 	: undefined;
