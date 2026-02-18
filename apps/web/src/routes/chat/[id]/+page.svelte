@@ -25,14 +25,10 @@
 
 	const chatId = $derived(page.params.id ?? "");
 
+	// svelte-ignore state_referenced_locally
 	const chatQuery = createQuery({
-		get queryKey() {
-			return ["assistant", "chat", chatId];
-		},
-		queryFn: () => assistantClient.getChat({ chatId }),
-		get enabled() {
-			return Boolean(chatId);
-		},
+		queryKey: ["assistant", "chat", chatId],
+		queryFn: () => assistantClient.getChat({ chatId })
 	});
 
 	let chat = $state<Chat | null>(null);
@@ -166,6 +162,7 @@
 								</Button>
 							{:else}
 								<Button
+									data-testid="send-message-button"
 									variant="default"
 									size="icon"
 									class="h-8 w-8 rounded-full"

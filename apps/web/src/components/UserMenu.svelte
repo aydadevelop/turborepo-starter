@@ -47,7 +47,12 @@
 			>
 				Settings
 			</a>
-			<Button variant="destructive" size="sm" onclick={handleSignOut}>
+			<Button
+				variant="destructive"
+				size="sm"
+				onclick={handleSignOut}
+				data-testid="sign-out-button"
+			>
 				Sign Out
 			</Button>
 		</div>
