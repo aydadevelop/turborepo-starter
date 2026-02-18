@@ -116,10 +116,7 @@ export const assistantRouter = {
 			const openrouter = createOpenRouter({
 				apiKey: context.openRouterApiKey,
 			});
-			const tools = createAssistantTools({
-				serverUrl: context.serverUrl,
-				requestHeaders: context.requestHeaders,
-			});
+			const tools = createAssistantTools(context.serverClient);
 
 			const result = streamText({
 				model: openrouter(context.aiModel || "openai/gpt-4o"),
