@@ -358,6 +358,7 @@ export const assistant = await Worker("assistant", {
 	...cloudflareApiOptions,
 	bindings: {
 		DB: db,
+		SERVER_WORKER: server,
 		CORS_ORIGIN: getCorsOrigin(),
 		BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
 		BETTER_AUTH_URL: getAuthUrl(),

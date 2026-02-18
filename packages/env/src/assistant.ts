@@ -25,4 +25,5 @@ export const env = {
 		emptyStringAsUndefined: true,
 	}),
 	DB: cfEnv.DB,
+	SERVER_WORKER: cfEnv.SERVER_WORKER,
 };
