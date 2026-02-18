@@ -1,7 +1,9 @@
-import type { AssistantRouter } from "@full-stack-cf-app/assistant/router";
+import type { RouterClient } from "@orpc/server";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
-import type { RouterClient } from "@orpc/server";
+
+import type { AssistantRouter } from "@full-stack-cf-app/assistant/router";
+
 import { PUBLIC_ASSISTANT_URL } from "$env/static/public";
 
 const TRAILING_SLASHES = /\/+$/;
