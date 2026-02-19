@@ -1,43 +1,43 @@
 import { test as base, type Page } from "@playwright/test";
-import { type PageBudget, getBudget } from "./budgets";
+import { getBudget, type PageBudget } from "./budgets";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-export type WebVitals = {
+export interface WebVitals {
 	lcp: number | null;
 	cls: number | null;
 	fcp: number | null;
-};
+}
 
-export type NavigationMetrics = {
+export interface NavigationMetrics {
 	ttfb: number;
 	domContentLoaded: number;
 	loadComplete: number;
 	domProcessing: number;
-};
+}
 
-export type ResourceMetrics = {
+export interface ResourceMetrics {
 	totalSize: number;
 	jsSize: number;
 	cssSize: number;
 	imageSize: number;
 	resourceCount: number;
 	slowResources: { name: string; duration: number; size: number }[];
-};
+}
 
-export type MemorySnapshot = {
+export interface MemorySnapshot {
 	usedJSHeapSizeMB: number;
 	totalJSHeapSizeMB: number;
-};
+}
 
-export type FrameMetrics = {
+export interface FrameMetrics {
 	fps: number;
 	longFrames: number;
 	totalFrames: number;
 	droppedFramePercent: number;
-};
+}
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -54,7 +54,7 @@ const injectVitalsObservers = async (page: Page): Promise<void> => {
 			const entries = list.getEntries();
 			if (entries.length > 0) {
 				(win.__vitals as Record<string, unknown>).lcp =
-					entries[entries.length - 1].startTime;
+					entries.at(-1).startTime;
 			}
 		}).observe({ type: "largest-contentful-paint", buffered: true });
 
@@ -86,13 +86,13 @@ const injectVitalsObservers = async (page: Page): Promise<void> => {
 
 const collectVitals = (page: Page): Promise<WebVitals> =>
 	page.evaluate(
-		() => (window as unknown as Record<string, unknown>).__vitals as WebVitals,
+		() => (window as unknown as Record<string, unknown>).__vitals as WebVitals
 	);
 
 const collectNavigation = (page: Page): Promise<NavigationMetrics> =>
 	page.evaluate(() => {
 		const nav = performance.getEntriesByType(
-			"navigation",
+			"navigation"
 		)[0] as PerformanceNavigationTiming;
 		return {
 			ttfb: nav.responseStart - nav.requestStart,
@@ -105,7 +105,7 @@ const collectNavigation = (page: Page): Promise<NavigationMetrics> =>
 const collectResources = (page: Page): Promise<ResourceMetrics> =>
 	page.evaluate(() => {
 		const entries = performance.getEntriesByType(
-			"resource",
+			"resource"
 		) as PerformanceResourceTiming[];
 		const byType = (type: string) =>
 			entries
@@ -132,9 +132,12 @@ const collectResources = (page: Page): Promise<ResourceMetrics> =>
 
 const collectMemory = (page: Page): Promise<MemorySnapshot | null> =>
 	page.evaluate(() => {
-		const mem = (performance as unknown as Record<string, unknown>)
-			.memory as Record<string, number> | undefined;
-		if (!mem) return null;
+		const mem = (performance as unknown as Record<string, unknown>).memory as
+			| Record<string, number>
+			| undefined;
+		if (!mem) {
+			return null;
+		}
 		return {
 			usedJSHeapSizeMB: mem.usedJSHeapSize / 1024 / 1024,
 			totalJSHeapSizeMB: mem.totalJSHeapSize / 1024 / 1024,
@@ -148,7 +151,7 @@ const collectMemory = (page: Page): Promise<MemorySnapshot | null> =>
 const measureFrames = async (
 	page: Page,
 	action: () => Promise<void>,
-	durationMs = 3000,
+	durationMs = 3000
 ): Promise<FrameMetrics> => {
 	// Start frame counting
 	await page.evaluate(() => {
@@ -156,7 +159,9 @@ const measureFrames = async (
 		win.__frameTimestamps = [] as number[];
 		win.__frameCounting = true;
 		const loop = (ts: number) => {
-			if (!(win.__frameCounting as boolean)) return;
+			if (!(win.__frameCounting as boolean)) {
+				return;
+			}
 			(win.__frameTimestamps as number[]).push(ts);
 			requestAnimationFrame(loop);
 		};
@@ -180,7 +185,7 @@ const measureFrames = async (
 			deltas.push(timestamps[i] - timestamps[i - 1]);
 		}
 
-		const totalTimeMs = timestamps[timestamps.length - 1] - timestamps[0];
+		const totalTimeMs = timestamps.at(-1) - timestamps[0];
 		const fps = totalTimeMs > 0 ? (deltas.length / totalTimeMs) * 1000 : 0;
 		const longFrames = deltas.filter((d) => d > 50).length; // > 50ms = below 20fps threshold
 		const droppedFramePercent =
@@ -199,7 +204,7 @@ const measureFrames = async (
 /*  Fixtures                                                           */
 /* ------------------------------------------------------------------ */
 
-type PerfFixtures = {
+interface PerfFixtures {
 	/** Inject web-vital observers into the page. Call before navigating. */
 	injectVitals: () => Promise<void>;
 	/** Collect accumulated web vitals from the page. */
@@ -213,11 +218,11 @@ type PerfFixtures = {
 	/** Measure frame rate during an interaction. */
 	measureFrames: (
 		action: () => Promise<void>,
-		durationMs?: number,
+		durationMs?: number
 	) => Promise<FrameMetrics>;
 	/** Get the performance budget for a route. */
 	budgetFor: (route: string) => PageBudget;
-};
+}
 
 export const test = base.extend<PerfFixtures>({
 	injectVitals: async ({ page }, use) => {
@@ -243,4 +248,6 @@ export const test = base.extend<PerfFixtures>({
 	},
 });
 
+// Re-export expect for test files
+// biome-ignore lint/performance/noBarrelFile: intentional re-export for test convenience
 export { expect } from "@playwright/test";

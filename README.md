@@ -68,9 +68,10 @@ Create environment files as needed:
 - `npm run check`: Run `lint` and `check-types` together
 - `npm run check-types`: Type-check tasks registered in workspace packages
 - `npm run test`: Run unit tests in packages that define `test`
-- `npm run test:e2e`: Run Playwright tests (web package)
+- `npm run test:e2e`: Run functional Playwright tests (`@full-stack-cf-app/e2e-web`, excludes `e2e/perf`)
+- `npm run test:perf`: Run Playwright performance suite (`e2e/perf`)
 - `npm run dev:server:e2e`: Start infra runtime for E2E (server/assistant/notifications only)
-- `npm run -w web test:e2e:reuse`: Run Playwright against already-running local servers (skip managed startup)
+- `npm run test:e2e:reuse`: Run Playwright against already-running local servers (skip managed startup)
 - `npm run test:integration:calendar`: Run live Google Calendar integration test suite (network)
 - `npm run db:push`: Push Drizzle schema
 - `npm run db:migrate`: Run Drizzle migrations
@@ -229,7 +230,7 @@ Commands run from repo root:
 - `npm run check`: Passes.
 - `npm run check-types`: Passes.
 - `npm run test`: Passes (20 tests across `packages/db`, `packages/auth`, `packages/api`).
-- `npm run test:e2e`: Passes (Playwright with local web server bootstrap).
+- `npm run test:e2e`: Passes (Playwright from `@full-stack-cf-app/e2e-web` with local managed servers).
 - `npm run dev:server`: Runs via `@full-stack-cf-app/infra` filter.
 
 Notable warnings observed during build:

@@ -66,14 +66,17 @@ export default defineConfig({
 		: {
 				webServer: [
 					{
-						command: `for p in 43173; do lsof -ti tcp:$p | xargs kill 2>/dev/null || true; done && PUBLIC_SERVER_URL=${serverURL} PUBLIC_ASSISTANT_URL=${assistantURL} npm run dev -- --port 43173 --strictPort`,
+						command:
+							process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ??
+							"npm run dev:web:e2e:clean",
 						url: baseURL,
 						reuseExistingServer: true,
 						timeout: 120_000,
 					},
 					{
 						command:
-							"cd ../.. && for p in 43100 43101 43102; do lsof -ti tcp:$p | xargs kill 2>/dev/null || true; done && ALCHEMY_SKIP_WEB=1 ALCHEMY_E2E=1 STAGE=e2e npm run dev:server",
+							process.env.PLAYWRIGHT_BACKEND_SERVER_COMMAND ??
+							"npm run dev:infra:e2e:clean",
 						url: `${assistantURL}/health`,
 						reuseExistingServer: true,
 						timeout: 120_000,

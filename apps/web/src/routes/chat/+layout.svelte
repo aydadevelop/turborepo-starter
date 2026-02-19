@@ -72,6 +72,7 @@
 		<div class="flex items-center justify-between border-b border-border p-3">
 			<h2 class="text-sm font-semibold">Chats</h2>
 			<Button
+				data-testid="new-chat-button-sidebar"
 				variant="ghost"
 				size="icon"
 				class="h-7 w-7"
@@ -93,6 +94,7 @@
 				>
 					<span class="truncate">{chat.title}</span>
 					<button
+						data-testid="delete-chat-button"
 						type="button"
 						class="ml-1 hidden shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive group-hover:block"
 						onclick={(e) => {
@@ -113,7 +115,10 @@
 			{/if}
 
 			{#if !$chatsQuery.isLoading && !$chatsQuery.data?.length}
-				<p class="px-2 py-4 text-center text-xs text-muted-foreground">
+				<p
+					class="px-2 py-4 text-center text-xs text-muted-foreground"
+					data-testid="chat-empty-state"
+				>
 					No chats yet
 				</p>
 			{/if}

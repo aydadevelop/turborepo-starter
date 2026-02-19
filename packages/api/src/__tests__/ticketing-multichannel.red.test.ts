@@ -5,25 +5,14 @@ import {
 	supportTicketMessage,
 	telegramNotification,
 } from "@full-stack-cf-app/db/schema/support";
-import {
-	clearTestDatabase,
-	createTestDatabase,
-} from "@full-stack-cf-app/db/test";
+import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
 import { call } from "@orpc/server";
-import { and, eq, sql } from "drizzle-orm";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { and, eq } from "drizzle-orm";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { Context } from "../context";
+import { createManagedContext, createUserContext } from "./utils/context";
 
-const testDbState = createTestDatabase();
+const testDbState = bootstrapTestDatabase();
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
@@ -33,30 +22,17 @@ const { intakeRouter } = await import("../routers/intake");
 const { helpdeskRouter } = await import("../routers/helpdesk");
 const { adminSupportRouter } = await import("../routers/admin/support");
 
-const managerContext: Context = {
-	session: {
-		user: {
-			id: "user-operator",
-		},
-	} as Context["session"],
-	activeMembership: {
-		organizationId: "org-1",
-		role: "manager",
-	},
+const managerContext = createManagedContext({
+	userId: "user-operator",
+	organizationId: "org-1",
+	role: "manager",
 	requestUrl: "http://localhost:3000/rpc/helpdesk",
-	requestHostname: "localhost",
-};
+});
 
-const adminContext: Context = {
-	session: {
-		user: {
-			id: "user-admin",
-		},
-	} as Context["session"],
-	activeMembership: null,
+const adminContext = createUserContext({
+	userId: "user-admin",
 	requestUrl: "http://localhost:3000/rpc/admin/support/listTickets",
-	requestHostname: "localhost",
-};
+});
 
 const seedOrganization = async () => {
 	await testDbState.db.insert(organization).values({
@@ -85,22 +61,12 @@ const seedUsers = async () => {
 };
 
 describe("ticketing multichannel (red)", () => {
-	beforeAll(() => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
-	});
-
-	afterAll(() => {
-		testDbState.close();
-	});
-
-	beforeEach(() => {
-		clearTestDatabase(testDbState.db);
+	beforeAll(async () => {
+		await seedOrganization();
+		await seedUsers();
 	});
 
 	it("creates ticket + first threaded message when ingesting external traffic without ticketId", async () => {
-		await seedOrganization();
-		await seedUsers();
-
 		const result = await call(
 			intakeRouter.ingestManaged,
 			{
@@ -152,9 +118,6 @@ describe("ticketing multichannel (red)", () => {
 	});
 
 	it("queues telegram outbound dispatch when an operator replies on telegram channel", async () => {
-		await seedOrganization();
-		await seedUsers();
-
 		const ticket = await call(
 			helpdeskRouter.ticketCreateManaged,
 			{
@@ -195,9 +158,6 @@ describe("ticketing multichannel (red)", () => {
 	});
 
 	it("finds tickets by description text in admin list search", async () => {
-		await seedOrganization();
-		await seedUsers();
-
 		await testDbState.db.insert(supportTicket).values([
 			{
 				id: "ticket-subject-match",
@@ -239,9 +199,6 @@ describe("ticketing multichannel (red)", () => {
 	});
 
 	it("filters admin support list by source channel", async () => {
-		await seedOrganization();
-		await seedUsers();
-
 		await testDbState.db.insert(supportTicket).values([
 			{
 				id: "ticket-telegram-1",

@@ -41,7 +41,7 @@
 	{/if}
 
 	{#if output}
-		<div>
+		<div data-testid="tool-output">
 			<h4 class="text-muted-foreground mb-2 text-sm font-medium">Output</h4>
 			<div
 				class="bg-background max-h-60 overflow-auto rounded border p-2 font-mono text-sm"

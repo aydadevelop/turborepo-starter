@@ -7,6 +7,7 @@ import {
 	drizzle,
 } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 
 import { relations } from "../relations";
 // biome-ignore lint/performance/noNamespaceImport: required by drizzle schema object
@@ -22,6 +23,15 @@ type TestSqliteClient = BetterSqliteDatabase.Database;
 export type TestDatabase = BetterSQLite3Database<typeof schema> & {
 	$client: TestSqliteClient;
 };
+
+export type TestDatabaseSeed = (db: TestDatabase) => void | Promise<void>;
+
+export interface BootstrapTestDatabaseOptions {
+	seed?: TestDatabaseSeed;
+	seedStrategy?: "beforeAll" | "beforeEach";
+}
+
+let testBootstrapCounter = 0;
 
 export const createTestDatabase = (): {
 	db: TestDatabase;
@@ -49,4 +59,56 @@ export const clearTestDatabase = (db: TestDatabase): void => {
 		db.run(sql.raw(`DELETE FROM ${name}`));
 	}
 	db.$client.pragma("foreign_keys = ON");
+};
+
+export const bootstrapTestDatabase = (
+	options: BootstrapTestDatabaseOptions = {}
+): {
+	db: TestDatabase;
+	close: () => void;
+} => {
+	const testDbState = createTestDatabase();
+	const seedStrategy = options.seedStrategy ?? "beforeAll";
+	const savepointName = `test_bootstrap_${testBootstrapCounter++}`;
+	let savepointActive = false;
+
+	beforeAll(async () => {
+		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
+
+		if (seedStrategy === "beforeAll" && options.seed) {
+			await options.seed(testDbState.db);
+		}
+	});
+
+	beforeEach(async () => {
+		if (seedStrategy === "beforeEach") {
+			clearTestDatabase(testDbState.db);
+			if (options.seed) {
+				await options.seed(testDbState.db);
+			}
+			return;
+		}
+
+		testDbState.db.run(sql.raw(`SAVEPOINT ${savepointName}`));
+		savepointActive = true;
+	});
+
+	afterEach(() => {
+		if (seedStrategy === "beforeEach" || !savepointActive) {
+			return;
+		}
+
+		try {
+			testDbState.db.run(sql.raw(`ROLLBACK TO SAVEPOINT ${savepointName}`));
+			testDbState.db.run(sql.raw(`RELEASE SAVEPOINT ${savepointName}`));
+		} finally {
+			savepointActive = false;
+		}
+	});
+
+	afterAll(() => {
+		testDbState.close();
+	});
+
+	return testDbState;
 };

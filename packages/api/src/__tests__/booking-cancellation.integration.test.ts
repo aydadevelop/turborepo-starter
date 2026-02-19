@@ -7,25 +7,14 @@ import {
 	bookingRefund,
 } from "@full-stack-cf-app/db/schema/booking";
 import { notificationEvent } from "@full-stack-cf-app/db/schema/notification";
-import {
-	clearTestDatabase,
-	createTestDatabase,
-} from "@full-stack-cf-app/db/test";
+import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
 import { call } from "@orpc/server";
-import { and, eq, sql } from "drizzle-orm";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { and, eq } from "drizzle-orm";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Context } from "../context";
+import { createManagedContext, createUserContext } from "./utils/context";
 
-const testDbState = createTestDatabase();
+const testDbState = bootstrapTestDatabase();
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
@@ -45,36 +34,23 @@ const queueSendMock = vi.fn(
 	}
 );
 
-const managerContext: Context = {
-	session: {
-		user: {
-			id: "user-manager",
-		},
-	} as Context["session"],
-	activeMembership: {
-		organizationId: "org-1",
-		role: "manager",
-	},
+const managerContext = createManagedContext({
+	userId: "user-manager",
+	organizationId: "org-1",
+	role: "manager",
 	requestUrl: "http://localhost:3000/rpc/booking/cancelManaged",
-	requestHostname: "localhost",
 	notificationQueue: {
 		send: queueSendMock,
 	},
-};
+});
 
-const customerContext: Context = {
-	session: {
-		user: {
-			id: "user-customer",
-		},
-	} as Context["session"],
-	activeMembership: null,
+const customerContext = createUserContext({
+	userId: "user-customer",
 	requestUrl: "http://localhost:3000/rpc/booking/cancellationRequestCreate",
-	requestHostname: "localhost",
 	notificationQueue: {
 		send: queueSendMock,
 	},
-};
+});
 
 const seedAuthAndBoat = async () => {
 	await testDbState.db.insert(organization).values({
@@ -148,16 +124,11 @@ const seedBookingWithCapturedPayment = async (params: {
 };
 
 describe("booking cancellation policy integration", () => {
-	beforeAll(() => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
-	});
-
-	afterAll(() => {
-		testDbState.close();
+	beforeAll(async () => {
+		await seedAuthAndBoat();
 	});
 
 	beforeEach(() => {
-		clearTestDatabase(testDbState.db);
 		queueSendMock.mockClear();
 		vi.useRealTimers();
 	});
@@ -166,7 +137,6 @@ describe("booking cancellation policy integration", () => {
 		vi.useFakeTimers();
 		try {
 			vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
-			await seedAuthAndBoat();
 			await seedBookingWithCapturedPayment({
 				bookingId: "booking-owner-cancel",
 				startsAt: new Date("2026-03-13T10:00:00.000Z"),
@@ -239,7 +209,6 @@ describe("booking cancellation policy integration", () => {
 		vi.useFakeTimers();
 		try {
 			vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
-			await seedAuthAndBoat();
 			await seedBookingWithCapturedPayment({
 				bookingId: "booking-customer-cancel",
 				startsAt: new Date("2026-03-10T20:00:00.000Z"),
@@ -326,7 +295,6 @@ describe("booking cancellation policy integration", () => {
 	});
 
 	it("rejects owner safety cancellation without evidence before mutating booking", async () => {
-		await seedAuthAndBoat();
 		await seedBookingWithCapturedPayment({
 			bookingId: "booking-owner-safety",
 			startsAt: new Date("2026-03-12T10:00:00.000Z"),
@@ -367,7 +335,6 @@ describe("booking cancellation policy integration", () => {
 		vi.useFakeTimers();
 		try {
 			vi.setSystemTime(new Date("2026-03-10T10:00:00.000Z"));
-			await seedAuthAndBoat();
 			await seedBookingWithCapturedPayment({
 				bookingId: "booking-customer-health",
 				startsAt: new Date("2026-03-10T20:00:00.000Z"),
@@ -431,7 +398,6 @@ describe("booking cancellation policy integration", () => {
 		vi.useFakeTimers();
 		try {
 			vi.setSystemTime(new Date("2026-03-10T10:30:00.000Z"));
-			await seedAuthAndBoat();
 			await seedBookingWithCapturedPayment({
 				bookingId: "booking-customer-too-late",
 				startsAt: new Date("2026-03-10T10:00:00.000Z"),

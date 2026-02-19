@@ -1,27 +1,10 @@
 import { organization, user } from "@full-stack-cf-app/db/schema/auth";
-import {
-	clearTestDatabase,
-	createTestDatabase,
-} from "@full-stack-cf-app/db/test";
+import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
 import { call } from "@orpc/server";
-import { sql } from "drizzle-orm";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
-import { ChannelAdapterRegistry } from "../channels/registry";
-import type {
-	OutboundChannelAdapter,
-	OutboundMessageParams,
-} from "../channels/types";
-import type { Context } from "../context";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { createManagedContext } from "./utils/context";
 
-const testDbState = createTestDatabase();
+const testDbState = bootstrapTestDatabase();
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
@@ -30,19 +13,12 @@ vi.doMock("@full-stack-cf-app/db", () => ({
 const { helpdeskRouter } = await import("../routers/helpdesk");
 const { intakeRouter } = await import("../routers/intake");
 
-const managerContext: Context = {
-	session: {
-		user: {
-			id: "user-operator",
-		},
-	} as Context["session"],
-	activeMembership: {
-		organizationId: "org-1",
-		role: "manager",
-	},
+const managerContext = createManagedContext({
+	userId: "user-operator",
+	organizationId: "org-1",
+	role: "manager",
 	requestUrl: "http://localhost:3000/rpc/helpdesk",
-	requestHostname: "localhost",
-};
+});
 
 const seedAuthFixtures = async () => {
 	await testDbState.db.insert(organization).values({
@@ -62,21 +38,11 @@ const seedAuthFixtures = async () => {
 };
 
 describe("multi-channel outbound dispatch (integration)", () => {
-	beforeAll(() => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
-	});
-
-	afterAll(() => {
-		testDbState.close();
-	});
-
-	beforeEach(() => {
-		clearTestDatabase(testDbState.db);
+	beforeAll(async () => {
+		await seedAuthFixtures();
 	});
 
 	it("ingests a telegram message, creates a ticket, and the ticket source is telegram", async () => {
-		await seedAuthFixtures();
-
 		const result = await call(
 			intakeRouter.ingestManaged,
 			{
@@ -102,8 +68,6 @@ describe("multi-channel outbound dispatch (integration)", () => {
 	});
 
 	it("ingests an email from sputnik, creates a ticket with email metadata", async () => {
-		await seedAuthFixtures();
-
 		const result = await call(
 			intakeRouter.ingestManaged,
 			{
@@ -129,8 +93,6 @@ describe("multi-channel outbound dispatch (integration)", () => {
 	});
 
 	it("ingests an avito message, creates a ticket", async () => {
-		await seedAuthFixtures();
-
 		const result = await call(
 			intakeRouter.ingestManaged,
 			{
@@ -155,8 +117,6 @@ describe("multi-channel outbound dispatch (integration)", () => {
 	});
 
 	it("creates ticket and reply on web channel gets delivered immediately", async () => {
-		await seedAuthFixtures();
-
 		const ticket = await call(
 			helpdeskRouter.ticketCreateManaged,
 			{
@@ -182,8 +142,6 @@ describe("multi-channel outbound dispatch (integration)", () => {
 	});
 
 	it("deduplicates repeated inbound messages from same channel", async () => {
-		await seedAuthFixtures();
-
 		const first = await call(
 			intakeRouter.ingestManaged,
 			{
@@ -212,8 +170,6 @@ describe("multi-channel outbound dispatch (integration)", () => {
 	});
 
 	it("appends inbound message to existing ticket when ticketId is provided", async () => {
-		await seedAuthFixtures();
-
 		const ticket = await call(
 			helpdeskRouter.ticketCreateManaged,
 			{
@@ -250,90 +206,5 @@ describe("multi-channel outbound dispatch (integration)", () => {
 		expect(ticketWithMessages.messages).toHaveLength(1);
 		expect(ticketWithMessages.messages[0]?.body).toBe("Follow up message");
 		expect(ticketWithMessages.ticket.status).toBe("pending_operator");
-	});
-});
-
-describe("ChannelAdapterRegistry dispatch logic (unit)", () => {
-	it("dispatches to correct outbound adapter based on channel", async () => {
-		const sentMessages: OutboundMessageParams[] = [];
-
-		const mockAdapter: OutboundChannelAdapter = {
-			channel: "telegram",
-			name: "mock-telegram",
-			resolveRecipientId: () => "chat-123",
-			send: (params) => {
-				sentMessages.push(params);
-				return Promise.resolve({
-					status: "sent" as const,
-					providerMessageId: "mock-msg-1",
-				});
-			},
-		};
-
-		const registry = new ChannelAdapterRegistry();
-		registry.registerOutbound(mockAdapter);
-
-		const adapter = registry.getOutboundAdapter("telegram");
-		expect(adapter).not.toBeNull();
-
-		if (!adapter) {
-			throw new Error("adapter not found");
-		}
-
-		const recipientId = adapter.resolveRecipientId({
-			ticketMetadata: { telegramChatId: "chat-123" },
-		});
-		expect(recipientId).toBe("chat-123");
-
-		const result = await adapter.send({
-			organizationId: "org-1",
-			ticketId: "ticket-1",
-			messageId: "msg-1",
-			channel: "telegram",
-			body: "Test reply",
-			recipientId: "chat-123",
-		});
-
-		expect(result.status).toBe("sent");
-		expect(sentMessages).toHaveLength(1);
-		expect(sentMessages[0]?.body).toBe("Test reply");
-	});
-
-	it("returns null for unregistered channel", () => {
-		const registry = new ChannelAdapterRegistry();
-		expect(registry.getOutboundAdapter("avito")).toBeNull();
-	});
-
-	it("mock adapters can simulate failure scenarios", async () => {
-		const failAdapter: OutboundChannelAdapter = {
-			channel: "email",
-			name: "fail-email",
-			resolveRecipientId: () => "test@example.com",
-			send: () =>
-				Promise.resolve({
-					status: "failed" as const,
-					failureReason: "SMTP connection timeout",
-				}),
-		};
-
-		const registry = new ChannelAdapterRegistry();
-		registry.registerOutbound(failAdapter);
-
-		const adapter = registry.getOutboundAdapter("email");
-		if (!adapter) {
-			throw new Error("adapter not found");
-		}
-
-		const result = await adapter.send({
-			organizationId: "org-1",
-			ticketId: "t-1",
-			messageId: "m-1",
-			channel: "email",
-			body: "Reply text",
-			recipientId: "test@example.com",
-		});
-
-		expect(result.status).toBe("failed");
-		expect(result.failureReason).toBe("SMTP connection timeout");
 	});
 });

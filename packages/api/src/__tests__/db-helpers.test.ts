@@ -1,21 +1,19 @@
 import { organization } from "@full-stack-cf-app/db/schema/auth";
 import { boat } from "@full-stack-cf-app/db/schema/boat";
-import {
-	clearTestDatabase,
-	createTestDatabase,
-} from "@full-stack-cf-app/db/test";
-import { sql } from "drizzle-orm";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
+import { describe, expect, it, vi } from "vitest";
 
-const testDbState = createTestDatabase();
+const testDbState = bootstrapTestDatabase({
+	seed: (db) => {
+		db.insert(organization)
+			.values({
+				id: "org-1",
+				name: "Test Org",
+				slug: "test-org",
+			})
+			.run();
+	},
+});
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
@@ -25,26 +23,6 @@ const { insertAndReturn, requireManaged, requireOwned, buildUpdatePayload } =
 	await import("../lib/db-helpers");
 
 describe("db-helpers", () => {
-	beforeAll(() => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
-	});
-
-	afterAll(() => {
-		testDbState.close();
-	});
-
-	beforeEach(() => {
-		clearTestDatabase(testDbState.db);
-		testDbState.db
-			.insert(organization)
-			.values({
-				id: "org-1",
-				name: "Test Org",
-				slug: "test-org",
-			})
-			.run();
-	});
-
 	describe("insertAndReturn", () => {
 		it("inserts and returns the created row", async () => {
 			const result = await insertAndReturn(boat, {

@@ -1,23 +1,11 @@
 import { organization, user } from "@full-stack-cf-app/db/schema/auth";
-import {
-	clearTestDatabase,
-	createTestDatabase,
-} from "@full-stack-cf-app/db/test";
+import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
 import { call } from "@orpc/server";
-import { sql } from "drizzle-orm";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { Context } from "../context";
+import { createManagedContext } from "./utils/context";
 
-const testDbState = createTestDatabase();
+const testDbState = bootstrapTestDatabase();
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
@@ -25,19 +13,12 @@ vi.doMock("@full-stack-cf-app/db", () => ({
 
 const { helpdeskRouter } = await import("../routers/helpdesk");
 
-const managerContext: Context = {
-	session: {
-		user: {
-			id: "user-operator",
-		},
-	} as Context["session"],
-	activeMembership: {
-		organizationId: "org-1",
-		role: "manager",
-	},
+const managerContext = createManagedContext({
+	userId: "user-operator",
+	organizationId: "org-1",
+	role: "manager",
 	requestUrl: "http://localhost:3000/rpc/helpdesk",
-	requestHostname: "localhost",
-};
+});
 
 const oneHourMs = 60 * 60 * 1000;
 
@@ -65,21 +46,11 @@ const seedAuthFixtures = async () => {
 };
 
 describe("helpdesk router (integration)", () => {
-	beforeAll(() => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
-	});
-
-	afterAll(() => {
-		testDbState.close();
-	});
-
-	beforeEach(() => {
-		clearTestDatabase(testDbState.db);
+	beforeAll(async () => {
+		await seedAuthFixtures();
 	});
 
 	it("keeps ticket message threading ordered and updates status only for customer-visible replies", async () => {
-		await seedAuthFixtures();
-
 		const createdTicket = await call(
 			helpdeskRouter.ticketCreateManaged,
 			{
@@ -157,8 +128,6 @@ describe("helpdesk router (integration)", () => {
 	});
 
 	it("tracks escalation/closure timestamps and handles terminal-state reply edge cases", async () => {
-		await seedAuthFixtures();
-
 		const createdTicket = await call(
 			helpdeskRouter.ticketCreateManaged,
 			{
@@ -247,8 +216,6 @@ describe("helpdesk router (integration)", () => {
 	});
 
 	it("applies priority SLA defaults and escalates overdue tickets by sweep", async () => {
-		await seedAuthFixtures();
-
 		const highPriorityTicket = await call(
 			helpdeskRouter.ticketCreateManaged,
 			{

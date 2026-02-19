@@ -1,24 +1,12 @@
 import { organization, user } from "@full-stack-cf-app/db/schema/auth";
-import {
-	clearTestDatabase,
-	createTestDatabase,
-} from "@full-stack-cf-app/db/test";
+import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
 import type { LegacyNotificationQueueMessage as NotificationQueueMessage } from "@full-stack-cf-app/notifications/contracts";
 import { call } from "@orpc/server";
-import { sql } from "drizzle-orm";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Context } from "../context";
+import { createManagedContext } from "./utils/context";
 
-const testDbState = createTestDatabase();
+const testDbState = bootstrapTestDatabase();
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
@@ -38,22 +26,15 @@ const queueSendMock = vi.fn(
 	}
 );
 
-const managerContext: Context = {
-	session: {
-		user: {
-			id: "user-operator",
-		},
-	} as Context["session"],
-	activeMembership: {
-		organizationId: "org-1",
-		role: "manager",
-	},
+const managerContext = createManagedContext({
+	userId: "user-operator",
+	organizationId: "org-1",
+	role: "manager",
 	requestUrl: "http://localhost:3000/rpc/telegram/notificationQueueManaged",
-	requestHostname: "localhost",
 	notificationQueue: {
 		send: queueSendMock,
 	},
-};
+});
 
 const seedAuthFixtures = async () => {
 	await testDbState.db.insert(organization).values({
@@ -71,22 +52,15 @@ const seedAuthFixtures = async () => {
 };
 
 describe("telegram router (integration)", () => {
-	beforeAll(() => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
-	});
-
-	afterAll(() => {
-		testDbState.close();
+	beforeAll(async () => {
+		await seedAuthFixtures();
 	});
 
 	beforeEach(() => {
-		clearTestDatabase(testDbState.db);
 		queueSendMock.mockClear();
 	});
 
 	it("publishes queue message when notification is created", async () => {
-		await seedAuthFixtures();
-
 		const created = await call(
 			telegramRouter.notificationQueueManaged,
 			{
@@ -111,8 +85,6 @@ describe("telegram router (integration)", () => {
 	});
 
 	it("returns idempotent response and does not republish queue message", async () => {
-		await seedAuthFixtures();
-
 		await call(
 			telegramRouter.notificationQueueManaged,
 			{

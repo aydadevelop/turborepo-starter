@@ -488,10 +488,20 @@
 		</div>
 
 		{#if actionMessage}
-			<p class="text-sm text-primary">{actionMessage}</p>
+			<p
+				class="text-sm text-primary"
+				data-testid="managed-booking-action-message"
+			>
+				{actionMessage}
+			</p>
 		{/if}
 		{#if actionError}
-			<p class="text-sm text-destructive">{actionError}</p>
+			<p
+				class="text-sm text-destructive"
+				data-testid="managed-booking-action-error"
+			>
+				{actionError}
+			</p>
 		{/if}
 
 		<!-- Cancellation Escalations -->
@@ -900,7 +910,10 @@
 						{#each filteredBookings as bookingItem (bookingItem.id)}
 							{@const shiftRequest = shiftRequestByBookingId.get(bookingItem.id)}
 							{@const escalation = escalationRequestByBookingId.get(bookingItem.id)}
-							<li class="space-y-3 rounded-md border p-3">
+							<li
+								class="space-y-3 rounded-md border p-3"
+								data-testid={`managed-booking-item-${bookingItem.id}`}
+							>
 								<div class="flex flex-wrap items-start justify-between gap-3">
 									<div class="space-y-1">
 										<p class="text-sm font-medium text-foreground">
@@ -930,6 +943,7 @@
 										</span>
 										<span
 											class={`rounded-full px-2 py-1 text-xs font-medium ${paymentStatusClass(bookingItem.paymentStatus)}`}
+											data-testid="managed-booking-payment-status"
 										>
 											{bookingItem.paymentStatus}
 										</span>
@@ -986,6 +1000,7 @@
 											variant="default"
 											disabled={payPendingBookingId === bookingItem.id}
 											onclick={() => void startPayment(bookingItem)}
+											data-testid="managed-booking-pay-button"
 										>
 											{payPendingBookingId === bookingItem.id
 												? "Processing..."

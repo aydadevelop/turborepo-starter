@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { expect, test } from "./fixtures";
 
 /**
  * Lighthouse audits via playwright-lighthouse.
@@ -39,7 +39,7 @@ const thresholds = {
 
 for (const { path, name } of routes) {
 	test.describe(`Lighthouse — ${name}`, () => {
-		test(`scores meet thresholds`, async ({ page }, testInfo) => {
+		test("scores meet thresholds", async ({ page }, testInfo) => {
 			if (!playAudit) {
 				test.skip(true, "playwright-lighthouse not installed");
 				return;
@@ -64,7 +64,7 @@ for (const { path, name } of routes) {
 						// Desktop-like throttling for consistent local results
 						throttling: {
 							rttMs: 40,
-							throughputKbps: 10240,
+							throughputKbps: 10_240,
 							cpuSlowdownMultiplier: 1,
 							requestLatencyMs: 0,
 							downloadThroughputKbps: 0,
@@ -76,13 +76,13 @@ for (const { path, name } of routes) {
 
 			const scores = {
 				performance: Math.round(
-					(audit.lhr.categories.performance?.score ?? 0) * 100,
+					(audit.lhr.categories.performance?.score ?? 0) * 100
 				),
 				accessibility: Math.round(
-					(audit.lhr.categories.accessibility?.score ?? 0) * 100,
+					(audit.lhr.categories.accessibility?.score ?? 0) * 100
 				),
 				bestPractices: Math.round(
-					(audit.lhr.categories["best-practices"]?.score ?? 0) * 100,
+					(audit.lhr.categories["best-practices"]?.score ?? 0) * 100
 				),
 				seo: Math.round((audit.lhr.categories.seo?.score ?? 0) * 100),
 			};
@@ -102,26 +102,26 @@ for (const { path, name } of routes) {
 
 			expect(
 				scores.performance,
-				`Performance score ${scores.performance} on ${path}`,
+				`Performance score ${scores.performance} on ${path}`
 			).toBeGreaterThanOrEqual(thresholds.performance);
 
 			expect(
 				scores.accessibility,
-				`Accessibility score ${scores.accessibility} on ${path}`,
+				`Accessibility score ${scores.accessibility} on ${path}`
 			).toBeGreaterThanOrEqual(thresholds.accessibility);
 
 			expect(
 				scores.bestPractices,
-				`Best Practices score ${scores.bestPractices} on ${path}`,
+				`Best Practices score ${scores.bestPractices} on ${path}`
 			).toBeGreaterThanOrEqual(thresholds["best-practices"]);
 
 			expect(
 				scores.seo,
-				`SEO score ${scores.seo} on ${path}`,
+				`SEO score ${scores.seo} on ${path}`
 			).toBeGreaterThanOrEqual(thresholds.seo);
 		});
 
-		test(`bundle sizes via Lighthouse`, async ({ page }, testInfo) => {
+		test("bundle sizes via Lighthouse", async ({ page }, testInfo) => {
 			if (!playAudit) {
 				test.skip(true, "playwright-lighthouse not installed");
 				return;
@@ -188,7 +188,7 @@ for (const { path, name } of routes) {
 						networkRequests: audit.lhr.audits["network-requests"],
 					},
 					null,
-					2,
+					2
 				),
 				contentType: "application/json",
 			});
@@ -197,7 +197,7 @@ for (const { path, name } of routes) {
 			if (bundleInfo.totalByteWeight !== null) {
 				expect(
 					bundleInfo.totalByteWeight,
-					`Total weight ${Math.round(bundleInfo.totalByteWeight / 1024)} KB on ${path}`,
+					`Total weight ${Math.round(bundleInfo.totalByteWeight / 1024)} KB on ${path}`
 				).toBeLessThan(3_000_000);
 			}
 		});

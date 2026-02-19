@@ -211,6 +211,7 @@
 											<Button
 												size="sm"
 												variant="outline"
+												data-testid="mock-pay-button"
 												disabled={Boolean(mockPaymentPendingSlotKey || cpPendingSlotKey)}
 												onclick={() => {
 													onBookMock(slot);

@@ -481,12 +481,27 @@
 						>
 							Booking Access
 						</p>
-						<p class="mt-1 text-sm text-foreground">{authStatusLabel}</p>
+						<p
+							class="mt-1 text-sm text-foreground"
+							data-testid="booking-access-status"
+						>
+							{authStatusLabel}
+						</p>
 						{#if mockPaymentMessage}
-							<p class="mt-2 text-xs text-primary">{mockPaymentMessage}</p>
+							<p
+								class="mt-2 text-xs text-primary"
+								data-testid="mock-payment-message"
+							>
+								{mockPaymentMessage}
+							</p>
 						{/if}
 						{#if mockPaymentError}
-							<p class="mt-2 text-xs text-destructive">{mockPaymentError}</p>
+							<p
+								class="mt-2 text-xs text-destructive"
+								data-testid="mock-payment-error"
+							>
+								{mockPaymentError}
+							</p>
 						{/if}
 						{#if !$sessionQuery.isPending && !hasBookingAccess}
 							<div class="mt-2 flex flex-wrap gap-2">

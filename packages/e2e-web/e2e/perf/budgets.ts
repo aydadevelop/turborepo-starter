@@ -3,7 +3,7 @@
  * All sizes in bytes, all times in milliseconds.
  */
 
-export type PageBudget = {
+export interface PageBudget {
 	/** Largest Contentful Paint (ms) */
 	lcp: number;
 	/** Cumulative Layout Shift (unitless) */
@@ -18,7 +18,7 @@ export type PageBudget = {
 	jsSize: number;
 	/** Max memory heap usage (MB) */
 	maxHeapMB: number;
-};
+}
 
 const defaults: PageBudget = {
 	lcp: 2500,

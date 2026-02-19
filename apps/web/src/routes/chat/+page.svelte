@@ -16,6 +16,7 @@
 		Select a chat from the sidebar or start a new one.
 	</p>
 	<Button
+		data-testid="new-chat-button-empty-state"
 		onclick={() => $createChatMutation.mutate("New Chat")}
 		disabled={$createChatMutation.isPending}
 	>

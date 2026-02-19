@@ -1,9 +1,10 @@
+import type { AppRouterClient } from "@full-stack-cf-app/api/routers";
 import { tool } from "ai";
 import z from "zod";
 
-import type { AppRouterClient } from "@full-stack-cf-app/api/routers";
-
-const getUserName = (user: Record<string, unknown> | undefined): string | null => {
+const getUserName = (
+	user: Record<string, unknown> | undefined
+): string | null => {
 	if (!user) {
 		return null;
 	}

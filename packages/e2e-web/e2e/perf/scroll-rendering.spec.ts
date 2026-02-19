@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { expect, test } from "./fixtures";
 
 /**
  * Scroll and rendering performance tests.
@@ -43,13 +43,13 @@ test.describe("Scroll & rendering performance", () => {
 			// Expect reasonable frame rate (>20 FPS average)
 			expect(
 				frames.fps,
-				`FPS during scroll on ${route}: ${frames.fps}`,
+				`FPS during scroll on ${route}: ${frames.fps}`
 			).toBeGreaterThan(20);
 
 			// No more than 30% dropped frames
 			expect(
 				frames.droppedFramePercent,
-				`${frames.droppedFramePercent}% dropped frames on ${route}`,
+				`${frames.droppedFramePercent}% dropped frames on ${route}`
 			).toBeLessThan(30);
 		});
 	}
@@ -97,12 +97,12 @@ test.describe("Scroll & rendering performance", () => {
 				(window as Record<string, unknown>).__longTasks as {
 					duration: number;
 					startTime: number;
-				}[],
+				}[]
 		);
 
 		console.log(
 			`Long tasks during scroll: ${longTasks.length}`,
-			longTasks.map((t) => `${t.duration.toFixed(0)}ms`),
+			longTasks.map((t) => `${t.duration.toFixed(0)}ms`)
 		);
 
 		test.info().annotations.push({
@@ -120,7 +120,7 @@ test.describe("Scroll & rendering performance", () => {
 		for (const task of longTasks) {
 			expect(
 				task.duration,
-				`Long task of ${task.duration.toFixed(0)}ms during scroll`,
+				`Long task of ${task.duration.toFixed(0)}ms during scroll`
 			).toBeLessThan(200);
 		}
 	});
@@ -147,23 +147,26 @@ test.describe("Scroll & rendering performance", () => {
 		});
 
 		const beforeCount = await page.evaluate(
-			() => (window as Record<string, unknown>).__renderCount as number,
+			() => (window as Record<string, unknown>).__renderCount as number
 		);
 
 		// Perform 5 scroll cycles
 		for (let i = 0; i < 5; i++) {
 			await page.evaluate(() =>
-				window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }),
+				window.scrollTo({
+					top: document.body.scrollHeight,
+					behavior: "instant",
+				})
 			);
 			await page.waitForTimeout(200);
 			await page.evaluate(() =>
-				window.scrollTo({ top: 0, behavior: "instant" }),
+				window.scrollTo({ top: 0, behavior: "instant" })
 			);
 			await page.waitForTimeout(200);
 		}
 
 		const afterCount = await page.evaluate(
-			() => (window as Record<string, unknown>).__renderCount as number,
+			() => (window as Record<string, unknown>).__renderCount as number
 		);
 
 		const mutations = afterCount - beforeCount;
@@ -185,7 +188,7 @@ test.describe("Scroll & rendering performance", () => {
 		// Threshold is generous — if you're seeing jank, this number will be very high.
 		expect(
 			mutations,
-			`${mutations} DOM mutations during scroll — excessive re-rendering`,
+			`${mutations} DOM mutations during scroll — excessive re-rendering`
 		).toBeLessThan(500);
 	});
 
@@ -200,21 +203,21 @@ test.describe("Scroll & rendering performance", () => {
 			new PerformanceObserver((list) => {
 				for (const entry of list.getEntries()) {
 					(win.__paints as string[]).push(
-						`${entry.name}: ${entry.startTime.toFixed(0)}ms`,
+						`${entry.name}: ${entry.startTime.toFixed(0)}ms`
 					);
 				}
 			}).observe({ type: "paint", buffered: true });
 		});
 
 		const paints = await page.evaluate(
-			() => (window as Record<string, unknown>).__paints as string[],
+			() => (window as Record<string, unknown>).__paints as string[]
 		);
 
 		console.log("Paint events:", paints);
 
 		// FCP should have fired
 		expect(paints.some((p) => p.startsWith("first-contentful-paint"))).toBe(
-			true,
+			true
 		);
 	});
 });

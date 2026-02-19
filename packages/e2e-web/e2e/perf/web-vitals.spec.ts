@@ -1,10 +1,10 @@
-import { test, expect } from "./fixtures";
+import { expect, test } from "./fixtures";
 
 const publicPages = ["/", "/login", "/boats"] as const;
 
 for (const route of publicPages) {
 	test.describe(`Web Vitals — ${route}`, () => {
-		test(`LCP, CLS, FCP within budget`, async ({
+		test("LCP, CLS, FCP within budget", async ({
 			page,
 			injectVitals,
 			getVitals,
@@ -37,7 +37,7 @@ for (const route of publicPages) {
 			}
 		});
 
-		test(`navigation timing within budget`, async ({
+		test("navigation timing within budget", async ({
 			page,
 			getNavigation,
 			budgetFor,
@@ -59,7 +59,7 @@ for (const route of publicPages) {
 			expect(nav.loadComplete, `Load on ${route}`).toBeLessThan(8000);
 		});
 
-		test(`resource sizes within budget`, async ({
+		test("resource sizes within budget", async ({
 			page,
 			getResources,
 			budgetFor,
@@ -82,7 +82,7 @@ for (const route of publicPages) {
 			});
 
 			expect(res.totalSize, `Total size on ${route}`).toBeLessThan(
-				budget.totalSize,
+				budget.totalSize
 			);
 			expect(res.jsSize, `JS size on ${route}`).toBeLessThan(budget.jsSize);
 

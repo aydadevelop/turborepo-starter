@@ -12,18 +12,7 @@
     "check-types": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "cd ../.. && biome check --config-path biome.json apps/web",
     "lint:fix": "cd ../.. && biome check --config-path biome.json apps/web --write",
-    "dev:e2e": "vite dev --mode e2e --host 127.0.0.1 --port 43173 --strictPort",
-    "dev:server:e2e": "npm --prefix ../.. run dev:server:e2e",
-    "dev:vite": "vite dev",
-    "test:e2e": "playwright test",
-    "test:e2e:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 playwright test",
-    "test:e2e:ui:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 playwright test --ui",
-    "test:e2e:ui": "playwright test --ui",
-    "test:perf": "playwright test -c playwright.perf.config.ts",
-    "test:perf:vitals": "playwright test -c playwright.perf.config.ts e2e/perf/web-vitals.spec.ts",
-    "test:perf:memory": "playwright test -c playwright.perf.config.ts e2e/perf/memory-leaks.spec.ts",
-    "test:perf:lighthouse": "playwright test -c playwright.perf.config.ts e2e/perf/lighthouse.spec.ts",
-    "test:perf:scroll": "playwright test -c playwright.perf.config.ts e2e/perf/scroll-rendering.spec.ts"
+    "dev:vite": "vite dev"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.4.18",
@@ -49,7 +38,6 @@
   },
   "devDependencies": {
     "@full-stack-cf-app/config": "*",
-    "@playwright/test": "^1.58.1",
     "@sveltejs/adapter-auto": "^6.1.0",
     "@sveltejs/adapter-cloudflare": "^7.2.4",
     "@sveltejs/kit": "^2.31.1",
@@ -57,8 +45,6 @@
     "@tailwindcss/vite": "^4.1.12",
     "@tanstack/svelte-query-devtools": "^5.85.3",
     "alchemy": "^0.82.1",
-    "lighthouse": "^13.0.3",
-    "playwright-lighthouse": "^4.0.0",
     "svelte": "^5.38.1",
     "svelte-check": "^4.3.1",
     "tailwindcss": "^4.1.12",

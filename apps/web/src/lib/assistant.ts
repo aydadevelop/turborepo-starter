@@ -1,8 +1,7 @@
-import type { RouterClient } from "@orpc/server";
+import type { AssistantRouter } from "@full-stack-cf-app/assistant/router";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
-
-import type { AssistantRouter } from "@full-stack-cf-app/assistant/router";
+import type { RouterClient } from "@orpc/server";
 
 import { env } from "$env/dynamic/public";
 

@@ -426,6 +426,7 @@ const buildBaselineSeedData = ({
 
 	const organizationId = "seed_org_demo_marina";
 	const adminOrgId = "seed_org_admin";
+	const customerOrgId = "seed_org_customer_club";
 	const userAdminId = "seed_user_admin";
 	const userOwnerId = "seed_user_owner_alex";
 	const userManagerId = "seed_user_manager_olga";
@@ -469,6 +470,14 @@ const buildBaselineSeedData = ({
 				id: adminOrgId,
 				name: "Admin",
 				slug: "admin",
+				logo: null,
+				metadata: toJson({ seedNamespace: "seed" }),
+				created_at: now,
+			},
+			{
+				id: customerOrgId,
+				name: "Seed Customer Club",
+				slug: "seed-customer-club",
 				logo: null,
 				metadata: toJson({ seedNamespace: "seed" }),
 				created_at: now,
@@ -568,6 +577,20 @@ const buildBaselineSeedData = ({
 				organization_id: organizationId,
 				user_id: userAgentId,
 				role: "agent",
+				created_at: now,
+			},
+			{
+				id: "seed_member_customer_ivan_demo",
+				organization_id: organizationId,
+				user_id: userCustomerId,
+				role: "customer",
+				created_at: now,
+			},
+			{
+				id: "seed_member_customer_ivan_club",
+				organization_id: customerOrgId,
+				user_id: userCustomerId,
+				role: "customer",
 				created_at: now,
 			},
 		],

@@ -6,25 +6,14 @@ import {
 	bookingRefund,
 	bookingShiftRequest,
 } from "@full-stack-cf-app/db/schema/booking";
-import {
-	clearTestDatabase,
-	createTestDatabase,
-} from "@full-stack-cf-app/db/test";
+import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
 import { call } from "@orpc/server";
-import { eq, sql } from "drizzle-orm";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { eq } from "drizzle-orm";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Context } from "../context";
+import { createManagedContext, createUserContext } from "./utils/context";
 
-const testDbState = createTestDatabase();
+const testDbState = bootstrapTestDatabase();
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
@@ -42,36 +31,23 @@ const queueSendMock = vi.fn(
 	) => Promise.resolve()
 );
 
-const managerContext: Context = {
-	session: {
-		user: {
-			id: "user-manager",
-		},
-	} as Context["session"],
-	activeMembership: {
-		organizationId: "org-1",
-		role: "manager",
-	},
+const managerContext = createManagedContext({
+	userId: "user-manager",
+	organizationId: "org-1",
+	role: "manager",
 	requestUrl: "http://localhost:3000/rpc/booking/shiftRequestReviewManaged",
-	requestHostname: "localhost",
 	notificationQueue: {
 		send: queueSendMock,
 	},
-};
+});
 
-const customerContext: Context = {
-	session: {
-		user: {
-			id: "user-customer",
-		},
-	} as Context["session"],
-	activeMembership: null,
+const customerContext = createUserContext({
+	userId: "user-customer",
 	requestUrl: "http://localhost:3000/rpc/booking/shiftRequestCreate",
-	requestHostname: "localhost",
 	notificationQueue: {
 		send: queueSendMock,
 	},
-};
+});
 
 const seedAuthBoatAndPricing = async (params?: {
 	serviceFeePercentage?: number;
@@ -161,16 +137,7 @@ const seedBooking = async (params: {
 };
 
 describe("booking shift request integration", () => {
-	beforeAll(() => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
-	});
-
-	afterAll(() => {
-		testDbState.close();
-	});
-
 	beforeEach(() => {
-		clearTestDatabase(testDbState.db);
 		queueSendMock.mockClear();
 		vi.useRealTimers();
 	});

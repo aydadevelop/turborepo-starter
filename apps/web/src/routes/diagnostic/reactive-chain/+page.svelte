@@ -28,18 +28,34 @@
 	const toLocalIsoDate = (d: Date) =>
 		`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-	const defaultDate = toLocalIsoDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
+	const defaultDate = toLocalIsoDate(
+		new Date(Date.now() + 24 * 60 * 60 * 1000)
+	);
 
 	function parseSearch(sp: URLSearchParams) {
-		const date =
-			sp.get("date") && DATE_PARAM_RE.test(sp.get("date")!)
-				? (sp.get("date") as string)
-				: defaultDate;
-		const startHour = clamp(Number.parseInt(sp.get("startHour") ?? "10", 10) || 10, 0, 23);
-		const durationHours = clamp(Number.parseFloat(sp.get("durationHours") ?? "2") || 2, 0.5, 24);
-		const passengers = clamp(Number.parseInt(sp.get("passengers") ?? "2", 10) || 2, 1, 500);
-		const startsAt = new Date(`${date}T${String(startHour).padStart(2, "0")}:00:00`);
-		const endsAt = new Date(startsAt.getTime() + durationHours * 60 * 60 * 1000);
+		const rawDate = sp.get("date");
+		const date = rawDate && DATE_PARAM_RE.test(rawDate) ? rawDate : defaultDate;
+		const startHour = clamp(
+			Number.parseInt(sp.get("startHour") ?? "10", 10) || 10,
+			0,
+			23
+		);
+		const durationHours = clamp(
+			Number.parseFloat(sp.get("durationHours") ?? "2") || 2,
+			0.5,
+			24
+		);
+		const passengers = clamp(
+			Number.parseInt(sp.get("passengers") ?? "2", 10) || 2,
+			1,
+			500
+		);
+		const startsAt = new Date(
+			`${date}T${String(startHour).padStart(2, "0")}:00:00`
+		);
+		const endsAt = new Date(
+			startsAt.getTime() + durationHours * 60 * 60 * 1000
+		);
 		return { date, startHour, durationHours, passengers, startsAt, endsAt };
 	}
 
@@ -140,7 +156,9 @@
 		});
 	});
 
-	const availabilityOptsStore_fixed = writable(untrack(() => availabilityOpts_fixed));
+	const availabilityOptsStore_fixed = writable(
+		untrack(() => availabilityOpts_fixed)
+	);
 	$effect(() => {
 		availabilityOptsStore_fixed.set(availabilityOpts_fixed);
 	});
@@ -148,7 +166,9 @@
 	const availabilityQuery_fixed = createQuery(availabilityOptsStore_fixed);
 
 	/* ---- navigation helpers ---- */
-	let queryEvents = $state<{ ts: number; status: string; fetchStatus: string }[]>([]);
+	let queryEvents = $state<
+		{ ts: number; status: string; fetchStatus: string }[]
+	>([]);
 
 	const navigate = (deltaHour: number) => {
 		const sp = new URLSearchParams(page.url.searchParams);
@@ -164,9 +184,10 @@
 <div class="mb-6">
 	<h2 class="mb-1 text-xl font-bold">Reactive chain diagnosis</h2>
 	<p class="text-sm text-muted-foreground">
-		Two versions of the same boats-page query setup side-by-side. Counters show how many times each
-		reactive node fires. <strong>Navigate (buttons below)</strong> to trigger URL changes, or just scroll
-		to check if any counter increments without navigation.
+		Two versions of the same boats-page query setup side-by-side. Counters show
+		how many times each reactive node fires.
+		<strong>Navigate (buttons below)</strong> to trigger URL changes, or just
+		scroll to check if any counter increments without navigation.
 	</p>
 </div>
 
@@ -174,6 +195,7 @@
 <div class="mb-4 flex flex-wrap gap-2">
 	<button
 		type="button"
+		data-testid="reactive-nav-start-hour-dec"
 		class="rounded border px-3 py-1 text-sm hover:bg-muted"
 		onclick={() => navigate(-1)}
 	>
@@ -181,6 +203,7 @@
 	</button>
 	<button
 		type="button"
+		data-testid="reactive-nav-start-hour-inc"
 		class="rounded border px-3 py-1 text-sm hover:bg-muted"
 		onclick={() => navigate(1)}
 	>
@@ -188,6 +211,7 @@
 	</button>
 	<button
 		type="button"
+		data-testid="reactive-nav-same-url"
 		class="rounded border px-3 py-1 text-sm hover:bg-muted"
 		onclick={() => navigate(0)}
 	>
@@ -199,7 +223,9 @@
 <div class="mb-6 grid gap-4 md:grid-cols-2">
 	<!-- Pattern A — Original -->
 	<div class="rounded-lg border border-destructive/40 bg-destructive/5 p-4">
-		<p class="mb-3 font-semibold text-destructive">Pattern A — Original (boats.svelte)</p>
+		<p class="mb-3 font-semibold text-destructive">
+			Pattern A — Original (boats.svelte)
+		</p>
 		<table class="w-full text-sm">
 			<thead>
 				<tr class="border-b text-left text-xs text-muted-foreground">
@@ -210,19 +236,33 @@
 			<tbody class="font-mono">
 				<tr>
 					<td class="py-0.5">parsedSearch $derived</td>
-					<td class="py-0.5 text-right">{fireCount_parsedSearch}</td>
+					<td
+						class="py-0.5 text-right"
+						data-testid="reactive-counter-parsed-search"
+					>
+						{fireCount_parsedSearch}
+					</td>
 				</tr>
 				<tr>
 					<td class="py-0.5">availabilityOpts $derived (dup parse)</td>
-					<td class="py-0.5 text-right">{fireCount_availabilityOpts}</td>
+					<td
+						class="py-0.5 text-right"
+						data-testid="reactive-counter-availability-opts"
+					>
+						{fireCount_availabilityOpts}
+					</td>
 				</tr>
 				<tr>
 					<td class="py-0.5">store $effect</td>
-					<td class="py-0.5 text-right">{fireCount_store}</td>
+					<td class="py-0.5 text-right" data-testid="reactive-counter-store">
+						{fireCount_store}
+					</td>
 				</tr>
 				<tr>
 					<td class="py-0.5">query state $effect</td>
-					<td class="py-0.5 text-right">{fireCount_query}</td>
+					<td class="py-0.5 text-right" data-testid="reactive-counter-query">
+						{fireCount_query}
+					</td>
 				</tr>
 				<tr class="border-t">
 					<td class="pt-1">Query status</td>
@@ -232,16 +272,21 @@
 		</table>
 
 		{#if fireCount_availabilityOpts > fireCount_parsedSearch}
-			<p class="mt-2 rounded bg-destructive/10 px-2 py-1 text-xs text-destructive">
-				⚠ availabilityOpts fired more than parsedSearch — duplicate parse() is causing extra
-				reactive work
+			<p
+				data-testid="reactive-warning-duplicate-parse"
+				class="mt-2 rounded bg-destructive/10 px-2 py-1 text-xs text-destructive"
+			>
+				⚠ availabilityOpts fired more than parsedSearch — duplicate parse() is
+				causing extra reactive work
 			</p>
 		{/if}
 	</div>
 
 	<!-- Pattern B — Fixed -->
 	<div class="rounded-lg border border-emerald-400/40 bg-emerald-50 p-4">
-		<p class="mb-3 font-semibold text-emerald-700">Pattern B — Fixed (reuses parsedSearch)</p>
+		<p class="mb-3 font-semibold text-emerald-700">
+			Pattern B — Fixed (reuses parsedSearch)
+		</p>
 		<table class="w-full text-sm">
 			<thead>
 				<tr class="border-b text-left text-xs text-muted-foreground">
@@ -252,11 +297,18 @@
 			<tbody class="font-mono">
 				<tr>
 					<td class="py-0.5">parsedSearch $derived (shared)</td>
-					<td class="py-0.5 text-right">{fireCount_parsedSearch}</td>
+					<td
+						class="py-0.5 text-right"
+						data-testid="reactive-counter-parsed-search-fixed"
+					>
+						{fireCount_parsedSearch}
+					</td>
 				</tr>
 				<tr>
 					<td class="py-0.5">availabilityOpts_fixed $derived</td>
-					<td class="py-0.5 text-right">{fireCount_fixed}</td>
+					<td class="py-0.5 text-right" data-testid="reactive-counter-fixed">
+						{fireCount_fixed}
+					</td>
 				</tr>
 				<tr class="border-t">
 					<td class="pt-1">Query status</td>
@@ -270,11 +322,17 @@
 <!-- Query event log -->
 <div class="mb-6">
 	<p class="mb-2 text-sm font-semibold">Query state change log (Pattern A)</p>
-	<div class="h-32 overflow-y-auto rounded border bg-white p-2 font-mono text-xs">
+	<div
+		class="h-32 overflow-y-auto rounded border bg-white p-2 font-mono text-xs"
+	>
 		{#each queryEvents as ev (ev.ts)}
 			<div class="flex gap-3">
-				<span class="text-muted-foreground">{new Date(ev.ts).toISOString().slice(11, 23)}</span>
-				<span class={ev.fetchStatus === "fetching" ? "text-amber-600" : "text-emerald-700"}>
+				<span class="text-muted-foreground"
+					>{new Date(ev.ts).toISOString().slice(11, 23)}</span
+				>
+				<span
+					class={ev.fetchStatus === "fetching" ? "text-amber-600" : "text-emerald-700"}
+				>
 					{ev.status}/{ev.fetchStatus}
 				</span>
 			</div>
@@ -283,15 +341,16 @@
 		{/each}
 	</div>
 	<p class="mt-1 text-xs text-muted-foreground">
-		If entries appear here while you're only scrolling (no navigation), a reactive cycle is causing
-		phantom query updates.
+		If entries appear here while you're only scrolling (no navigation), a
+		reactive cycle is causing phantom query updates.
 	</p>
 </div>
 
 <!-- Long scrollable list — jank becomes visible here if re-renders happen -->
 <div class="rounded-lg border bg-white p-4">
 	<p class="mb-3 text-sm font-semibold">
-		Scroll target — {ITEMS.length} items. Watch the counters above while scrolling.
+		Scroll target — {ITEMS.length} items. Watch the counters above while
+		scrolling.
 	</p>
 	<ul class="space-y-2">
 		{#each ITEMS as n (n)}

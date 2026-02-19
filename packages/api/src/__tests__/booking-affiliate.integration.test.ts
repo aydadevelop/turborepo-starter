@@ -6,25 +6,14 @@ import {
 import { organization, user } from "@full-stack-cf-app/db/schema/auth";
 import { boat } from "@full-stack-cf-app/db/schema/boat";
 import { booking } from "@full-stack-cf-app/db/schema/booking";
-import {
-	clearTestDatabase,
-	createTestDatabase,
-} from "@full-stack-cf-app/db/test";
+import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
 import { call } from "@orpc/server";
-import { eq, sql } from "drizzle-orm";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { eq } from "drizzle-orm";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { Context } from "../context";
+import { createManagedContext, createUserContext } from "./utils/context";
 
-const testDbState = createTestDatabase();
+const testDbState = bootstrapTestDatabase();
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
@@ -32,32 +21,17 @@ vi.doMock("@full-stack-cf-app/db", () => ({
 
 const { bookingRouter } = await import("../routers/booking");
 
-const managerContext: Context = {
-	session: {
-		user: {
-			id: "user-manager",
-		},
-	} as Context["session"],
-	activeMembership: {
-		organizationId: "org-1",
-		role: "org_owner",
-	},
+const managerContext = createManagedContext({
+	userId: "user-manager",
+	organizationId: "org-1",
+	role: "org_owner",
 	requestUrl: "http://localhost:3000/rpc/booking/affiliatePayoutListManaged",
-	requestHostname: "localhost",
-	notificationQueue: undefined,
-};
+});
 
-const affiliateContext: Context = {
-	session: {
-		user: {
-			id: "user-affiliate",
-		},
-	} as Context["session"],
-	activeMembership: null,
+const affiliateContext = createUserContext({
+	userId: "user-affiliate",
 	requestUrl: "http://localhost:3000/rpc/booking/listAffiliateMine",
-	requestHostname: "localhost",
-	notificationQueue: undefined,
-};
+});
 
 const seedBase = async () => {
 	await testDbState.db.insert(organization).values({
@@ -235,16 +209,7 @@ const seedBase = async () => {
 };
 
 describe("booking affiliate payout integration", () => {
-	beforeAll(() => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
-	});
-
-	afterAll(() => {
-		testDbState.close();
-	});
-
-	beforeEach(async () => {
-		clearTestDatabase(testDbState.db);
+	beforeAll(async () => {
 		await seedBase();
 	});
 

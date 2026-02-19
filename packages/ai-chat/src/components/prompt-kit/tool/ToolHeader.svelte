@@ -56,6 +56,7 @@
 <CollapsibleTrigger>
 	{#snippet child({ props })}
 		<Button
+			data-testid={`tool-toggle-${toolPart.type}`}
 			{...props}
 			variant="ghost"
 			class={cn(

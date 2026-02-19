@@ -11,25 +11,13 @@ import {
 	bookingPaymentAttempt,
 	bookingRefund,
 } from "@full-stack-cf-app/db/schema/booking";
-import {
-	clearTestDatabase,
-	createTestDatabase,
-} from "@full-stack-cf-app/db/test";
+import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
 import { call } from "@orpc/server";
-import { sql } from "drizzle-orm";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { Context } from "../context";
+import { createUserContext } from "./utils/context";
 
-const testDbState = createTestDatabase();
+const testDbState = bootstrapTestDatabase();
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
@@ -37,17 +25,10 @@ vi.doMock("@full-stack-cf-app/db", () => ({
 
 const { bookingRouter } = await import("../routers/booking");
 
-const customerAContext: Context = {
-	session: {
-		user: {
-			id: "user-customer-a",
-		},
-	} as Context["session"],
-	activeMembership: null,
+const customerAContext = createUserContext({
+	userId: "user-customer-a",
 	requestUrl: "http://localhost:3000/rpc/booking/disputeListMine",
-	requestHostname: "localhost",
-	notificationQueue: undefined,
-};
+});
 
 const seedBase = async () => {
 	await testDbState.db.insert(organization).values({
@@ -267,16 +248,7 @@ const seedBase = async () => {
 };
 
 describe("booking listMine endpoint isolation", () => {
-	beforeAll(() => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
-	});
-
-	afterAll(() => {
-		testDbState.close();
-	});
-
-	beforeEach(async () => {
-		clearTestDatabase(testDbState.db);
+	beforeAll(async () => {
 		await seedBase();
 	});
 

@@ -15,8 +15,8 @@
 	 *   B) Query in a child, list in parent (isolated re-render)
 	 */
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived, writable } from "svelte/store";
 	import { untrack } from "svelte";
+	import { derived, writable } from "svelte/store";
 	import { authClient } from "$lib/auth-client";
 	import { orpc } from "$lib/orpc";
 
@@ -40,7 +40,7 @@
 			input: { limit: 20 },
 			enabled: Boolean($sq.data?.user?.id),
 			refetchInterval: intervalMs,
-		}),
+		})
 	);
 	const notifQuery = createQuery(notifQueryOptions);
 
@@ -104,9 +104,12 @@
 <div class="mb-6">
 	<h2 class="mb-1 text-xl font-bold">Polling + scroll jank</h2>
 	<p class="text-sm text-muted-foreground">
-		TanStack Query polls every <strong>{intervalMs / 1000}s</strong>. Watch the render counter while
-		scrolling. Pattern A embeds <code class="font-mono text-xs">renderCount</code> in list item labels
-		(anti-pattern) — Pattern B uses stable data.
+		TanStack Query polls every <strong>{intervalMs / 1000}s</strong>. Watch the
+		render counter while scrolling. Pattern A embeds <code
+			class="font-mono text-xs"
+		>
+			renderCount
+		</code> in list item labels (anti-pattern) — Pattern B uses stable data.
 	</p>
 </div>
 
@@ -116,6 +119,7 @@
 		<span>Poll interval:</span>
 		<select
 			class="rounded border px-2 py-1 text-sm"
+			data-testid="poll-interval-select"
 			bind:value={intervalMs}
 		>
 			<option value={1000}>1s (stress test)</option>
@@ -136,7 +140,7 @@
 <!-- Render counter dashboard -->
 <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
 	<div class="rounded-lg border bg-white p-3 text-center">
-		<p class="text-2xl font-bold">{renderCount}</p>
+		<p class="text-2xl font-bold" data-testid="state-changes">{renderCount}</p>
 		<p class="text-xs text-muted-foreground">Total state changes</p>
 	</div>
 	<div class="rounded-lg border bg-white p-3 text-center">
@@ -161,11 +165,17 @@
 
 <!-- Event log -->
 <details class="mb-4">
-	<summary class="cursor-pointer text-sm font-semibold">Render event log (last 50)</summary>
-	<div class="mt-2 h-32 overflow-y-auto rounded border bg-white p-2 font-mono text-xs">
+	<summary class="cursor-pointer text-sm font-semibold">
+		Render event log (last 50)
+	</summary>
+	<div
+		class="mt-2 h-32 overflow-y-auto rounded border bg-white p-2 font-mono text-xs"
+	>
 		{#each renderEvents as ev (ev.ts)}
 			<div class="flex gap-3">
-				<span class="text-muted-foreground">{new Date(ev.ts).toISOString().slice(11, 23)}</span>
+				<span class="text-muted-foreground"
+					>{new Date(ev.ts).toISOString().slice(11, 23)}</span
+				>
 				<span>{ev.trigger}</span>
 			</div>
 		{:else}
@@ -199,14 +209,15 @@
 <div class="rounded-lg border bg-white p-4">
 	{#if activeTab === "unstable"}
 		<p class="mb-3 text-sm text-destructive">
-			⚠ Anti-pattern: renderCount embedded in item label. Every poll updates all {ITEMS.length} DOM
-			text nodes.
+			⚠ Anti-pattern: renderCount embedded in item label. Every poll updates all
+			{ITEMS.length} DOM text nodes.
 		</p>
 		<ul class="space-y-1">
 			{#each ITEMS as item (item.id)}
 				<li class="rounded border border-border/50 px-3 py-1.5 text-sm">
 					<!-- BUG: renderCount in template means this text node updates on every poll -->
-					{item.id}. {item.label} (state changes: {renderCount})
+					{item.id}
+					. {item.label} (state changes: {renderCount})
 				</li>
 			{/each}
 		</ul>

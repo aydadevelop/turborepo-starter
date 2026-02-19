@@ -1,0 +1,30 @@
+{
+  "name": "@full-stack-cf-app/e2e-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:web:e2e": "turbo run dev:vite --filter=web -- --mode e2e --host 127.0.0.1 --port 43173 --strictPort",
+    "dev:web:e2e:clean": "for p in 43173; do lsof -ti tcp:$p | xargs kill 2>/dev/null || true; done && npm run dev:web:e2e",
+    "dev:infra:e2e": "OPEN_ROUTER_API_KEY=${OPEN_ROUTER_API_KEY:-local-e2e-openrouter-key} ALCHEMY_E2E=1 ALCHEMY_SKIP_WEB=1 STAGE=e2e SERVER_PORT=43100 NOTIFICATIONS_PORT=43101 ASSISTANT_PORT=43102 turbo run dev --filter=@full-stack-cf-app/infra",
+    "dev:infra:e2e:clean": "for p in 43100 43101 43102; do lsof -ti tcp:$p | xargs kill 2>/dev/null || true; done && turbo run db:reset:local --filter=@full-stack-cf-app/db && npm run dev:infra:e2e",
+    "test:e2e": "playwright test -c playwright.config.ts",
+    "test:e2e:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 npm run test:e2e",
+    "test:e2e:ui": "playwright test -c playwright.config.ts --ui",
+    "test:e2e:ui:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 npm run test:e2e:ui",
+    "test:perf": "playwright test -c playwright.perf.config.ts",
+    "test:perf:vitals": "playwright test -c playwright.perf.config.ts e2e/perf/web-vitals.spec.ts",
+    "test:perf:memory": "playwright test -c playwright.perf.config.ts e2e/perf/memory-leaks.spec.ts",
+    "test:perf:lighthouse": "playwright test -c playwright.perf.config.ts e2e/perf/lighthouse.spec.ts",
+    "test:perf:scroll": "playwright test -c playwright.perf.config.ts e2e/perf/scroll-rendering.spec.ts"
+  },
+  "dependencies": {
+    "@full-stack-cf-app/infra": "*",
+    "web": "*"
+  },
+  "devDependencies": {
+    "@libsql/client": "0.15.15",
+    "@playwright/test": "^1.58.1",
+    "lighthouse": "^13.0.3",
+    "playwright-lighthouse": "^4.0.0"
+  }
+}

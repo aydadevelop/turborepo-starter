@@ -23,7 +23,9 @@
 	// Session is passed from Header to avoid a second concurrent useSession()
 	// subscription — two independent subscriptions cause duplicate session-change
 	// renders across Header + NotificationCenter on every auth tick.
-	const { sessionQuery }: { sessionQuery: ReturnType<typeof authClient.useSession> } = $props();
+	const {
+		sessionQuery,
+	}: { sessionQuery: ReturnType<typeof authClient.useSession> } = $props();
 
 	const MAX_ITEMS = 20;
 	// Use $derived.by() + writable store so that $sessionQuery is tracked
@@ -35,7 +37,9 @@
 			enabled: Boolean($sessionQuery.data?.user?.id),
 		})
 	);
-	const notificationsQueryOptsStore = writable(untrack(() => notificationsQueryOpts));
+	const notificationsQueryOptsStore = writable(
+		untrack(() => notificationsQueryOpts)
+	);
 	$effect(() => {
 		notificationsQueryOptsStore.set(notificationsQueryOpts);
 	});

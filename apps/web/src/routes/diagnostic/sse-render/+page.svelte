@@ -17,14 +17,14 @@
 	import { consumeEventIterator } from "@orpc/client";
 	import { untrack } from "svelte";
 	import { authClient } from "$lib/auth-client";
-	import { client } from "$lib/orpc";
 	import {
 		deriveCursorMs,
-		mergeNotificationItems,
 		type InAppNotificationItem,
+		mergeNotificationItems,
 		type NotificationStreamState,
 		sortNotificationsByDeliveredAtDesc,
 	} from "$lib/notification-center";
+	import { client } from "$lib/orpc";
 
 	/* ---- session (mirrors NotificationCenter) ---- */
 	const sessionQuery = authClient.useSession();
@@ -46,15 +46,17 @@
 
 	let lastEventAt: number | null = null;
 
-	function recordStreamEvent(
-		kind: string,
-		extra?: { itemCount?: number },
-	) {
+	function recordStreamEvent(kind: string, extra?: { itemCount?: number }) {
 		const now = Date.now();
 		const latencyMs = lastEventAt ? now - lastEventAt : null;
 		lastEventAt = now;
 		streamEvents = [
-			{ ts: now, kind, itemCount: extra?.itemCount, latencyMs: latencyMs ?? undefined },
+			{
+				ts: now,
+				kind,
+				itemCount: extra?.itemCount,
+				latencyMs: latencyMs ?? undefined,
+			},
 			...streamEvents.slice(0, 99),
 		];
 	}
@@ -109,7 +111,7 @@
 					recordStreamEvent("finish");
 					stopStream = null;
 				},
-			},
+			}
 		);
 	}
 
@@ -131,6 +133,7 @@
 	});
 
 	import { onMount } from "svelte";
+
 	onMount(() => {
 		return () => closeStream();
 	});
@@ -172,14 +175,16 @@
 	const ITEMS = Array.from({ length: 80 }, (_, i) => i + 1);
 
 	/* ---- formatted notifications for display ---- */
-	const sortedNotifications = $derived(sortNotificationsByDeliveredAtDesc(notifications));
+	const sortedNotifications = $derived(
+		sortNotificationsByDeliveredAtDesc(notifications)
+	);
 </script>
 
 <div class="mb-6">
 	<h2 class="mb-1 text-xl font-bold">SSE stream render impact</h2>
 	<p class="text-sm text-muted-foreground">
-		Connects to the real notification stream. Shows how many times SSE events trigger state updates
-		and whether Svelte 5 batches rapid mutations.
+		Connects to the real notification stream. Shows how many times SSE events
+		trigger state updates and whether Svelte 5 batches rapid mutations.
 		{#if !$sessionQuery.data?.user}
 			<strong class="text-amber-600">
 				⚠ You are not signed in — stream will not connect. Sign in first.
@@ -222,8 +227,9 @@
 <div class="mb-4 rounded-lg border bg-white p-4">
 	<p class="mb-2 text-sm font-semibold">Svelte 5 batch mutation test</p>
 	<p class="mb-3 text-xs text-muted-foreground">
-		Fires 10 synchronous <code class="font-mono">notifications =</code> mutations. In Svelte 5
-		these should be batched into 1 DOM update. Watch DevTools Performance → "Update" events.
+		Fires 10 synchronous <code class="font-mono">notifications =</code>
+		mutations. In Svelte 5 these should be batched into 1 DOM update. Watch
+		DevTools Performance → "Update" events.
 	</p>
 	<button
 		type="button"
@@ -234,7 +240,9 @@
 		{simulationRunning ? "Running…" : "Run 10-event simulation"}
 	</button>
 	{#if simulationCount > 0}
-		<span class="ml-3 text-sm text-emerald-700">{simulationCount} mutations fired</span>
+		<span class="ml-3 text-sm text-emerald-700"
+			>{simulationCount} mutations fired</span
+		>
 	{/if}
 </div>
 
@@ -248,18 +256,25 @@
 		<code class="font-mono">NotificationCenter.svelte</code> each call
 		<code class="font-mono">authClient.useSession()</code>
 		independently. This page shows that session updates fire
-		<strong>{sessionUpdateCount}×</strong> here alone. In the real layout, it fires twice per
-		session tick (once per component). The fix is to pass the session as a prop from Header → NotificationCenter.
+		<strong>{sessionUpdateCount}×</strong> here alone. In the real layout, it
+		fires twice per session tick (once per component). The fix is to pass the
+		session as a prop from Header → NotificationCenter.
 	</p>
 </div>
 
 <!-- Stream event log -->
 <details class="mb-4" open>
-	<summary class="cursor-pointer text-sm font-semibold">Stream event log</summary>
-	<div class="mt-2 h-40 overflow-y-auto rounded border bg-white p-2 font-mono text-xs">
+	<summary class="cursor-pointer text-sm font-semibold">
+		Stream event log
+	</summary>
+	<div
+		class="mt-2 h-40 overflow-y-auto rounded border bg-white p-2 font-mono text-xs"
+	>
 		{#each streamEvents as ev (ev.ts)}
 			<div class="flex gap-2">
-				<span class="shrink-0 text-muted-foreground">{new Date(ev.ts).toISOString().slice(11, 23)}</span>
+				<span class="shrink-0 text-muted-foreground"
+					>{new Date(ev.ts).toISOString().slice(11, 23)}</span
+				>
 				<span
 					class={ev.kind === "snapshot"
 						? "text-primary"
@@ -268,8 +283,12 @@
 							: "text-muted-foreground"}
 				>
 					{ev.kind}
-					{#if ev.itemCount !== undefined}({ev.itemCount} items){/if}
-					{#if ev.latencyMs !== undefined} +{ev.latencyMs}ms{/if}
+					{#if ev.itemCount !== undefined}
+						({ev.itemCount} items)
+					{/if}
+					{#if ev.latencyMs !== undefined}
+						+{ev.latencyMs}ms
+					{/if}
 				</span>
 			</div>
 		{:else}
@@ -281,7 +300,9 @@
 <!-- Active notifications -->
 {#if sortedNotifications.length > 0}
 	<div class="mb-4 rounded-lg border bg-white p-4">
-		<p class="mb-2 text-sm font-semibold">Current notifications ({sortedNotifications.length})</p>
+		<p class="mb-2 text-sm font-semibold">
+			Current notifications ({sortedNotifications.length})
+		</p>
 		<ul class="space-y-1">
 			{#each sortedNotifications as n (n.id)}
 				<li class="rounded border border-border/50 px-2 py-1 text-xs">
@@ -295,11 +316,14 @@
 <!-- Long scrollable list to expose scroll jank -->
 <div class="rounded-lg border bg-white p-4">
 	<p class="mb-3 text-sm font-semibold">
-		Scroll target — {ITEMS.length} items. If SSE events arrive while scrolling, check for jank.
+		Scroll target — {ITEMS.length} items. If SSE events arrive while scrolling,
+		check for jank.
 	</p>
 	<ul class="space-y-2">
 		{#each ITEMS as n (n)}
-			<li class="flex justify-between rounded border border-border/50 px-3 py-2 text-sm">
+			<li
+				class="flex justify-between rounded border border-border/50 px-3 py-2 text-sm"
+			>
 				<span>Row #{n}</span>
 				<span class="font-mono text-xs text-muted-foreground">
 					events: {streamEventCount}

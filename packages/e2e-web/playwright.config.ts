@@ -8,21 +8,26 @@ const useManagedServers = process.env.PLAYWRIGHT_MANAGED_SERVERS !== "0";
 const reuseExistingServers =
 	!process.env.CI && process.env.PLAYWRIGHT_REUSE_SERVERS !== "0";
 const webServerCommand =
-	process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ?? "npm run dev:e2e";
+	process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ?? "npm run dev:web:e2e:clean";
 const backendServerCommand =
-	process.env.PLAYWRIGHT_BACKEND_SERVER_COMMAND ?? "npm run dev:server:e2e";
+	process.env.PLAYWRIGHT_BACKEND_SERVER_COMMAND ??
+	"npm run dev:infra:e2e:clean";
 
 process.env.PLAYWRIGHT_BASE_URL ??= baseURL;
 process.env.PLAYWRIGHT_SERVER_URL ??= serverURL;
 process.env.PLAYWRIGHT_ASSISTANT_URL ??= assistantURL;
+const workers = Number(
+	process.env.PLAYWRIGHT_WORKERS ?? (process.env.CI ? "1" : "2")
+);
 
 export default defineConfig({
 	testDir: "./e2e",
+	testIgnore: ["**/perf/**"],
 	globalSetup: "./e2e/global-setup.ts",
-	fullyParallel: true,
+	fullyParallel: false,
 	forbidOnly: Boolean(process.env.CI),
 	retries: process.env.CI ? 2 : 0,
-	workers: process.env.CI ? 1 : undefined,
+	workers: Number.isFinite(workers) && workers > 0 ? workers : 1,
 	reporter: "line",
 	use: {
 		baseURL,

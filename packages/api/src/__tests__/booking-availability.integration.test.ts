@@ -8,25 +8,13 @@ import {
 	boatPricingRule,
 } from "@full-stack-cf-app/db/schema/boat";
 import { booking } from "@full-stack-cf-app/db/schema/booking";
-import {
-	clearTestDatabase,
-	createTestDatabase,
-} from "@full-stack-cf-app/db/test";
+import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
 import { call } from "@orpc/server";
-import { sql } from "drizzle-orm";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import type { Context } from "../context";
+import { createPublicContext } from "./utils/context";
 
-const testDbState = createTestDatabase();
+const testDbState = bootstrapTestDatabase();
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
@@ -34,29 +22,14 @@ vi.doMock("@full-stack-cf-app/db", () => ({
 
 const { bookingRouter } = await import("../routers/booking");
 
-const publicContext: Context = {
-	session: null,
-	activeMembership: null,
+const publicContext = createPublicContext({
 	requestUrl: "http://localhost:3000/rpc/booking/availabilityPublic",
-	requestHostname: "localhost",
-};
+});
 
 const startsAt = new Date("2026-03-10T10:00:00.000Z");
 const endsAt = new Date("2026-03-10T12:00:00.000Z");
 
 describe("booking availabilityPublic (integration)", () => {
-	beforeAll(() => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
-	});
-
-	afterAll(() => {
-		testDbState.close();
-	});
-
-	beforeEach(() => {
-		clearTestDatabase(testDbState.db);
-	});
-
 	it("filters boats by required amenity keys (must have all)", async () => {
 		await testDbState.db.insert(organization).values({
 			id: "org-1",

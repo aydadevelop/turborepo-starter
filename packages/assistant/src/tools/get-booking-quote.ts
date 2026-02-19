@@ -1,7 +1,6 @@
+import type { AppRouterClient } from "@full-stack-cf-app/api/routers";
 import { tool } from "ai";
 import z from "zod";
-
-import type { AppRouterClient } from "@full-stack-cf-app/api/routers";
 
 export const createGetBookingQuoteTool = (client: AppRouterClient) =>
 	tool({
@@ -21,13 +20,7 @@ export const createGetBookingQuoteTool = (client: AppRouterClient) =>
 				.optional()
 				.describe("Optional discount code to apply"),
 		}),
-		execute: async ({
-			boatId,
-			startsAt,
-			endsAt,
-			passengers,
-			discountCode,
-		}) => {
+		execute: async ({ boatId, startsAt, endsAt, passengers, discountCode }) => {
 			const result = await client.booking.quotePublic({
 				boatId,
 				startsAt: new Date(startsAt),

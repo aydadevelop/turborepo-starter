@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { expect, test } from "./fixtures";
 
 /**
  * Memory leak detection: navigate/interact repeatedly and check that
@@ -58,12 +58,12 @@ test.describe("Memory leak detection", () => {
 		});
 
 		console.log(
-			`Memory growth: ${growthPercent.toFixed(1)}% (${firstHalfAvg.toFixed(1)} MB → ${secondHalfAvg.toFixed(1)} MB)`,
+			`Memory growth: ${growthPercent.toFixed(1)}% (${firstHalfAvg.toFixed(1)} MB → ${secondHalfAvg.toFixed(1)} MB)`
 		);
 
 		expect(
 			growthPercent,
-			`Heap grew ${growthPercent.toFixed(1)}% across navigations — possible memory leak`,
+			`Heap grew ${growthPercent.toFixed(1)}% across navigations — possible memory leak`
 		).toBeLessThan(50);
 	});
 
@@ -105,7 +105,7 @@ test.describe("Memory leak detection", () => {
 		console.table(snapshots);
 
 		const first = snapshots[0].usedMB;
-		const last = snapshots[snapshots.length - 1].usedMB;
+		const last = snapshots.at(-1).usedMB;
 		const growthMB = last - first;
 
 		test.info().annotations.push({
@@ -118,13 +118,13 @@ test.describe("Memory leak detection", () => {
 		});
 
 		console.log(
-			`Memory after 10 scroll cycles: ${first.toFixed(1)} MB → ${last.toFixed(1)} MB (+ ${growthMB.toFixed(1)} MB)`,
+			`Memory after 10 scroll cycles: ${first.toFixed(1)} MB → ${last.toFixed(1)} MB (+ ${growthMB.toFixed(1)} MB)`
 		);
 
 		// Allow max 20 MB growth over 10 interaction cycles
 		expect(
 			growthMB,
-			`Heap grew ${growthMB.toFixed(1)} MB during interactions — possible leak`,
+			`Heap grew ${growthMB.toFixed(1)} MB during interactions — possible leak`
 		).toBeLessThan(20);
 	});
 
@@ -149,7 +149,7 @@ test.describe("Memory leak detection", () => {
 
 		// Count DOM nodes as a proxy for detached-node accumulation
 		const nodeCount = await page.evaluate(
-			() => document.querySelectorAll("*").length,
+			() => document.querySelectorAll("*").length
 		);
 
 		test.info().annotations.push({
@@ -162,7 +162,7 @@ test.describe("Memory leak detection", () => {
 		// Landing page should not have excessive DOM nodes
 		expect(
 			nodeCount,
-			`${nodeCount} DOM nodes on landing — excessive DOM size`,
+			`${nodeCount} DOM nodes on landing — excessive DOM size`
 		).toBeLessThan(3000);
 	});
 });

@@ -28,7 +28,7 @@
 	// svelte-ignore state_referenced_locally
 	const chatQuery = createQuery({
 		queryKey: ["assistant", "chat", chatId],
-		queryFn: () => assistantClient.getChat({ chatId })
+		queryFn: () => assistantClient.getChat({ chatId }),
 	});
 
 	let chat = $state<Chat | null>(null);

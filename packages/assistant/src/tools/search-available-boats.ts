@@ -1,7 +1,6 @@
+import type { AppRouterClient } from "@full-stack-cf-app/api/routers";
 import { tool } from "ai";
 import z from "zod";
-
-import type { AppRouterClient } from "@full-stack-cf-app/api/routers";
 
 export const createSearchAvailableBoatsTool = (client: AppRouterClient) =>
 	tool({

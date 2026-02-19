@@ -32,19 +32,38 @@
       "persistent": true
     },
     "test:e2e": {
-      "dependsOn": ["build"],
-      "env": [
-        "PLAYWRIGHT_BASE_URL",
-        "PLAYWRIGHT_SERVER_URL",
-        "PLAYWRIGHT_ASSISTANT_URL",
-        "PLAYWRIGHT_MANAGED_SERVERS",
-        "PLAYWRIGHT_REUSE_SERVERS",
-        "PLAYWRIGHT_SKIP_SEED",
-        "PLAYWRIGHT_SEED_SCENARIO",
-        "PLAYWRIGHT_SEED_ANCHOR_DATE",
-        "PLAYWRIGHT_WEB_SERVER_COMMAND",
-        "PLAYWRIGHT_BACKEND_SERVER_COMMAND"
-      ],
+      "dependsOn": ["transit"],
+      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
+      "outputs": ["test-results/**", "playwright-report/**"]
+    },
+    "test:e2e:ui": {
+      "dependsOn": ["transit"],
+      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
+      "cache": false
+    },
+    "test:perf": {
+      "dependsOn": ["transit"],
+      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
+      "cache": false
+    },
+    "test:perf:vitals": {
+      "dependsOn": ["transit"],
+      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
+      "cache": false
+    },
+    "test:perf:memory": {
+      "dependsOn": ["transit"],
+      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
+      "cache": false
+    },
+    "test:perf:lighthouse": {
+      "dependsOn": ["transit"],
+      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
+      "cache": false
+    },
+    "test:perf:scroll": {
+      "dependsOn": ["transit"],
+      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
       "cache": false
     },
     "test:integration:calendar": {
@@ -81,6 +100,7 @@
         "PLAYWRIGHT_BASE_URL",
         "PLAYWRIGHT_SERVER_URL",
         "PLAYWRIGHT_ASSISTANT_URL",
+        "OPEN_ROUTER_API_KEY",
         "PUBLIC_SERVER_URL",
         "PUBLIC_ASSISTANT_URL"
       ],

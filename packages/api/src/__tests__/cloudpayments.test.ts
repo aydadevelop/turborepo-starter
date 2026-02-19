@@ -5,22 +5,11 @@ import {
 	bookingCalendarLink,
 	bookingPaymentAttempt,
 } from "@full-stack-cf-app/db/schema/booking";
-import {
-	clearTestDatabase,
-	createTestDatabase,
-} from "@full-stack-cf-app/db/test";
-import { eq, sql } from "drizzle-orm";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
+import { eq } from "drizzle-orm";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const testDbState = createTestDatabase();
+const testDbState = bootstrapTestDatabase();
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
@@ -256,21 +245,15 @@ describe("parseWebhookBody", () => {
 
 describe("processWebhook", () => {
 	beforeAll(() => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
-	});
-
-	afterAll(() => {
-		testDbState.close();
+		seedBase();
 	});
 
 	beforeEach(() => {
-		clearTestDatabase(testDbState.db);
 		syncCalendarLinkOnBookingUpdateMock.mockReset();
 		syncCalendarLinkOnBookingUpdateMock.mockResolvedValue({
 			status: "linked",
 			calendarLinkUpdate: {},
 		});
-		seedBase();
 	});
 
 	describe("check", () => {

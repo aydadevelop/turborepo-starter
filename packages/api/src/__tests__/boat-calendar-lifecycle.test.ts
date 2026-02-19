@@ -3,22 +3,11 @@ import {
 	boat,
 	boatCalendarConnection,
 } from "@full-stack-cf-app/db/schema/boat";
-import {
-	clearTestDatabase,
-	createTestDatabase,
-} from "@full-stack-cf-app/db/test";
-import { eq, sql } from "drizzle-orm";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
+import { eq } from "drizzle-orm";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const testDbState = createTestDatabase();
+const testDbState = bootstrapTestDatabase();
 
 vi.doMock("@full-stack-cf-app/db", () => ({
 	db: testDbState.db,
@@ -90,20 +79,14 @@ const seedConnection = (
 
 describe("reconcileBoatCalendarConnectionsOnStateChange", () => {
 	beforeAll(() => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
-	});
-
-	afterAll(() => {
-		testDbState.close();
+		seedBoat();
 	});
 
 	beforeEach(() => {
-		clearTestDatabase(testDbState.db);
 		startCalendarConnectionWatchMock.mockReset();
 		stopCalendarConnectionWatchMock.mockReset();
 		syncCalendarConnectionByIdMock.mockReset();
 		getCalendarAdapterMock.mockReset();
-		seedBoat();
 	});
 
 	it("disables sync and unsubscribes watch when boat transitions to disabled", async () => {
