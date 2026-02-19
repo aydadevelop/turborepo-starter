@@ -148,13 +148,15 @@
 		return `${resolve("/boats")}?${params.toString()}`;
 	};
 
+	// Reuse parsedSearch instead of calling parseBoatsSearchState() again —
+	// avoids creating redundant Date objects and a duplicate reactive dependency
+	// on page.url.searchParams that would fire the $effect → store update twice.
 	const availabilityOpts = $derived.by(() => {
-		const parsed = parseBoatsSearchState(page.url.searchParams);
 		return orpc.booking.availabilityPublic.queryOptions({
 			input: {
-				startsAt: parsed.startsAt,
-				endsAt: parsed.endsAt,
-				passengers: parsed.passengers,
+				startsAt: parsedSearch.startsAt,
+				endsAt: parsedSearch.endsAt,
+				passengers: parsedSearch.passengers,
 				includeUnavailable: true,
 				sortBy: "newest",
 				limit: 30,
@@ -163,9 +165,9 @@
 			context: {
 				queryKey: [
 					"booking.availabilityPublic",
-					parsed.startsAt.toISOString(),
-					parsed.endsAt.toISOString(),
-					parsed.passengers,
+					parsedSearch.startsAt.toISOString(),
+					parsedSearch.endsAt.toISOString(),
+					parsedSearch.passengers,
 				],
 			},
 		});

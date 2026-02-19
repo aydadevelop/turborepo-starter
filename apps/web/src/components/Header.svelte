@@ -9,6 +9,25 @@
 	import OrgSwitcher from "./OrgSwitcher.svelte";
 	import UserMenu from "./UserMenu.svelte";
 
+	// Stable constant — resolve() depends only on BASE_PATH (build-time),
+	// so these never need to be recreated. Hoisting out of $derived avoids
+	// giving the {#each} block a new array reference on every session tick.
+	const STATIC_LINKS = [
+		{ to: resolve("/"), label: "Home" },
+		{ to: resolve("/boats"), label: "Boats" },
+		{ to: resolve("/bookings"), label: "Bookings" },
+		{ to: resolve("/chat"), label: "Chat" },
+		{ to: resolve("/dashboard"), label: "Dashboard" },
+	] as const;
+
+	// Stable queryFn — hoisted outside derived() so the function reference
+	// doesn't change on every session store emission.
+	const fetchUserInvitations = async () => {
+		const { data, error } = await authClient.organization.listUserInvitations();
+		if (error) throw error;
+		return data ?? [];
+	};
+
 	const sessionQuery = authClient.useSession();
 
 	const isImpersonating = $derived(
@@ -33,12 +52,7 @@
 
 	const invitationsQueryOptions = derived(sessionQuery, ($sessionQuery) => ({
 		queryKey: ["user-invitations"],
-		queryFn: async () => {
-			const { data, error } =
-				await authClient.organization.listUserInvitations();
-			if (error) throw error;
-			return data ?? [];
-		},
+		queryFn: fetchUserInvitations, // stable reference — no new closure per tick
 		retry: false,
 		enabled: Boolean($sessionQuery.data),
 	}));
@@ -55,14 +69,6 @@
 		($invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
 			.length
 	);
-
-	const links = $derived([
-		{ to: resolve("/"), label: "Home" },
-		{ to: resolve("/boats"), label: "Boats" },
-		{ to: resolve("/bookings"), label: "Bookings" },
-		{ to: resolve("/chat"), label: "Chat" },
-		{ to: resolve("/dashboard"), label: "Dashboard" },
-	]);
 </script>
 
 <header
@@ -99,7 +105,7 @@
 		<nav
 			class="hidden items-center gap-6 text-sm text-muted-foreground md:flex"
 		>
-			{#each links as link (link.to)}
+			{#each STATIC_LINKS as link (link.to)}
 				<a href={link.to} class="transition hover:text-foreground">
 					{link.label}
 				</a>
@@ -135,7 +141,9 @@
 		</nav>
 		<div class="flex items-center gap-2">
 			<OrgSwitcher />
-			<NotificationCenter />
+			<!-- Pass the already-fetched session down so NotificationCenter
+			     doesn't create a second independent subscription. -->
+			<NotificationCenter {sessionQuery} />
 			<UserMenu />
 		</div>
 	</div>

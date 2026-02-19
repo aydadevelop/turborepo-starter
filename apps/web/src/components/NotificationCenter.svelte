@@ -2,10 +2,10 @@
 	import { Button } from "@full-stack-cf-app/ui/components/button";
 	import { consumeEventIterator } from "@orpc/client";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
-	import { onMount } from "svelte";
-	import { derived } from "svelte/store";
+	import { onMount, untrack } from "svelte";
+	import { writable } from "svelte/store";
 	import { resolve } from "$app/paths";
-	import { authClient } from "$lib/auth-client";
+	import type { authClient } from "$lib/auth-client";
 	import {
 		countUnreadNotifications,
 		deriveCursorMs,
@@ -20,17 +20,26 @@
 	} from "$lib/notification-center";
 	import { client, orpc } from "$lib/orpc";
 
-	const sessionQuery = authClient.useSession();
+	// Session is passed from Header to avoid a second concurrent useSession()
+	// subscription — two independent subscriptions cause duplicate session-change
+	// renders across Header + NotificationCenter on every auth tick.
+	const { sessionQuery }: { sessionQuery: ReturnType<typeof authClient.useSession> } = $props();
+
 	const MAX_ITEMS = 20;
-	const notificationsQueryOptions = derived(sessionQuery, ($sessionQuery) => {
-		return orpc.notifications.listMe.queryOptions({
-			input: {
-				limit: MAX_ITEMS,
-			},
+	// Use $derived.by() + writable store so that $sessionQuery is tracked
+	// via Svelte 5 auto-subscription rather than Svelte 3/4 derived() stores,
+	// keeping the pattern consistent with the rest of the codebase.
+	const notificationsQueryOpts = $derived.by(() =>
+		orpc.notifications.listMe.queryOptions({
+			input: { limit: MAX_ITEMS },
 			enabled: Boolean($sessionQuery.data?.user?.id),
-		});
+		})
+	);
+	const notificationsQueryOptsStore = writable(untrack(() => notificationsQueryOpts));
+	$effect(() => {
+		notificationsQueryOptsStore.set(notificationsQueryOpts);
 	});
-	const notificationsQuery = createQuery(notificationsQueryOptions);
+	const notificationsQuery = createQuery(notificationsQueryOptsStore);
 	const markViewedMutation = createMutation(
 		orpc.notifications.markViewed.mutationOptions({
 			onSuccess: () => {
