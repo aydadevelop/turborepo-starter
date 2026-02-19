@@ -4,12 +4,15 @@ import { RPCLink } from "@orpc/client/fetch";
 
 import type { AssistantRouter } from "@full-stack-cf-app/assistant/router";
 
-import { PUBLIC_ASSISTANT_URL } from "$env/static/public";
+import { env } from "$env/dynamic/public";
 
 const TRAILING_SLASHES = /\/+$/;
 const ABSOLUTE_URL = /^https?:\/\//;
+const DEFAULT_ASSISTANT_URL = "http://localhost:43102";
 
-const assistantUrl = PUBLIC_ASSISTANT_URL.replace(TRAILING_SLASHES, "");
+const assistantUrl = (
+	env.PUBLIC_ASSISTANT_URL ?? DEFAULT_ASSISTANT_URL
+).replace(TRAILING_SLASHES, "");
 
 function resolveUrl(path: string): string {
 	if (ABSOLUTE_URL.test(path)) {

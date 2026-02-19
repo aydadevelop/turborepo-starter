@@ -12,9 +12,13 @@
     "check-types": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "cd ../.. && biome check --config-path biome.json apps/web",
     "lint:fix": "cd ../.. && biome check --config-path biome.json apps/web --write",
+    "dev:e2e": "vite dev --mode e2e --host 127.0.0.1 --port 43173 --strictPort",
+    "dev:server:e2e": "npm --prefix ../.. run dev:server:e2e",
     "dev": "vite dev",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:ui:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 playwright test --ui"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.4.18",

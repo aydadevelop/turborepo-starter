@@ -197,7 +197,7 @@ const assistantPort = parsePort(process.env.ASSISTANT_PORT, 3002);
 
 // Local dev uses localhost ports, deployed stages use their web URL
 const devCorsOrigin =
-	"http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176";
+	"http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:43173";
 
 // Start ngrok tunnel in local dev when explicitly enabled via ALCHEMY_TUNNEL=1
 const shouldStartTunnel =

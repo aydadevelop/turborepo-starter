@@ -12,6 +12,8 @@ build
 .env
 .env.*
 !.env.example
+!apps/web/.env.e2e
+!packages/infra/.env.e2e
 .dev.vars
 
 # Secrets (sensitive credentials and keys)

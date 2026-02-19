@@ -4,6 +4,13 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:43173";
 const serverURL = process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:43100";
 const assistantURL =
 	process.env.PLAYWRIGHT_ASSISTANT_URL ?? "http://localhost:43102";
+const useManagedServers = process.env.PLAYWRIGHT_MANAGED_SERVERS !== "0";
+const reuseExistingServers =
+	!process.env.CI && process.env.PLAYWRIGHT_REUSE_SERVERS !== "0";
+const webServerCommand =
+	process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ?? "npm run dev:e2e";
+const backendServerCommand =
+	process.env.PLAYWRIGHT_BACKEND_SERVER_COMMAND ?? "npm run dev:server:e2e";
 
 process.env.PLAYWRIGHT_BASE_URL ??= baseURL;
 process.env.PLAYWRIGHT_SERVER_URL ??= serverURL;
@@ -16,7 +23,7 @@ export default defineConfig({
 	forbidOnly: Boolean(process.env.CI),
 	retries: process.env.CI ? 2 : 0,
 	workers: process.env.CI ? 1 : undefined,
-	// reporter: "html",
+	reporter: "line",
 	use: {
 		baseURL,
 		trace: "on-first-retry",
@@ -27,21 +34,20 @@ export default defineConfig({
 			use: { ...devices["Desktop Chrome"] },
 		},
 	],
-	webServer: [
-		{
-			command: `for p in 43173; do lsof -ti tcp:$p | xargs kill 2>/dev/null || true; done && PUBLIC_SERVER_URL=${serverURL} PUBLIC_ASSISTANT_URL=${assistantURL} npm run dev -- --port 43173 --strictPort`,
-			url: baseURL,
-			reuseExistingServer: !process.env.CI,
-			timeout: 120_000,
-		},
-		{
-			// Starts server, notifications, and assistant workers on dedicated e2e ports.
-			// ALCHEMY_SKIP_WEB=1 prevents the SvelteKit worker from conflicting with Vite above.
-			command:
-				"cd ../.. && for p in 43100 43101 43102; do lsof -ti tcp:$p | xargs kill 2>/dev/null || true; done && ALCHEMY_SKIP_WEB=1 ALCHEMY_E2E=1 STAGE=e2e npm run dev:server",
-			url: `${assistantURL}/health`,
-			reuseExistingServer: true,
-			timeout: 120_000,
-		},
-	],
+	webServer: useManagedServers
+		? [
+				{
+					command: webServerCommand,
+					url: baseURL,
+					reuseExistingServer: reuseExistingServers,
+					timeout: 60_000,
+				},
+				{
+					command: backendServerCommand,
+					url: `${assistantURL}/health`,
+					reuseExistingServer: reuseExistingServers,
+					timeout: 120_000,
+				},
+			]
+		: undefined,
 });

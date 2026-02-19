@@ -7,13 +7,17 @@ import {
 } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/svelte";
 import { telegramClient } from "better-auth-telegram/client";
-import { PUBLIC_SERVER_URL } from "$env/static/public";
+import { env } from "$env/dynamic/public";
 
 const TRAILING_SLASHES = /\/+$/;
 const ABSOLUTE_URL = /^https?:\/\//;
+const DEFAULT_SERVER_URL = "http://localhost:43100";
 
 function resolveServerUrl(): string {
-	const raw = PUBLIC_SERVER_URL.replace(TRAILING_SLASHES, "");
+	const raw = (env.PUBLIC_SERVER_URL ?? DEFAULT_SERVER_URL).replace(
+		TRAILING_SLASHES,
+		""
+	);
 	if (ABSOLUTE_URL.test(raw)) {
 		return raw;
 	}

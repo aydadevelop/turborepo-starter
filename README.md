@@ -69,6 +69,8 @@ Create environment files as needed:
 - `npm run check-types`: Type-check tasks registered in workspace packages
 - `npm run test`: Run unit tests in packages that define `test`
 - `npm run test:e2e`: Run Playwright tests (web package)
+- `npm run dev:server:e2e`: Start infra runtime for E2E (server/assistant/notifications only)
+- `npm run -w web test:e2e:reuse`: Run Playwright against already-running local servers (skip managed startup)
 - `npm run test:integration:calendar`: Run live Google Calendar integration test suite (network)
 - `npm run db:push`: Push Drizzle schema
 - `npm run db:migrate`: Run Drizzle migrations
