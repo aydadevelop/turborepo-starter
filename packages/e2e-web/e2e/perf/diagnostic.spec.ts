@@ -1,5 +1,5 @@
-import { expect, test } from "./fixtures";
 import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const readNumberByTestId = async (
 	page: Page,
@@ -88,7 +88,10 @@ test.describe("Polling diagnostics", () => {
 		page,
 	}, testInfo) => {
 		if (testInfo.project.name === "perf-mobile") {
-			test.skip(true, "Polling diagnostic is currently unstable on mobile profile");
+			test.skip(
+				true,
+				"Polling diagnostic is currently unstable on mobile profile"
+			);
 		}
 
 		await page.goto("/diagnostic/polling-render");

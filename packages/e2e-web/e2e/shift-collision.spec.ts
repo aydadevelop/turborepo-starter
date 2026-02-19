@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
-import { signInAsSeedOwner } from "./auth-helpers";
-import { url } from "./helpers";
+import { signInAsSeedOwner } from "./utils/auth";
+import { url } from "./utils/url";
 
 const NO_LONGER_AVAILABLE_RE = /no longer available/i;
 const SHIFT_REASON_TEXT = "Shift to later daytime slot";

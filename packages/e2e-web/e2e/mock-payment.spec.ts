@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { url } from "./helpers";
+import { url } from "./utils/url";
 
 const SERVER_URL =
 	process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:43100";
@@ -40,9 +40,9 @@ test.describe("Mock Payment", () => {
 
 		await page.goto(BOAT_URL);
 
-		await expect(
-			page.getByTestId("booking-access-status")
-		).toContainText(customerEmail);
+		await expect(page.getByTestId("booking-access-status")).toContainText(
+			customerEmail
+		);
 
 		const mockPayButton = page.getByTestId("mock-pay-button").first();
 		await expect(mockPayButton).toBeVisible();

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { url } from "./helpers";
+import { url } from "./utils/url";
 
 const HEADING_PATTERN = /Full Stack Cloudflare App/i;
 

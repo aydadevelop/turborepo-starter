@@ -1,5 +1,5 @@
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
-import { url } from "./helpers";
+import { url } from "./utils/url";
 
 const CHAT_URL_PATTERN = /\/chat\/[\w-]+/;
 const BOATS_PLACEHOLDER = /ask about boats/i;

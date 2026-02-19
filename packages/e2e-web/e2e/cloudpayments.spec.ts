@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
-import { signInAsSeedOwner } from "./auth-helpers";
-import { url } from "./helpers";
+import { signInAsSeedOwner } from "./utils/auth";
+import { url } from "./utils/url";
 
 const PAYMENT_WIDGET_OR_MESSAGE_RE = /payment|cloudpayments|not configured/i;
 const PAID_TEXT_RE = /paid/i;
@@ -20,7 +20,9 @@ test.describe("CloudPayments Payment", () => {
 		const unpaidBookingItem = managedBookingItem(page, BOOKING_ID_PENDING);
 		await expect(unpaidBookingItem).toBeVisible({ timeout: 10_000 });
 
-		const payButton = unpaidBookingItem.getByTestId("managed-booking-pay-button");
+		const payButton = unpaidBookingItem.getByTestId(
+			"managed-booking-pay-button"
+		);
 		await expect(payButton).toBeVisible();
 
 		await payButton.click();

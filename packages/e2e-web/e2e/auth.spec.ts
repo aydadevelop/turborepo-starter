@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { url } from "./helpers";
+import { url } from "./utils/url";
 
 const LOGIN_HEADING_PATTERN = /welcome back/i;
 const LOGIN_URL_PATTERN = /\/login/;

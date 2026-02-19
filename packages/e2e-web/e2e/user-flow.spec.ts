@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { url } from "./helpers";
+import { url } from "./utils/url";
 
 const BOATS_URL = url(
 	"/boats?date=2026-03-16&startHour=10&durationHours=2&passengers=2"

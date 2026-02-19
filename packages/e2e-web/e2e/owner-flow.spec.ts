@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { signInAsSeedOwner } from "./auth-helpers";
-import { url } from "./helpers";
-import { SEED_CREDENTIALS } from "./seed-fixtures";
+import { signInAsSeedOwner } from "./utils/auth";
+import { SEED_CREDENTIALS } from "./utils/seed";
+import { url } from "./utils/url";
 
 const DASHBOARD_URL_RE = /\/dashboard/;
 const BOOKING_ID_PENDING = "seed_booking_odyssey_pending";
@@ -27,8 +27,8 @@ test.describe("Owner Flow", () => {
 				"/boats/seed_boat_aurora--seed-aurora-8?date=2026-03-16&durationHours=2&passengers=2"
 			)
 		);
-		await expect(
-			page.getByTestId("booking-access-status")
-		).toContainText(SEED_CREDENTIALS.owner.email);
+		await expect(page.getByTestId("booking-access-status")).toContainText(
+			SEED_CREDENTIALS.owner.email
+		);
 	});
 });

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { signInAsSeedAdmin } from "./auth-helpers";
-import { url } from "./helpers";
+import { signInAsSeedAdmin } from "./utils/auth";
+import { url } from "./utils/url";
 
 const DASHBOARD_URL_RE = /\/dashboard/;
 const ADMIN_USERS_URL_RE = /\/admin\/users/;
