@@ -20,7 +20,7 @@
     "test:integration:calendar:webhook": "turbo run test:integration:calendar:webhook --filter=@full-stack-cf-app/api",
     "test:integration:calendar:webhook:tunnel": "node ./scripts/calendar-webhook-e2e.mjs",
     "dev:native": "turbo run dev --filter=native",
-    "dev:web": "turbo run dev --filter=web",
+    "dev:web": "turbo run dev:vite --filter=web",
     "dev:server": "turbo run dev --filter=@full-stack-cf-app/infra",
     "dev:server:e2e": "ALCHEMY_E2E=1 ALCHEMY_SKIP_WEB=1 STAGE=e2e SERVER_PORT=43100 NOTIFICATIONS_PORT=43101 ASSISTANT_PORT=43102 turbo run dev --filter=@full-stack-cf-app/infra",
     "dev:tunnel": "ALCHEMY_TUNNEL=1 turbo run dev --filter=@full-stack-cf-app/infra",

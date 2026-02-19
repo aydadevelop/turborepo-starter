@@ -80,6 +80,10 @@
       "cache": false,
       "persistent": true
     },
+    "dev:vite": {
+      "cache": false,
+      "persistent": true
+    },
     "db:push": {
       "cache": false
     },
