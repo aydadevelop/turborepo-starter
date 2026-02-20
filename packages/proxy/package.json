@@ -11,10 +11,12 @@
     "lint:fix": "cd ../.. && biome check --config-path biome.json packages/proxy --write"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.13",
     "@full-stack-cf-app/config": "*",
     "@ngrok/ngrok": "^1.4.1",
     "@types/http-proxy": "^1.17.14",
     "http-proxy": "^1.18.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "ultracite": "^7.1.3"
   }
 }

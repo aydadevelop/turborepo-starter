@@ -60,7 +60,7 @@ const seedUsers = async () => {
 	]);
 };
 
-describe("ticketing multichannel (red)", () => {
+describe("ticketing multichannel", () => {
 	beforeAll(async () => {
 		await seedOrganization();
 		await seedUsers();

@@ -46,8 +46,11 @@ const isDeploying =
 	isDeployCommand || isDestroyCommand || Boolean(process.env.CI);
 const isLocalDevRuntime = !isDeploying;
 
-// Load stage-specific files first, then base defaults.
-// This preserves shell-provided env vars while still allowing stage defaults.
+// Environment layering:
+// 1) shell/CI env (highest priority, never overridden by dotenv)
+// 2) stage-specific files (.env.e2e / .env.production)
+// 3) base defaults (.env)
+// Keep stage files focused on overrides to avoid duplicated keys.
 if (isE2E) {
 	config({ path: "./.env.e2e" });
 }

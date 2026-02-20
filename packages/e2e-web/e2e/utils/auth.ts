@@ -1,9 +1,9 @@
 import type { Page } from "@playwright/test";
+import { getPlaywrightRuntimeEnv } from "../../playwright.env";
 import { SEED_CREDENTIALS } from "./seed";
 import { url } from "./url";
 
-const SERVER_URL =
-	process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:43100";
+const { serverURL: SERVER_URL } = getPlaywrightRuntimeEnv();
 
 interface BrowserFetchResult {
 	ok: boolean;

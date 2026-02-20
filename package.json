@@ -21,6 +21,8 @@
     "test:e2e:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 turbo run test:e2e --filter=@full-stack-cf-app/e2e-web --only",
     "test:e2e:ui": "turbo run test:e2e:ui --filter=@full-stack-cf-app/e2e-web --only",
     "test:e2e:ui:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 turbo run test:e2e:ui --filter=@full-stack-cf-app/e2e-web --only",
+    "test:frontend:dev": "turbo run test:frontend:dev --filter=web --only",
+    "test:frontend:dev:ui": "turbo run test:frontend:dev:ui --filter=web --only",
     "test:perf": "turbo run test:perf --filter=@full-stack-cf-app/e2e-web --only",
     "test:perf:vitals": "turbo run test:perf:vitals --filter=@full-stack-cf-app/e2e-web --only",
     "test:perf:memory": "turbo run test:perf:memory --filter=@full-stack-cf-app/e2e-web --only",
@@ -32,7 +34,7 @@
     "dev:native": "turbo run dev --filter=native",
     "dev:web": "turbo run dev:vite --filter=web",
     "dev:server": "turbo run dev --filter=@full-stack-cf-app/infra",
-    "dev:server:e2e": "OPEN_ROUTER_API_KEY=${OPEN_ROUTER_API_KEY:-local-e2e-openrouter-key} ALCHEMY_E2E=1 ALCHEMY_SKIP_WEB=1 STAGE=e2e SERVER_PORT=43100 NOTIFICATIONS_PORT=43101 ASSISTANT_PORT=43102 turbo run dev --filter=@full-stack-cf-app/infra",
+    "dev:server:e2e": "STAGE=e2e turbo run dev --filter=@full-stack-cf-app/infra",
     "dev:tunnel": "ALCHEMY_TUNNEL=1 turbo run dev --filter=@full-stack-cf-app/infra",
     "dev:server:clean": "npm run db:reset:local && npm run dev:server",
     "db:push": "turbo run db:push --filter=@full-stack-cf-app/db",
@@ -51,8 +53,9 @@
     "destroy:dev": "npm run destroy -- --stage dev",
     "destroy:test": "npm run destroy -- --stage test",
     "destroy:prod": "npm run destroy -- --stage prod",
-    "check": "npm run lint && npm run check-types",
-    "ruler:apply": "npx @intellectronica/ruler@latest apply --local-only"
+    "check": "ultracite check",
+    "ruler:apply": "npx @intellectronica/ruler@latest apply --local-only",
+    "fix": "ultracite fix"
   },
   "dependencies": {
     "@full-stack-cf-app/env": "*",

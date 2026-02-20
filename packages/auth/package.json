@@ -29,11 +29,13 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.13",
     "@full-stack-cf-app/config": "*",
     "@full-stack-cf-app/vitest-config": "*",
     "@types/better-sqlite3": "^7.6.13",
     "better-sqlite3": "^11.10.0",
     "typescript": "^5",
+    "ultracite": "^7.1.3",
     "vitest": "^3.2.4"
   }
 }

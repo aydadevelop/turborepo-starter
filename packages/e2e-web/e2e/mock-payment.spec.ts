@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { getPlaywrightRuntimeEnv } from "../playwright.env";
 import { url } from "./utils/url";
 
-const SERVER_URL =
-	process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:43100";
+const { serverURL: SERVER_URL } = getPlaywrightRuntimeEnv();
 const BOAT_URL = url(
 	"/boats/seed_boat_aurora--seed-aurora-8?date=2026-03-20&durationHours=2&passengers=2"
 );

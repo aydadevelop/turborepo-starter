@@ -137,6 +137,9 @@
 	let dateParseCount = $state(0);
 	let dateReferenceChanges = $state(0);
 	let lastStartsAt: Date | null = null;
+	/* Artificial tick to simulate "page re-derives without URL change" */
+	let simulationTick = $state(0);
+	let simulationInterval: ReturnType<typeof setInterval> | null = null;
 
 	/* Simulates what boats/+page.svelte does — parse on every $derived.by call */
 	const parsedSearch_unstable = $derived.by(() => {
@@ -160,10 +163,6 @@
 			lastStartsAt = startsAt;
 		});
 	});
-
-	/* Artificial tick to simulate "page re-derives without URL change" */
-	let simulationTick = $state(0);
-	let simulationInterval: ReturnType<typeof setInterval> | null = null;
 
 	function startTickSimulation() {
 		if (simulationInterval) return;

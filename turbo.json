@@ -136,6 +136,17 @@
     },
     "destroy": {
       "cache": false
+    },
+    "test:frontend:dev": {
+      "dependsOn": ["transit"],
+      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
+      "cache": false
+    },
+    "test:frontend:dev:ui": {
+      "dependsOn": ["transit"],
+      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
+      "cache": false,
+      "persistent": true
     }
   }
 }

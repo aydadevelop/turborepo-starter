@@ -1,47 +1,14 @@
-import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { bootstrapLocalE2EDatabase } from "../../db/scripts/bootstrap-local-e2e.mjs";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, "../../..");
-const seedScriptPath = path.resolve(
-	repoRoot,
-	"packages/db/scripts/seed-local.mjs"
-);
-const d1Dir = path.resolve(
-	repoRoot,
-	".alchemy/miniflare/v3/d1/miniflare-D1DatabaseObject"
-);
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const hasSqliteDatabase = (): boolean => {
-	if (!existsSync(d1Dir)) {
+const isLocalBaseURL = (value: string): boolean => {
+	try {
+		const parsed = new URL(value);
+		return LOCAL_HOSTNAMES.has(parsed.hostname);
+	} catch {
 		return false;
 	}
-	return readdirSync(d1Dir).some(
-		(name) =>
-			name.endsWith(".sqlite") &&
-			!name.includes("-wal") &&
-			!name.includes("-shm")
-	);
-};
-
-const waitForLocalD1 = async () => {
-	const timeoutMs = 60_000;
-	const startedAt = Date.now();
-
-	while (Date.now() - startedAt < timeoutMs) {
-		if (hasSqliteDatabase()) {
-			return;
-		}
-		await delay(500);
-	}
-
-	throw new Error(
-		`Timed out waiting for local D1 sqlite files under ${d1Dir}.`
-	);
 };
 
 export default async function globalSetup(): Promise<void> {
@@ -52,17 +19,16 @@ export default async function globalSetup(): Promise<void> {
 		return;
 	}
 
+	const baseURL = process.env.PLAYWRIGHT_BASE_URL;
+	if (baseURL && !isLocalBaseURL(baseURL)) {
+		console.log(
+			`[playwright:global-setup] Skipping DB seed for remote base URL (${baseURL})`
+		);
+		return;
+	}
+
 	const scenario = process.env.PLAYWRIGHT_SEED_SCENARIO ?? "baseline";
 	const anchorDate = process.env.PLAYWRIGHT_SEED_ANCHOR_DATE ?? "2026-03-15";
 
-	await waitForLocalD1();
-
-	execFileSync(
-		"node",
-		[seedScriptPath, "--scenario", scenario, "--anchor-date", anchorDate],
-		{
-			cwd: repoRoot,
-			stdio: "inherit",
-		}
-	);
+	await bootstrapLocalE2EDatabase({ scenario, anchorDate });
 }

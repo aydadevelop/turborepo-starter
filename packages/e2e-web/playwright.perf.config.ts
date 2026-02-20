@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { getPlaywrightRuntimeEnv } from "./playwright.env";
 
 /**
  * Performance-specific Playwright configuration.
@@ -13,16 +14,15 @@ import { defineConfig, devices } from "@playwright/test";
  *  - remote debugging port for Lighthouse (--remote-debugging-port=9222)
  */
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:43173";
-const serverURL = process.env.PLAYWRIGHT_SERVER_URL ?? "http://localhost:43100";
-const assistantURL =
-	process.env.PLAYWRIGHT_ASSISTANT_URL ?? "http://localhost:43102";
-
-process.env.PLAYWRIGHT_BASE_URL ??= baseURL;
-process.env.PLAYWRIGHT_SERVER_URL ??= serverURL;
-process.env.PLAYWRIGHT_ASSISTANT_URL ??= assistantURL;
-
-const isRemote = !baseURL.includes("localhost");
+const {
+	baseURL,
+	assistantURL,
+	isRemote,
+	useManagedServers,
+	reuseExistingServers,
+	webServerCommand,
+	backendServerCommand,
+} = getPlaywrightRuntimeEnv();
 
 export default defineConfig({
 	testDir: "./e2e/perf",
@@ -61,26 +61,22 @@ export default defineConfig({
 			},
 		},
 	],
-	...(isRemote
-		? {}
-		: {
+	...(useManagedServers && !isRemote
+		? {
 				webServer: [
 					{
-						command:
-							process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ??
-							"npm run dev:web:e2e:clean",
+						command: webServerCommand,
 						url: baseURL,
-						reuseExistingServer: true,
+						reuseExistingServer: reuseExistingServers,
 						timeout: 120_000,
 					},
 					{
-						command:
-							process.env.PLAYWRIGHT_BACKEND_SERVER_COMMAND ??
-							"npm run dev:infra:e2e:clean",
+						command: backendServerCommand,
 						url: `${assistantURL}/health`,
-						reuseExistingServer: true,
+						reuseExistingServer: reuseExistingServers,
 						timeout: 120_000,
 					},
 				],
-			}),
+			}
+		: {}),
 });

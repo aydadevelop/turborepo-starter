@@ -243,7 +243,7 @@ export const test = base.extend<PerfFixtures>({
 	measureFrames: async ({ page }, use) => {
 		await use((action, durationMs) => measureFrames(page, action, durationMs));
 	},
-	budgetFor: async ({}, use) => {
+	budgetFor: async (_fixtures, use) => {
 		await use(getBudget);
 	},
 });
