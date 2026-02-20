@@ -1,66 +1,80 @@
 # Better-T-Stack Project Rules
 
-This is a full-stack-cf-app project created with Better-T-Stack CLI.
+This repository is the source template for a reusable Cloudflare full-stack starter.
 
-## Project Structure
+## Starter Target Stack
 
-This is a monorepo with the following structure:
+- Frontend: SvelteKit (Svelte 5) + shadcn-svelte
+- Backend: Hono (Cloudflare Workers runtime)
+- API layer: oRPC (contract-first)
+- Database: Drizzle + D1 (SQLite)
+- Infra: Alchemy
+- Build system: Turborepo
+- Testing: Vitest (+ e2e workspace tests)
+- Runtime/deploy: Cloudflare Workers + Queues
+- Package manager target for starter: Bun
 
-- **`apps/web/`** - Frontend application (SvelteKit)
+## Recommended Starter Extraction Flow
 
-- **`apps/server/`** - Backend server (Hono)
+1. Create a dedicated extraction branch from a green main.
+   - `git switch -c codex/starter-v1`
+2. Remove domain-specific business modules and third-party integrations not meant for template users.
+3. Keep baseline packages and examples:
+   - Auth, API contracts/routers, DB schema + migrations, queue producer/consumer, UI primitives.
+4. Migrate to Bun in one pass.
+   - Update root `packageManager`.
+   - Generate `bun.lock`.
+   - Remove npm lockfile and npm-only command docs.
+5. Validate baseline before publishing:
+   - `turbo run lint check-types test build`
+   - `turbo run deploy --filter=@*/infra -- --stage dev`
+6. Publish to new repository:
+   - Keep history: push `codex/starter-v1` to new remote `main`.
+   - Clean history: create orphan branch and commit once.
 
-- **`packages/api/`** - Shared API logic and types
-- **`packages/auth/`** - Authentication logic and utilities
-- **`packages/db/`** - Database schema and utilities
-- **`packages/env/`** - Shared environment variables and validation
-- **`packages/config/`** - Shared TypeScript configuration
-- **`packages/infra/`** - Infrastructure as code (Alchemy for Cloudflare)
+## Core Rules
 
-## Available Scripts
+### Turborepo
 
-- `npm run dev` - Start all apps in development mode
-- `npm run dev:web` - Start only the web app
-- `npm run dev:server` - Start only the server
-- `npm run build` - Build all apps
-- `npm run lint` - Lint all packages
-- `npm run typecheck` - Type check all packages
+- Define tasks in workspace packages; root only delegates with `turbo run`.
+- Keep `turbo.json` task graph explicit (`dependsOn`, `outputs`, env passthrough).
+- Avoid root scripts that run package commands directly.
 
-## Database Commands
+### oRPC Contract-First
 
-All database operations should be run from the server workspace:
+- Keep shared contracts and routers in `packages/api`.
+- Use typed Zod schemas for inputs/outputs.
+- Keep web client typed against router exports, not ad-hoc HTTP wrappers.
 
-- `npm run db:push` - Push schema changes to database
-- `npm run db:studio` - Open database studio
-- `npm run db:generate` - Generate Drizzle files
-- `npm run db:migrate` - Run database migrations
+### Hono Worker Boundaries
 
-Database schema files are located in `packages/db/src/schema/`
+- Keep server entrypoints transport-focused.
+- Put business logic in package services/routers.
+- Use middleware for cross-cutting behavior (auth, cors, error handling).
 
-## API Structure
+### Drizzle + D1
 
-- oRPC contracts and routers are in `packages/api/src/`
-- Client-side oRPC client is in `apps/web/src/utils/orpc.ts`
+- Keep schema and migrations in `packages/db`.
+- Do not introduce migration drift between local and deployed stages.
+- Keep seeders deterministic for starter demos/tests.
 
-## Authentication
+### Alchemy + Cloudflare Queues
 
-Authentication is powered by Better Auth:
+- Define resources in `packages/infra/alchemy.run.ts`.
+- Bind queues through Alchemy and consume via Worker `queue` handler.
+- Use message schemas and DLQs by default for async workloads.
 
-- Auth configuration is in `packages/auth/src/`
-- Web app auth client is in `apps/web/src/lib/auth-client.ts`
+### Svelte + shadcn-svelte
 
-## Project Configuration
+- Use Svelte 5 runes and modern event syntax.
+- Keep shared components in `packages/ui`.
+- Reuse shadcn-svelte composition patterns and import conventions.
 
-This project includes a `bts.jsonc` configuration file that stores your Better-T-Stack settings:
+## Bad Practices To Avoid
 
-- Contains your selected stack configuration (database, ORM, backend, frontend, etc.)
-- Used by the CLI to understand your project structure
-- Safe to delete if not needed
-
-## Key Points
-
-- This is a Turborepo monorepo using npm workspaces
-- Each app has its own `package.json` and dependencies
-- Run commands from the root to execute across all workspaces
-- Run workspace-specific commands with `npm run command-name`
-- Turborepo handles build caching and parallel execution
+- Mixing Bun and npm lockfiles in the same branch.
+- Hiding task logic in root scripts instead of package scripts.
+- Putting business/domain logic in Hono entrypoint files.
+- Queue consumers that process unvalidated payloads.
+- Manual Cloudflare resource edits that are not captured in Alchemy.
+- Starter defaults that include sensitive env values or product-specific secrets.

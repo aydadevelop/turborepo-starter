@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Badge } from "@full-stack-cf-app/ui/components/badge";
-	import { Button } from "@full-stack-cf-app/ui/components/button";
-	import * as Card from "@full-stack-cf-app/ui/components/card";
-	import { Input } from "@full-stack-cf-app/ui/components/input";
-	import { Label } from "@full-stack-cf-app/ui/components/label";
+	import { Badge } from "@my-app/ui/components/badge";
+	import { Button } from "@my-app/ui/components/button";
+	import * as Card from "@my-app/ui/components/card";
+	import { Input } from "@my-app/ui/components/input";
+	import { Label } from "@my-app/ui/components/label";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { authClient } from "$lib/auth-client";
 	import { orpc, queryClient } from "$lib/orpc";
@@ -24,19 +24,19 @@
 			value: "org_admin",
 			label: "Admin",
 			description:
-				"Full organization management. Can manage members, boats, bookings, and settings.",
+				"Full organization management. Can manage members, settings, and all resources.",
 		},
 		{
 			value: "manager",
 			label: "Manager",
 			description:
-				"Manage boats, bookings, and support. Limited member management.",
+				"Manage tasks, payments, and support. Limited member management.",
 		},
 		{
 			value: "agent",
-			label: "Agent / Captain",
+			label: "Agent",
 			description:
-				"Handle bookings, support tickets, and view assigned boats. Ideal for boat captains.",
+				"Handle support tickets and intake requests. Read-only access to payments.",
 		},
 		{
 			value: "member",
@@ -160,22 +160,22 @@
 				<div>
 					<p class="font-medium">Admin</p>
 					<p class="text-muted-foreground">
-						Full management: members, boats, bookings, support, settings. Use
-						for co-owners or office managers.
+						Full management: members, settings, tasks, payments, and support.
+						Use for co-owners or office managers.
 					</p>
 				</div>
 				<div>
 					<p class="font-medium">Manager</p>
 					<p class="text-muted-foreground">
-						Day-to-day operations: manage boats, handle bookings, process
+						Day-to-day operations: manage tasks, handle payments, process
 						support tickets. Cannot delete members.
 					</p>
 				</div>
 				<div>
-					<p class="font-medium">Agent / Captain</p>
+					<p class="font-medium">Agent</p>
 					<p class="text-muted-foreground">
-						Front-line work: view assigned boats, handle bookings and customer
-						support. Perfect for boat captains.
+						Front-line work: handle support tickets and intake requests.
+						Read-only access to payments.
 					</p>
 				</div>
 				<div>

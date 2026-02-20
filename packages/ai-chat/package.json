@@ -1,5 +1,5 @@
 {
-  "name": "@full-stack-cf-app/ai-chat",
+  "name": "@my-app/ai-chat",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@ai-sdk/svelte": "^4.0.86",
-    "@full-stack-cf-app/ui": "*",
+    "@my-app/ui": "*",
     "@shikijs/themes": "^3.22.0",
     "ai": "^6.0.86",
     "isomorphic-dompurify": "^3.0.0-rc.2",
@@ -37,8 +37,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
-    "@full-stack-cf-app/config": "*",
-    "@full-stack-cf-app/tailwind-config": "*",
+    "@my-app/config": "*",
+    "@my-app/tailwind-config": "*",
     "@internationalized/date": "^3.11.0",
     "@lucide/svelte": "^0.562.0",
     "bits-ui": "^2.15.5",

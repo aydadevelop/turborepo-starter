@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button } from "@full-stack-cf-app/ui/components/button";
+	import { Button } from "@my-app/ui/components/button";
 	import {
 		Card,
 		CardContent,
@@ -7,9 +7,9 @@
 		CardFooter,
 		CardHeader,
 		CardTitle,
-	} from "@full-stack-cf-app/ui/components/card";
-	import { Input } from "@full-stack-cf-app/ui/components/input";
-	import { Label } from "@full-stack-cf-app/ui/components/label";
+	} from "@my-app/ui/components/card";
+	import { Input } from "@my-app/ui/components/input";
+	import { Label } from "@my-app/ui/components/label";
 	import { createForm } from "@tanstack/svelte-form";
 	import { z } from "zod";
 	import { goto } from "$app/navigation";

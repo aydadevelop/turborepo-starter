@@ -1,5 +1,5 @@
 {
-  "name": "@full-stack-cf-app/vitest-config",
+  "name": "@my-app/vitest-config",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
-    "@full-stack-cf-app/config": "*",
+    "@my-app/config": "*",
     "typescript": "^5",
     "ultracite": "^7.1.3"
   }

@@ -8,8 +8,8 @@ const DEFAULTS = {
 	assistantURL: "http://localhost:43102",
 	workersCi: 1,
 	workersLocal: 2,
-	webServerCommand: "npm run dev:web:e2e",
-	backendServerCommand: "npm run dev:infra:e2e",
+	webServerCommand: "bun run dev:web:e2e",
+	backendServerCommand: "bun run dev:infra:e2e",
 } as const;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

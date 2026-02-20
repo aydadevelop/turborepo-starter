@@ -7,10 +7,10 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const E2E_PORTS = [43_173, 43_100, 43_101, 43_102];
 const e2ePaths = [
-	"packages/infra/.alchemy/full-stack-cf-app/e2e",
-	"packages/infra/.alchemy/out/full-stack-cf-app-server-e2e",
-	"packages/infra/.alchemy/out/full-stack-cf-app-notifications-e2e",
-	"packages/infra/.alchemy/out/full-stack-cf-app-assistant-e2e",
+	"packages/infra/.alchemy/my-app/e2e",
+	"packages/infra/.alchemy/out/my-app-server-e2e",
+	"packages/infra/.alchemy/out/my-app-notifications-e2e",
+	"packages/infra/.alchemy/out/my-app-assistant-e2e",
 	".alchemy/miniflare",
 ];
 

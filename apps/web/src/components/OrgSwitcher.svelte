@@ -4,10 +4,11 @@
 		Item as SelectItem,
 		Root as SelectRoot,
 		Trigger as SelectTrigger,
-	} from "@full-stack-cf-app/ui/components/select";
+	} from "@my-app/ui/components/select";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { derived } from "svelte/store";
 	import { authClient } from "$lib/auth-client";
+	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { queryClient } from "$lib/orpc";
 
 	const sessionQuery = authClient.useSession();
@@ -20,7 +21,7 @@
 			return data ?? [];
 		},
 		retry: false,
-		enabled: Boolean($session.data),
+		enabled: hasAuthenticatedSession($session.data),
 	}));
 	const orgsQuery = createQuery(orgsQueryOptions);
 
@@ -41,8 +42,9 @@
 		if (error) return;
 		queryClient.invalidateQueries({ queryKey: ["organization"] });
 		queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] });
-		queryClient.invalidateQueries({ queryKey: ["bookings"] });
-		queryClient.invalidateQueries({ queryKey: ["boats"] });
+		queryClient.invalidateQueries({ queryKey: ["notifications"] });
+		queryClient.invalidateQueries({ queryKey: ["todos"] });
+		queryClient.invalidateQueries({ queryKey: ["assistant"] });
 	};
 </script>
 

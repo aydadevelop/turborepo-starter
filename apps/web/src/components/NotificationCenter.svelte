@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { Button } from "@full-stack-cf-app/ui/components/button";
+	import { Button } from "@my-app/ui/components/button";
 	import { consumeEventIterator } from "@orpc/client";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { onMount, untrack } from "svelte";
 	import { writable } from "svelte/store";
 	import { resolve } from "$app/paths";
 	import type { authClient } from "$lib/auth-client";
+	import { getAuthenticatedUserId } from "$lib/auth-session";
 	import {
 		countUnreadNotifications,
 		deriveCursorMs,
@@ -34,7 +35,7 @@
 	const notificationsQueryOpts = $derived.by(() =>
 		orpc.notifications.listMe.queryOptions({
 			input: { limit: MAX_ITEMS },
-			enabled: Boolean($sessionQuery.data?.user?.id),
+			enabled: Boolean(getAuthenticatedUserId($sessionQuery.data)),
 		})
 	);
 	const notificationsQueryOptsStore = writable(
@@ -233,7 +234,7 @@
 	}
 
 	$effect(() => {
-		const nextUserId = $sessionQuery.data?.user?.id ?? null;
+		const nextUserId = getAuthenticatedUserId($sessionQuery.data);
 		if (nextUserId === currentUserId) {
 			return;
 		}

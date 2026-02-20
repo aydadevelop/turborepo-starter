@@ -1,12 +1,13 @@
-import { auth } from "@full-stack-cf-app/auth";
-import { db } from "@full-stack-cf-app/db";
-import { member } from "@full-stack-cf-app/db/schema/auth";
-import { notificationQueueMessageSchema } from "@full-stack-cf-app/notifications/contracts";
+import { auth } from "@my-app/auth";
+import { db } from "@my-app/db";
+import { member } from "@my-app/db/schema/auth";
+import { notificationQueueMessageSchema } from "@my-app/notifications/contracts";
 import { and, asc, eq } from "drizzle-orm";
 import type { Context as HonoContext } from "hono";
 
-import { bookingExpirationCheckMessageSchema } from "./contracts/booking-lifecycle-queue";
+import { recurringTaskTickMessageSchema } from "./contracts/recurring-task-queue";
 import type { EventBus } from "./lib/event-bus";
+import { processRecurringTaskTick } from "./tasks/recurring";
 
 export interface CreateContextOptions {
 	context: HonoContext;
@@ -59,7 +60,7 @@ const getInlineNotificationProcessor = () => {
 		inlineNotificationProcessorPromise = (async () => {
 			try {
 				const notificationsProcessorModule = (await import(
-					"@full-stack-cf-app/notifications/processor"
+					"@my-app/notifications/processor"
 				)) as {
 					NotificationProcessorService?: new () => NotificationInlineProcessor;
 				};
@@ -116,29 +117,25 @@ const inlineNotificationQueueProducer: NotificationQueueProducer = {
 	},
 };
 
-const inlineBookingLifecycleQueueProducer: NotificationQueueProducer = {
+const inlineRecurringTaskQueueProducer: NotificationQueueProducer = {
 	send: (message, options) => {
-		const expirationMessage =
-			bookingExpirationCheckMessageSchema.safeParse(message);
-		if (!expirationMessage.success) {
+		const recurringMessage = recurringTaskTickMessageSchema.safeParse(message);
+		if (!recurringMessage.success) {
 			return Promise.reject(
-				new Error("Inline booking lifecycle queue: unsupported message kind")
+				new Error("Inline recurring task queue: unsupported message kind")
 			);
 		}
 
 		const delayMs = (options?.delaySeconds ?? 0) * 1000;
-		const bookingId = expirationMessage.data.bookingId;
 		setTimeout(async () => {
 			try {
-				const { expireBookingIfUnpaid } = await import(
-					"./routers/booking/services/expiration"
-				);
-				await expireBookingIfUnpaid(bookingId);
+				await processRecurringTaskTick({
+					message: recurringMessage.data,
+					notificationQueue: inlineNotificationQueueProducer,
+					recurringTaskQueue: inlineRecurringTaskQueueProducer,
+				});
 			} catch (error) {
-				console.error(
-					`[inline-expiration] Failed to expire booking ${bookingId}:`,
-					error
-				);
+				console.error("Inline recurring task processing failed", error);
 			}
 		}, delayMs);
 		return Promise.resolve();
@@ -152,7 +149,7 @@ export interface Context {
 	requestHostname: string;
 	requestCookies?: Readonly<Record<string, string>>;
 	notificationQueue?: NotificationQueueProducer;
-	bookingLifecycleQueue?: NotificationQueueProducer;
+	recurringTaskQueue?: NotificationQueueProducer;
 	eventBus?: EventBus;
 }
 
@@ -164,7 +161,7 @@ export interface OrganizationContext extends Context {
 	activeMembership: ActiveOrganizationMembership;
 	eventBus: EventBus;
 	notificationQueue?: NotificationQueueProducer;
-	bookingLifecycleQueue?: NotificationQueueProducer;
+	recurringTaskQueue?: NotificationQueueProducer;
 }
 
 const parseCookiesFromHeader = (
@@ -284,37 +281,37 @@ export async function createContext({
 		context as HonoContext & {
 			env?: {
 				NOTIFICATION_QUEUE?: unknown;
-				BOOKING_LIFECYCLE_QUEUE?: unknown;
+				RECURRING_TASK_QUEUE?: unknown;
 			};
 		}
 	).env?.NOTIFICATION_QUEUE;
-	const bookingLifecycleQueueCandidate = (
+	const recurringTaskQueueCandidate = (
 		context as HonoContext & {
 			env?: {
 				NOTIFICATION_QUEUE?: unknown;
-				BOOKING_LIFECYCLE_QUEUE?: unknown;
+				RECURRING_TASK_QUEUE?: unknown;
 			};
 		}
-	).env?.BOOKING_LIFECYCLE_QUEUE;
+	).env?.RECURRING_TASK_QUEUE;
 	const notificationQueue = isNotificationQueueProducer(
 		notificationQueueCandidate
 	)
 		? notificationQueueCandidate
 		: undefined;
-	const bookingLifecycleQueue = isNotificationQueueProducer(
-		bookingLifecycleQueueCandidate
+	const recurringTaskQueue = isNotificationQueueProducer(
+		recurringTaskQueueCandidate
 	)
-		? bookingLifecycleQueueCandidate
+		? recurringTaskQueueCandidate
 		: undefined;
 	const resolvedNotificationQueue =
 		notificationQueue ??
 		(LOCAL_REQUEST_HOSTNAMES.has(requestHostname)
 			? inlineNotificationQueueProducer
 			: undefined);
-	const resolvedBookingLifecycleQueue =
-		bookingLifecycleQueue ??
+	const resolvedRecurringTaskQueue =
+		recurringTaskQueue ??
 		(LOCAL_REQUEST_HOSTNAMES.has(requestHostname)
-			? inlineBookingLifecycleQueueProducer
+			? inlineRecurringTaskQueueProducer
 			: undefined);
 
 	return {
@@ -324,6 +321,6 @@ export async function createContext({
 		requestHostname,
 		requestCookies,
 		notificationQueue: resolvedNotificationQueue,
-		bookingLifecycleQueue: resolvedBookingLifecycleQueue,
+		recurringTaskQueue: resolvedRecurringTaskQueue,
 	};
 }

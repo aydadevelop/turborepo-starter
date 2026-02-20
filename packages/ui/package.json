@@ -1,5 +1,5 @@
 {
-  "name": "@full-stack-cf-app/ui",
+  "name": "@my-app/ui",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -35,7 +35,7 @@
     "lint:fix": "cd ../.. && biome check --config-path biome.json packages/ui --write"
   },
   "dependencies": {
-    "@full-stack-cf-app/tailwind-config": "*",
+    "@my-app/tailwind-config": "*",
     "bits-ui": "^2.15.5",
     "clsx": "^2.1.1",
     "lucide-svelte": "^0.563.0",
@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
-    "@full-stack-cf-app/config": "*",
+    "@my-app/config": "*",
     "@internationalized/date": "^3.11.0",
     "@lucide/svelte": "^0.561.0",
     "svelte": "^5.38.1",

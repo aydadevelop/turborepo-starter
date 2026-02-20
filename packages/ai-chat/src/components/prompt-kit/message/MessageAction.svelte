@@ -4,7 +4,7 @@
 		TooltipContent,
 		TooltipProvider,
 		TooltipTrigger,
-	} from "@full-stack-cf-app/ui/components/tooltip";
+	} from "@my-app/ui/components/tooltip";
 	import type { Tooltip as TooltipPrimitive } from "bits-ui";
 	import type { Snippet } from "svelte";
 

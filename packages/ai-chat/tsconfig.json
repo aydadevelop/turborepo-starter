@@ -1,5 +1,5 @@
 {
-  "extends": "@full-stack-cf-app/config/tsconfig.base.json",
+  "extends": "@my-app/config/tsconfig.base.json",
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
@@ -13,7 +13,7 @@
     "declarationMap": true,
     "baseUrl": ".",
     "paths": {
-      "@full-stack-cf-app/ai-chat/*": ["./src/*"]
+      "@my-app/ai-chat/*": ["./src/*"]
     },
     "types": ["node"]
   },

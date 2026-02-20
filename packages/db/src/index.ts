@@ -1,4 +1,4 @@
-import { env } from "@full-stack-cf-app/env/server";
+import { env } from "@my-app/env/server";
 import { drizzle } from "drizzle-orm/d1";
 
 import { relations } from "./relations";

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { url } from "./utils/url";
 
-const HEADING_PATTERN = /Full Stack Cloudflare App/i;
+const HEADING_PATTERN = /Cloudflare SaaS Starter/i;
 
 test.describe("Landing Page", () => {
 	test("loads home page and shows hero heading", async ({ page }) => {

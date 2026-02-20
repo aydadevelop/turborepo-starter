@@ -1,5 +1,5 @@
-import { db } from "@full-stack-cf-app/db";
-import { userConsent } from "@full-stack-cf-app/db/schema/consent";
+import { db } from "@my-app/db";
+import { userConsent } from "@my-app/db/schema/consent";
 import { ORPCError } from "@orpc/server";
 import { desc, eq } from "drizzle-orm";
 import z from "zod";

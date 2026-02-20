@@ -1,141 +1,85 @@
 <script lang="ts">
-	import { Button } from "@full-stack-cf-app/ui/components/button";
-	import * as Card from "@full-stack-cf-app/ui/components/card";
-	import { Input } from "@full-stack-cf-app/ui/components/input";
+	import { Button } from "@my-app/ui/components/button";
+	import * as Card from "@my-app/ui/components/card";
+	import { Input } from "@my-app/ui/components/input";
+	import { Label } from "@my-app/ui/components/label";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
+	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { orpc } from "$lib/orpc";
 
-	let passkeyPending = $state(false);
-	let passkeyMessage = $state<string | null>(null);
-	let passkeyError = $state<string | null>(null);
-	let cancelPendingBookingId = $state<string | null>(null);
-	let cancelDraftBookingId = $state<string | null>(null);
-	let cancelReasonDraft = $state("Cancelled from dashboard");
-	let cancelMessage = $state<string | null>(null);
-	let cancelError = $state<string | null>(null);
-
 	const sessionQuery = authClient.useSession();
-
 	const privateDataQuery = createQuery(orpc.privateData.queryOptions());
-	const myBookingsQuery = createQuery(
-		orpc.booking.listMine.queryOptions({
-			input: {
-				limit: 20,
-				offset: 0,
-				sortBy: "startsAt",
-				sortOrder: "desc",
-			},
-		})
+
+	let reminderTitle = $state("Weekly product check-in");
+	let reminderBody = $state("Review active subscriptions and invoices.");
+	let reminderIntervalSeconds = $state("3600");
+	let reminderRunCount = $state("3");
+	let reminderMessage = $state<string | null>(null);
+	let reminderError = $state<string | null>(null);
+
+	let chargeAmountCents = $state("9900");
+	let chargeDescription = $state("Starter plan renewal");
+	let chargeMessage = $state<string | null>(null);
+	let chargeError = $state<string | null>(null);
+
+	const scheduleReminderMutation = createMutation(
+		orpc.tasks.scheduleRecurringReminder.mutationOptions()
 	);
-	const cancelManagedBookingMutation = createMutation(
-		orpc.booking.cancelManaged.mutationOptions()
+	const mockChargeMutation = createMutation(
+		orpc.payments.createMockChargeNotification.mutationOptions()
 	);
 
 	$effect(() => {
-		if (!($sessionQuery.isPending || $sessionQuery.data)) {
+		if ($sessionQuery.isPending) return;
+		if (!hasAuthenticatedSession($sessionQuery.data)) {
 			goto(
 				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
 			);
 		}
 	});
 
-	const toDate = (value: Date | string): Date => {
-		return value instanceof Date ? value : new Date(value);
-	};
-
-	const formatBookingRange = (
-		startsAt: Date | string,
-		endsAt: Date | string
-	): string => {
-		const start = toDate(startsAt);
-		const end = toDate(endsAt);
-		return `${new Intl.DateTimeFormat("en-US", {
-			dateStyle: "medium",
-			timeStyle: "short",
-		}).format(start)} - ${new Intl.DateTimeFormat("en-US", {
-			dateStyle: "medium",
-			timeStyle: "short",
-		}).format(end)}`;
-	};
-
-	const formatMoney = (amountCents: number, currency: string): string => {
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency,
-			maximumFractionDigits: 2,
-		}).format(amountCents / 100);
-	};
-
-	const registerPasskey = async () => {
-		if (typeof window === "undefined" || !("PublicKeyCredential" in window)) {
-			passkeyError = "Passkeys are not supported in this browser.";
-			passkeyMessage = null;
-			return;
-		}
-
-		const user = $sessionQuery.data?.user;
-		if (!user) {
-			passkeyError = "You must be signed in to register a passkey.";
-			passkeyMessage = null;
-			return;
-		}
-
-		passkeyPending = true;
-		passkeyError = null;
-		passkeyMessage = null;
+	const submitRecurringReminder = async () => {
+		reminderMessage = null;
+		reminderError = null;
 		try {
-			const { error } = await authClient.passkey.addPasskey({
-				name: user.email ?? user.name ?? "My passkey",
+			const result = await $scheduleReminderMutation.mutateAsync({
+				title: reminderTitle.trim(),
+				body: reminderBody.trim() || undefined,
+				intervalSeconds: Number(reminderIntervalSeconds),
+				runCount: Number(reminderRunCount),
+				initialDelaySeconds: 0,
+				severity: "info",
 			});
-
-			if (error) {
-				passkeyError = error.message || "Failed to register passkey.";
-				return;
-			}
-
-			passkeyMessage = "Passkey registered. You can sign in using passkey now.";
+			reminderMessage = `Queued task ${result.taskId.slice(0, 8)} (${result.runCount} runs).`;
 		} catch (error) {
-			passkeyError =
-				error instanceof Error ? error.message : "Failed to register passkey.";
-		} finally {
-			passkeyPending = false;
+			reminderError =
+				error instanceof Error
+					? error.message
+					: "Failed to schedule recurring reminder.";
 		}
 	};
 
-	const startCancelBookingFlow = (bookingId: string) => {
-		cancelDraftBookingId = bookingId;
-		cancelReasonDraft = "Cancelled from dashboard";
-		cancelError = null;
-		cancelMessage = null;
-	};
-
-	const cancelCancelBookingFlow = () => {
-		cancelDraftBookingId = null;
-		cancelReasonDraft = "Cancelled from dashboard";
-	};
-
-	const confirmCancelManagedBooking = async (bookingId: string) => {
-		const reason = cancelReasonDraft.trim();
-		cancelPendingBookingId = bookingId;
-		cancelError = null;
-		cancelMessage = null;
+	const submitMockCharge = async () => {
+		chargeMessage = null;
+		chargeError = null;
 		try {
-			await $cancelManagedBookingMutation.mutateAsync({
-				bookingId,
-				...(reason ? { reason } : {}),
+			const result = await $mockChargeMutation.mutateAsync({
+				amountCents: Number(chargeAmountCents),
+				currency: "USD",
+				description: chargeDescription.trim(),
 			});
-			cancelMessage = `Booking ${bookingId.slice(0, 8)} cancelled.`;
-			cancelDraftBookingId = null;
-			await $myBookingsQuery.refetch();
+			chargeMessage = result.queued
+				? "Queued payment notification."
+				: "Payment event stored (queue unavailable in this runtime).";
 		} catch (error) {
-			cancelError =
-				error instanceof Error ? error.message : "Failed to cancel booking.";
-		} finally {
-			cancelPendingBookingId = null;
+			chargeError =
+				error instanceof Error
+					? error.message
+					: "Failed to create mock charge notification.";
 		}
 	};
 </script>
@@ -144,158 +88,121 @@
 	<div class="flex items-center justify-center min-h-[50vh]">
 		<p class="text-muted-foreground">Loading...</p>
 	</div>
-{:else if !$sessionQuery.data}
+{:else if !hasAuthenticatedSession($sessionQuery.data)}
 	<div class="flex items-center justify-center min-h-[50vh]">
 		<p class="text-muted-foreground">Redirecting to login...</p>
 	</div>
 {:else}
-	<div class="max-w-2xl mx-auto p-6 space-y-6">
+	<div class="mx-auto max-w-3xl p-6 space-y-6">
 		<h1 class="text-3xl font-bold">Dashboard</h1>
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Welcome, {$sessionQuery.data.user.name}</Card.Title>
-				<Card.Description>Your account overview</Card.Description>
+				<Card.Title>Profile</Card.Title>
+				<Card.Description>
+					Signed in as
+					{$sessionQuery.data?.user?.name ?? $sessionQuery.data?.user?.email}
+				</Card.Description>
 			</Card.Header>
-			<Card.Content class="space-y-4">
-				<div class="flex items-center justify-between">
-					<span class="text-muted-foreground">API Status</span>
-					<span class="text-foreground">
-						{$privateDataQuery.data?.message ?? "Loading..."}
-					</span>
-				</div>
+			<Card.Content class="space-y-2 text-sm">
+				<p class="text-muted-foreground">
+					Server status: {$privateDataQuery.data?.message ?? "Loading..."}
+				</p>
+				<p class="text-muted-foreground">
+					Email: {$sessionQuery.data?.user?.email}
+				</p>
 			</Card.Content>
 			<Card.Footer class="flex gap-2">
-				<Button variant="outline" href={resolve("/dashboard/bookings")}>
-					Managed Bookings
+				<Button href={resolve("/dashboard/settings")} variant="outline">
+					Account Settings
 				</Button>
+				<Button href={resolve("/org/team")} variant="outline">Team</Button>
 			</Card.Footer>
 		</Card.Root>
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Passkey</Card.Title>
+				<Card.Title>Recurring Reminder</Card.Title>
 				<Card.Description>
-					Register a passkey once, then sign in without password.
+					Schedules queue-backed recurring notifications for your user.
 				</Card.Description>
 			</Card.Header>
-			<Card.Content class="space-y-3 text-sm text-muted-foreground">
-				<p>Use Face ID, Touch ID, Windows Hello, or a hardware security key.</p>
-				{#if passkeyMessage}
-					<p class="text-primary">{passkeyMessage}</p>
+			<Card.Content class="space-y-3">
+				<div class="space-y-2">
+					<Label for="reminder-title">Title</Label>
+					<Input id="reminder-title" bind:value={reminderTitle} />
+				</div>
+				<div class="space-y-2">
+					<Label for="reminder-body">Body</Label>
+					<Input id="reminder-body" bind:value={reminderBody} />
+				</div>
+				<div class="grid gap-3 sm:grid-cols-2">
+					<div class="space-y-2">
+						<Label for="reminder-interval">Interval (seconds)</Label>
+						<Input
+							id="reminder-interval"
+							bind:value={reminderIntervalSeconds}
+						/>
+					</div>
+					<div class="space-y-2">
+						<Label for="reminder-runs">Runs</Label>
+						<Input id="reminder-runs" bind:value={reminderRunCount} />
+					</div>
+				</div>
+				{#if reminderMessage}
+					<p class="text-sm text-primary">{reminderMessage}</p>
 				{/if}
-				{#if passkeyError}
-					<p class="text-destructive">{passkeyError}</p>
+				{#if reminderError}
+					<p class="text-sm text-destructive">{reminderError}</p>
 				{/if}
 			</Card.Content>
 			<Card.Footer>
 				<Button
-					variant="outline"
-					onclick={() => void registerPasskey()}
-					disabled={passkeyPending}
+					onclick={() => void submitRecurringReminder()}
+					disabled={$scheduleReminderMutation.isPending}
 				>
-					{passkeyPending ? "Registering..." : "Register Passkey"}
+					{$scheduleReminderMutation.isPending ? "Scheduling..." : "Schedule Reminder"}
 				</Button>
 			</Card.Footer>
 		</Card.Root>
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>My Bookings</Card.Title>
+				<Card.Title>Mock Payment Notification</Card.Title>
 				<Card.Description>
-					Cancel bookings from dashboard. Cancellation policy, refund,
-					notification, and calendar detach are applied server-side.
+					Creates a payment success notification event for testing SaaS flows.
 				</Card.Description>
 			</Card.Header>
 			<Card.Content class="space-y-3">
-				{#if cancelMessage}
-					<p class="text-sm text-primary">{cancelMessage}</p>
+				<div class="grid gap-3 sm:grid-cols-2">
+					<div class="space-y-2">
+						<Label for="charge-amount">Amount (cents)</Label>
+						<Input id="charge-amount" bind:value={chargeAmountCents} />
+					</div>
+					<div class="space-y-2">
+						<Label for="charge-description">Description</Label>
+						<Input id="charge-description" bind:value={chargeDescription} />
+					</div>
+				</div>
+				{#if chargeMessage}
+					<p class="text-sm text-primary">{chargeMessage}</p>
 				{/if}
-				{#if cancelError}
-					<p class="text-sm text-destructive">{cancelError}</p>
-				{/if}
-
-				{#if $myBookingsQuery.isPending}
-					<p class="text-sm text-muted-foreground">Loading bookings...</p>
-				{:else if $myBookingsQuery.isError}
-					<p class="text-sm text-muted-foreground">
-						Bookings are unavailable for this account.
-					</p>
-				{:else if ($myBookingsQuery.data?.items.length ?? 0) === 0}
-					<p class="text-sm text-muted-foreground">No bookings found.</p>
-				{:else}
-					<ul class="space-y-3">
-						{#each $myBookingsQuery.data?.items ?? [] as myBooking (myBooking.id)}
-							<li
-								class="flex flex-col gap-3 rounded-md border p-3 md:flex-row md:items-center md:justify-between"
-							>
-								<div class="space-y-1 text-sm">
-									<p class="font-medium">
-										#{myBooking.id.slice(0, 8)} · {myBooking.status}
-									</p>
-									<p class="text-muted-foreground">
-										{formatBookingRange(
-											myBooking.startsAt,
-											myBooking.endsAt
-										)}
-									</p>
-									<p class="text-muted-foreground">
-										Total:
-										{formatMoney(
-											myBooking.totalPriceCents,
-											myBooking.currency
-										)}
-										· Refunded:
-										{formatMoney(
-											myBooking.refundAmountCents ?? 0,
-											myBooking.currency
-										)}
-									</p>
-								</div>
-								{#if myBooking.status === "cancelled"}
-									<Button variant="outline" disabled>Cancelled</Button>
-								{:else if cancelDraftBookingId === myBooking.id}
-									<div class="flex w-full max-w-sm flex-col gap-2">
-										<Input
-											value={cancelReasonDraft}
-											oninput={(event) => {
-												const target = event.target as HTMLInputElement;
-												cancelReasonDraft = target.value;
-											}}
-											placeholder="Cancellation reason"
-										/>
-										<div class="flex gap-2">
-											<Button
-												variant="destructive"
-												onclick={() => void confirmCancelManagedBooking(myBooking.id)}
-												disabled={cancelPendingBookingId === myBooking.id}
-											>
-												{cancelPendingBookingId === myBooking.id
-													? "Cancelling..."
-													: "Confirm cancel"}
-											</Button>
-											<Button
-												variant="outline"
-												onclick={cancelCancelBookingFlow}
-												disabled={cancelPendingBookingId === myBooking.id}
-											>
-												Dismiss
-											</Button>
-										</div>
-									</div>
-								{:else}
-									<Button
-										variant="outline"
-										onclick={() => startCancelBookingFlow(myBooking.id)}
-									>
-										Cancel booking
-									</Button>
-								{/if}
-							</li>
-						{/each}
-					</ul>
+				{#if chargeError}
+					<p class="text-sm text-destructive">{chargeError}</p>
 				{/if}
 			</Card.Content>
+			<Card.Footer class="flex gap-2">
+				<Button
+					onclick={() => void submitMockCharge()}
+					disabled={$mockChargeMutation.isPending}
+				>
+					{$mockChargeMutation.isPending ? "Submitting..." : "Create Mock Charge"}
+				</Button>
+				<Button href={resolve("/todos")} variant="outline">Open Todos</Button>
+				<Button href={resolve("/chat")} variant="outline">
+					Open Assistant
+				</Button>
+			</Card.Footer>
 		</Card.Root>
 	</div>
 {/if}

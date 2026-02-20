@@ -1,6 +1,5 @@
-import { organization } from "@full-stack-cf-app/db/schema/auth";
-import { boat } from "@full-stack-cf-app/db/schema/boat";
-import { bootstrapTestDatabase } from "@full-stack-cf-app/db/test";
+import { member, organization, user } from "@my-app/db/schema/auth";
+import { bootstrapTestDatabase } from "@my-app/db/test";
 import { describe, expect, it, vi } from "vitest";
 
 const testDbState = bootstrapTestDatabase({
@@ -12,10 +11,18 @@ const testDbState = bootstrapTestDatabase({
 				slug: "test-org",
 			})
 			.run();
+		db.insert(user)
+			.values({
+				id: "user-1",
+				name: "Test User",
+				email: "user-1@example.com",
+				emailVerified: true,
+			})
+			.run();
 	},
 });
 
-vi.doMock("@full-stack-cf-app/db", () => ({
+vi.doMock("@my-app/db", () => ({
 	db: testDbState.db,
 }));
 
@@ -25,47 +32,39 @@ const { insertAndReturn, requireManaged, requireOwned, buildUpdatePayload } =
 describe("db-helpers", () => {
 	describe("insertAndReturn", () => {
 		it("inserts and returns the created row", async () => {
-			const result = await insertAndReturn(boat, {
-				id: "boat-1",
+			const result = await insertAndReturn(member, {
+				id: "member-1",
 				organizationId: "org-1",
-				name: "Test Boat",
-				slug: "test-boat",
-				status: "active",
-				passengerCapacity: 10,
-				minimumHours: 1,
-				timezone: "UTC",
+				userId: "user-1",
+				role: "member",
 			});
 
-			expect(result.id).toBe("boat-1");
-			expect(result.name).toBe("Test Boat");
+			expect(result.id).toBe("member-1");
 			expect(result.organizationId).toBe("org-1");
+			expect(result.userId).toBe("user-1");
 		});
 	});
 
 	describe("requireManaged", () => {
 		it("returns the row when it belongs to the organization", async () => {
 			testDbState.db
-				.insert(boat)
+				.insert(member)
 				.values({
-					id: "boat-2",
+					id: "member-2",
 					organizationId: "org-1",
-					name: "Managed Boat",
-					slug: "managed-boat",
-					status: "active",
-					passengerCapacity: 8,
-					minimumHours: 2,
-					timezone: "UTC",
+					userId: "user-1",
+					role: "manager",
 				})
 				.run();
 
-			const result = await requireManaged(boat, "boat-2", "org-1");
-			expect(result.id).toBe("boat-2");
-			expect(result.name).toBe("Managed Boat");
+			const result = await requireManaged(member, "member-2", "org-1");
+			expect(result.id).toBe("member-2");
+			expect(result.role).toBe("manager");
 		});
 
 		it("throws NOT_FOUND when ID does not exist", async () => {
 			await expect(
-				requireManaged(boat, "nonexistent", "org-1")
+				requireManaged(member, "nonexistent", "org-1")
 			).rejects.toMatchObject({
 				code: "NOT_FOUND",
 			});
@@ -73,32 +72,19 @@ describe("db-helpers", () => {
 
 		it("throws NOT_FOUND when org does not match", async () => {
 			testDbState.db
-				.insert(boat)
+				.insert(member)
 				.values({
-					id: "boat-3",
+					id: "member-3",
 					organizationId: "org-1",
-					name: "Other Org Boat",
-					slug: "other-org-boat",
-					status: "active",
-					passengerCapacity: 6,
-					minimumHours: 1,
-					timezone: "UTC",
+					userId: "user-1",
+					role: "member",
 				})
 				.run();
 
 			await expect(
-				requireManaged(boat, "boat-3", "org-wrong")
+				requireManaged(member, "member-3", "org-wrong")
 			).rejects.toMatchObject({
 				code: "NOT_FOUND",
-			});
-		});
-
-		it("includes custom error message when provided", async () => {
-			await expect(
-				requireManaged(boat, "nope", "org-1", "Boat not found")
-			).rejects.toMatchObject({
-				code: "NOT_FOUND",
-				message: "Boat not found",
 			});
 		});
 	});
@@ -106,36 +92,32 @@ describe("db-helpers", () => {
 	describe("requireOwned", () => {
 		it("returns the row when both columns match", async () => {
 			testDbState.db
-				.insert(boat)
+				.insert(member)
 				.values({
-					id: "boat-4",
+					id: "member-4",
 					organizationId: "org-1",
-					name: "Owned Boat",
-					slug: "owned-boat",
-					status: "active",
-					passengerCapacity: 4,
-					minimumHours: 1,
-					timezone: "UTC",
+					userId: "user-1",
+					role: "member",
 				})
 				.run();
 
 			const result = await requireOwned(
-				boat,
-				boat.id,
-				"boat-4",
-				boat.organizationId,
+				member,
+				member.id,
+				"member-4",
+				member.organizationId,
 				"org-1"
 			);
-			expect(result.id).toBe("boat-4");
+			expect(result.id).toBe("member-4");
 		});
 
 		it("throws NOT_FOUND when no match", async () => {
 			await expect(
 				requireOwned(
-					boat,
-					boat.id,
+					member,
+					member.id,
 					"nope",
-					boat.organizationId,
+					member.organizationId,
 					"org-1",
 					"Not owned"
 				)
@@ -150,23 +132,21 @@ describe("db-helpers", () => {
 describe("buildUpdatePayload", () => {
 	it("strips undefined values and adds updatedAt", () => {
 		const payload = buildUpdatePayload({
-			name: "Updated",
+			role: "org_admin",
 			description: undefined,
-			status: "active",
 		});
 
-		expect(payload.name).toBe("Updated");
-		expect(payload.status).toBe("active");
+		expect(payload.role).toBe("org_admin");
 		expect(payload).not.toHaveProperty("description");
 		expect(payload.updatedAt).toBeInstanceOf(Date);
 	});
 
 	it("keeps null values", () => {
 		const payload = buildUpdatePayload({
-			name: null,
+			role: null,
 		});
 
-		expect(payload.name).toBeNull();
+		expect(payload.role).toBeNull();
 		expect(payload.updatedAt).toBeInstanceOf(Date);
 	});
 

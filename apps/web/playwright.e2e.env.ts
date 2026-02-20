@@ -6,7 +6,7 @@ const DEFAULTS = {
 	baseURL: "http://localhost:5173",
 	workersCi: 1,
 	workersLocal: 2,
-	webServerCommand: "npm run dev:vite",
+	webServerCommand: "bun run dev:vite",
 } as const;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

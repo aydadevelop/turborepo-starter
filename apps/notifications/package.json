@@ -11,17 +11,17 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
-    "@full-stack-cf-app/db": "*",
-    "@full-stack-cf-app/env": "*",
-    "@full-stack-cf-app/notifications": "*",
+    "@my-app/db": "*",
+    "@my-app/env": "*",
+    "@my-app/notifications": "*",
     "drizzle-orm": "1.0.0-beta.15-859cf75",
     "hono": "^4.8.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
     "@cloudflare/workers-types": "^4.20251213.0",
-    "@full-stack-cf-app/config": "*",
-    "@full-stack-cf-app/vitest-config": "*",
+    "@my-app/config": "*",
+    "@my-app/vitest-config": "*",
     "@types/node": "^22.13.14",
     "alchemy": "^0.82.1",
     "tsdown": "^0.16.5",

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Badge } from "@full-stack-cf-app/ui/components/badge";
-	import { Button } from "@full-stack-cf-app/ui/components/button";
-	import * as Card from "@full-stack-cf-app/ui/components/card";
-	import { Input } from "@full-stack-cf-app/ui/components/input";
-	import { Separator } from "@full-stack-cf-app/ui/components/separator";
+	import { Badge } from "@my-app/ui/components/badge";
+	import { Button } from "@my-app/ui/components/button";
+	import * as Card from "@my-app/ui/components/card";
+	import { Input } from "@my-app/ui/components/input";
+	import { Separator } from "@my-app/ui/components/separator";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { onMount } from "svelte";
 	import { derived } from "svelte/store";

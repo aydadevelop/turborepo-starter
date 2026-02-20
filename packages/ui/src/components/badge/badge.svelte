@@ -24,7 +24,7 @@
 </script>
 
 <script lang="ts">
-	import { cn, type WithElementRef } from "@full-stack-cf-app/ui/lib/utils";
+	import { cn, type WithElementRef } from "@my-app/ui/lib/utils";
 	import type { HTMLAnchorAttributes } from "svelte/elements";
 
 	let {

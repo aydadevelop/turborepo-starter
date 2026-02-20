@@ -1,5 +1,5 @@
 {
-  "name": "@full-stack-cf-app/auth",
+  "name": "@my-app/auth",
   "type": "module",
   "exports": {
     ".": {
@@ -21,8 +21,8 @@
   },
   "dependencies": {
     "@better-auth/passkey": "^1.4.18",
-    "@full-stack-cf-app/db": "*",
-    "@full-stack-cf-app/env": "*",
+    "@my-app/db": "*",
+    "@my-app/env": "*",
     "better-auth": "^1.4.18",
     "better-auth-telegram": "^0.3.2",
     "dotenv": "^17.2.2",
@@ -30,8 +30,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
-    "@full-stack-cf-app/config": "*",
-    "@full-stack-cf-app/vitest-config": "*",
+    "@my-app/config": "*",
+    "@my-app/vitest-config": "*",
     "@types/better-sqlite3": "^7.6.13",
     "better-sqlite3": "^11.10.0",
     "typescript": "^5",

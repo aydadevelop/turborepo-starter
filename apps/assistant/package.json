@@ -11,17 +11,17 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
-    "@full-stack-cf-app/assistant": "*",
-    "@full-stack-cf-app/auth": "*",
-    "@full-stack-cf-app/env": "*",
+    "@my-app/assistant": "*",
+    "@my-app/auth": "*",
+    "@my-app/env": "*",
     "@orpc/server": "^1.12.2",
     "hono": "^4.8.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
     "@cloudflare/workers-types": "^4.20251213.0",
-    "@full-stack-cf-app/config": "*",
-    "@full-stack-cf-app/vitest-config": "*",
+    "@my-app/config": "*",
+    "@my-app/vitest-config": "*",
     "@types/node": "^22.13.14",
     "alchemy": "^0.82.1",
     "tsdown": "^0.16.5",

@@ -1,5 +1,5 @@
 {
-  "name": "@full-stack-cf-app/proxy",
+  "name": "@my-app/proxy",
   "private": true,
   "type": "module",
   "exports": {
@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
-    "@full-stack-cf-app/config": "*",
+    "@my-app/config": "*",
     "@ngrok/ngrok": "^1.4.1",
     "@types/http-proxy": "^1.17.14",
     "http-proxy": "^1.18.1",

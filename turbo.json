@@ -1,7 +1,40 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
-  "globalPassThroughEnv": ["ALCHEMY_TUNNEL", "BASE_PATH"],
+  "globalEnv": ["CI"],
+  "globalPassThroughEnv": [
+    "ALCHEMY_TUNNEL",
+    "ALCHEMY_PASSWORD",
+    "ALCHEMY_STATE_TOKEN",
+    "ALCHEMY_E2E",
+    "BASE_PATH",
+    "STAGE",
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_API_KEY",
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CF_ACCOUNT_ID",
+    "CLOUDFLARE_EMAIL",
+    "CLOUDFLARE_PROFILE",
+    "CLOUDFLARE_WORKERS_SUBDOMAIN",
+    "CLOUDFLARE_BASE_URL",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "SERVER_URL",
+    "ASSISTANT_URL",
+    "CORS_ORIGIN",
+    "OPEN_ROUTER_API_KEY",
+    "AI_MODEL",
+    "POLAR_ACCESS_TOKEN",
+    "CLOUDPAYMENTS_PUBLIC_ID",
+    "PUBLIC_CLOUDPAYMENTS_PUBLIC_ID",
+    "CLOUDPAYMENTS_API_SECRET",
+    "TELEGRAM_BOT_TOKEN",
+    "TELEGRAM_BOT_USERNAME",
+    "TELEGRAM_BOT_API_BASE_URL",
+    "NGROK_AUTH_TOKEN",
+    "NGROK_AUTHTOKEN",
+    "NGROK_DOMAIN_NAME"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -32,74 +65,21 @@
       "persistent": true
     },
     "test:e2e": {
-      "dependsOn": ["transit"],
-      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
-      "outputs": ["test-results/**", "playwright-report/**"]
+      "cache": false,
+      "passThroughEnv": ["PLAYWRIGHT_*", "BASE_PATH"]
     },
     "test:e2e:ui": {
-      "dependsOn": ["transit"],
-      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
-      "cache": false
-    },
-    "test:perf": {
-      "dependsOn": ["transit"],
-      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
-      "cache": false
-    },
-    "test:perf:vitals": {
-      "dependsOn": ["transit"],
-      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
-      "cache": false
-    },
-    "test:perf:memory": {
-      "dependsOn": ["transit"],
-      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
-      "cache": false
-    },
-    "test:perf:lighthouse": {
-      "dependsOn": ["transit"],
-      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
-      "cache": false
-    },
-    "test:perf:scroll": {
-      "dependsOn": ["transit"],
-      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
-      "cache": false
-    },
-    "test:integration:calendar": {
-      "env": [
-        "RUN_NETWORK_TESTS",
-        "GOOGLE_CALENDAR_CREDENTIALS_PATH",
-        "GOOGLE_CALENDAR_TEST_FULL_ACCESS_ID",
-        "GOOGLE_CALENDAR_TEST_READ_ONLY_ID",
-        "GOOGLE_CALENDAR_TEST_NO_ACCESS_ID"
-      ],
-      "cache": false
-    },
-    "test:integration:calendar:webhook": {
-      "env": [
-        "RUN_NETWORK_TESTS",
-        "RUN_WEBHOOK_NETWORK_TESTS",
-        "GOOGLE_CALENDAR_CREDENTIALS_PATH",
-        "GOOGLE_CALENDAR_TEST_FULL_ACCESS_ID",
-        "GOOGLE_CALENDAR_TEST_READ_ONLY_ID",
-        "GOOGLE_CALENDAR_TEST_NO_ACCESS_ID",
-        "GOOGLE_CALENDAR_TEST_WEBHOOK_URL",
-        "GOOGLE_CALENDAR_WEBHOOK_TEST_TOKEN"
-      ],
-      "cache": false
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": ["PLAYWRIGHT_*", "BASE_PATH"]
     },
     "dev": {
       "env": [
         "ALCHEMY_SKIP_WEB",
-        "ALCHEMY_E2E",
         "STAGE",
         "SERVER_PORT",
         "NOTIFICATIONS_PORT",
         "ASSISTANT_PORT",
-        "PLAYWRIGHT_BASE_URL",
-        "PLAYWRIGHT_SERVER_URL",
-        "PLAYWRIGHT_ASSISTANT_URL",
         "OPEN_ROUTER_API_KEY",
         "PUBLIC_SERVER_URL",
         "PUBLIC_ASSISTANT_URL"
@@ -136,17 +116,6 @@
     },
     "destroy": {
       "cache": false
-    },
-    "test:frontend:dev": {
-      "dependsOn": ["transit"],
-      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
-      "cache": false
-    },
-    "test:frontend:dev:ui": {
-      "dependsOn": ["transit"],
-      "passThroughEnv": ["PLAYWRIGHT_*", "CI"],
-      "cache": false,
-      "persistent": true
     }
   }
 }

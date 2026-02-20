@@ -12,10 +12,10 @@
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server"
   },
   "dependencies": {
-    "@full-stack-cf-app/api": "*",
-    "@full-stack-cf-app/auth": "*",
-    "@full-stack-cf-app/db": "*",
-    "@full-stack-cf-app/env": "*",
+    "@my-app/api": "*",
+    "@my-app/auth": "*",
+    "@my-app/db": "*",
+    "@my-app/env": "*",
     "@orpc/openapi": "^1.12.2",
     "@orpc/server": "^1.12.2",
     "@orpc/zod": "^1.12.2",
@@ -27,8 +27,8 @@
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
     "@cloudflare/workers-types": "^4.20251213.0",
-    "@full-stack-cf-app/config": "*",
-    "@full-stack-cf-app/vitest-config": "*",
+    "@my-app/config": "*",
+    "@my-app/vitest-config": "*",
     "@types/node": "^22.13.14",
     "alchemy": "^0.82.1",
     "tsdown": "^0.16.5",

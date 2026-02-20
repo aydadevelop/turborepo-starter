@@ -1,19 +1,18 @@
 {
   "mcpServers": {
     "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"],
+      "command": "bunx",
+      "args": ["@upstash/context7-mcp"],
       "type": "stdio"
     },
     "cloudflare": {
-      "command": "npx",
+      "command": "bunx",
       "args": ["mcp-remote", "https://docs.mcp.cloudflare.com/sse"],
       "type": "stdio"
     },
     "better-auth": {
-      "command": "npx",
+      "command": "bunx",
       "args": [
-        "-y",
         "mcp-remote@latest",
         "https://mcp.chonkie.ai/better-auth/better-auth-builder/mcp"
       ],

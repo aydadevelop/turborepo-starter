@@ -6,8 +6,8 @@ import {
 	session,
 	user,
 	verification,
-} from "@full-stack-cf-app/db/schema/auth";
-import { createTestDatabase } from "@full-stack-cf-app/db/test";
+} from "@my-app/db/schema/auth";
+import { createTestDatabase } from "@my-app/db/test";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization as organizationPlugin } from "better-auth/plugins/organization";

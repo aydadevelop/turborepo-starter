@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@full-stack-cf-app/ui/lib/utils";
+	import { cn } from "@my-app/ui/lib/utils";
 	import githubDarkDefault from "@shikijs/themes/github-dark-default";
 	// Import Shiki themes
 	import githubLightDefault from "@shikijs/themes/github-light-default";

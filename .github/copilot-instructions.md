@@ -1,224 +1,77 @@
 ---
-applyTo: "**/*.{ts,tsx,js,jsx}"
+applyTo: "**/*.{ts,tsx,js,jsx,svelte,mjs,cjs}"
 ---
 
-# Ultracite Code Standards
+# Full-Stack CF App Instructions
 
-This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
+This monorepo is the baseline for a reusable Cloudflare starter:
 
-## Quick Reference
+- SvelteKit (Svelte 5) + shadcn-svelte
+- Hono on Workers
+- oRPC contract-first APIs
+- Drizzle + D1
+- Alchemy IaC
+- Turborepo
+- Vitest
+- Cloudflare Queues + DLQ
 
-- **Format code**: `npm exec -- ultracite fix`
-- **Check for issues**: `npm exec -- ultracite check`
-- **Diagnose setup**: `npm exec -- ultracite doctor`
+## Working Model
 
-Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
+- Keep task scripts in workspace `package.json` files.
+- Root scripts only delegate (`turbo run <task>`).
+- Register task behavior in `turbo.json`; do not hide task logic in root scripts.
+- Keep one package manager per branch/repo.
+  - This repo runs Bun.
+  - Do not reintroduce npm lockfiles or npm-only scripts.
 
----
+## Architecture Boundaries
 
-## Core Principles
+- `apps/web`: UI composition and client integration.
+- `apps/server`: Hono transport adapters and worker entrypoints.
+- `packages/api`: oRPC contracts, routers, and domain services.
+- `packages/db`: Drizzle schema, migrations, and DB scripts.
+- `packages/infra`: Alchemy Cloudflare resources and bindings.
+- `packages/ui`: shared shadcn-svelte components.
 
-Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity.
+## Svelte + shadcn-svelte
 
-### Type Safety & Explicitness
+- Use Svelte 5 runes (`$state`, `$derived`, `$props`).
+- Prefer modern DOM handlers (`onclick`) over legacy syntax.
+- Use shadcn-svelte import patterns consistently.
+- Keep shared design system pieces in `packages/ui`.
 
-- Use explicit types for function parameters and return values when they enhance clarity
-- Prefer `unknown` over `any` when the type is genuinely unknown
-- Use const assertions (`as const`) for immutable values and literal types
-- Leverage TypeScript's type narrowing instead of type assertions
-- Use meaningful variable names instead of magic numbers - extract constants with descriptive names
+## Hono + oRPC
 
-### Modern JavaScript/TypeScript
+- Keep endpoint transport thin in server files.
+- Put validation and business logic in package-level routers/services.
+- Use Zod schemas for request/response boundaries.
+- Favor contract-first usage from client and server; avoid ad-hoc fetch for core RPC flows.
 
-- Use arrow functions for callbacks and short functions
-- Prefer `for...of` loops over `.forEach()` and indexed `for` loops
-- Use optional chaining (`?.`) and nullish coalescing (`??`) for safer property access
-- Prefer template literals over string concatenation
-- Use destructuring for object and array assignments
-- Use `const` by default, `let` only when reassignment is needed, never `var`
+## Queues
 
-### Async & Promises
-
-- Always `await` promises in async functions - don't forget to use the return value
-- Use `async/await` syntax instead of promise chains for better readability
-- Handle errors appropriately in async code with try-catch blocks
-- Don't use async functions as Promise executors
-
-### React & JSX
-
-- Use function components over class components
-- Call hooks at the top level only, never conditionally
-- Specify all dependencies in hook dependency arrays correctly
-- Use the `key` prop for elements in iterables (prefer unique IDs over array indices)
-- Nest children between opening and closing tags instead of passing as props
-- Don't define components inside other components
-- Use semantic HTML and ARIA attributes for accessibility:
-  - Provide meaningful alt text for images
-  - Use proper heading hierarchy
-  - Add labels for form inputs
-  - Include keyboard event handlers alongside mouse events
-  - Use semantic elements (`<button>`, `<nav>`, etc.) instead of divs with roles
-
-### Error Handling & Debugging
-
-- Remove `console.log`, `debugger`, and `alert` statements from production code
-- Throw `Error` objects with descriptive messages, not strings or other values
-- Use `try-catch` blocks meaningfully - don't catch errors just to rethrow them
-- Prefer early returns over nested conditionals for error cases
-
-### Code Organization
-
-- Keep functions focused and under reasonable cognitive complexity limits
-- Extract complex conditions into well-named boolean variables
-- Use early returns to reduce nesting
-- Prefer simple conditionals over nested ternary operators
-- Group related code together and separate concerns
-
-### Security
-
-- Add `rel="noopener"` when using `target="_blank"` on links
-- Avoid `dangerouslySetInnerHTML` unless absolutely necessary
-- Don't use `eval()` or assign directly to `document.cookie`
-- Validate and sanitize user input
-
-### Performance
-
-- Avoid spread syntax in accumulators within loops
-- Use top-level regex literals instead of creating them in loops
-- Prefer specific imports over namespace imports
-- Avoid barrel files (index files that re-export everything)
-- Use proper image components (e.g., Next.js `<Image>`) over `<img>` tags
-
-### Framework-Specific Guidance
-
-**Solid/Svelte/Vue/Qwik:**
-
-- Use `class` and `for` attributes (not `className` or `htmlFor`)
-
----
+- Define queue message schemas in shared package contracts.
+- Validate message payloads with `safeParse` before processing.
+- Use explicit retry limits and DLQ strategy.
+- Acknowledge/ retry deterministically; do not leave ambiguous outcomes.
 
 ## Testing
 
-- Write assertions inside `it()` or `test()` blocks
-- Avoid done callbacks in async tests - use async/await instead
-- Don't use `.only` or `.skip` in committed code
-- Keep test suites reasonably flat - avoid excessive `describe` nesting
+- Use shared Vitest config from `packages/vitest-config`.
+- Co-locate unit tests with package code.
+- Keep e2e tests isolated in dedicated workspace package(s).
+- Do not merge code with `.only` or `.skip` test controls enabled.
 
-## When Biome Can't Help
+## Security and Reliability
 
-Biome's linter will catch most issues automatically. Focus your attention on:
+- Never commit secrets or local credential files.
+- Validate env inputs with typed schemas.
+- Prefer explicit error handling with structured logs over silent failures.
+- Keep infra as code in Alchemy; avoid manual dashboard-only changes.
 
-1. **Business logic correctness** - Biome can't validate your algorithms
-2. **Meaningful naming** - Use descriptive names for functions, variables, and types
-3. **Architecture decisions** - Component structure, data flow, and API design
-4. **Edge cases** - Handle boundary conditions and error states
-5. **User experience** - Accessibility, performance, and usability considerations
-6. **Documentation** - Add comments for complex logic, but prefer self-documenting code
+## Starter Branch Strategy
 
----
-
-Most formatting and common issues are automatically fixed by Biome. Run `npm exec -- ultracite fix` before committing to ensure compliance.
-
-
-# Ultracite Code Standards
-
-This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
-
-## Quick Reference
-
-- **Format code**: `npm exec -- ultracite fix`
-- **Check for issues**: `npm exec -- ultracite check`
-- **Diagnose setup**: `npm exec -- ultracite doctor`
-
-Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
-
----
-
-## Core Principles
-
-Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity.
-
-### Type Safety & Explicitness
-
-- Use explicit types for function parameters and return values when they enhance clarity
-- Prefer `unknown` over `any` when the type is genuinely unknown
-- Use const assertions (`as const`) for immutable values and literal types
-- Leverage TypeScript's type narrowing instead of type assertions
-- Use meaningful variable names instead of magic numbers - extract constants with descriptive names
-
-### Modern JavaScript/TypeScript
-
-- Use arrow functions for callbacks and short functions
-- Prefer `for...of` loops over `.forEach()` and indexed `for` loops
-- Use optional chaining (`?.`) and nullish coalescing (`??`) for safer property access
-- Prefer template literals over string concatenation
-- Use destructuring for object and array assignments
-- Use `const` by default, `let` only when reassignment is needed, never `var`
-
-### Async & Promises
-
-- Always `await` promises in async functions - don't forget to use the return value
-- Use `async/await` syntax instead of promise chains for better readability
-- Handle errors appropriately in async code with try-catch blocks
-- Don't use async functions as Promise executors
-
-
-### Error Handling & Debugging
-
-- Remove `console.log`, `debugger`, and `alert` statements from production code
-- Throw `Error` objects with descriptive messages, not strings or other values
-- Use `try-catch` blocks meaningfully - don't catch errors just to rethrow them
-- Prefer early returns over nested conditionals for error cases
-
-### Code Organization
-
-- Keep functions focused and under reasonable cognitive complexity limits
-- Extract complex conditions into well-named boolean variables
-- Use early returns to reduce nesting
-- Prefer simple conditionals over nested ternary operators
-- Group related code together and separate concerns
-
-### Security
-
-- Add `rel="noopener"` when using `target="_blank"` on links
-- Avoid `dangerouslySetInnerHTML` unless absolutely necessary
-- Don't use `eval()` or assign directly to `document.cookie`
-- Validate and sanitize user input
-
-### Performance
-
-- Avoid spread syntax in accumulators within loops
-- Use top-level regex literals instead of creating them in loops
-- Prefer specific imports over namespace imports
-- Avoid barrel files (index files that re-export everything)
-- Use proper image components (e.g., Next.js `<Image>`) over `<img>` tags
-
-### Framework-Specific Guidance
-
-
-**Solid/Svelte/Vue/Qwik:**
-- Use `class` and `for` attributes (not `className` or `htmlFor`)
-
----
-
-## Testing
-
-- Write assertions inside `it()` or `test()` blocks
-- Avoid done callbacks in async tests - use async/await instead
-- Don't use `.only` or `.skip` in committed code
-- Keep test suites reasonably flat - avoid excessive `describe` nesting
-
-## When Biome Can't Help
-
-Biome's linter will catch most issues automatically. Focus your attention on:
-
-1. **Business logic correctness** - Biome can't validate your algorithms
-2. **Meaningful naming** - Use descriptive names for functions, variables, and types
-3. **Architecture decisions** - Component structure, data flow, and API design
-4. **Edge cases** - Handle boundary conditions and error states
-5. **User experience** - Accessibility, performance, and usability considerations
-6. **Documentation** - Add comments for complex logic, but prefer self-documenting code
-
----
-
-Most formatting and common issues are automatically fixed by Biome. Run `npm exec -- ultracite fix` before committing to ensure compliance.
+- Yes: create a dedicated extraction branch before copying to a new repo.
+- Recommended branch name: `codex/starter-v1`.
+- Publish options:
+  - Preserve history by pushing the branch to a new remote.
+  - Use an orphan branch for a clean, single-commit starter history.

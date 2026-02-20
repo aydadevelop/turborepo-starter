@@ -1,12 +1,12 @@
-import { db } from "@full-stack-cf-app/db";
+import { db } from "@my-app/db";
 import {
 	type NotificationChannel,
 	notificationDelivery,
 	notificationEvent,
 	notificationInApp,
 	notificationIntent,
-} from "@full-stack-cf-app/db/schema/notification";
-import { env } from "@full-stack-cf-app/env/server";
+} from "@my-app/db/schema/notification";
+import { env } from "@my-app/env/server";
 import { eq } from "drizzle-orm";
 
 import {
@@ -19,7 +19,7 @@ const TELEGRAM_API_BASE_URL_DEFAULT = "https://api.telegram.org";
 
 const isLocalRuntime = () => {
 	try {
-		const hostname = new URL(env.BETTER_AUTH_URL).hostname.toLowerCase();
+		const hostname = new URL(env.SERVER_URL).hostname.toLowerCase();
 		return (
 			hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
 		);

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Button } from "@full-stack-cf-app/ui/components/button";
-	import { Input } from "@full-stack-cf-app/ui/components/input";
-	import { Label } from "@full-stack-cf-app/ui/components/label";
+	import { Button } from "@my-app/ui/components/button";
+	import { Input } from "@my-app/ui/components/input";
+	import { Label } from "@my-app/ui/components/label";
 	import { authClient } from "$lib/auth-client";
 	import PhoneInput from "./PhoneInput.svelte";
 

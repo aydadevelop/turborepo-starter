@@ -12,7 +12,7 @@ import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 import { relations } from "../relations";
 // biome-ignore lint/performance/noNamespaceImport: required by drizzle schema object
 import * as schema from "../schema";
-import { BOOKING_TRIGGERS_SQL } from "../triggers";
+import { POST_MIGRATION_TRIGGERS_SQL } from "../triggers";
 
 const migrationsFolder = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
@@ -41,7 +41,9 @@ export const createTestDatabase = (): {
 	const db = drizzle(":memory:", { schema, relations });
 	db.$client.pragma("journal_mode = WAL");
 	migrate(db, { migrationsFolder });
-	db.$client.exec(BOOKING_TRIGGERS_SQL);
+	if (POST_MIGRATION_TRIGGERS_SQL.trim().length > 0) {
+		db.$client.exec(POST_MIGRATION_TRIGGERS_SQL);
+	}
 
 	return {
 		db,

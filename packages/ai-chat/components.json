@@ -7,11 +7,11 @@
     "baseColor": "zinc"
   },
   "aliases": {
-    "components": "@full-stack-cf-app/ai-chat/components",
-    "utils": "@full-stack-cf-app/ui/lib/utils",
-    "hooks": "@full-stack-cf-app/ui/hooks",
-    "lib": "@full-stack-cf-app/ui/lib",
-    "ui": "@full-stack-cf-app/ui/components"
+    "components": "@my-app/ai-chat/components",
+    "utils": "@my-app/ui/lib/utils",
+    "hooks": "@my-app/ui/hooks",
+    "lib": "@my-app/ui/lib",
+    "ui": "@my-app/ui/components"
   },
   "typescript": true
 }

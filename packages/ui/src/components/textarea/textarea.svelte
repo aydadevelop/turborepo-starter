@@ -3,7 +3,7 @@
 		cn,
 		type WithElementRef,
 		type WithoutChildren,
-	} from "@full-stack-cf-app/ui/lib/utils";
+	} from "@my-app/ui/lib/utils";
 	import type { HTMLTextareaAttributes } from "svelte/elements";
 
 	let {

@@ -1,4 +1,4 @@
-import type { AppRouterClient } from "@full-stack-cf-app/api/routers/index";
+import type { AppRouterClient } from "@my-app/api/routers/index";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
@@ -7,12 +7,8 @@ import { env } from "$env/dynamic/public";
 
 const TRAILING_SLASHES = /\/+$/;
 const ABSOLUTE_URL = /^https?:\/\//;
-const DEFAULT_SERVER_URL = "http://localhost:43100";
 
-const serverUrl = (env.PUBLIC_SERVER_URL ?? DEFAULT_SERVER_URL).replace(
-	TRAILING_SLASHES,
-	""
-);
+const serverUrl = (env.PUBLIC_SERVER_URL ?? "").replace(TRAILING_SLASHES, "");
 
 function resolveUrl(path: string): string {
 	if (ABSOLUTE_URL.test(path)) {

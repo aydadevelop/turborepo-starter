@@ -1,5 +1,5 @@
 import { app } from "./app";
-import { processBookingLifecycleBatch } from "./queues/booking-lifecycle-consumer";
+import { processRecurringTaskBatch } from "./queues/recurring-task-consumer";
 
 interface Env {
 	NOTIFICATION_QUEUE?: {
@@ -11,7 +11,7 @@ interface Env {
 			}
 		): Promise<void>;
 	};
-	BOOKING_LIFECYCLE_QUEUE?: {
+	RECURRING_TASK_QUEUE?: {
 		send(
 			message: unknown,
 			options?: {
@@ -24,8 +24,11 @@ interface Env {
 
 const serverApp: ExportedHandler<Env> = {
 	fetch: app.fetch,
-	queue: async (batch) => {
-		await processBookingLifecycleBatch(batch);
+	queue: async (batch, env) => {
+		await processRecurringTaskBatch(batch, {
+			notificationQueue: env.NOTIFICATION_QUEUE,
+			recurringTaskQueue: env.RECURRING_TASK_QUEUE,
+		});
 	},
 };
 

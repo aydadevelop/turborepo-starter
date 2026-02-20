@@ -1,4 +1,4 @@
-import { assistantRouter } from "@full-stack-cf-app/assistant/router";
+import { assistantRouter } from "@my-app/assistant/router";
 import { call, implement } from "@orpc/server";
 import type { Page } from "@playwright/test";
 import type { UIMessage } from "ai";

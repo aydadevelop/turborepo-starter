@@ -1,11 +1,11 @@
-import { db } from "@full-stack-cf-app/db";
+import { db } from "@my-app/db";
 import {
 	notificationEvent,
 	notificationEventStatusValues,
 	notificationInApp,
 	notificationSeverityValues,
-} from "@full-stack-cf-app/db/schema/notification";
-import { subscribeNotificationEventPublished } from "@full-stack-cf-app/notifications/pusher";
+} from "@my-app/db/schema/notification";
+import { subscribeNotificationEventPublished } from "@my-app/notifications/pusher";
 import { eventIterator, ORPCError, withEventMeta } from "@orpc/server";
 import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import z from "zod";

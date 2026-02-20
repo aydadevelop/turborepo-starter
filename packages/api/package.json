@@ -1,5 +1,5 @@
 {
-  "name": "@full-stack-cf-app/api",
+  "name": "@my-app/api",
   "type": "module",
   "exports": {
     ".": {
@@ -17,6 +17,9 @@
     "./payments/webhooks/*": {
       "default": "./src/payments/webhooks/*.ts"
     },
+    "./tasks/*": {
+      "default": "./src/tasks/*.ts"
+    },
     "./routers": {
       "default": "./src/routers/index.ts"
     },
@@ -29,23 +32,21 @@
     "lint": "cd ../.. && biome check --config-path biome.json packages/api",
     "lint:fix": "cd ../.. && biome check --config-path biome.json packages/api --write",
     "test": "vitest run",
-    "test:watch": "vitest --watch",
-    "test:integration:calendar": "RUN_NETWORK_TESTS=1 vitest run src/__tests__/calendar-google.integration.test.ts",
-    "test:integration:calendar:webhook": "RUN_NETWORK_TESTS=1 RUN_WEBHOOK_NETWORK_TESTS=1 vitest run src/__tests__/calendar-google.integration.test.ts"
+    "test:watch": "vitest --watch"
   },
   "dependencies": {
-    "@full-stack-cf-app/auth": "*",
-    "@full-stack-cf-app/db": "*",
-    "@full-stack-cf-app/env": "*",
-    "@full-stack-cf-app/notifications": "*",
+    "@my-app/auth": "*",
+    "@my-app/db": "*",
+    "@my-app/env": "*",
+    "@my-app/notifications": "*",
     "@orpc/server": "^1.12.2",
     "drizzle-orm": "1.0.0-beta.15-859cf75",
     "zod": "^4.1.13"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
-    "@full-stack-cf-app/config": "*",
-    "@full-stack-cf-app/vitest-config": "*",
+    "@my-app/config": "*",
+    "@my-app/vitest-config": "*",
     "hono": "^4.8.2",
     "typescript": "^5",
     "ultracite": "^7.1.3",

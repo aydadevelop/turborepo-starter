@@ -12,7 +12,7 @@ const findLocalD1Database = (): string => {
 	if (!existsSync(d1Dir)) {
 		throw new Error(
 			`Local D1 database directory not found: ${d1Dir}\n` +
-				"Run 'npm run dev' first to create the local database."
+				"Run 'bun run dev' first to create the local database."
 		);
 	}
 
@@ -31,7 +31,7 @@ const findLocalD1Database = (): string => {
 	if (!latestDb) {
 		throw new Error(
 			"No local D1 database found.\n" +
-				"Run 'npm run dev' first to create the local database."
+				"Run 'bun run dev' first to create the local database."
 		);
 	}
 

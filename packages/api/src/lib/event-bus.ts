@@ -1,184 +1,113 @@
-import type {
-	EmitNotificationEventInput,
-	NotificationRecipientInput,
-} from "@full-stack-cf-app/notifications/contracts";
-import { notificationsPusher } from "@full-stack-cf-app/notifications/pusher";
+import {
+	type NotificationRecipient,
+	type NotificationRecipientInput,
+	notificationRecipientSchema,
+} from "@my-app/notifications/contracts";
+import { notificationsPusher } from "@my-app/notifications/pusher";
 
-import type { NotificationQueueProducer } from "../context";
-
-// ─── Domain event types ────────────────────────────────────────────────
-
-export interface BookingNotificationPayload {
-	bookingId: string;
-	boatName: string;
-	windowText: string;
+export interface NotificationQueueProducer {
+	send(
+		message: unknown,
+		options?: {
+			contentType?: "text" | "bytes" | "json" | "v8";
+			delaySeconds?: number;
+		}
+	): Promise<void>;
 }
 
-export interface BookingRefundPayload extends BookingNotificationPayload {
-	refundId: string;
-	refundAmountCents: number;
-	formattedAmount: string;
-}
-
-export interface SupportTicketNotificationPayload {
-	ticketId: string;
-	subject: string;
-	source?: string;
-	priority?: string;
-}
-
-export interface SupportTicketStatusPayload
-	extends SupportTicketNotificationPayload {
-	fromStatus: string;
-	toStatus: string;
-}
-
-export interface DomainEventMap {
-	"booking.created": BookingNotificationPayload;
-	"booking.cancelled": BookingNotificationPayload;
-	"booking.refund.processed": BookingRefundPayload;
-	"support.ticket.created": SupportTicketNotificationPayload;
-	"support.ticket.status_changed": SupportTicketStatusPayload;
-	"support.ticket.sla_escalated": SupportTicketNotificationPayload & {
-		previousStatus: string;
-		dueAt: string | null;
-	};
-}
-
-export type DomainEventType = keyof DomainEventMap;
-
-export interface DomainEvent<T extends DomainEventType = DomainEventType> {
-	type: T;
-	organizationId: string;
-	actorUserId?: string;
-	sourceType: string;
-	sourceId: string;
-	payload: DomainEventMap[T];
-	recipients: EventRecipient[];
-}
-
-export interface EventRecipient {
-	userId: string;
-	title: string;
-	body?: string;
-	ctaUrl?: string;
-	channels?: NotificationRecipientInput["channels"];
-	severity?: NotificationRecipientInput["severity"];
-	metadata?: Record<string, unknown>;
-}
-
-// ─── Helpers ───────────────────────────────────────────────────────────
-
-const uniqueRecipientUserIds = (
-	values: Array<string | null | undefined>
-): string[] =>
-	values.filter((value, index, array): value is string => {
-		return Boolean(value) && array.indexOf(value) === index;
-	});
-
-/**
- * Format a money amount in cents for notification display.
- */
-export const formatRefundAmount = (params: {
-	amountCents: number;
-	currency: string;
-}): string => {
-	try {
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency: params.currency,
-			currencyDisplay: "narrowSymbol",
-			maximumFractionDigits: 2,
-		}).format(params.amountCents / 100);
-	} catch {
-		return `${(params.amountCents / 100).toFixed(2)} ${params.currency}`;
+const uniqueUserIds = (values: Array<string | null | undefined>): string[] => {
+	const seen = new Set<string>();
+	const result: string[] = [];
+	for (const value of values) {
+		if (!value) {
+			continue;
+		}
+		if (seen.has(value)) {
+			continue;
+		}
+		seen.add(value);
+		result.push(value);
 	}
+	return result;
 };
 
-/**
- * Build a recipient list from a list of potentially-null user IDs,
- * applying the same title/body/ctaUrl to all.
- */
 export const buildRecipients = (params: {
 	userIds: Array<string | null | undefined>;
 	title: string;
 	body?: string;
 	ctaUrl?: string;
+	severity?: "info" | "success" | "warning" | "error";
 	channels?: NotificationRecipientInput["channels"];
-	severity?: NotificationRecipientInput["severity"];
 	metadata?: Record<string, unknown>;
-}): EventRecipient[] =>
-	uniqueRecipientUserIds(params.userIds).map((userId) => ({
-		userId,
-		title: params.title,
-		body: params.body,
-		ctaUrl: params.ctaUrl,
-		channels: params.channels ?? ["in_app"],
-		severity: params.severity,
-		metadata: params.metadata,
-	}));
+}): NotificationRecipient[] => {
+	return uniqueUserIds(params.userIds).map((userId) => {
+		return notificationRecipientSchema.parse({
+			userId,
+			title: params.title,
+			body: params.body,
+			ctaUrl: params.ctaUrl,
+			severity: params.severity,
+			channels: params.channels,
+			metadata: params.metadata,
+		});
+	});
+};
 
-// ─── EventBus ──────────────────────────────────────────────────────────
+export interface EventBusEvent {
+	type: string;
+	organizationId: string;
+	actorUserId?: string;
+	sourceType?: string;
+	sourceId?: string;
+	idempotencyKey?: string;
+	payload?: Record<string, unknown>;
+	recipients: NotificationRecipientInput[];
+}
 
 export class EventBus {
-	private events: DomainEvent[] = [];
+	#events: EventBusEvent[] = [];
 
-	emit<T extends DomainEventType>(event: DomainEvent<T>): void {
+	get size(): number {
+		return this.#events.length;
+	}
+
+	get pending(): ReadonlyArray<EventBusEvent> {
+		return this.#events;
+	}
+
+	emit(event: EventBusEvent): void {
 		if (event.recipients.length === 0) {
 			return;
 		}
-		this.events.push(event);
-	}
-
-	get pending(): readonly DomainEvent[] {
-		return this.events;
-	}
-
-	get size(): number {
-		return this.events.length;
+		this.#events.push(event);
 	}
 
 	async flush(queue?: NotificationQueueProducer): Promise<void> {
-		const eventsToFlush = [...this.events];
-		this.events = [];
+		const events = [...this.#events];
+		this.#events = [];
 
-		for (const event of eventsToFlush) {
-			const input: EmitNotificationEventInput = {
-				organizationId: event.organizationId,
-				actorUserId: event.actorUserId,
-				eventType: event.type,
-				sourceType: event.sourceType,
-				sourceId: event.sourceId,
-				idempotencyKey: buildIdempotencyKey(event),
-				payload: {
-					recipients: event.recipients.map((r) => ({
-						userId: r.userId,
-						title: r.title,
-						body: r.body,
-						ctaUrl: r.ctaUrl,
-						channels: r.channels ?? ["in_app"],
-						severity: r.severity,
-						metadata: r.metadata,
-					})),
-				},
-			};
-
+		for (const event of events) {
 			try {
-				await notificationsPusher({ input, queue });
+				await notificationsPusher({
+					input: {
+						organizationId: event.organizationId,
+						actorUserId: event.actorUserId,
+						eventType: event.type,
+						sourceType: event.sourceType,
+						sourceId: event.sourceId,
+						idempotencyKey:
+							event.idempotencyKey ??
+							`${event.type}:${event.sourceType ?? "event"}:${event.sourceId ?? crypto.randomUUID()}`,
+						payload: {
+							recipients: event.recipients,
+							metadata: event.payload,
+						},
+					},
+					queue,
+				});
 			} catch (error) {
-				console.error(`Failed to emit ${event.type} event`, error);
+				console.error("Failed to flush notification event", error);
 			}
 		}
 	}
 }
-
-const buildIdempotencyKey = (event: DomainEvent): string => {
-	const base = `${event.type}:${event.sourceId}`;
-	if (
-		event.type === "booking.refund.processed" &&
-		"refundId" in event.payload
-	) {
-		return `${base}:${(event.payload as BookingRefundPayload).refundId}`;
-	}
-	return base;
-};

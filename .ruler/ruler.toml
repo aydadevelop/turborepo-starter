@@ -13,11 +13,11 @@ merge_strategy = "merge"
 
 # --- MCP Server Definitions ---
 [mcp_servers.context7]
-command = "npx"
-args = ["-y", "@upstash/context7-mcp"]
+command = "bunx"
+args = ["@upstash/context7-mcp"]
 
 [mcp_servers.cloudflare]
-command = "npx"
+command = "bunx"
 args = ["mcp-remote", "https://docs.mcp.cloudflare.com/sse"]
 
 

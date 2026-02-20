@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@full-stack-cf-app/ui/lib/utils";
+	import { cn } from "@my-app/ui/lib/utils";
 	import { Select as SelectPrimitive } from "bits-ui";
 	import type { ComponentProps } from "svelte";
 

@@ -1,5 +1,5 @@
 {
-  "extends": "@full-stack-cf-app/config/tsconfig.base.json",
+  "extends": "@my-app/config/tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
     "strictNullChecks": true,

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-// Mock @full-stack-cf-app/db before any module that transitively imports it
+// Mock @my-app/db before any module that transitively imports it
 // (event-bus → notifications/pusher → db → env/server → cloudflare:workers)
-vi.doMock("@full-stack-cf-app/db", () => ({ db: {} }));
+vi.doMock("@my-app/db", () => ({ db: {} }));
 
 const mockPusher = vi.fn().mockResolvedValue(undefined);
-vi.doMock("@full-stack-cf-app/notifications/pusher", () => ({
+vi.doMock("@my-app/notifications/pusher", () => ({
 	notificationsPusher: mockPusher,
 }));
 
@@ -74,41 +74,40 @@ describe("EventBus", () => {
 		const bus = new EventBus();
 
 		bus.emit({
-			type: "support.ticket.created",
+			type: "task.created",
 			organizationId: "org-1",
-			sourceType: "support_ticket",
-			sourceId: "ticket-1",
-			payload: { ticketId: "ticket-1", subject: "Test" },
-			recipients: [{ userId: "user-1", title: "New ticket" }],
+			sourceType: "task",
+			sourceId: "task-1",
+			payload: { taskId: "task-1", title: "Test" },
+			recipients: [{ userId: "user-1", title: "New task" }],
 		});
 
 		bus.emit({
-			type: "booking.created",
+			type: "payment.charge.mocked",
 			organizationId: "org-1",
-			sourceType: "booking",
-			sourceId: "booking-1",
+			sourceType: "payment",
+			sourceId: "payment-1",
 			payload: {
-				bookingId: "booking-1",
-				boatName: "Test Boat",
-				windowText: "10:00-12:00",
+				paymentId: "payment-1",
+				amountCents: 1000,
 			},
-			recipients: [{ userId: "user-2", title: "New booking" }],
+			recipients: [{ userId: "user-2", title: "Payment processed" }],
 		});
 
 		expect(bus.size).toBe(2);
-		expect(bus.pending[0]?.type).toBe("support.ticket.created");
-		expect(bus.pending[1]?.type).toBe("booking.created");
+		expect(bus.pending[0]?.type).toBe("task.created");
+		expect(bus.pending[1]?.type).toBe("payment.charge.mocked");
 	});
 
 	it("skips events with no recipients", () => {
 		const bus = new EventBus();
 
 		bus.emit({
-			type: "support.ticket.created",
+			type: "task.created",
 			organizationId: "org-1",
-			sourceType: "support_ticket",
-			sourceId: "ticket-1",
-			payload: { ticketId: "ticket-1", subject: "Test" },
+			sourceType: "task",
+			sourceId: "task-1",
+			payload: { taskId: "task-1", title: "Test" },
 			recipients: [],
 		});
 
@@ -120,13 +119,13 @@ describe("EventBus", () => {
 		const bus = new EventBus();
 
 		bus.emit({
-			type: "support.ticket.created",
+			type: "notification.created",
 			organizationId: "org-1",
 			actorUserId: "actor-1",
-			sourceType: "support_ticket",
-			sourceId: "ticket-1",
-			payload: { ticketId: "ticket-1", subject: "Help" },
-			recipients: [{ userId: "user-1", title: "New ticket: Help" }],
+			sourceType: "notification",
+			sourceId: "notification-1",
+			payload: { notificationId: "notification-1", title: "Help" },
+			recipients: [{ userId: "user-1", title: "New notification: Help" }],
 		});
 
 		await bus.flush();
@@ -136,9 +135,9 @@ describe("EventBus", () => {
 		expect(mockPusher).toHaveBeenCalledWith(
 			expect.objectContaining({
 				input: expect.objectContaining({
-					eventType: "support.ticket.created",
+					eventType: "notification.created",
 					organizationId: "org-1",
-					sourceId: "ticket-1",
+					sourceId: "notification-1",
 				}),
 			})
 		);
@@ -154,14 +153,13 @@ describe("EventBus", () => {
 		const bus = new EventBus();
 
 		bus.emit({
-			type: "booking.cancelled",
+			type: "task.cancelled",
 			organizationId: "org-1",
-			sourceType: "booking",
-			sourceId: "b-1",
+			sourceType: "task",
+			sourceId: "task-1",
 			payload: {
-				bookingId: "b-1",
-				boatName: "Boat",
-				windowText: "10-12",
+				taskId: "task-1",
+				reason: "cancelled",
 			},
 			recipients: [{ userId: "u-1", title: "Cancelled" }],
 		});

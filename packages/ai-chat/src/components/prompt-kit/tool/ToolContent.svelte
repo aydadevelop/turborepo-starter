@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { CollapsibleContent } from "@full-stack-cf-app/ui/components/collapsible";
-	import { cn } from "@full-stack-cf-app/ui/lib/utils";
+	import { CollapsibleContent } from "@my-app/ui/components/collapsible";
+	import { cn } from "@my-app/ui/lib/utils";
 	import type { Snippet } from "svelte";
 
 	let {

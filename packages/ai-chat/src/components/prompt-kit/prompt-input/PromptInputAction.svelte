@@ -2,7 +2,7 @@
 	import {
 		TooltipContent,
 		TooltipTrigger,
-	} from "@full-stack-cf-app/ui/components/tooltip";
+	} from "@my-app/ui/components/tooltip";
 	import { Tooltip as TooltipPrimitive } from "bits-ui";
 	import { getPromptInputContext } from "./prompt-input-context.svelte.js";
 

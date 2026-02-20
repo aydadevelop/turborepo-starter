@@ -1,7 +1,7 @@
 import {
 	type OrganizationRoleName,
 	organizationRoles,
-} from "@full-stack-cf-app/auth/organization-access";
+} from "@my-app/auth/organization-access";
 
 export type OrganizationPermission = Parameters<
 	(typeof organizationRoles)[OrganizationRoleName]["authorize"]

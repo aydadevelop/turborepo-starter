@@ -1,4 +1,4 @@
-import type { AppRouterClient } from "@full-stack-cf-app/api/routers";
+import type { AppRouterClient } from "@my-app/api/routers";
 import { tool } from "ai";
 import z from "zod";
 

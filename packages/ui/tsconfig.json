@@ -1,5 +1,5 @@
 {
-  "extends": "@full-stack-cf-app/config/tsconfig.base.json",
+  "extends": "@my-app/config/tsconfig.base.json",
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
@@ -13,7 +13,7 @@
     "declarationMap": true,
     "baseUrl": ".",
     "paths": {
-      "@full-stack-cf-app/ui/*": ["./src/*"]
+      "@my-app/ui/*": ["./src/*"]
     },
     "types": ["node"]
   },

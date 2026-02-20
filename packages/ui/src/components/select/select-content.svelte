@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { WithoutChildrenOrChild } from "@full-stack-cf-app/ui/lib/utils";
-	import { cn, type WithoutChild } from "@full-stack-cf-app/ui/lib/utils";
+	import type { WithoutChildrenOrChild } from "@my-app/ui/lib/utils";
+	import { cn, type WithoutChild } from "@my-app/ui/lib/utils";
 	import { Select as SelectPrimitive } from "bits-ui";
 	import type { ComponentProps } from "svelte";
 	import SelectPortal from "./select-portal.svelte";

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Badge } from "@full-stack-cf-app/ui/components/badge";
-	import * as Card from "@full-stack-cf-app/ui/components/card";
-	import * as Table from "@full-stack-cf-app/ui/components/table";
-	import * as Tabs from "@full-stack-cf-app/ui/components/tabs";
+	import { Badge } from "@my-app/ui/components/badge";
+	import * as Card from "@my-app/ui/components/card";
+	import * as Table from "@my-app/ui/components/table";
+	import * as Tabs from "@my-app/ui/components/tabs";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { untrack } from "svelte";
 	import { writable } from "svelte/store";
@@ -43,18 +43,6 @@
 		invitationsOptsStore.set(invitationsOpts);
 	});
 	const invitationsQuery = createQuery(invitationsOptsStore);
-
-	const boatsOpts = $derived.by(() => {
-		const organizationId = page.params.id ?? "";
-		return orpc.admin.boats.list.queryOptions({
-			input: { organizationId, limit: 50 },
-		});
-	});
-	const boatsOptsStore = writable(untrack(() => boatsOpts));
-	$effect(() => {
-		boatsOptsStore.set(boatsOpts);
-	});
-	const boatsQuery = createQuery(boatsOptsStore);
 
 	const roleColor = (role: string) => {
 		switch (role) {
@@ -102,9 +90,6 @@
 				</Tabs.Trigger>
 				<Tabs.Trigger value="invitations">
 					Invitations ({$invitationsQuery.data?.total ?? "..."})
-				</Tabs.Trigger>
-				<Tabs.Trigger value="boats">
-					Boats ({$boatsQuery.data?.total ?? "..."})
 				</Tabs.Trigger>
 			</Tabs.List>
 
@@ -189,61 +174,6 @@
 											class="text-center text-muted-foreground"
 										>
 											No invitations.
-										</Table.Cell>
-									</Table.Row>
-								{/each}
-							</Table.Body>
-						</Table.Root>
-					</Card.Content>
-				</Card.Root>
-			</Tabs.Content>
-
-			<Tabs.Content value="boats">
-				<Card.Root>
-					<Card.Content class="p-0">
-						<Table.Root>
-							<Table.Header>
-								<Table.Row>
-									<Table.Head>Name</Table.Head>
-									<Table.Head>Status</Table.Head>
-									<Table.Head>Approved</Table.Head>
-									<Table.Head>Actions</Table.Head>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{#each $boatsQuery.data?.items ?? [] as b (b.id)}
-									<Table.Row>
-										<Table.Cell class="font-medium">{b.name}</Table.Cell>
-										<Table.Cell>
-											<Badge
-												variant={b.status === "active" ? "default" : "secondary"}
-											>
-												{b.status}
-											</Badge>
-										</Table.Cell>
-										<Table.Cell>
-											{#if b.approvedAt}
-												<Badge>Approved</Badge>
-											{:else}
-												<Badge variant="outline">Pending</Badge>
-											{/if}
-										</Table.Cell>
-										<Table.Cell>
-											<a
-												href={`${resolve("/admin/boats")}/${b.id}`}
-												class="text-sm text-primary hover:underline"
-											>
-												View
-											</a>
-										</Table.Cell>
-									</Table.Row>
-								{:else}
-									<Table.Row>
-										<Table.Cell
-											colspan={4}
-											class="text-center text-muted-foreground"
-										>
-											No boats.
 										</Table.Cell>
 									</Table.Row>
 								{/each}

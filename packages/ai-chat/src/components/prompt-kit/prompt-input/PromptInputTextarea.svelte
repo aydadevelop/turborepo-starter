@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Textarea } from "@full-stack-cf-app/ui/components/textarea";
-	import { cn } from "@full-stack-cf-app/ui/lib/utils";
+	import { Textarea } from "@my-app/ui/components/textarea";
+	import { cn } from "@my-app/ui/lib/utils";
 	import { watch } from "runed";
 	import type { HTMLTextareaAttributes } from "svelte/elements";
 	import { getPromptInputContext } from "./prompt-input-context.svelte.js";

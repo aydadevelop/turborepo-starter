@@ -8,13 +8,10 @@ import {
 	publicProcedure,
 } from "../index";
 import { adminRouter } from "./admin/router";
-import { boatRouter } from "./boat/router";
-import { bookingRouter } from "./booking";
 import { consentRouter } from "./consent";
-import { helpdeskRouter } from "./helpdesk";
-import { intakeRouter } from "./intake";
 import { notificationsRouter } from "./notifications";
-import { telegramRouter } from "./telegram";
+import { paymentsRouter } from "./payments";
+import { tasksRouter } from "./tasks";
 import { todoRouter } from "./todo";
 
 export const appRouter = {
@@ -73,14 +70,11 @@ export const appRouter = {
 				role: context.activeMembership.role,
 			};
 		}),
-	boat: boatRouter,
-	booking: bookingRouter,
 	admin: adminRouter,
 	consent: consentRouter,
-	helpdesk: helpdeskRouter,
-	intake: intakeRouter,
 	notifications: notificationsRouter,
-	telegram: telegramRouter,
+	payments: paymentsRouter,
+	tasks: tasksRouter,
 	todo: todoRouter,
 };
 export type AppRouter = typeof appRouter;

@@ -1,4 +1,4 @@
-import { env } from "@full-stack-cf-app/env/server";
+import { env } from "@my-app/env/server";
 import { cors } from "hono/cors";
 
 const parseCorsOrigins = (value: string | undefined) =>

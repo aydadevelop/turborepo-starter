@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Button } from "@full-stack-cf-app/ui/components/button";
-	import * as Card from "@full-stack-cf-app/ui/components/card";
-	import { Input } from "@full-stack-cf-app/ui/components/input";
-	import { Label } from "@full-stack-cf-app/ui/components/label";
+	import { Button } from "@my-app/ui/components/button";
+	import * as Card from "@my-app/ui/components/card";
+	import { Input } from "@my-app/ui/components/input";
+	import { Label } from "@my-app/ui/components/label";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";

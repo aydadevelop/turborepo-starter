@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Badge } from "@full-stack-cf-app/ui/components/badge";
-	import { Button } from "@full-stack-cf-app/ui/components/button";
-	import * as Card from "@full-stack-cf-app/ui/components/card";
-	import { Input } from "@full-stack-cf-app/ui/components/input";
-	import * as Table from "@full-stack-cf-app/ui/components/table";
+	import { Badge } from "@my-app/ui/components/badge";
+	import { Button } from "@my-app/ui/components/button";
+	import * as Card from "@my-app/ui/components/card";
+	import { Input } from "@my-app/ui/components/input";
+	import * as Table from "@my-app/ui/components/table";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { derived, writable } from "svelte/store";
 	import { resolve } from "$app/paths";

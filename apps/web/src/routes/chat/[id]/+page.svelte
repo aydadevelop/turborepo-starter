@@ -1,4 +1,6 @@
 <script lang="ts">
+	import ArrowUp from "@lucide/svelte/icons/arrow-up";
+	import Square from "@lucide/svelte/icons/square";
 	import {
 		Chat,
 		ChatContainerContent,
@@ -12,11 +14,9 @@
 		PromptInputActions,
 		PromptInputTextarea,
 		ToolComposed,
-	} from "@full-stack-cf-app/ai-chat";
-	import { createORPCChatTransport } from "@full-stack-cf-app/assistant/transport";
-	import { Button } from "@full-stack-cf-app/ui/components/button";
-	import ArrowUp from "@lucide/svelte/icons/arrow-up";
-	import Square from "@lucide/svelte/icons/square";
+	} from "@my-app/ai-chat";
+	import { createORPCChatTransport } from "@my-app/assistant/transport";
+	import { Button } from "@my-app/ui/components/button";
 	import { createQuery } from "@tanstack/svelte-query";
 	import type { UIMessage } from "ai";
 	import { isToolUIPart } from "ai";
@@ -143,7 +143,7 @@
 				isLoading={chat.status === "streaming"}
 			>
 				<PromptInputTextarea
-					placeholder="Ask about boats, availability, or pricing..."
+					placeholder="Ask about profile, todos, recurring reminders, or payments..."
 				/>
 				<PromptInputActions>
 					<PromptInputAction>

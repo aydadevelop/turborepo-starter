@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Badge } from "@full-stack-cf-app/ui/components/badge";
+	import { Badge } from "@my-app/ui/components/badge";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { derived } from "svelte/store";
 	import { resolve } from "$app/paths";
@@ -14,8 +14,6 @@
 	// giving the {#each} block a new array reference on every session tick.
 	const STATIC_LINKS = [
 		{ to: resolve("/"), label: "Home" },
-		{ to: resolve("/boats"), label: "Boats" },
-		{ to: resolve("/bookings"), label: "Bookings" },
 		{ to: resolve("/chat"), label: "Chat" },
 		{ to: resolve("/dashboard"), label: "Dashboard" },
 	] as const;

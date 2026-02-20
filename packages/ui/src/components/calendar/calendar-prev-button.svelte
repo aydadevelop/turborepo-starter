@@ -1,10 +1,10 @@
 <script lang="ts">
+	import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
 	import {
 		type ButtonVariant,
 		buttonVariants,
-	} from "@full-stack-cf-app/ui/components/button";
-	import { cn } from "@full-stack-cf-app/ui/lib/utils";
-	import ChevronLeftIcon from "@lucide/svelte/icons/chevron-left";
+	} from "@my-app/ui/components/button";
+	import { cn } from "@my-app/ui/lib/utils";
 	import { Calendar as CalendarPrimitive } from "bits-ui";
 
 	let {

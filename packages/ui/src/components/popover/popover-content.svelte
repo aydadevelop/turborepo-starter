@@ -1,8 +1,5 @@
 <script lang="ts">
-	import {
-		cn,
-		type WithoutChildrenOrChild,
-	} from "@full-stack-cf-app/ui/lib/utils";
+	import { cn, type WithoutChildrenOrChild } from "@my-app/ui/lib/utils";
 	import { Popover as PopoverPrimitive } from "bits-ui";
 	import type { ComponentProps } from "svelte";
 	import PopoverPortal from "./popover-portal.svelte";

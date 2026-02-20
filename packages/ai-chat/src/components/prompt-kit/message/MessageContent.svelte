@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@full-stack-cf-app/ui/lib/utils";
+	import { cn } from "@my-app/ui/lib/utils";
 	import type { Snippet } from "svelte";
 	import type { HTMLAttributes } from "svelte/elements";
 	import Markdown from "../markdown/Markdown.svelte";

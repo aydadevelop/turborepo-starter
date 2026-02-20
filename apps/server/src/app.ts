@@ -1,21 +1,15 @@
-import { configureCalendarAdaptersFromEnv } from "@full-stack-cf-app/api/calendar/adapters/configure";
-import { configurePaymentWebhookAdaptersFromEnv } from "@full-stack-cf-app/api/payments/webhooks";
-import { env } from "@full-stack-cf-app/env/server";
+import { configurePaymentWebhookAdaptersFromEnv } from "@my-app/api/payments/webhooks";
+import { env } from "@my-app/env/server";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 
 import { corsMiddleware } from "./middleware/cors";
 import { authRoutes } from "./routes/auth";
-import { calendarInternalRoutes } from "./routes/calendar-internal";
-import { calendarWebhookRoutes } from "./routes/calendar-webhook";
+
 import { healthRoutes } from "./routes/health";
 import { paymentWebhookRoutes } from "./routes/payment-webhook";
 import { rpcMiddleware } from "./rpc/handlers";
-
-configureCalendarAdaptersFromEnv({
-	GOOGLE_CALENDAR_CREDENTIALS_JSON: env.GOOGLE_CALENDAR_CREDENTIALS_JSON,
-});
 
 configurePaymentWebhookAdaptersFromEnv({
 	CLOUDPAYMENTS_PUBLIC_ID: env.CLOUDPAYMENTS_PUBLIC_ID,
@@ -28,8 +22,6 @@ app.use(logger());
 app.use("/*", corsMiddleware);
 
 app.route("/", authRoutes);
-app.route("/", calendarWebhookRoutes);
-app.route("/", calendarInternalRoutes);
 app.route("/", paymentWebhookRoutes);
 app.use("/*", rpcMiddleware);
 app.route("/", healthRoutes);

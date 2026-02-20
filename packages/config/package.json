@@ -1,5 +1,5 @@
 {
-  "name": "@full-stack-cf-app/config",
+  "name": "@my-app/config",
   "version": "0.0.0",
   "private": true,
   "devDependencies": {

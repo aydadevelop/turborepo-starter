@@ -1,8 +1,8 @@
-import type { AppRouterClient } from "@full-stack-cf-app/api/routers";
-import type { AssistantContext } from "@full-stack-cf-app/assistant/context";
-import { assistantRouter } from "@full-stack-cf-app/assistant/router";
-import { auth } from "@full-stack-cf-app/auth";
-import { env } from "@full-stack-cf-app/env/assistant";
+import type { AppRouterClient } from "@my-app/api/routers";
+import type { AssistantContext } from "@my-app/assistant/context";
+import { assistantRouter } from "@my-app/assistant/router";
+import { auth } from "@my-app/auth";
+import { env } from "@my-app/env/assistant";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { onError } from "@orpc/server";
@@ -22,7 +22,7 @@ const createServerClient = (
 	fetchFn: typeof fetch
 ): AppRouterClient => {
 	const link = new RPCLink({
-		url: `${env.BETTER_AUTH_URL}/rpc`,
+		url: `${env.SERVER_URL}/rpc`,
 		fetch(request, init) {
 			const forwarded = new Request(request, init);
 			if (cookie) {

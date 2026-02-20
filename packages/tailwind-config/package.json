@@ -1,5 +1,5 @@
 {
-  "name": "@full-stack-cf-app/tailwind-config",
+  "name": "@my-app/tailwind-config",
   "version": "0.0.1",
   "private": true,
   "type": "module",

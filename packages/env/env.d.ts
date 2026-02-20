@@ -1,4 +1,4 @@
-import type { assistant, server } from "@full-stack-cf-app/infra/alchemy.run";
+import type { assistant, server } from "@my-app/infra/alchemy.run";
 
 // This file infers types for the cloudflare:workers environment from your Alchemy Worker.
 // @see https://alchemy.run/concepts/bindings/#type-safe-bindings

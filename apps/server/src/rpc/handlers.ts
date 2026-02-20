@@ -1,5 +1,5 @@
-import { createContext } from "@full-stack-cf-app/api/context";
-import { appRouter } from "@full-stack-cf-app/api/routers/index";
+import { createContext } from "@my-app/api/context";
+import { appRouter } from "@my-app/api/routers/index";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { ORPCError, onError } from "@orpc/server";
@@ -33,7 +33,7 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
 				sources: [
 					{
 						url: "/api-reference/spec.json",
-						title: "Boat Booking API",
+						title: "Starter SaaS API",
 					},
 					{
 						url: "/api/auth/open-api/generate-schema",
@@ -46,10 +46,10 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
 </html>`,
 			specGenerateOptions: ({ request }) => ({
 				info: {
-					title: "Boat Booking API",
+					title: "Starter SaaS API",
 					version: "1.0.0",
 					description:
-						"API for managing boat rentals, bookings, pricing, and customer support.",
+						"Starter API for auth, organizations, tasks, notifications, payments, and todo flows.",
 				},
 				servers: [{ url: request.url.origin }],
 				tags: [
@@ -58,90 +58,25 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
 						description: "Health checks and access control",
 					},
 					{
-						name: "Boats",
-						description: "Boat CRUD — create, list, update, archive",
-					},
-					{
-						name: "Docks",
-						description: "Dock management for boats",
-					},
-					{
-						name: "Amenities",
-						description: "Boat amenity listings and replacement",
-					},
-					{
-						name: "Assets",
-						description: "Media and file assets attached to boats",
-					},
-					{
-						name: "Calendar",
-						description: "Calendar connection sync and management",
-					},
-					{
-						name: "Availability",
-						description: "Weekly availability rules and date-specific blocks",
-					},
-					{
-						name: "Pricing",
-						description: "Pricing profiles and conditional pricing rules",
-					},
-					{
-						name: "Min Duration",
-						description: "Minimum booking duration rules per time slot",
-					},
-					{
-						name: "Booking",
-						description:
-							"Booking CRUD — list, get, create, and cancel managed bookings",
-					},
-					{
-						name: "Storefront",
-						description:
-							"Public storefront — availability search, quotes, checkout, and booking creation",
-					},
-					{
-						name: "Affiliate",
-						description: "Affiliate booking attribution and payout management",
-					},
-					{
-						name: "Cancellation",
-						description: "Cancellation request submission, listing, and review",
-					},
-					{
-						name: "Dispute",
-						description: "Booking dispute creation, listing, and resolution",
-					},
-					{
-						name: "Refund",
-						description: "Refund request submission, review, and processing",
-					},
-					{
-						name: "Shift",
-						description: "Booking shift (reschedule) requests and review",
-					},
-					{
-						name: "Payment",
-						description: "Payment attempts and processing",
-					},
-					{
-						name: "Discount",
-						description: "Discount code management",
-					},
-					{
-						name: "Helpdesk",
-						description: "Support tickets and messages",
-					},
-					{
-						name: "Intake",
-						description: "Inbound message ingestion and processing",
+						name: "Admin / Organizations",
+						description: "Platform admin organization and user management",
 					},
 					{
 						name: "Notifications",
-						description: "In-app notifications and real-time streams",
+						description: "In-app notification listing, marking, and streaming",
 					},
 					{
-						name: "Telegram",
-						description: "Telegram notifications and webhook events",
+						name: "Payments",
+						description: "Payment provider status and mock charge events",
+					},
+					{
+						name: "Tasks",
+						description:
+							"Recurring task scheduling with queue-backed reminders",
+					},
+					{
+						name: "Consent",
+						description: "User consent status and acceptance",
 					},
 					{
 						name: "Todo",
@@ -154,43 +89,12 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
 						tags: ["System"],
 					},
 					{
-						name: "Boat Management",
-						tags: [
-							"Boats",
-							"Docks",
-							"Amenities",
-							"Assets",
-							"Calendar",
-							"Availability",
-							"Pricing",
-							"Min Duration",
-						],
+						name: "Administration",
+						tags: ["Admin / Organizations"],
 					},
 					{
-						name: "Bookings & Payments",
-						tags: [
-							"Booking",
-							"Storefront",
-							"Affiliate",
-							"Cancellation",
-							"Dispute",
-							"Refund",
-							"Shift",
-							"Payment",
-							"Discount",
-						],
-					},
-					{
-						name: "Support",
-						tags: ["Helpdesk", "Intake"],
-					},
-					{
-						name: "Communication",
-						tags: ["Notifications", "Telegram"],
-					},
-					{
-						name: "Misc",
-						tags: ["Todo"],
+						name: "SaaS Core",
+						tags: ["Payments", "Tasks", "Notifications", "Consent", "Todo"],
 					},
 				],
 			}),

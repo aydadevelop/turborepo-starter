@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { Button } from "@full-stack-cf-app/ui/components/button";
-	import { CollapsibleTrigger } from "@full-stack-cf-app/ui/components/collapsible";
-	import { cn } from "@full-stack-cf-app/ui/lib/utils";
 	import CheckCircle2 from "@lucide/svelte/icons/check-circle-2";
 	import ChevronDown from "@lucide/svelte/icons/chevron-down";
 	import Loader2 from "@lucide/svelte/icons/loader-2";
 	import Settings from "@lucide/svelte/icons/settings";
 	import XCircle from "@lucide/svelte/icons/x-circle";
+	import { Button } from "@my-app/ui/components/button";
+	import { CollapsibleTrigger } from "@my-app/ui/components/collapsible";
+	import { cn } from "@my-app/ui/lib/utils";
 	import type { Component } from "svelte";
 	import ToolBadge from "./ToolBadge.svelte";
 	import type { ToolPart } from "./types.js";

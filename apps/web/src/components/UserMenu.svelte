@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button } from "@full-stack-cf-app/ui/components/button";
+	import { Button } from "@my-app/ui/components/button";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";

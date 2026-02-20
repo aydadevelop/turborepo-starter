@@ -6,6 +6,6 @@ export default defineConfig({
 	outDir: "./dist",
 	clean: true,
 	minify: true,
-	noExternal: [/@full-stack-cf-app\/.*/],
+	noExternal: [/@my-app\/.*/],
 	external: ["cloudflare:workers"],
 });

@@ -34,52 +34,56 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.22
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Build
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npx turbo run build --affected
+            bunx turbo run build --affected
           else
-            npm run build
+            bun run build
           fi
 
       - name: Lint
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npx turbo run lint --affected
+            bunx turbo run lint --affected
           else
-            npm run lint
+            bun run lint
           fi
 
       - name: Type check
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npx turbo run check-types --affected
+            bunx turbo run check-types --affected
           else
-            npm run check-types
+            bun run check-types
           fi
 
       - name: Test
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npx turbo run test --affected
+            bunx turbo run test --affected
           else
-            npm run test
+            bun run test
           fi
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: bunx playwright install --with-deps chromium
 
       - name: E2E test
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npx turbo run test:e2e --affected
+            bunx turbo run test:e2e --affected
           else
-            npm run test:e2e
+            bun run test:e2e
           fi
         env:
           PUBLIC_SERVER_URL: http://localhost:3000
@@ -111,13 +115,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.22
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Build packages
-        run: npm run build
+        run: bun run build
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ vars.TURBO_TEAM }}
@@ -129,7 +137,7 @@ jobs:
           echo "Deploying stage: $STAGE"
 
           # Run deploy and capture output
-          npm run deploy -- --stage $STAGE 2>&1 | tee deploy.log
+          bun run deploy -- --stage $STAGE 2>&1 | tee deploy.log
 
           # Extract URLs from deploy output
           WEB_URL=$(grep -oP 'Web\s+->\s+\K(https?://[^\s]+)' deploy.log || echo "")
@@ -201,16 +209,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.22
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Destroy preview environment
         run: |
           STAGE=pr-${{ github.event.number }}
           echo "Destroying stage: $STAGE"
-          npm run destroy -- --stage $STAGE
+          bun run destroy -- --stage $STAGE
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           ALCHEMY_PASSWORD: ${{ secrets.ALCHEMY_PASSWORD }}

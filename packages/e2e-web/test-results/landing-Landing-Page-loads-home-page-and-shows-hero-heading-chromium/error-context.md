@@ -1,0 +1,75 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - link "CF Cloudflare App" [ref=e6] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e7]: CF
+          - generic [ref=e8]: Cloudflare App
+        - navigation [ref=e9]:
+          - link "Home" [ref=e10] [cursor=pointer]:
+            - /url: /
+          - link "Boats" [ref=e11] [cursor=pointer]:
+            - /url: /boats
+          - link "Bookings" [ref=e12] [cursor=pointer]:
+            - /url: /bookings
+          - link "Chat" [ref=e13] [cursor=pointer]:
+            - /url: /chat
+          - link "Dashboard" [ref=e14] [cursor=pointer]:
+            - /url: /dashboard
+        - button "Sign In" [ref=e18]
+    - main [ref=e19]:
+      - generic [ref=e21]:
+        - generic [ref=e22]:
+          - heading "Full Stack Cloudflare App" [level=1] [ref=e23]
+          - paragraph [ref=e24]: A minimal monorepo starter with Better Auth, oRPC, Drizzle, and shadcn-svelte.
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - generic [ref=e28]: Authentication
+              - paragraph [ref=e29]: Secure login with Better Auth
+            - paragraph [ref=e31]: Email/password auth with session management, protected routes, and Polar integration for payments.
+            - link "Sign In" [ref=e33] [cursor=pointer]:
+              - /url: /login
+          - generic [ref=e34]:
+            - generic [ref=e35]:
+              - generic [ref=e36]: Boat Pages
+              - paragraph [ref=e37]: Public page generation
+            - paragraph [ref=e39]: Generate shareable boat pages from real-time availability, pricing, and slot data.
+            - link "Browse Boats" [ref=e41] [cursor=pointer]:
+              - /url: /boats
+          - generic [ref=e42]:
+            - generic [ref=e43]:
+              - generic [ref=e44]: Dashboard
+              - paragraph [ref=e45]: Protected user area
+            - paragraph [ref=e47]: Access the dashboard to see your session data and subscription status.
+            - link "Go to Dashboard" [ref=e49] [cursor=pointer]:
+              - /url: /dashboard
+          - generic [ref=e50]:
+            - generic [ref=e51]:
+              - generic [ref=e52]: Todos (oRPC)
+              - paragraph [ref=e53]: Database + API example
+            - paragraph [ref=e55]: Full CRUD operations using oRPC, TanStack Query, and Drizzle with D1 database.
+            - link "Manage Todos" [ref=e57] [cursor=pointer]:
+              - /url: /todos
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - generic [ref=e60]: UI Components
+              - paragraph [ref=e61]: shadcn-svelte in monorepo
+            - paragraph [ref=e63]:
+              - text: Shared UI components from
+              - code [ref=e64]: "@full-stack-cf-app/ui"
+              - text: package.
+            - generic [ref=e66]:
+              - button "Default" [ref=e67]
+              - button "Outline" [ref=e68]
+              - button "Ghost" [ref=e69]
+        - paragraph [ref=e71]: Built with SvelteKit, Hono, Cloudflare Workers, and D1.
+  - generic [ref=e72]:
+    - img [ref=e74]
+    - button "Open Tanstack query devtools" [ref=e122] [cursor=pointer]:
+      - img [ref=e123]
+```

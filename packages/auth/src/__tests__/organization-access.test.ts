@@ -27,33 +27,33 @@ describe("organization access roles", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("allows manager to update boats", () => {
+	it("allows manager to update tasks", () => {
 		const result = organizationRoles.manager.authorize({
-			boat: ["update"],
+			task: ["update"],
 		});
 
 		expect(result.success).toBe(true);
 	});
 
-	it("does not allow customer to create boats", () => {
+	it("does not allow customer to create payments", () => {
 		const result = organizationRoles.customer.authorize({
-			boat: ["create"],
+			payment: ["create"],
 		});
 
 		expect(result.success).toBe(false);
 	});
 
-	it("allows agent to create bookings", () => {
+	it("allows agent to create support tickets", () => {
 		const result = organizationRoles.agent.authorize({
-			booking: ["create"],
+			support: ["create"],
 		});
 
 		expect(result.success).toBe(true);
 	});
 
-	it("does not allow member to delete bookings", () => {
-		const result = organizationRoles.member.authorize({
-			booking: ["delete"],
+	it("does not allow customer to create notifications", () => {
+		const result = organizationRoles.customer.authorize({
+			notification: ["create"],
 		});
 
 		expect(result.success).toBe(false);

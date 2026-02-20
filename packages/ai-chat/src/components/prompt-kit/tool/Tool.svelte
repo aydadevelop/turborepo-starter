@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Collapsible } from "@full-stack-cf-app/ui/components/collapsible";
-	import { cn } from "@full-stack-cf-app/ui/lib/utils";
+	import { Collapsible } from "@my-app/ui/components/collapsible";
+	import { cn } from "@my-app/ui/lib/utils";
 	import type { Snippet } from "svelte";
 	import type { ToolPart } from "./types.js";
 

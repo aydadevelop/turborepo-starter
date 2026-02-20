@@ -1,8 +1,5 @@
-import { db } from "@full-stack-cf-app/db";
-import {
-	assistantChat,
-	assistantMessage,
-} from "@full-stack-cf-app/db/schema/assistant";
+import { db } from "@my-app/db";
+import { assistantChat, assistantMessage } from "@my-app/db/schema/assistant";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { ORPCError, os, streamToEventIterator, type } from "@orpc/server";
 import {

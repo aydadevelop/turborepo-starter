@@ -3,20 +3,24 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const APP_NAME = "full-stack-cf-app";
+const APP_NAME = "my-app";
 const DB_PREFIX = `${APP_NAME}-database`;
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(scriptDir, "..");
+const serverWorkspaceDir = resolve(repoRoot, "apps/server");
 
 const usage = `
 Remote D1 helper
 
 Usage:
-  npm run db:backup:remote -- --stage <stage> [--out <path>]
-  npm run db:copy:remote -- --from-stage <source> --to-stage <target> --yes [--out <path>]
+  bun run db:backup:remote -- --stage <stage> [--out <path>]
+  bun run db:copy:remote -- --from-stage <source> --to-stage <target> --yes [--out <path>]
 
 Examples:
-  npm run db:backup:remote -- --stage prod
-  npm run db:copy:remote -- --from-stage prod --to-stage test --yes
+  bun run db:backup:remote -- --stage prod
+  bun run db:copy:remote -- --from-stage prod --to-stage test --yes
 
 Notes:
   - Database names are resolved as ${DB_PREFIX}-<stage>.
@@ -51,14 +55,11 @@ function ensureParentDir(pathname) {
 }
 
 function runWrangler(args) {
-	const result = spawnSync(
-		"npm",
-		["exec", "--workspace", "server", "--", "wrangler", ...args],
-		{
-			stdio: "inherit",
-			env: process.env,
-		}
-	);
+	const result = spawnSync("bunx", ["wrangler", ...args], {
+		stdio: "inherit",
+		env: process.env,
+		cwd: serverWorkspaceDir,
+	});
 
 	if (result.error) {
 		throw result.error;

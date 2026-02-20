@@ -3,6 +3,7 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
+	import { hasAuthenticatedSession } from "$lib/auth-session";
 
 	const { children } = $props();
 	const sessionQuery = authClient.useSession();
@@ -10,7 +11,7 @@
 	$effect(() => {
 		if ($sessionQuery.isPending) return;
 		const user = $sessionQuery.data?.user;
-		if (!user) {
+		if (!hasAuthenticatedSession($sessionQuery.data)) {
 			goto(
 				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
 			);
@@ -25,9 +26,6 @@
 		{ href: resolve("/admin"), label: "Overview" },
 		{ href: resolve("/admin/organizations"), label: "Organizations" },
 		{ href: resolve("/admin/users"), label: "Users" },
-		{ href: resolve("/admin/boats"), label: "Boats" },
-		{ href: resolve("/admin/bookings"), label: "Bookings" },
-		{ href: resolve("/admin/support"), label: "Support" },
 	]);
 
 	const isActive = (href: string) => {

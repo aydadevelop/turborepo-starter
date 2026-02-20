@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Button } from "@full-stack-cf-app/ui/components/button";
 	import MessageSquarePlus from "@lucide/svelte/icons/message-square-plus";
+	import { Button } from "@my-app/ui/components/button";
 	import type { CreateMutationResult } from "@tanstack/svelte-query";
 	import { getContext } from "svelte";
 
@@ -11,7 +11,7 @@
 </script>
 
 <div class="flex h-full flex-col items-center justify-center gap-4 p-8">
-	<h1 class="text-2xl font-bold">Boat Booking Assistant</h1>
+	<h1 class="text-2xl font-bold">Workspace Assistant</h1>
 	<p class="text-muted-foreground">
 		Select a chat from the sidebar or start a new one.
 	</p>

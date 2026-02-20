@@ -1,4 +1,4 @@
-import { db } from "@full-stack-cf-app/db";
+import { db } from "@my-app/db";
 import { ORPCError } from "@orpc/server";
 import {
 	and,
@@ -59,7 +59,7 @@ export const requireManaged = async <T extends TableWithIdAndOrg>(
 
 /**
  * Require a row matching two arbitrary columns. Throws NOT_FOUND if missing.
- * Useful for ownership checks like (calendarConnectionId, boatId).
+ * Useful for ownership checks on compound keys.
  */
 export const requireOwned = async <T extends SQLiteTable>(
 	table: T,

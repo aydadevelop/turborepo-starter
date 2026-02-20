@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Badge } from "@full-stack-cf-app/ui/components/badge";
-	import { Button } from "@full-stack-cf-app/ui/components/button";
-	import * as Card from "@full-stack-cf-app/ui/components/card";
-	import * as Dialog from "@full-stack-cf-app/ui/components/dialog";
-	import * as Table from "@full-stack-cf-app/ui/components/table";
+	import { Badge } from "@my-app/ui/components/badge";
+	import { Button } from "@my-app/ui/components/button";
+	import * as Card from "@my-app/ui/components/card";
+	import * as Dialog from "@my-app/ui/components/dialog";
+	import * as Table from "@my-app/ui/components/table";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { authClient } from "$lib/auth-client";
 	import { queryClient } from "$lib/orpc";
@@ -43,12 +43,12 @@
 		{
 			value: "manager",
 			label: "Manager",
-			description: "Manage boats, bookings, support",
+			description: "Manage tasks, payments, support",
 		},
 		{
 			value: "agent",
-			label: "Agent / Captain",
-			description: "Handle bookings and support for assigned boats",
+			label: "Agent",
+			description: "Handle support tickets and intake requests",
 		},
 		{ value: "member", label: "Member", description: "Read-only access" },
 	];

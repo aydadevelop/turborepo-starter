@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button } from "@full-stack-cf-app/ui/components/button";
+	import { Button } from "@my-app/ui/components/button";
 	import {
 		Card,
 		CardContent,
@@ -7,7 +7,7 @@
 		CardFooter,
 		CardHeader,
 		CardTitle,
-	} from "@full-stack-cf-app/ui/components/card";
+	} from "@my-app/ui/components/card";
 	import { resolve } from "$app/paths";
 </script>
 
@@ -17,11 +17,10 @@
 	<div class="mx-auto max-w-5xl px-6 py-16">
 		<div class="text-center">
 			<h1 class="text-4xl font-bold tracking-tight text-balance">
-				Full Stack Cloudflare App
+				Cloudflare SaaS Starter
 			</h1>
 			<p class="mt-4 text-lg text-muted-foreground text-balance">
-				A minimal monorepo starter with Better Auth, oRPC, Drizzle, and
-				shadcn-svelte.
+				SvelteKit + Hono + Better Auth + oRPC + Drizzle + Alchemy.
 			</p>
 		</div>
 
@@ -29,46 +28,30 @@
 			<Card class="transition-shadow hover:shadow-md">
 				<CardHeader>
 					<CardTitle>Authentication</CardTitle>
-					<CardDescription>Secure login with Better Auth</CardDescription>
+					<CardDescription>
+						Login, orgs, and admin impersonation
+					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<p class="text-sm text-muted-foreground">
-						Email/password auth with session management, protected routes, and
-						Polar integration for payments.
+						Includes email/password, passkeys, organization memberships, and
+						admin impersonation flows.
 					</p>
 				</CardContent>
 				<CardFooter>
-					<Button href={resolve("/login")} variant="default">Sign In</Button>
-				</CardFooter>
-			</Card>
-
-			<Card class="transition-shadow hover:shadow-md">
-				<CardHeader>
-					<CardTitle>Boat Pages</CardTitle>
-					<CardDescription>Public page generation</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<p class="text-sm text-muted-foreground">
-						Generate shareable boat pages from real-time availability, pricing,
-						and slot data.
-					</p>
-				</CardContent>
-				<CardFooter>
-					<Button href={resolve("/boats")} variant="outline">
-						Browse Boats
-					</Button>
+					<Button href={resolve("/login")}>Sign In</Button>
 				</CardFooter>
 			</Card>
 
 			<Card class="transition-shadow hover:shadow-md">
 				<CardHeader>
 					<CardTitle>Dashboard</CardTitle>
-					<CardDescription>Protected user area</CardDescription>
+					<CardDescription>Profile and SaaS starter actions</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<p class="text-sm text-muted-foreground">
-						Access the dashboard to see your session data and subscription
-						status.
+						Trigger mock payment notifications, schedule recurring reminders,
+						and validate protected API wiring.
 					</p>
 				</CardContent>
 				<CardFooter>
@@ -80,13 +63,30 @@
 
 			<Card class="transition-shadow hover:shadow-md">
 				<CardHeader>
-					<CardTitle>Todos (oRPC)</CardTitle>
-					<CardDescription>Database + API example</CardDescription>
+					<CardTitle>Assistant</CardTitle>
+					<CardDescription>Tool-enabled AI workspace</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<p class="text-sm text-muted-foreground">
-						Full CRUD operations using oRPC, TanStack Query, and Drizzle with D1
-						database.
+						Chat UI connected to tool calls for identity, todo actions, and
+						queue-backed recurring reminders.
+					</p>
+				</CardContent>
+				<CardFooter>
+					<Button href={resolve("/chat")} variant="outline">
+						Open Assistant
+					</Button>
+				</CardFooter>
+			</Card>
+
+			<Card class="transition-shadow hover:shadow-md">
+				<CardHeader>
+					<CardTitle>Todo Demo</CardTitle>
+					<CardDescription>Minimal oRPC + DB example</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<p class="text-sm text-muted-foreground">
+						Reference CRUD flow with TanStack Query and shared API contracts.
 					</p>
 				</CardContent>
 				<CardFooter>
@@ -95,33 +95,6 @@
 					</Button>
 				</CardFooter>
 			</Card>
-
-			<Card class="transition-shadow hover:shadow-md">
-				<CardHeader>
-					<CardTitle>UI Components</CardTitle>
-					<CardDescription>shadcn-svelte in monorepo</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<p class="text-sm text-muted-foreground">
-						Shared UI components from
-						<code class="rounded bg-muted px-1">@full-stack-cf-app/ui</code>
-						package.
-					</p>
-				</CardContent>
-				<CardFooter>
-					<div class="flex gap-2">
-						<Button size="sm">Default</Button>
-						<Button size="sm" variant="outline">Outline</Button>
-						<Button size="sm" variant="ghost">Ghost</Button>
-					</div>
-				</CardFooter>
-			</Card>
-		</div>
-
-		<div class="mt-12 text-center">
-			<p class="text-sm text-muted-foreground">
-				Built with SvelteKit, Hono, Cloudflare Workers, and D1.
-			</p>
 		</div>
 	</div>
 </div>

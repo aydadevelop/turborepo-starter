@@ -169,8 +169,8 @@
                 "patterns": [
                   {
                     "group": [
-                      "@full-stack-cf-app/api",
-                      "@full-stack-cf-app/api/**"
+                      "@my-app/api",
+                      "@my-app/api/**"
                     ],
                     "message": "Use queue contracts and package boundaries; notifications app must not import API internals."
                   }

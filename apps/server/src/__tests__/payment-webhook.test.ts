@@ -1,10 +1,10 @@
-import type { PaymentWebhookAdapter } from "@full-stack-cf-app/api/payments/webhooks";
+import type { PaymentWebhookAdapter } from "@my-app/api/payments/webhooks";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const registerMock = vi.fn();
 const getAdapterMock = vi.fn();
 
-vi.mock("@full-stack-cf-app/api/payments/webhooks", () => {
+vi.mock("@my-app/api/payments/webhooks", () => {
 	class WebhookAuthError extends Error {
 		constructor(msg: string) {
 			super(msg);
@@ -87,9 +87,7 @@ describe("paymentWebhookRoutes", () => {
 	});
 
 	it("returns 401 on authentication failure", async () => {
-		const { WebhookAuthError } = await import(
-			"@full-stack-cf-app/api/payments/webhooks"
-		);
+		const { WebhookAuthError } = await import("@my-app/api/payments/webhooks");
 		mockAdapter = createMockAdapter({
 			authenticateWebhook: vi.fn(() => {
 				throw new WebhookAuthError("Invalid credentials");
@@ -110,7 +108,7 @@ describe("paymentWebhookRoutes", () => {
 
 	it("returns 400 on payload parse failure", async () => {
 		const { WebhookPayloadError } = await import(
-			"@full-stack-cf-app/api/payments/webhooks"
+			"@my-app/api/payments/webhooks"
 		);
 		mockAdapter = createMockAdapter({
 			parseWebhookBody: vi

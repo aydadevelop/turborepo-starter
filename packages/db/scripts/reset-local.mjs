@@ -27,7 +27,7 @@ if (existsSync(localD1Dir)) {
 // next `alchemy dev` re-applies migrations to the fresh Miniflare database.
 const alchemyAppStateRoot = path.resolve(
 	repoRoot,
-	"packages/infra/.alchemy/full-stack-cf-app"
+	"packages/infra/.alchemy/my-app"
 );
 
 if (existsSync(alchemyAppStateRoot)) {

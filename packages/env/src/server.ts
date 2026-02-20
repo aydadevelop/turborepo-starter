@@ -4,19 +4,17 @@ import { env as cfEnv } from "cloudflare:workers";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
+import {
+	baseCloudflareServerSchema,
+	pickBaseCloudflareRuntimeEnv,
+} from "./common";
+
 // Extract string env vars for validation (excludes DB binding)
 const stringEnvVars = {
-	CORS_ORIGIN: cfEnv.CORS_ORIGIN,
-	BETTER_AUTH_SECRET: cfEnv.BETTER_AUTH_SECRET,
-	BETTER_AUTH_URL: cfEnv.BETTER_AUTH_URL,
+	...pickBaseCloudflareRuntimeEnv(cfEnv),
 	TELEGRAM_BOT_TOKEN: cfEnv.TELEGRAM_BOT_TOKEN,
 	TELEGRAM_BOT_USERNAME: cfEnv.TELEGRAM_BOT_USERNAME,
 	TELEGRAM_BOT_API_BASE_URL: cfEnv.TELEGRAM_BOT_API_BASE_URL,
-	GOOGLE_CALENDAR_CREDENTIALS_JSON: cfEnv.GOOGLE_CALENDAR_CREDENTIALS_JSON,
-	GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN:
-		cfEnv.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN,
-	CALENDAR_SYNC_TASK_TOKEN: cfEnv.CALENDAR_SYNC_TASK_TOKEN,
-	GOOGLE_CALENDAR_WEBHOOK_URL: cfEnv.GOOGLE_CALENDAR_WEBHOOK_URL,
 	CLOUDPAYMENTS_PUBLIC_ID: cfEnv.CLOUDPAYMENTS_PUBLIC_ID,
 	CLOUDPAYMENTS_API_SECRET: cfEnv.CLOUDPAYMENTS_API_SECRET,
 };
@@ -25,12 +23,7 @@ const stringEnvVars = {
 export const env = {
 	...createEnv({
 		server: {
-			// Required
-			CORS_ORIGIN: z.string().min(1, "CORS_ORIGIN is required"),
-			BETTER_AUTH_SECRET: z
-				.string()
-				.min(16, "BETTER_AUTH_SECRET must be at least 16 characters"),
-			BETTER_AUTH_URL: z.url("BETTER_AUTH_URL must be a valid URL"),
+			...baseCloudflareServerSchema,
 			// Optional - empty string means disabled
 			POLAR_ACCESS_TOKEN: z.string().default(""),
 			POLAR_SUCCESS_URL: z.string().default(""),
@@ -38,10 +31,6 @@ export const env = {
 			TELEGRAM_BOT_TOKEN: z.string().default(""),
 			TELEGRAM_BOT_USERNAME: z.string().default(""),
 			TELEGRAM_BOT_API_BASE_URL: z.string().default(""),
-			GOOGLE_CALENDAR_CREDENTIALS_JSON: z.string().default(""),
-			GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN: z.string().default(""),
-			CALENDAR_SYNC_TASK_TOKEN: z.string().default(""),
-			GOOGLE_CALENDAR_WEBHOOK_URL: z.string().default(""),
 			CLOUDPAYMENTS_PUBLIC_ID: z.string().default(""),
 			CLOUDPAYMENTS_API_SECRET: z.string().default(""),
 		},

@@ -1,7 +1,7 @@
 import { passkey } from "@better-auth/passkey";
-import { db } from "@full-stack-cf-app/db";
-import * as schema from "@full-stack-cf-app/db/schema/auth";
-import { env } from "@full-stack-cf-app/env/server";
+import { db } from "@my-app/db";
+import * as schema from "@my-app/db/schema/auth";
+import { env } from "@my-app/env/server";
 import type { BetterAuthPlugin } from "better-auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -26,16 +26,16 @@ const WORKERS_DEV_RE = /\.([^.]+\.workers\.dev)$/;
 
 const initAuth = () => {
 	const corsOrigins = parseCorsOrigins(env.CORS_ORIGIN);
-	const authBaseUrl = env.BETTER_AUTH_URL.replace(TRAILING_SLASH_RE, "");
-	const authUrl = new URL(authBaseUrl);
+	const serverBaseUrl = env.SERVER_URL.replace(TRAILING_SLASH_RE, "");
+	const serverUrl = new URL(serverBaseUrl);
 
 	// For *.workers.dev deployments, use the workers subdomain (e.g. "smartcache.workers.dev")
 	// so passkey and cookies work across server/web/assistant subdomains.
-	const workersDevMatch = authUrl.hostname.match(WORKERS_DEV_RE);
+	const workersDevMatch = serverUrl.hostname.match(WORKERS_DEV_RE);
 	const passkeyRpId =
-		authUrl.hostname === "localhost"
+		serverUrl.hostname === "localhost"
 			? "localhost"
-			: (workersDevMatch?.[1] ?? authUrl.hostname);
+			: (workersDevMatch?.[1] ?? serverUrl.hostname);
 
 	const plugins: BetterAuthPlugin[] = [
 		admin(),
@@ -104,13 +104,14 @@ const initAuth = () => {
 		//   },
 		// },
 		secret: env.BETTER_AUTH_SECRET,
-		baseURL: env.BETTER_AUTH_URL,
+		baseURL: env.SERVER_URL,
 		advanced: {
-			defaultCookieAttributes: {
-				sameSite: "none",
-				secure: true,
-				httpOnly: true,
-			},
+			// On localhost (HTTP), SameSite=None+Secure cookies are rejected by Playwright/Chromium.
+			// Use Lax for local dev and None+Secure only for deployed environments.
+			defaultCookieAttributes:
+				serverUrl.hostname === "localhost"
+					? { sameSite: "lax" as const, httpOnly: true }
+					: { sameSite: "none" as const, secure: true, httpOnly: true },
 			...(workersDevMatch
 				? {
 						crossSubDomainCookies: {

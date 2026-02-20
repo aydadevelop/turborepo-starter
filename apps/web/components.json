@@ -8,10 +8,10 @@
   },
   "aliases": {
     "components": "$lib/components",
-    "utils": "@full-stack-cf-app/ui/lib/utils",
+    "utils": "@my-app/ui/lib/utils",
     "hooks": "$lib/hooks",
     "lib": "$lib",
-    "ui": "@full-stack-cf-app/ui/components"
+    "ui": "@my-app/ui/components"
   },
   "typescript": true
 }

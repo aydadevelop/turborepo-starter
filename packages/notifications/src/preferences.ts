@@ -1,8 +1,8 @@
-import { db } from "@full-stack-cf-app/db";
+import { db } from "@my-app/db";
 import {
 	type NotificationChannel,
 	notificationPreference,
-} from "@full-stack-cf-app/db/schema/notification";
+} from "@my-app/db/schema/notification";
 import { and, asc, eq, inArray } from "drizzle-orm";
 
 const DEFAULT_CHANNEL_ENABLEMENT: Record<NotificationChannel, boolean> = {

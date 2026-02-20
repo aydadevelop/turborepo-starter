@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Button } from "@full-stack-cf-app/ui/components/button";
 	import MessageSquarePlus from "@lucide/svelte/icons/message-square-plus";
 	import Trash2 from "@lucide/svelte/icons/trash-2";
+	import { Button } from "@my-app/ui/components/button";
 	import {
 		createMutation,
 		createQuery,

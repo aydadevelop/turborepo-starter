@@ -1,4 +1,4 @@
-import { auth } from "@full-stack-cf-app/auth";
+import { auth } from "@my-app/auth";
 import { Hono } from "hono";
 
 export const authRoutes = new Hono();

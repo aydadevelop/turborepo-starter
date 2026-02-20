@@ -1,5 +1,5 @@
-import { db } from "@full-stack-cf-app/db";
-import { todo } from "@full-stack-cf-app/db/schema/todo";
+import { db } from "@my-app/db";
+import { todo } from "@my-app/db/schema/todo";
 import { eq } from "drizzle-orm";
 import z from "zod";
 

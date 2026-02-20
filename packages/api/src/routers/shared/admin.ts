@@ -1,5 +1,5 @@
-import { db } from "@full-stack-cf-app/db";
-import { user } from "@full-stack-cf-app/db/schema/auth";
+import { db } from "@my-app/db";
+import { user } from "@my-app/db/schema/auth";
 import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
 

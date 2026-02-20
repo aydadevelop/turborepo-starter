@@ -11,8 +11,24 @@ export const o = os.$context<Context>();
 
 export const publicProcedure = o;
 
+const hasAuthenticatedSessionUser = (context: Context): boolean => {
+	const user = context.session?.user as
+		| {
+				id?: string | null;
+				isAnonymous?: boolean | null;
+				is_anonymous?: boolean | null;
+		  }
+		| undefined;
+
+	if (!user?.id) {
+		return false;
+	}
+
+	return !(user.isAnonymous ?? user.is_anonymous ?? false);
+};
+
 const requireAuth = o.middleware(({ context, next }) => {
-	if (!context.session?.user) {
+	if (!hasAuthenticatedSessionUser(context)) {
 		throw new ORPCError("UNAUTHORIZED");
 	}
 	return next();

@@ -1,5 +1,5 @@
-import { db } from "@full-stack-cf-app/db";
-import { notificationEvent } from "@full-stack-cf-app/db/schema/notification";
+import { db } from "@my-app/db";
+import { notificationEvent } from "@my-app/db/schema/notification";
 import { and, eq } from "drizzle-orm";
 
 import {

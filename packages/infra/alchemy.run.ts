@@ -1,4 +1,7 @@
-import { startTunnel } from "@full-stack-cf-app/proxy";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { startTunnel } from "@my-app/proxy";
 import alchemy from "alchemy";
 import {
 	createCloudflareApi,
@@ -9,6 +12,100 @@ import {
 } from "alchemy/cloudflare";
 import { CloudflareStateStore } from "alchemy/state";
 import { config } from "dotenv";
+
+const appName = "my-app";
+const infraDir = path.dirname(fileURLToPath(import.meta.url));
+const LOCAL_DEV_AUTH_SECRET = "local-dev-secret";
+const LOCAL_DEV_OPEN_ROUTER_API_KEY = "local-dev-open-router-key";
+const E2E_AUTH_SECRET = "e2e-local-auth-secret";
+const E2E_OPEN_ROUTER_API_KEY = "e2e-local-open-router-key";
+type CloudflareApi = Awaited<ReturnType<typeof createCloudflareApi>>;
+
+const readNonEmptyEnv = (name: string): string | undefined => {
+	const value = process.env[name]?.trim();
+	return value ? value : undefined;
+};
+
+const loadEnvFile = (relativePath: string): void => {
+	const absolutePath = path.resolve(infraDir, relativePath);
+	if (!existsSync(absolutePath)) {
+		return;
+	}
+	config({ path: absolutePath, override: false });
+};
+
+const parseCloudflareResult = async <T>(
+	response: Response,
+	operation: string
+): Promise<T> => {
+	const payload = (await response.json().catch(() => undefined)) as
+		| {
+				success?: boolean;
+				errors?: Array<{ message?: string }>;
+				result?: T;
+		  }
+		| undefined;
+	const messages =
+		payload?.errors
+			?.map((error) => error.message?.trim())
+			.filter((message): message is string => Boolean(message)) ?? [];
+	const detail =
+		messages.length > 0
+			? messages.join("; ")
+			: response.statusText || "Unknown Cloudflare API error";
+
+	if (
+		!response.ok ||
+		payload?.success !== true ||
+		payload.result === undefined
+	) {
+		throw new Error(
+			`[infra] Failed to ${operation} (${response.status}): ${detail}`
+		);
+	}
+
+	return payload.result;
+};
+
+const disableWorkerPreviewUrls = async (
+	api: CloudflareApi,
+	scriptName: string
+): Promise<void> => {
+	const response = await api.post(
+		`/accounts/${api.accountId}/workers/scripts/${scriptName}/subdomain`,
+		{
+			enabled: true,
+			previews_enabled: false,
+		}
+	);
+
+	if (response.status === 404) {
+		return;
+	}
+
+	await parseCloudflareResult(
+		response,
+		`disable workers.dev previews for ${scriptName}`
+	);
+};
+
+const resolveWorkersSubdomain = async (
+	api: CloudflareApi
+): Promise<string | undefined> => {
+	const response = await api.get(
+		`/accounts/${api.accountId}/workers/subdomain`
+	);
+	if (response.status === 404) {
+		return undefined;
+	}
+
+	const result = await parseCloudflareResult<{ subdomain?: string }>(
+		response,
+		"resolve workers.dev subdomain"
+	);
+	const subdomain = result.subdomain?.trim();
+	return subdomain && subdomain.length > 0 ? subdomain : undefined;
+};
 
 // Prevent crash when dev server rebuild terminates in-flight HTTP connections.
 // undici emits unhandled 'error' events on aborted fetch streams during restart.
@@ -34,34 +131,41 @@ const stage =
 	process.env.STAGE ??
 	"dev";
 const isE2E = process.env.ALCHEMY_E2E === "1" || stage === "e2e";
-const appName = "full-stack-cf-app";
 const lifecycleEvent = process.env.npm_lifecycle_event ?? "";
 const isDeployCommand =
 	lifecycleEvent === "deploy" || process.argv.includes("deploy");
 const isDestroyCommand =
 	lifecycleEvent === "destroy" || process.argv.includes("destroy");
 
-// Only deploy/destroy commands (or CI) use production server env.
-const isDeploying =
-	isDeployCommand || isDestroyCommand || Boolean(process.env.CI);
+// Only deploy/destroy commands should run with cloud deploy semantics.
+const isDeploying = isDeployCommand || isDestroyCommand;
 const isLocalDevRuntime = !isDeploying;
+const workerScriptNames = [
+	`${appName}-server-${stage}`,
+	`${appName}-notifications-${stage}`,
+	`${appName}-assistant-${stage}`,
+	`${appName}-web-${stage}`,
+];
+
+let serverStageEnvPath = `../../apps/server/.env.${stage}`;
+if (isE2E) {
+	serverStageEnvPath = "../../apps/server/.env.e2e";
+} else if (stage === "prod" || stage === "production") {
+	serverStageEnvPath = "../../apps/server/.env.production";
+}
 
 // Environment layering:
 // 1) shell/CI env (highest priority, never overridden by dotenv)
-// 2) stage-specific files (.env.e2e / .env.production)
+// 2) stage-specific files (.env.e2e / .env.{stage})
 // 3) base defaults (.env)
 // Keep stage files focused on overrides to avoid duplicated keys.
 if (isE2E) {
-	config({ path: "./.env.e2e" });
+	loadEnvFile("./.env.e2e");
 }
-config({ path: "./.env" });
+loadEnvFile("./.env");
 
-if (isDeploying) {
-	config({ path: "../../apps/server/.env.production" });
-} else if (isE2E) {
-	config({ path: "../../apps/server/.env.e2e" });
-}
-config({ path: "../../apps/server/.env" });
+loadEnvFile(serverStageEnvPath);
+loadEnvFile("../../apps/server/.env");
 
 if (isE2E) {
 	// Safety rail: never use real Cloudflare account credentials in e2e runs.
@@ -69,15 +173,73 @@ if (isE2E) {
 	process.env.CLOUDFLARE_API_KEY = "";
 	process.env.CLOUDFLARE_ACCOUNT_ID = "local-e2e-account";
 	process.env.CF_ACCOUNT_ID = "local-e2e-account";
-	process.env.BETTER_AUTH_SECRET ??= "e2e-local-auth-secret";
+	process.env.BETTER_AUTH_SECRET ??= E2E_AUTH_SECRET;
+	process.env.OPEN_ROUTER_API_KEY ??= E2E_OPEN_ROUTER_API_KEY;
+}
+
+const resolveRuntimeSecret = (name: string, localFallback: string): string => {
+	const configured = readNonEmptyEnv(name);
+	if (configured) {
+		return configured;
+	}
+	if (isLocalDevRuntime) {
+		console.warn(
+			`[infra] ${name} is missing; using a local placeholder for non-deploy runtime.`
+		);
+		return localFallback;
+	}
+	if (isDestroyCommand) {
+		return localFallback;
+	}
+	throw new Error(
+		`[infra] Missing required ${name}. Configure it via shell, CI secret, or env file before deploy.`
+	);
+};
+
+const betterAuthSecret = resolveRuntimeSecret(
+	"BETTER_AUTH_SECRET",
+	LOCAL_DEV_AUTH_SECRET
+);
+const openRouterApiKey = resolveRuntimeSecret(
+	"OPEN_ROUTER_API_KEY",
+	LOCAL_DEV_OPEN_ROUTER_API_KEY
+);
+const telegramBotToken = readNonEmptyEnv("TELEGRAM_BOT_TOKEN") ?? "";
+const telegramBotUsername = readNonEmptyEnv("TELEGRAM_BOT_USERNAME") ?? "";
+const telegramBotApiBaseUrl =
+	readNonEmptyEnv("TELEGRAM_BOT_API_BASE_URL") ?? "";
+const cloudpaymentsPublicId =
+	readNonEmptyEnv("CLOUDPAYMENTS_PUBLIC_ID") ??
+	readNonEmptyEnv("PUBLIC_CLOUDPAYMENTS_PUBLIC_ID") ??
+	"";
+const cloudpaymentsApiSecret =
+	readNonEmptyEnv("CLOUDPAYMENTS_API_SECRET") ?? "";
+const aiModel = readNonEmptyEnv("AI_MODEL") ?? "openai/gpt-4o";
+const publicCloudpaymentsPublicId =
+	readNonEmptyEnv("PUBLIC_CLOUDPAYMENTS_PUBLIC_ID") ?? "";
+let workersSubdomain = readNonEmptyEnv("CLOUDFLARE_WORKERS_SUBDOMAIN");
+let deployApi: CloudflareApi | undefined;
+
+if (isDeploying) {
+	deployApi = await createCloudflareApi();
+	if (!workersSubdomain) {
+		try {
+			workersSubdomain = await resolveWorkersSubdomain(deployApi);
+		} catch (error) {
+			console.warn(
+				"[infra] Could not auto-resolve workers.dev subdomain. Set CLOUDFLARE_WORKERS_SUBDOMAIN if deploy URL derivation is needed.",
+				error
+			);
+		}
+	}
 }
 
 // Alchemy's Worker resource initializes Cloudflare API before local-mode branching.
 // In offline local dev, provide deterministic fallback credentials so no account discovery
 // network call is required to boot Miniflare workers.
 const localCloudflareAccountId =
-	process.env.CLOUDFLARE_ACCOUNT_ID ??
-	process.env.CF_ACCOUNT_ID ??
+	readNonEmptyEnv("CLOUDFLARE_ACCOUNT_ID") ??
+	readNonEmptyEnv("CF_ACCOUNT_ID") ??
 	(isLocalDevRuntime ? "local-dev-account" : undefined);
 const cloudflareApiOptions: { accountId?: string } = isLocalDevRuntime
 	? {
@@ -87,8 +249,8 @@ const cloudflareApiOptions: { accountId?: string } = isLocalDevRuntime
 
 if (
 	isLocalDevRuntime &&
-	!process.env.CLOUDFLARE_API_TOKEN &&
-	!process.env.CLOUDFLARE_API_KEY
+	!readNonEmptyEnv("CLOUDFLARE_API_TOKEN") &&
+	!readNonEmptyEnv("CLOUDFLARE_API_KEY")
 ) {
 	process.env.CLOUDFLARE_API_TOKEN = "local-dev-token";
 	console.warn(
@@ -98,8 +260,8 @@ if (
 
 if (
 	isLocalDevRuntime &&
-	!process.env.CLOUDFLARE_ACCOUNT_ID &&
-	!process.env.CF_ACCOUNT_ID
+	!readNonEmptyEnv("CLOUDFLARE_ACCOUNT_ID") &&
+	!readNonEmptyEnv("CF_ACCOUNT_ID")
 ) {
 	console.warn(
 		"[infra] CLOUDFLARE_ACCOUNT_ID is missing; using local placeholder accountId for offline dev."
@@ -107,40 +269,25 @@ if (
 }
 
 if (isDeployCommand) {
-	const api = await createCloudflareApi();
-	const disableWorkerPreviewUrls = async (scriptName: string) => {
-		// Cloudflare rejects script uploads with DO migration metadata when Preview URLs are enabled.
-		// This is controlled by the workers.dev subdomain setting `previews_enabled`.
-		await api
-			.post(
-				`/accounts/${api.accountId}/workers/scripts/${scriptName}/subdomain`,
-				{
-					enabled: true,
-					previews_enabled: false,
-				}
-			)
-			.catch((error: unknown) => {
-				// Script may not exist yet on first deploy; ignore 404.
-				if (typeof error === "object" && error && "status" in error) {
-					const status = (error as { status?: number }).status;
-					if (status === 404) {
-						return;
-					}
-				}
-				throw error;
-			});
-	};
-
-	await Promise.all([
-		disableWorkerPreviewUrls(`${appName}-server-${stage}`),
-		disableWorkerPreviewUrls(`${appName}-notifications-${stage}`),
-		disableWorkerPreviewUrls(`${appName}-assistant-${stage}`),
-		disableWorkerPreviewUrls(`${appName}-web-${stage}`),
-	]);
+	if (!deployApi) {
+		throw new Error(
+			"[infra] Cloudflare API client is unavailable for deploy. Check credentials."
+		);
+	}
+	// Cloudflare rejects script uploads with DO migration metadata when Preview URLs are enabled.
+	// This is controlled by the workers.dev subdomain setting `previews_enabled`.
+	await Promise.all(
+		workerScriptNames.map((scriptName) =>
+			disableWorkerPreviewUrls(deployApi, scriptName)
+		)
+	);
 }
 
 const app = await alchemy(appName, {
 	stage,
+	password:
+		process.env.ALCHEMY_PASSWORD ??
+		(isLocalDevRuntime ? "local-dev-password" : undefined),
 	stateStore: process.env.ALCHEMY_STATE_TOKEN
 		? (scope) => new CloudflareStateStore(scope)
 		: undefined,
@@ -169,7 +316,7 @@ const notificationQueue = await Queue("notification-queue", {
 	...cloudflareApiOptions,
 });
 
-const bookingLifecycleDeadLetterQueue = await Queue("booking-lifecycle-dlq", {
+const recurringTaskDeadLetterQueue = await Queue("recurring-task-dlq", {
 	adopt: true,
 	settings: {
 		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
@@ -177,9 +324,9 @@ const bookingLifecycleDeadLetterQueue = await Queue("booking-lifecycle-dlq", {
 	...cloudflareApiOptions,
 });
 
-const bookingLifecycleQueue = await Queue("booking-lifecycle-queue", {
+const recurringTaskQueue = await Queue("recurring-task-queue", {
 	adopt: true,
-	dlq: bookingLifecycleDeadLetterQueue,
+	dlq: recurringTaskDeadLetterQueue,
 	settings: {
 		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
 	},
@@ -215,7 +362,7 @@ if (shouldStartTunnel) {
 const getCorsOrigin = (): string => {
 	// Local development - use localhost origins
 	if (!isDeploying) {
-		const base = process.env.CORS_ORIGIN ?? devCorsOrigin;
+		const base = readNonEmptyEnv("CORS_ORIGIN") ?? devCorsOrigin;
 		// When tunnel is active, also allow the ngrok domain
 		const ngrokDomain = process.env.NGROK_DOMAIN_NAME;
 		if (shouldStartTunnel && ngrokDomain) {
@@ -223,39 +370,74 @@ const getCorsOrigin = (): string => {
 		}
 		return base;
 	}
+	const explicitCorsOrigin = readNonEmptyEnv("CORS_ORIGIN");
+	if (explicitCorsOrigin) {
+		return explicitCorsOrigin;
+	}
 	// PR previews - allow all origins
 	if (stage.startsWith("pr-")) {
 		return "*";
 	}
-	// Deployed stages - use env or construct from stage name
-	return (
-		process.env.CORS_ORIGIN ??
-		`https://full-stack-cf-app-web-${stage}.smartcache.workers.dev`
+	if (workersSubdomain) {
+		return `https://${appName}-web-${stage}.${workersSubdomain}.workers.dev`;
+	}
+	if (isDestroyCommand) {
+		return "*";
+	}
+	throw new Error(
+		"[infra] CORS_ORIGIN is required for deploy when workers.dev subdomain cannot be resolved."
 	);
 };
 
-// Construct auth URL for deployed stages if not set
-const getAuthUrl = (): string => {
+// Derive the canonical server URL — single source of truth for all service-to-service links.
+// BETTER_AUTH_URL is kept as an alias (auth lives on the server worker).
+const getServerUrl = (): string => {
 	if (!isDeploying) {
-		return process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+		return (
+			readNonEmptyEnv("SERVER_URL") ??
+			readNonEmptyEnv("BETTER_AUTH_URL") ??
+			`http://localhost:${serverPort}`
+		);
 	}
-	return (
-		process.env.BETTER_AUTH_URL ??
-		`https://full-stack-cf-app-server-${stage}.smartcache.workers.dev`
+	const explicit =
+		readNonEmptyEnv("SERVER_URL") ?? readNonEmptyEnv("BETTER_AUTH_URL");
+	if (explicit) {
+		return explicit;
+	}
+	if (workersSubdomain) {
+		return `https://${appName}-server-${stage}.${workersSubdomain}.workers.dev`;
+	}
+	if (isDestroyCommand) {
+		return "https://destroy.invalid";
+	}
+	throw new Error(
+		"[infra] SERVER_URL is required for deploy when workers.dev subdomain cannot be resolved."
 	);
 };
 
-const getWebhookUrl = (): string => {
-	if (process.env.GOOGLE_CALENDAR_WEBHOOK_URL) {
-		return process.env.GOOGLE_CALENDAR_WEBHOOK_URL;
+const serverUrl = getServerUrl();
+// Auth lives on the server worker — BETTER_AUTH_URL = SERVER_URL
+const betterAuthUrl = serverUrl;
+
+const getAssistantUrl = (): string => {
+	if (!isDeploying) {
+		return (
+			readNonEmptyEnv("ASSISTANT_URL") ?? `http://localhost:${assistantPort}`
+		);
 	}
-	if (!isDeploying && shouldStartTunnel && process.env.NGROK_DOMAIN_NAME) {
-		return `https://${process.env.NGROK_DOMAIN_NAME}/server/webhooks/calendar/google`;
+	const explicit = readNonEmptyEnv("ASSISTANT_URL");
+	if (explicit) {
+		return explicit;
 	}
-	if (isDeploying) {
-		return `${getAuthUrl()}/webhooks/calendar/google`;
+	if (workersSubdomain) {
+		return `https://${appName}-assistant-${stage}.${workersSubdomain}.workers.dev`;
 	}
-	return "";
+	if (isDestroyCommand) {
+		return "https://destroy.invalid";
+	}
+	throw new Error(
+		"[infra] ASSISTANT_URL is required for deploy when workers.dev subdomain cannot be resolved."
+	);
 };
 
 export const server = await Worker("server", {
@@ -266,48 +448,36 @@ export const server = await Worker("server", {
 	bindings: {
 		DB: db,
 		NOTIFICATION_QUEUE: notificationQueue,
-		BOOKING_LIFECYCLE_QUEUE: bookingLifecycleQueue,
+		RECURRING_TASK_QUEUE: recurringTaskQueue,
 		CORS_ORIGIN: getCorsOrigin(),
-		BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
-		BETTER_AUTH_URL: getAuthUrl(),
+		BETTER_AUTH_SECRET: alchemy.secret.env(
+			"BETTER_AUTH_SECRET",
+			betterAuthSecret
+		),
+		SERVER_URL: serverUrl,
+		BETTER_AUTH_URL: betterAuthUrl,
 		TELEGRAM_BOT_TOKEN: alchemy.secret.env(
 			"TELEGRAM_BOT_TOKEN",
-			process.env.TELEGRAM_BOT_TOKEN || ""
+			telegramBotToken
 		),
-		TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME || "",
-		TELEGRAM_BOT_API_BASE_URL: process.env.TELEGRAM_BOT_API_BASE_URL || "",
-		GOOGLE_CALENDAR_CREDENTIALS_JSON: alchemy.secret.env(
-			"GOOGLE_CALENDAR_CREDENTIALS_JSON",
-			process.env.GOOGLE_CALENDAR_CREDENTIALS_JSON || ""
-		),
-		GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN: alchemy.secret.env(
-			"GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN",
-			process.env.GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN || ""
-		),
-		CALENDAR_SYNC_TASK_TOKEN: alchemy.secret.env(
-			"CALENDAR_SYNC_TASK_TOKEN",
-			process.env.CALENDAR_SYNC_TASK_TOKEN || ""
-		),
-		GOOGLE_CALENDAR_WEBHOOK_URL: getWebhookUrl(),
-		CLOUDPAYMENTS_PUBLIC_ID:
-			process.env.CLOUDPAYMENTS_PUBLIC_ID ||
-			process.env.PUBLIC_CLOUDPAYMENTS_PUBLIC_ID ||
-			"",
+		TELEGRAM_BOT_USERNAME: telegramBotUsername,
+		TELEGRAM_BOT_API_BASE_URL: telegramBotApiBaseUrl,
+		CLOUDPAYMENTS_PUBLIC_ID: cloudpaymentsPublicId,
 		CLOUDPAYMENTS_API_SECRET: alchemy.secret.env(
 			"CLOUDPAYMENTS_API_SECRET",
-			process.env.CLOUDPAYMENTS_API_SECRET || ""
+			cloudpaymentsApiSecret
 		),
 	},
 	eventSources: [
 		{
-			queue: bookingLifecycleQueue,
+			queue: recurringTaskQueue,
 			settings: {
 				batchSize: 10,
 				maxConcurrency: 2,
 				maxRetries: 4,
 				maxWaitTimeMs: 1500,
 				retryDelay: 30,
-				deadLetterQueue: bookingLifecycleDeadLetterQueue,
+				deadLetterQueue: recurringTaskDeadLetterQueue,
 			},
 		},
 	],
@@ -326,13 +496,17 @@ export const notifications = await Worker("notifications", {
 	bindings: {
 		DB: db,
 		CORS_ORIGIN: getCorsOrigin(),
-		BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
-		BETTER_AUTH_URL: getAuthUrl(),
+		BETTER_AUTH_SECRET: alchemy.secret.env(
+			"BETTER_AUTH_SECRET",
+			betterAuthSecret
+		),
+		SERVER_URL: serverUrl,
+		BETTER_AUTH_URL: betterAuthUrl,
 		TELEGRAM_BOT_TOKEN: alchemy.secret.env(
 			"TELEGRAM_BOT_TOKEN",
-			process.env.TELEGRAM_BOT_TOKEN || ""
+			telegramBotToken
 		),
-		TELEGRAM_BOT_API_BASE_URL: process.env.TELEGRAM_BOT_API_BASE_URL || "",
+		TELEGRAM_BOT_API_BASE_URL: telegramBotApiBaseUrl,
 	},
 	eventSources: [
 		{
@@ -362,14 +536,18 @@ export const assistant = await Worker("assistant", {
 	bindings: {
 		DB: db,
 		SERVER_WORKER: server,
+		SERVER_URL: serverUrl,
 		CORS_ORIGIN: getCorsOrigin(),
-		BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
-		BETTER_AUTH_URL: getAuthUrl(),
+		BETTER_AUTH_SECRET: alchemy.secret.env(
+			"BETTER_AUTH_SECRET",
+			betterAuthSecret
+		),
+		BETTER_AUTH_URL: betterAuthUrl,
 		OPEN_ROUTER_API_KEY: alchemy.secret.env(
 			"OPEN_ROUTER_API_KEY",
-			process.env.OPEN_ROUTER_API_KEY || ""
+			openRouterApiKey
 		),
-		AI_MODEL: process.env.AI_MODEL || "openai/gpt-4o",
+		AI_MODEL: aiModel,
 	},
 	dev: { port: assistantPort },
 	observability: {
@@ -385,13 +563,14 @@ export const web = shouldStartWeb
 			cwd: "../../apps/web",
 			...cloudflareApiOptions,
 			bindings: {
-				// When tunnel is active, use relative /server so browser API calls
+				// When tunnel is active, use relative paths so browser API calls
 				// go through the ngrok origin (same-origin → /server/rpc)
-				PUBLIC_SERVER_URL: shouldStartTunnel ? "/server" : server.url!,
-				PUBLIC_ASSISTANT_URL: shouldStartTunnel ? "/assistant" : assistant.url!,
+				PUBLIC_SERVER_URL: shouldStartTunnel ? "/server" : serverUrl,
+				PUBLIC_ASSISTANT_URL: shouldStartTunnel
+					? "/assistant"
+					: getAssistantUrl(),
 				PUBLIC_BASE_PATH: shouldStartTunnel ? "/web" : "",
-				PUBLIC_CLOUDPAYMENTS_PUBLIC_ID:
-					process.env.PUBLIC_CLOUDPAYMENTS_PUBLIC_ID || "",
+				PUBLIC_CLOUDPAYMENTS_PUBLIC_ID: publicCloudpaymentsPublicId,
 			},
 			observability: {
 				enabled: true,
@@ -431,35 +610,14 @@ await app.finalize();
 
 if (isDeployCommand) {
 	// Ensure previews stay disabled after Alchemy finishes applying resources.
-	const api = await createCloudflareApi();
-	await Promise.all([
-		api.post(
-			`/accounts/${api.accountId}/workers/scripts/${appName}-server-${stage}/subdomain`,
-			{
-				enabled: true,
-				previews_enabled: false,
-			}
-		),
-		api.post(
-			`/accounts/${api.accountId}/workers/scripts/${appName}-notifications-${stage}/subdomain`,
-			{
-				enabled: true,
-				previews_enabled: false,
-			}
-		),
-		api.post(
-			`/accounts/${api.accountId}/workers/scripts/${appName}-assistant-${stage}/subdomain`,
-			{
-				enabled: true,
-				previews_enabled: false,
-			}
-		),
-		api.post(
-			`/accounts/${api.accountId}/workers/scripts/${appName}-web-${stage}/subdomain`,
-			{
-				enabled: true,
-				previews_enabled: false,
-			}
-		),
-	]);
+	if (!deployApi) {
+		throw new Error(
+			"[infra] Cloudflare API client is unavailable for deploy finalization."
+		);
+	}
+	await Promise.all(
+		workerScriptNames.map((scriptName) =>
+			disableWorkerPreviewUrls(deployApi, scriptName)
+		)
+	);
 }

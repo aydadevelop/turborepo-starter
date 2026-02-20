@@ -65,7 +65,7 @@ export const goto = async (
 			error.message.includes("ERR_CONNECTION_REFUSED")
 		) {
 			throw new Error(
-				`Cannot reach frontend at ${baseURL}${target}. Start the frontend (npm run dev:vite --workspace web) then rerun tests.`
+				`Cannot reach frontend at ${baseURL}${target}. Start the frontend (bun run dev:vite --workspace web) then rerun tests.`
 			);
 		}
 		throw error;

@@ -2,19 +2,21 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const configureCalendarAdaptersFromEnvMock = vi.fn();
+const configurePaymentWebhookAdaptersFromEnvMock = vi.fn();
 
-vi.mock("@full-stack-cf-app/api/calendar/adapters/configure", () => {
+vi.mock("@my-app/api/payments/webhooks", () => {
 	return {
-		configureCalendarAdaptersFromEnv: configureCalendarAdaptersFromEnvMock,
+		configurePaymentWebhookAdaptersFromEnv:
+			configurePaymentWebhookAdaptersFromEnvMock,
 	};
 });
 
-vi.mock("@full-stack-cf-app/env/server", () => {
+vi.mock("@my-app/env/server", () => {
 	return {
 		env: {
 			CORS_ORIGIN: "http://localhost:5173",
-			GOOGLE_CALENDAR_CREDENTIALS_JSON: "",
+			CLOUDPAYMENTS_PUBLIC_ID: "pk_test",
+			CLOUDPAYMENTS_API_SECRET: "sk_test",
 		},
 	};
 });
@@ -25,15 +27,9 @@ vi.mock("../routes/auth", () => {
 	};
 });
 
-vi.mock("../routes/calendar-webhook", () => {
+vi.mock("../routes/payment-webhook", () => {
 	return {
-		calendarWebhookRoutes: new Hono(),
-	};
-});
-
-vi.mock("../routes/calendar-internal", () => {
-	return {
-		calendarInternalRoutes: new Hono(),
+		paymentWebhookRoutes: new Hono(),
 	};
 });
 
@@ -64,7 +60,7 @@ vi.mock("../routes/health", () => {
 describe("app", () => {
 	beforeEach(() => {
 		vi.resetModules();
-		configureCalendarAdaptersFromEnvMock.mockReset();
+		configurePaymentWebhookAdaptersFromEnvMock.mockReset();
 	});
 
 	it("returns JSON not found response for unknown routes", async () => {
@@ -94,11 +90,12 @@ describe("app", () => {
 		expect(await response.text()).toContain("teapot");
 	});
 
-	it("configures calendar adapters during app bootstrap", async () => {
+	it("configures payment webhook adapters during app bootstrap", async () => {
 		await import("../app");
 
-		expect(configureCalendarAdaptersFromEnvMock).toHaveBeenCalledWith({
-			GOOGLE_CALENDAR_CREDENTIALS_JSON: "",
+		expect(configurePaymentWebhookAdaptersFromEnvMock).toHaveBeenCalledWith({
+			CLOUDPAYMENTS_PUBLIC_ID: "pk_test",
+			CLOUDPAYMENTS_API_SECRET: "sk_test",
 		});
 	});
 });

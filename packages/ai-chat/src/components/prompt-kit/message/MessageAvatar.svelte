@@ -3,8 +3,8 @@
 		Avatar,
 		AvatarFallback,
 		AvatarImage,
-	} from "@full-stack-cf-app/ui/components/avatar";
-	import { cn } from "@full-stack-cf-app/ui/lib/utils";
+	} from "@my-app/ui/components/avatar";
+	import { cn } from "@my-app/ui/lib/utils";
 
 	let {
 		src,
