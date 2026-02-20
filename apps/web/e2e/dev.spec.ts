@@ -1,8 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import {
-	captureFrontendDevScreenshot,
-	gotoFrontendDevRoute,
-} from "./utils/frontend-dev";
+import { goto } from "./utils/setup";
 
 const readNumberByTestId = async (page: Page, id: string) => {
 	const raw = await page.getByTestId(id).first().textContent();
@@ -15,7 +12,7 @@ test.describe("Frontend Dev Interactions", () => {
 	test("diagnostic home supports fast state setup and screenshot capture", async ({
 		page,
 	}) => {
-		await gotoFrontendDevRoute(page, "/diagnostic", {
+		await goto(page, "/diagnostic", {
 			viewport: { width: 1366, height: 900 },
 			localStorage: {
 				"frontend-dev:last-scenario": "diagnostic-home",
@@ -23,7 +20,7 @@ test.describe("Frontend Dev Interactions", () => {
 			sessionStorage: {
 				"frontend-dev:flow": "quick-visual-check",
 			},
-			waitAfterNavigationMs: 120,
+			waitMs: 120,
 		});
 
 		await expect(
@@ -33,15 +30,16 @@ test.describe("Frontend Dev Interactions", () => {
 			page.getByTestId("diagnostic-card-derived-stability")
 		).toBeVisible();
 
-		await captureFrontendDevScreenshot(page, {
-			name: "diagnostic-home",
+		await page.screenshot({
+			path: "test-results/diagnostic-home.png",
+			fullPage: true,
 		});
 	});
 
 	test("reactive chain supports interaction replay and screenshot capture", async ({
 		page,
 	}) => {
-		await gotoFrontendDevRoute(page, "/diagnostic/reactive-chain", {
+		await goto(page, "/diagnostic/reactive-chain", {
 			query: {
 				date: "2026-03-20",
 				startHour: 10,
@@ -52,14 +50,16 @@ test.describe("Frontend Dev Interactions", () => {
 			localStorage: {
 				"frontend-dev:last-scenario": "reactive-chain",
 			},
-			waitAfterNavigationMs: 300,
+			waitMs: 300,
 		});
 
 		await expect(page.getByTestId("reactive-nav-start-hour-inc")).toBeVisible();
+
 		const parsedBefore = await readNumberByTestId(
 			page,
 			"reactive-counter-parsed-search"
 		);
+
 		await page.getByTestId("reactive-nav-start-hour-inc").click();
 		await page.waitForTimeout(250);
 		await page.getByTestId("reactive-nav-start-hour-dec").click();
@@ -75,8 +75,9 @@ test.describe("Frontend Dev Interactions", () => {
 			page.getByTestId("reactive-counter-availability-opts")
 		).toBeVisible();
 
-		await captureFrontendDevScreenshot(page, {
-			name: "reactive-chain-after-navigation",
+		await page.screenshot({
+			path: "test-results/reactive-chain-after-navigation.png",
+			fullPage: true,
 		});
 	});
 });

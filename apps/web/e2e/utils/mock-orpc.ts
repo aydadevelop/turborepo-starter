@@ -1,6 +1,7 @@
-import type { AssistantRouter } from "@full-stack-cf-app/assistant/router";
-import { implement } from "@orpc/server";
+import { assistantRouter } from "@full-stack-cf-app/assistant/router";
+import { call, implement } from "@orpc/server";
 import type { Page } from "@playwright/test";
+import type { UIMessage } from "ai";
 
 /**
  * Mocks the initial chat history load using oRPC's implement function
@@ -8,28 +9,24 @@ import type { Page } from "@playwright/test";
 export const mockChatHistory = async (
 	page: Page,
 	chatId: string,
-	messages: any[]
+	messages: UIMessage[]
 ) => {
 	// Create a fake implementation of the getChat procedure
-	const fakeGetChat = implement({} as AssistantRouter["getChat"]).handler(
-		() => {
-			return {
-				id: chatId,
-				title: "Mocked Chat",
-				userId: "mock-user",
-				createdAt: new Date(),
-				updatedAt: new Date(),
-				messages,
-			};
-		}
-	);
+	const fakeGetChat = implement(assistantRouter.getChat).handler(() => ({
+		id: chatId,
+		title: "Mocked Chat",
+		userId: "mock-user",
+		createdAt: new Date(),
+		updatedAt: new Date(),
+		messages,
+	}));
 
 	await page.route("**/rpc/getChat", async (route) => {
 		const request = route.request();
 		if (request.method() === "POST") {
 			try {
-				// Execute the fake handler
-				const result = await fakeGetChat({ chatId }, {} as any);
+				// Execute the fake handler via oRPC's call utility (no context needed)
+				const result = await call(fakeGetChat, { chatId });
 
 				await route.fulfill({
 					status: 200,

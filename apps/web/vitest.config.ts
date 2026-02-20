@@ -8,7 +8,6 @@ export default mergeConfig(
 			exclude: [
 				"**/node_modules/**",
 				"**/dist/**",
-				"**/e2e-dev/**",
 				"**/e2e/**",
 				"**/playwright-report/**",
 				"**/test-results/**",

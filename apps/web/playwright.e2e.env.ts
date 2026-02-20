@@ -33,7 +33,7 @@ const readPositiveIntEnv = (key: string, fallback: number): number => {
 	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-export interface FrontendDevRuntimeEnv {
+export interface E2ERuntimeEnv {
 	baseURL: string;
 	useManagedServers: boolean;
 	reuseExistingServers: boolean;
@@ -42,7 +42,7 @@ export interface FrontendDevRuntimeEnv {
 }
 
 let envLoaded = false;
-let cached: FrontendDevRuntimeEnv | null = null;
+let cached: E2ERuntimeEnv | null = null;
 
 const loadRuntimeEnvFiles = (): void => {
 	if (envLoaded) {
@@ -58,7 +58,7 @@ const loadRuntimeEnvFiles = (): void => {
 	envLoaded = true;
 };
 
-export const getFrontendDevRuntimeEnv = (): FrontendDevRuntimeEnv => {
+export const getE2ERuntimeEnv = (): E2ERuntimeEnv => {
 	if (cached) {
 		return cached;
 	}

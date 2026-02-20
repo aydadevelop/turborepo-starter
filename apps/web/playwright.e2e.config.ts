@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { getFrontendDevRuntimeEnv } from "./playwright.e2e-dev.env";
+import { getE2ERuntimeEnv } from "./playwright.e2e.env";
 
 const {
 	baseURL,
@@ -7,10 +7,10 @@ const {
 	reuseExistingServers,
 	webServerCommand,
 	workers,
-} = getFrontendDevRuntimeEnv();
+} = getE2ERuntimeEnv();
 
 export default defineConfig({
-	testDir: "./e2e-dev",
+	testDir: "./e2e",
 	fullyParallel: false,
 	forbidOnly: Boolean(process.env.CI),
 	retries: process.env.CI ? 2 : 0,
