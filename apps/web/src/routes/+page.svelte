@@ -16,7 +16,10 @@
 >
 	<div class="mx-auto max-w-5xl px-6 py-16">
 		<div class="text-center">
-			<h1 class="text-4xl font-bold tracking-tight text-balance">
+			<h1
+				class="text-4xl font-bold tracking-tight text-balance"
+				data-testid="landing-hero-title"
+			>
 				Cloudflare SaaS Starter
 			</h1>
 			<p class="mt-4 text-lg text-muted-foreground text-balance">
@@ -25,7 +28,10 @@
 		</div>
 
 		<div class="mt-12 grid gap-6 md:grid-cols-2">
-			<Card class="transition-shadow hover:shadow-md">
+			<Card
+				class="transition-shadow hover:shadow-md"
+				data-testid="landing-auth-card"
+			>
 				<CardHeader>
 					<CardTitle>Authentication</CardTitle>
 					<CardDescription>
@@ -39,7 +45,9 @@
 					</p>
 				</CardContent>
 				<CardFooter>
-					<Button href={resolve("/login")}>Sign In</Button>
+					<Button href={resolve("/login")} data-testid="landing-auth-signin">
+						Sign In
+					</Button>
 				</CardFooter>
 			</Card>
 

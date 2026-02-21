@@ -58,7 +58,9 @@
 		</div>
 	{:else}
 		<div class="flex items-center gap-2">
-			<Button size="sm" onclick={goToLogin}>Sign In</Button>
+			<Button size="sm" onclick={goToLogin} data-testid="header-sign-in-button">
+				Sign In
+			</Button>
 		</div>
 	{/if}
 </div>

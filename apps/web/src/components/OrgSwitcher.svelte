@@ -55,7 +55,11 @@
 		onValueChange={(v) => void handleSwitch(v)}
 		disabled={switching}
 	>
-		<SelectTrigger size="sm" class="max-w-[180px]">
+		<SelectTrigger
+			size="sm"
+			class="max-w-[180px]"
+			data-testid="org-switcher-trigger"
+		>
 			{#if switching}
 				<span class="text-muted-foreground">Switching...</span>
 			{:else}

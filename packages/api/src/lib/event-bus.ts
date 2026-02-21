@@ -71,7 +71,7 @@ export class EventBus {
 		return this.#events.length;
 	}
 
-	get pending(): ReadonlyArray<EventBusEvent> {
+	get pending(): readonly EventBusEvent[] {
 		return this.#events;
 	}
 

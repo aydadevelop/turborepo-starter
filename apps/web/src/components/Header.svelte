@@ -73,14 +73,18 @@
 	class="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur"
 >
 	{#if isImpersonating}
-		<div class="bg-destructive px-4 py-1.5 text-center text-sm text-white">
+		<div
+			class="bg-destructive px-4 py-1.5 text-center text-sm text-white"
+			data-testid="impersonation-banner"
+		>
 			You are impersonating
-			<strong
+			<strong data-testid="impersonated-user-name"
 				>{$sessionQuery.data?.user?.name ?? $sessionQuery.data?.user?.email}</strong
 			>
 			<button
 				type="button"
 				class="ml-3 rounded bg-white/20 px-2 py-0.5 font-medium hover:bg-white/30"
+				data-testid="stop-impersonating-button"
 				onclick={() => void handleStopImpersonating()}
 			>
 				Stop impersonating
@@ -104,12 +108,19 @@
 			class="hidden items-center gap-6 text-sm text-muted-foreground md:flex"
 		>
 			{#each STATIC_LINKS as link (link.to)}
-				<a href={link.to} class="transition hover:text-foreground">
+				<a
+					href={link.to}
+					class="transition hover:text-foreground"
+					data-testid={`nav-link-${link.label.toLowerCase().replaceAll(" ", "-")}`}
+				>
 					{link.label}
 				</a>
 			{/each}
 			{#if hasOrgAccess}
-				<a href={resolve("/org/team")} class="transition hover:text-foreground"
+				<a
+					href={resolve("/org/team")}
+					class="transition hover:text-foreground"
+					data-testid="nav-link-team"
 					>Team</a
 				>
 			{/if}
@@ -117,6 +128,7 @@
 				<a
 					href={resolve("/invitations")}
 					class="relative transition hover:text-foreground"
+					data-testid="nav-link-invitations"
 				>
 					Invitations
 					{#if pendingInvitationCount > 0}
@@ -133,6 +145,7 @@
 				<a
 					href={resolve("/admin")}
 					class="font-medium text-primary transition hover:text-primary/80"
+					data-testid="nav-link-admin"
 					>Admin</a
 				>
 			{/if}

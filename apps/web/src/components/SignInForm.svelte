@@ -130,7 +130,9 @@
 <div class="mx-auto mt-10 w-full max-w-md p-6">
 	<Card>
 		<CardHeader class="text-center">
-			<CardTitle class="text-2xl">Welcome Back</CardTitle>
+			<CardTitle class="text-2xl" data-testid="login-heading">
+				Welcome Back
+			</CardTitle>
 			<CardDescription>Sign in to your account</CardDescription>
 		</CardHeader>
 		<CardContent class="space-y-4">
@@ -174,6 +176,7 @@
 									type="email"
 									autocomplete="username webauthn"
 									placeholder="you@example.com"
+									data-testid="login-email-input"
 									onblur={field.handleBlur}
 									value={field.state.value}
 									oninput={(e: Event) => {
@@ -200,6 +203,7 @@
 									type="password"
 									autocomplete="current-password webauthn"
 									placeholder="••••••••"
+									data-testid="login-password-input"
 									onblur={field.handleBlur}
 									value={field.state.value}
 									oninput={(e: Event) => {
@@ -224,6 +228,7 @@
 								type="submit"
 								class="w-full"
 								disabled={!state.canSubmit || state.isSubmitting}
+								data-testid="sign-in-submit-button"
 							>
 								{state.isSubmitting ? "Signing in..." : "Sign In"}
 							</Button>
@@ -259,7 +264,11 @@
 			<TelegramLogin {postAuthRedirectPath} />
 		</CardContent>
 		<CardFooter class="justify-center">
-			<Button variant="link" onclick={switchToSignUp}>
+			<Button
+				variant="link"
+				onclick={switchToSignUp}
+				data-testid="switch-to-sign-up-button"
+			>
 				Need an account? Sign Up
 			</Button>
 		</CardFooter>

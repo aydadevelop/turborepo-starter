@@ -49,7 +49,7 @@
 </script>
 
 <div class="space-y-4">
-	<h2 class="text-xl font-semibold">Users</h2>
+	<h2 class="text-xl font-semibold" data-testid="admin-users-heading">Users</h2>
 
 	<div class="flex flex-wrap gap-2">
 		<Input
@@ -103,7 +103,7 @@
 					</Table.Header>
 					<Table.Body>
 						{#each $usersQuery.data?.items ?? [] as u (u.id)}
-							<Table.Row>
+							<Table.Row data-testid={`admin-user-row-${u.id}`}>
 								<Table.Cell class="font-medium">{u.name}</Table.Cell>
 								<Table.Cell class="text-muted-foreground">{u.email}</Table.Cell>
 								<Table.Cell>
@@ -125,6 +125,7 @@
 											variant="outline"
 											size="sm"
 											disabled={impersonating}
+											data-testid={`impersonate-user-${u.id}`}
 											onclick={() => void handleImpersonate(u.id)}
 										>
 											Impersonate

@@ -7,9 +7,9 @@
     "dev:web:e2e:clean": "for p in 43173; do lsof -ti tcp:$p | xargs kill 2>/dev/null || true; done && bun run dev:web:e2e",
     "dev:infra:e2e": "ALCHEMY_PASSWORD=e2e-local-password ALCHEMY_E2E=1 ALCHEMY_SKIP_WEB=1 STAGE=e2e bun run --cwd ../.. dev:server",
     "dev:infra:e2e:clean": "for p in 43100 43101 43102; do lsof -ti tcp:$p | xargs kill 2>/dev/null || true; done && turbo run db:reset:local --filter=@my-app/db && bun run dev:infra:e2e",
-    "test:e2e": "playwright test -c playwright.config.ts",
+    "test:e2e": "for p in 43173 43100 43101 43102; do lsof -ti tcp:$p | xargs kill 2>/dev/null || true; done && PLAYWRIGHT_REUSE_SERVERS=0 playwright test -c playwright.config.ts",
     "test:e2e:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 bun run test:e2e",
-    "test:e2e:ui": "playwright test -c playwright.config.ts --ui",
+    "test:e2e:ui": "for p in 43173 43100 43101 43102; do lsof -ti tcp:$p | xargs kill 2>/dev/null || true; done && PLAYWRIGHT_REUSE_SERVERS=0 playwright test -c playwright.config.ts --ui",
     "test:e2e:ui:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 bun run test:e2e:ui"
   },
   "dependencies": {

@@ -115,7 +115,7 @@ export class CloudPaymentsWebhookAdapter implements PaymentWebhookAdapter {
 		return parseBody(request);
 	}
 
-	async processWebhook(
+	processWebhook(
 		webhookType: string,
 		payload: unknown
 	): Promise<PaymentWebhookResult> {
@@ -127,6 +127,6 @@ export class CloudPaymentsWebhookAdapter implements PaymentWebhookAdapter {
 			status: notification.Status ?? null,
 		});
 
-		return { code: 0 };
+		return Promise.resolve({ code: 0 });
 	}
 }
