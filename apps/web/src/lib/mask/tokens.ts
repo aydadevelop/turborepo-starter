@@ -1,7 +1,7 @@
 interface MaskToken {
-	pattern: RegExp;
 	multiple?: boolean;
 	optional?: boolean;
+	pattern: RegExp;
 	repeated?: boolean;
 	transform?: (char: string) => string;
 }

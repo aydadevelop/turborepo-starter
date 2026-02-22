@@ -7,14 +7,14 @@ type MaskaTarget = string | NodeListOf<HTMLInputElement> | HTMLInputElement;
 
 export interface MaskInputOptions extends MaskOptions {
 	onMaska?: OnMaskaType | OnMaskaType[];
-	preProcess?: (value: string) => string;
 	postProcess?: (value: string) => string;
+	preProcess?: (value: string) => string;
 }
 
 export interface MaskaDetail {
+	completed: boolean;
 	masked: string;
 	unmasked: string;
-	completed: boolean;
 }
 
 export class MaskInput {

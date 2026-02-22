@@ -68,8 +68,8 @@ const parseBody = async (
 };
 
 export interface CloudPaymentsAdapterOptions {
-	publicId: string;
 	apiSecret: string;
+	publicId: string;
 }
 
 export class CloudPaymentsWebhookAdapter implements PaymentWebhookAdapter {

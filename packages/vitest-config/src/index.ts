@@ -1,6 +1,6 @@
-import type { UserConfig } from "vitest/config";
+import type { ViteUserConfig } from "vitest/config";
 
-export const sharedConfig: UserConfig = {
+export const sharedConfig: ViteUserConfig = {
 	test: {
 		globals: true,
 		include: ["**/*.{test,spec}.{js,ts}"],

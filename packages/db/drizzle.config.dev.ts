@@ -5,7 +5,7 @@ import { defineConfig } from "drizzle-kit";
 // Find the latest local D1 database created by Alchemy/miniflare
 const findLocalD1Database = (): string => {
 	const d1Dir = path.resolve(
-		__dirname,
+		import.meta.dirname,
 		"../../.alchemy/miniflare/v3/d1/miniflare-D1DatabaseObject"
 	);
 

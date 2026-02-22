@@ -6,8 +6,12 @@ import alchemy from "alchemy";
 import {
 	createCloudflareApi,
 	D1Database,
+	enableWorkerSubdomain,
+	getAccountSubdomain,
 	Queue,
+	R2Bucket,
 	SvelteKit,
+	VectorizeIndex,
 	Worker,
 } from "alchemy/cloudflare";
 import { CloudflareStateStore } from "alchemy/state";
@@ -32,79 +36,6 @@ const loadEnvFile = (relativePath: string): void => {
 		return;
 	}
 	config({ path: absolutePath, override: false });
-};
-
-const parseCloudflareResult = async <T>(
-	response: Response,
-	operation: string
-): Promise<T> => {
-	const payload = (await response.json().catch(() => undefined)) as
-		| {
-				success?: boolean;
-				errors?: Array<{ message?: string }>;
-				result?: T;
-		  }
-		| undefined;
-	const messages =
-		payload?.errors
-			?.map((error) => error.message?.trim())
-			.filter((message): message is string => Boolean(message)) ?? [];
-	const detail =
-		messages.length > 0
-			? messages.join("; ")
-			: response.statusText || "Unknown Cloudflare API error";
-
-	if (
-		!response.ok ||
-		payload?.success !== true ||
-		payload.result === undefined
-	) {
-		throw new Error(
-			`[infra] Failed to ${operation} (${response.status}): ${detail}`
-		);
-	}
-
-	return payload.result;
-};
-
-const disableWorkerPreviewUrls = async (
-	api: CloudflareApi,
-	scriptName: string
-): Promise<void> => {
-	const response = await api.post(
-		`/accounts/${api.accountId}/workers/scripts/${scriptName}/subdomain`,
-		{
-			enabled: true,
-			previews_enabled: false,
-		}
-	);
-
-	if (response.status === 404) {
-		return;
-	}
-
-	await parseCloudflareResult(
-		response,
-		`disable workers.dev previews for ${scriptName}`
-	);
-};
-
-const resolveWorkersSubdomain = async (
-	api: CloudflareApi
-): Promise<string | undefined> => {
-	const response = await api.get(
-		`/accounts/${api.accountId}/workers/subdomain`
-	);
-	if (response.status === 404) {
-		return undefined;
-	}
-
-	const result = await parseCloudflareResult<{ subdomain?: string }>(
-		response,
-		"resolve workers.dev subdomain"
-	);
-	const subdomain = result.subdomain?.trim();
-	return subdomain && subdomain.length > 0 ? subdomain : undefined;
 };
 
 // Prevent crash when dev server rebuild terminates in-flight HTTP connections.
@@ -223,50 +154,48 @@ let deployApi: CloudflareApi | undefined;
 if (isDeploying) {
 	deployApi = await createCloudflareApi();
 	if (!workersSubdomain) {
-		try {
-			workersSubdomain = await resolveWorkersSubdomain(deployApi);
-		} catch (error) {
+		workersSubdomain = await getAccountSubdomain(deployApi).catch(() => {
 			console.warn(
-				"[infra] Could not auto-resolve workers.dev subdomain. Set CLOUDFLARE_WORKERS_SUBDOMAIN if deploy URL derivation is needed.",
-				error
+				"[infra] Could not auto-resolve workers.dev subdomain. Set CLOUDFLARE_WORKERS_SUBDOMAIN if deploy URL derivation is needed."
 			);
-		}
+			return undefined;
+		});
 	}
 }
 
-// Alchemy's Worker resource initializes Cloudflare API before local-mode branching.
-// In offline local dev, provide deterministic fallback credentials so no account discovery
-// network call is required to boot Miniflare workers.
+// In offline local dev, set placeholder credentials so Miniflare boots without
+// requiring a real Cloudflare account discovery network call.
+if (isLocalDevRuntime) {
+	if (
+		!(
+			readNonEmptyEnv("CLOUDFLARE_API_TOKEN") ||
+			readNonEmptyEnv("CLOUDFLARE_API_KEY")
+		)
+	) {
+		process.env.CLOUDFLARE_API_TOKEN = "local-dev-token";
+		console.warn(
+			"[infra] CLOUDFLARE_API_TOKEN is missing; using local placeholder token for offline dev."
+		);
+	}
+	if (
+		!(
+			readNonEmptyEnv("CLOUDFLARE_ACCOUNT_ID") ||
+			readNonEmptyEnv("CF_ACCOUNT_ID")
+		)
+	) {
+		console.warn(
+			"[infra] CLOUDFLARE_ACCOUNT_ID is missing; using local placeholder accountId for offline dev."
+		);
+	}
+}
+
 const localCloudflareAccountId =
 	readNonEmptyEnv("CLOUDFLARE_ACCOUNT_ID") ??
 	readNonEmptyEnv("CF_ACCOUNT_ID") ??
 	(isLocalDevRuntime ? "local-dev-account" : undefined);
 const cloudflareApiOptions: { accountId?: string } = isLocalDevRuntime
-	? {
-			accountId: localCloudflareAccountId,
-		}
+	? { accountId: localCloudflareAccountId }
 	: {};
-
-if (
-	isLocalDevRuntime &&
-	!readNonEmptyEnv("CLOUDFLARE_API_TOKEN") &&
-	!readNonEmptyEnv("CLOUDFLARE_API_KEY")
-) {
-	process.env.CLOUDFLARE_API_TOKEN = "local-dev-token";
-	console.warn(
-		"[infra] CLOUDFLARE_API_TOKEN is missing; using local placeholder token for offline dev."
-	);
-}
-
-if (
-	isLocalDevRuntime &&
-	!readNonEmptyEnv("CLOUDFLARE_ACCOUNT_ID") &&
-	!readNonEmptyEnv("CF_ACCOUNT_ID")
-) {
-	console.warn(
-		"[infra] CLOUDFLARE_ACCOUNT_ID is missing; using local placeholder accountId for offline dev."
-	);
-}
 
 if (isDeployCommand) {
 	if (!deployApi) {
@@ -275,10 +204,10 @@ if (isDeployCommand) {
 		);
 	}
 	// Cloudflare rejects script uploads with DO migration metadata when Preview URLs are enabled.
-	// This is controlled by the workers.dev subdomain setting `previews_enabled`.
+	// Disable previews (keep workers.dev URL) for all workers before applying resources.
 	await Promise.all(
 		workerScriptNames.map((scriptName) =>
-			disableWorkerPreviewUrls(deployApi, scriptName)
+			enableWorkerSubdomain(deployApi, scriptName, false)
 		)
 	);
 }
@@ -295,43 +224,62 @@ const app = await alchemy(appName, {
 
 const db = await D1Database("database", {
 	migrationsDir: "../../packages/db/src/migrations",
-	adopt: true, // Reuse existing database if it exists
+	adopt: true,
 	...cloudflareApiOptions,
 });
 
-const notificationDeadLetterQueue = await Queue("notification-dlq", {
+const TWO_WEEKS_SEC = 60 * 60 * 24 * 14;
+
+// Creates a queue + dead-letter queue pair with standard retention.
+const createQueuePair = async (name: string) => {
+	const dlq = await Queue(`${name}-dlq`, {
+		adopt: true,
+		settings: { messageRetentionPeriod: TWO_WEEKS_SEC },
+		...cloudflareApiOptions,
+	});
+	const queue = await Queue(`${name}-queue`, {
+		adopt: true,
+		dlq,
+		settings: { messageRetentionPeriod: TWO_WEEKS_SEC },
+		...cloudflareApiOptions,
+	});
+	return { queue, dlq };
+};
+
+const { queue: notificationQueue, dlq: notificationDeadLetterQueue } =
+	await createQueuePair("notification");
+const { queue: recurringTaskQueue, dlq: recurringTaskDeadLetterQueue } =
+	await createQueuePair("recurring-task");
+
+// ─── YouTube Pipeline Infrastructure ─────────────────────────────────────────
+
+const ytTranscriptsBucket = await R2Bucket("yt-transcripts", {
 	adopt: true,
-	settings: {
-		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
-	},
 	...cloudflareApiOptions,
 });
 
-const notificationQueue = await Queue("notification-queue", {
-	adopt: true,
-	dlq: notificationDeadLetterQueue,
-	settings: {
-		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
-	},
-	...cloudflareApiOptions,
-});
+const { queue: ytDiscoveryQueue, dlq: ytDiscoveryDlq } =
+	await createQueuePair("yt-discovery");
+const { queue: ytIngestQueue, dlq: ytIngestDlq } =
+	await createQueuePair("yt-ingest");
+const { queue: ytVectorizeQueue, dlq: ytVectorizeDlq } =
+	await createQueuePair("yt-vectorize");
+const { queue: ytNlpQueue, dlq: ytNlpDlq } = await createQueuePair("yt-nlp");
+const { queue: ytClusterQueue, dlq: ytClusterDlq } =
+	await createQueuePair("yt-cluster");
+const { queue: ytTranscribeQueue, dlq: ytTranscribeDlq } =
+	await createQueuePair("yt-transcribe");
 
-const recurringTaskDeadLetterQueue = await Queue("recurring-task-dlq", {
-	adopt: true,
-	settings: {
-		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
-	},
-	...cloudflareApiOptions,
-});
-
-const recurringTaskQueue = await Queue("recurring-task-queue", {
-	adopt: true,
-	dlq: recurringTaskDeadLetterQueue,
-	settings: {
-		messageRetentionPeriod: 60 * 60 * 24 * 14, // 14 days
-	},
-	...cloudflareApiOptions,
-});
+// VectorizeIndex always calls the real Cloudflare API (no local emulation).
+// Skip it in e2e mode where only fake credentials are available.
+const ytSignalsVectorize = isE2E
+	? undefined
+	: await VectorizeIndex("yt-signals", {
+			dimensions: 1536,
+			metric: "cosine",
+			adopt: true,
+			...cloudflareApiOptions,
+		});
 
 const parsePort = (value: string | undefined, fallback: number): number => {
 	if (!value) {
@@ -449,6 +397,14 @@ export const server = await Worker("server", {
 		DB: db,
 		NOTIFICATION_QUEUE: notificationQueue,
 		RECURRING_TASK_QUEUE: recurringTaskQueue,
+		YT_DISCOVERY_QUEUE: ytDiscoveryQueue,
+		YT_INGEST_QUEUE: ytIngestQueue,
+		YT_VECTORIZE_QUEUE: ytVectorizeQueue,
+		YT_NLP_QUEUE: ytNlpQueue,
+		YT_CLUSTER_QUEUE: ytClusterQueue,
+		YT_TRANSCRIBE_QUEUE: ytTranscribeQueue,
+		YT_TRANSCRIPTS_BUCKET: ytTranscriptsBucket,
+		...(ytSignalsVectorize ? { YT_SIGNALS_VECTORIZE: ytSignalsVectorize } : {}),
 		CORS_ORIGIN: getCorsOrigin(),
 		BETTER_AUTH_SECRET: alchemy.secret.env(
 			"BETTER_AUTH_SECRET",
@@ -478,6 +434,72 @@ export const server = await Worker("server", {
 				maxWaitTimeMs: 1500,
 				retryDelay: 30,
 				deadLetterQueue: recurringTaskDeadLetterQueue,
+			},
+		},
+		{
+			queue: ytDiscoveryQueue,
+			settings: {
+				batchSize: 5,
+				maxConcurrency: 1,
+				maxRetries: 3,
+				maxWaitTimeMs: 2000,
+				retryDelay: 60,
+				deadLetterQueue: ytDiscoveryDlq,
+			},
+		},
+		{
+			queue: ytIngestQueue,
+			settings: {
+				batchSize: 3,
+				maxConcurrency: 2,
+				maxRetries: 3,
+				maxWaitTimeMs: 5000,
+				retryDelay: 60,
+				deadLetterQueue: ytIngestDlq,
+			},
+		},
+		{
+			queue: ytVectorizeQueue,
+			settings: {
+				batchSize: 5,
+				maxConcurrency: 2,
+				maxRetries: 3,
+				maxWaitTimeMs: 3000,
+				retryDelay: 30,
+				deadLetterQueue: ytVectorizeDlq,
+			},
+		},
+		{
+			queue: ytNlpQueue,
+			settings: {
+				batchSize: 3,
+				maxConcurrency: 1,
+				maxRetries: 3,
+				maxWaitTimeMs: 5000,
+				retryDelay: 60,
+				deadLetterQueue: ytNlpDlq,
+			},
+		},
+		{
+			queue: ytClusterQueue,
+			settings: {
+				batchSize: 5,
+				maxConcurrency: 1,
+				maxRetries: 3,
+				maxWaitTimeMs: 3000,
+				retryDelay: 30,
+				deadLetterQueue: ytClusterDlq,
+			},
+		},
+		{
+			queue: ytTranscribeQueue,
+			settings: {
+				batchSize: 2,
+				maxConcurrency: 1,
+				maxRetries: 3,
+				maxWaitTimeMs: 10_000,
+				retryDelay: 120,
+				deadLetterQueue: ytTranscribeDlq,
 			},
 		},
 	],
@@ -617,7 +639,7 @@ if (isDeployCommand) {
 	}
 	await Promise.all(
 		workerScriptNames.map((scriptName) =>
-			disableWorkerPreviewUrls(deployApi, scriptName)
+			enableWorkerSubdomain(deployApi, scriptName, false)
 		)
 	);
 }

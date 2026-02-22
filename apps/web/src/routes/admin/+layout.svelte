@@ -48,15 +48,17 @@
 		<div class="mb-6">
 			<h1 class="text-2xl font-bold">Admin</h1>
 			<nav class="mt-3 flex gap-1 overflow-x-auto border-b">
-				{#each navItems as item (item.href)}<a
-					href={item.href}
-					class="whitespace-nowrap px-3 py-2 text-sm transition
+				{#each navItems as item (item.href)}
+					<a
+						href={item.href}
+						class="whitespace-nowrap px-3 py-2 text-sm transition
 							{isActive(item.href)
 							? 'border-b-2 border-primary font-medium text-foreground'
 							: 'text-muted-foreground hover:text-foreground'}"
-				>
-					{item.label}
-				</a>{/each}
+					>
+						{item.label}
+					</a>
+				{/each}
 			</nav>
 		</div>
 		{@render children()}

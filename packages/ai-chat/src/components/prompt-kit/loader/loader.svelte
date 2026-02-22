@@ -13,6 +13,9 @@
 	import WaveLoader from "./wave-loader.svelte";
 
 	interface Props {
+		class?: string;
+		size?: "sm" | "md" | "lg";
+		text?: string;
 		variant?:
 			| "circular"
 			| "classic"
@@ -26,9 +29,6 @@
 			| "text-blink"
 			| "text-shimmer"
 			| "loading-dots";
-		size?: "sm" | "md" | "lg";
-		text?: string;
-		class?: string;
 	}
 
 	let {

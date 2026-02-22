@@ -35,8 +35,8 @@ const readPositiveIntEnv = (key: string, fallback: number): number => {
 
 export interface E2ERuntimeEnv {
 	baseURL: string;
-	useManagedServers: boolean;
 	reuseExistingServers: boolean;
+	useManagedServers: boolean;
 	webServerCommand: string;
 	workers: number;
 }

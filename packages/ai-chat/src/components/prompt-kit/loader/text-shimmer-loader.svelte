@@ -2,9 +2,9 @@
 	import { cn } from "@my-app/ui/lib/utils";
 
 	interface Props {
-		text?: string;
 		class?: string;
 		size?: "sm" | "md" | "lg";
+		text?: string;
 	}
 
 	let { text = "Thinking", class: className, size = "md" }: Props = $props();

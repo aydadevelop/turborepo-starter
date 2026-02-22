@@ -168,10 +168,7 @@
               "options": {
                 "patterns": [
                   {
-                    "group": [
-                      "@my-app/api",
-                      "@my-app/api/**"
-                    ],
+                    "group": ["@my-app/api", "@my-app/api/**"],
                     "message": "Use queue contracts and package boundaries; notifications app must not import API internals."
                   }
                 ]

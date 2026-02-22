@@ -16,6 +16,7 @@
 		{ to: resolve("/"), label: "Home" },
 		{ to: resolve("/chat"), label: "Chat" },
 		{ to: resolve("/dashboard"), label: "Dashboard" },
+		{ to: resolve("/youtube"), label: "YouTube" },
 	] as const;
 
 	// Stable queryFn — hoisted outside derived() so the function reference

@@ -3,8 +3,8 @@
 
 	interface Props {
 		class?: string;
-		text?: string;
 		size?: "sm" | "md" | "lg";
+		text?: string;
 	}
 
 	let { class: className, text = "Thinking", size = "md" }: Props = $props();

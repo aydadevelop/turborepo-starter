@@ -13,6 +13,7 @@ import { notificationsRouter } from "./notifications";
 import { paymentsRouter } from "./payments";
 import { tasksRouter } from "./tasks";
 import { todoRouter } from "./todo";
+import { youtubeRouter } from "./youtube/index";
 
 export const appRouter = {
 	healthCheck: publicProcedure
@@ -76,6 +77,7 @@ export const appRouter = {
 	payments: paymentsRouter,
 	tasks: tasksRouter,
 	todo: todoRouter,
+	youtube: youtubeRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;

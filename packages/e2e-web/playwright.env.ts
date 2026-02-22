@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 
 const DEFAULTS = {
 	baseURL: "http://localhost:43173",
-	serverURL: "http://localhost:43100",
-	assistantURL: "http://localhost:43102",
+	serverURL: "http://127.0.0.1:43100",
+	assistantURL: "http://127.0.0.1:43102",
 	workersCi: 1,
 	workersLocal: 2,
 	webServerCommand: "bun run dev:web:e2e",
@@ -50,14 +50,14 @@ const isLocalUrl = (value: string): boolean => {
 };
 
 export interface PlaywrightRuntimeEnv {
-	baseURL: string;
-	serverURL: string;
 	assistantURL: string;
-	isRemote: boolean;
-	useManagedServers: boolean;
-	reuseExistingServers: boolean;
-	webServerCommand: string;
 	backendServerCommand: string;
+	baseURL: string;
+	isRemote: boolean;
+	reuseExistingServers: boolean;
+	serverURL: string;
+	useManagedServers: boolean;
+	webServerCommand: string;
 	workers: number;
 }
 

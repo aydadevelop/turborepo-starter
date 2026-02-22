@@ -2,8 +2,8 @@ import type { Page } from "@playwright/test";
 import { url } from "./url";
 
 export interface E2EState {
-	query?: Record<string, string | number | boolean>;
 	localStorage?: Record<string, string>;
+	query?: Record<string, string | number | boolean>;
 	sessionStorage?: Record<string, string>;
 	viewport?: { width: number; height: number };
 	waitMs?: number;

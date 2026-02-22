@@ -6,12 +6,12 @@ import { url } from "./url";
 const { serverURL: SERVER_URL } = getPlaywrightRuntimeEnv();
 
 interface BrowserFetchResult {
+	contentType: string | null;
+	json: unknown;
 	ok: boolean;
 	status: number;
-	url: string;
-	contentType: string | null;
 	text: string;
-	json: unknown;
+	url: string;
 }
 
 export const browserRequest = async (

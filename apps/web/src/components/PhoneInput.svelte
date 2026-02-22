@@ -5,11 +5,11 @@
 	const PHONE_MASK = "+7 (###) ###-##-##";
 
 	interface Props {
-		value?: string;
-		unmasked?: string;
-		disabled?: boolean;
 		class?: string;
+		disabled?: boolean;
 		placeholder?: string;
+		unmasked?: string;
+		value?: string;
 	}
 
 	let {

@@ -5,18 +5,18 @@ import { tokens } from "./tokens";
 export type MaskType = string | string[] | ((input: string) => string) | null;
 
 interface MaskNumber {
-	locale?: string;
 	fraction?: number;
+	locale?: string;
 	unsigned?: boolean;
 }
 
 export interface MaskOptions {
+	eager?: boolean;
 	mask?: MaskType;
+	number?: MaskNumber;
+	reversed?: boolean;
 	tokens?: MaskTokens;
 	tokensReplace?: boolean;
-	eager?: boolean;
-	reversed?: boolean;
-	number?: MaskNumber;
 }
 
 export class Mask {

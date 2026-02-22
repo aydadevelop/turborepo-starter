@@ -31,8 +31,8 @@ export interface NotificationQueueProducer {
 }
 
 interface NotificationInlineProcessorResult {
-	status: "processed" | "already_processed" | "failed" | "not_found";
 	reason?: string;
+	status: "processed" | "already_processed" | "failed" | "not_found";
 }
 
 interface NotificationInlineProcessor {
@@ -143,14 +143,15 @@ const inlineRecurringTaskQueueProducer: NotificationQueueProducer = {
 };
 
 export interface Context {
-	session: AuthSession;
 	activeMembership: ActiveOrganizationMembership | null;
-	requestUrl: string;
-	requestHostname: string;
-	requestCookies?: Readonly<Record<string, string>>;
+	eventBus?: EventBus;
 	notificationQueue?: NotificationQueueProducer;
 	recurringTaskQueue?: NotificationQueueProducer;
-	eventBus?: EventBus;
+	ytDiscoveryQueue?: NotificationQueueProducer;
+	requestCookies?: Readonly<Record<string, string>>;
+	requestHostname: string;
+	requestUrl: string;
+	session: AuthSession;
 }
 
 /**
@@ -162,6 +163,7 @@ export interface OrganizationContext extends Context {
 	eventBus: EventBus;
 	notificationQueue?: NotificationQueueProducer;
 	recurringTaskQueue?: NotificationQueueProducer;
+	ytDiscoveryQueue?: NotificationQueueProducer;
 }
 
 const parseCookiesFromHeader = (
@@ -282,6 +284,7 @@ export async function createContext({
 			env?: {
 				NOTIFICATION_QUEUE?: unknown;
 				RECURRING_TASK_QUEUE?: unknown;
+				YT_DISCOVERY_QUEUE?: unknown;
 			};
 		}
 	).env?.NOTIFICATION_QUEUE;
@@ -290,9 +293,19 @@ export async function createContext({
 			env?: {
 				NOTIFICATION_QUEUE?: unknown;
 				RECURRING_TASK_QUEUE?: unknown;
+				YT_DISCOVERY_QUEUE?: unknown;
 			};
 		}
 	).env?.RECURRING_TASK_QUEUE;
+	const ytDiscoveryQueueCandidate = (
+		context as HonoContext & {
+			env?: {
+				NOTIFICATION_QUEUE?: unknown;
+				RECURRING_TASK_QUEUE?: unknown;
+				YT_DISCOVERY_QUEUE?: unknown;
+			};
+		}
+	).env?.YT_DISCOVERY_QUEUE;
 	const notificationQueue = isNotificationQueueProducer(
 		notificationQueueCandidate
 	)
@@ -302,6 +315,9 @@ export async function createContext({
 		recurringTaskQueueCandidate
 	)
 		? recurringTaskQueueCandidate
+		: undefined;
+	const ytDiscoveryQueue = isNotificationQueueProducer(ytDiscoveryQueueCandidate)
+		? ytDiscoveryQueueCandidate
 		: undefined;
 	const resolvedNotificationQueue =
 		notificationQueue ??
@@ -322,5 +338,6 @@ export async function createContext({
 		requestCookies,
 		notificationQueue: resolvedNotificationQueue,
 		recurringTaskQueue: resolvedRecurringTaskQueue,
+		ytDiscoveryQueue,
 	};
 }

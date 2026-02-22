@@ -17,15 +17,15 @@ export interface RecurringTaskQueueProducer {
 }
 
 export interface ScheduleRecurringTaskInput {
-	taskId: string;
-	organizationId: string;
-	userId: string;
-	title: string;
 	body?: string;
-	severity?: "info" | "success" | "warning" | "error";
 	initialDelaySeconds: number;
 	intervalSeconds: number;
+	organizationId: string;
 	runCount: number;
+	severity?: "info" | "success" | "warning" | "error";
+	taskId: string;
+	title: string;
+	userId: string;
 }
 
 export const scheduleRecurringTask = async (

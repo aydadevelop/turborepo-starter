@@ -1,1 +1,0 @@
-ALTER TABLE `boat_calendar_connection` ADD `sync_retry_count` integer DEFAULT 0 NOT NULL;

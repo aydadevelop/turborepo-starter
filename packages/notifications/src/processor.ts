@@ -48,11 +48,11 @@ const toFailureReason = (error: unknown) => {
 };
 
 export interface NotificationProviderResult {
-	status: "sent" | "failed";
-	providerMessageId?: string;
 	failureReason?: string;
-	responsePayload?: string;
+	providerMessageId?: string;
 	providerRecipient?: string;
+	responsePayload?: string;
+	status: "sent" | "failed";
 }
 
 export interface NotificationProvider {

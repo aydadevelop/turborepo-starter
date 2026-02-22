@@ -117,9 +117,7 @@
 		</Card.Root>
 
 		<Card.Root>
-			<Card.Header>
-				<Card.Title>Your Tasks</Card.Title>
-			</Card.Header>
+			<Card.Header> <Card.Title>Your Tasks</Card.Title> </Card.Header>
 			<Card.Content>
 				{#if isLoadingTodos}
 					<p class="text-muted-foreground">Loading...</p>

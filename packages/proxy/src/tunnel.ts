@@ -8,6 +8,10 @@ interface TunnelRoute {
 }
 
 export interface TunnelOptions {
+	/** Stable ngrok domain to claim (omit for random) */
+	ngrokDomain?: string;
+	/** Local port for the reverse proxy (default: 4040) */
+	proxyPort?: number;
 	/** URLs of services to proxy – taken directly from alchemy worker outputs */
 	upstreams: {
 		web?: string;
@@ -15,10 +19,6 @@ export interface TunnelOptions {
 		notifications: string;
 		assistant: string;
 	};
-	/** Local port for the reverse proxy (default: 4040) */
-	proxyPort?: number;
-	/** Stable ngrok domain to claim (omit for random) */
-	ngrokDomain?: string;
 }
 
 /**

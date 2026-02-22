@@ -6,9 +6,6 @@ export interface PaymentWebhookResult {
 }
 
 export interface PaymentWebhookAdapter {
-	readonly provider: PaymentProvider;
-	readonly supportedWebhookTypes: ReadonlySet<string>;
-
 	authenticateWebhook(request: Request): void;
 
 	parseWebhookBody(request: Request): Promise<unknown>;
@@ -17,4 +14,6 @@ export interface PaymentWebhookAdapter {
 		webhookType: string,
 		payload: unknown
 	): Promise<PaymentWebhookResult>;
+	readonly provider: PaymentProvider;
+	readonly supportedWebhookTypes: ReadonlySet<string>;
 }

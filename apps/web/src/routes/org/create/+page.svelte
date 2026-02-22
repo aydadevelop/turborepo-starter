@@ -94,9 +94,7 @@
 	</div>
 
 	<Card.Root>
-		<Card.Header>
-			<Card.Title>Данные организации</Card.Title>
-		</Card.Header>
+		<Card.Header> <Card.Title>Данные организации</Card.Title> </Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="space-y-2">
 				<Label for="org-name">Название организации</Label>

@@ -54,14 +54,14 @@ export const buildRecipients = (params: {
 };
 
 export interface EventBusEvent {
-	type: string;
-	organizationId: string;
 	actorUserId?: string;
-	sourceType?: string;
-	sourceId?: string;
 	idempotencyKey?: string;
+	organizationId: string;
 	payload?: Record<string, unknown>;
 	recipients: NotificationRecipientInput[];
+	sourceId?: string;
+	sourceType?: string;
+	type: string;
 }
 
 export class EventBus {

@@ -85,27 +85,29 @@
 
 		<nav class="flex-1 overflow-y-auto p-2">
 			{#if $chatsQuery.data}
-				{#each $chatsQuery.data as chat (chat.id)}<a
-					href={resolve(`/chat/${chat.id}`)}
-					class="group flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition {activeChatId ===
+				{#each $chatsQuery.data as chat (chat.id)}
+					<a
+						href={resolve(`/chat/${chat.id}`)}
+						class="group flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition {activeChatId ===
 						chat.id
 							? 'bg-accent text-accent-foreground'
 							: 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'}"
-				>
-					<span class="truncate">{chat.title}</span>
-					<button
-						data-testid="delete-chat-button"
-						type="button"
-						class="ml-1 hidden shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive group-hover:block"
-						onclick={(e) => {
+					>
+						<span class="truncate">{chat.title}</span>
+						<button
+							data-testid="delete-chat-button"
+							type="button"
+							class="ml-1 hidden shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive group-hover:block"
+							onclick={(e) => {
 								e.preventDefault();
 								e.stopPropagation();
 								$deleteChatMutation.mutate(chat.id);
 							}}
-					>
-						<Trash2 class="h-3.5 w-3.5" />
-					</button>
-				</a>{/each}
+						>
+							<Trash2 class="h-3.5 w-3.5" />
+						</button>
+					</a>
+				{/each}
 			{/if}
 
 			{#if $chatsQuery.isLoading}

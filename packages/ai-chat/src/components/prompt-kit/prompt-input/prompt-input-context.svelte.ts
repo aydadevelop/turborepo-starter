@@ -1,12 +1,12 @@
 import { getContext, setContext } from "svelte";
 
 export interface PromptInputSchema {
+	disabled?: boolean;
 	isLoading?: boolean;
-	value?: string;
-	onValueChange?: (value: string) => void;
 	maxHeight?: number | string;
 	onSubmit?: () => void;
-	disabled?: boolean;
+	onValueChange?: (value: string) => void;
+	value?: string;
 }
 
 export class PromptInputClass {

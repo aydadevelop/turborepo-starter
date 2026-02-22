@@ -59,7 +59,8 @@
     "alchemy": "0.85.1",
     "turbo": "^2.6.3",
     "typescript": "^5",
-    "ultracite": "7.2.3"
+    "ultracite": "7.2.3",
+    "ytdlp-nodejs": "^3.4.4"
   },
   "packageManager": "bun@1.2.22",
   "overrides": {

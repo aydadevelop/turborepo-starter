@@ -1,12 +1,12 @@
 export type NotificationSeverity = "info" | "success" | "warning" | "error";
 
 export interface InAppNotificationItem {
-	id: string;
-	title: string;
 	body: string | null;
 	ctaUrl: string | null;
-	severity: NotificationSeverity;
 	deliveredAt: string;
+	id: string;
+	severity: NotificationSeverity;
+	title: string;
 	viewedAt: string | null;
 }
 

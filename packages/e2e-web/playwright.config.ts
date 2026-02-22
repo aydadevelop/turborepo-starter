@@ -36,7 +36,7 @@ export default defineConfig({
 					command: webServerCommand,
 					url: baseURL,
 					reuseExistingServer: reuseExistingServers,
-					timeout: 60_000,
+					timeout: 120_000,
 				},
 				{
 					command: backendServerCommand,

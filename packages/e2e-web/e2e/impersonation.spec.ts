@@ -6,9 +6,7 @@ const DASHBOARD_URL_RE = /\/dashboard/;
 const ADMIN_USERS_URL_RE = /\/admin\/users/;
 
 test.describe("Impersonation & Org Switching", () => {
-	test("seeded admin can impersonate seeded operator", async ({
-		page,
-	}) => {
+	test("seeded admin can impersonate seeded operator", async ({ page }) => {
 		await signInAsSeedAdmin(page);
 
 		await page.goto(url("/admin/users"));

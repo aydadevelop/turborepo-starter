@@ -21,10 +21,10 @@ export interface NotificationQueueProducer {
 
 export interface NotificationEventPublishedHint {
 	eventId: string;
-	organizationId: string;
 	eventType: string;
-	recipientUserIds: string[];
 	occurredAt: number;
+	organizationId: string;
+	recipientUserIds: string[];
 }
 
 type NotificationEventPublishedListener = (

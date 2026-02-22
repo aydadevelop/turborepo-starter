@@ -100,7 +100,8 @@
 	{#if totalPages > 1}
 		<div class="flex items-center justify-between">
 			<p class="text-sm text-muted-foreground">
-				Page {currentPage} of {totalPages} ({$orgsQuery.data?.total ?? 0} total)
+				Page {currentPage} of {totalPages} ({$orgsQuery.data?.total ?? 0}
+				total)
 			</p>
 			<div class="flex gap-2">
 				<Button

@@ -2,8 +2,8 @@ import { CloudPaymentsWebhookAdapter } from "./cloudpayments";
 import { registerPaymentWebhookAdapter } from "./registry";
 
 interface PaymentWebhookEnvironment {
-	CLOUDPAYMENTS_PUBLIC_ID?: string;
 	CLOUDPAYMENTS_API_SECRET?: string;
+	CLOUDPAYMENTS_PUBLIC_ID?: string;
 }
 
 let configured = false;
