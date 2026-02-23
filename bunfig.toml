@@ -1,0 +1,22 @@
+# Workspace-level Bun configuration.
+#
+# Correct test commands for this repo:
+#   bun run test        → turbo run test → vitest per package
+#   bun run test:e2e    → turbo → Playwright (packages/e2e-web)
+#
+# `bun test` (Bun's native runner) is BLOCKED by the preload guard below.
+# It would otherwise pick up ALL *.test.ts and *.spec.ts files, including
+# Playwright specs and Vitest-only tests that crash the Bun runtime.
+#
+# The real native-module crash (better-sqlite3) is also prevented by a
+# runtime guard in packages/db/src/test/index.ts as a second line of defence.
+
+[test]
+preload = ["./scripts/bun-test-guard.ts"]
+testPathIgnorePatterns = [
+  "**/*.spec.ts",
+  "**/e2e/**",
+  "**/yt-consumers.test.ts",
+  "**/app.test.ts",
+  "**/payment-webhook.test.ts",
+]

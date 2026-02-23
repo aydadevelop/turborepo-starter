@@ -48,6 +48,15 @@ export const createFeedInputSchema = z.object({
 	name: z.string().trim().min(1).max(200),
 	gameTitle: z.string().trim().min(1).max(200),
 	searchQuery: z.string().trim().min(1).max(500),
+	/**
+	 * YouTube channel ID (UCxxx…) to browse directly instead of searching.
+	 * Discovery will fetch the channel's /videos tab when this is provided.
+	 */
+	channelId: z
+		.string()
+		.trim()
+		.regex(/^UC[\w-]{22}$/)
+		.optional(),
 	stopWords: z.string().trim().max(2000).optional(),
 	publishedAfter: z.string().trim().optional(),
 	gameVersion: z.string().trim().max(50).optional(),
@@ -58,6 +67,12 @@ export const updateFeedInputSchema = z.object({
 	feedId: z.string().trim().min(1),
 	name: z.string().trim().min(1).max(200).optional(),
 	searchQuery: z.string().trim().min(1).max(500).optional(),
+	channelId: z
+		.string()
+		.trim()
+		.regex(/^UC[\w-]{22}$/)
+		.nullable()
+		.optional(),
 	stopWords: z.string().trim().max(2000).optional(),
 	publishedAfter: z.string().trim().optional(),
 	gameVersion: z.string().trim().max(50).optional(),
@@ -70,6 +85,7 @@ export const feedOutputSchema = z.object({
 	name: z.string(),
 	gameTitle: z.string(),
 	searchQuery: z.string(),
+	channelId: z.string().nullable(),
 	stopWords: z.string().nullable(),
 	publishedAfter: z.string().nullable(),
 	gameVersion: z.string().nullable(),

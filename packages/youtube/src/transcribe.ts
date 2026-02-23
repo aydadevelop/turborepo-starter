@@ -18,6 +18,15 @@ export const transcribeOptionsSchema = z.object({
 
 export type TranscribeOptions = z.infer<typeof transcribeOptionsSchema>;
 
+export interface TranscribeSegment {
+	/** End time in seconds */
+	end: number;
+	/** Start time in seconds */
+	start: number;
+	/** Text of this segment */
+	text: string;
+}
+
 export interface TranscribeResult {
 	/** Audio duration in seconds */
 	durationSeconds: number;
@@ -27,6 +36,8 @@ export interface TranscribeResult {
 	language: string;
 	/** The model used */
 	model: string;
+	/** Word/sentence-level segments with timecodes (from verbose_json) */
+	segments: TranscribeSegment[];
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
@@ -58,6 +69,7 @@ export async function transcribeAudio(
 	const verbose = response as OpenAI.Audio.Transcription & {
 		duration?: number;
 		language?: string;
+		segments?: Array<{ start: number; end: number; text: string }>;
 	};
 
 	return {
@@ -65,5 +77,10 @@ export async function transcribeAudio(
 		durationSeconds: verbose.duration ?? 0,
 		language: verbose.language ?? options.language ?? "en",
 		model: options.model ?? "whisper-1",
+		segments: (verbose.segments ?? []).map((s) => ({
+			start: s.start,
+			end: s.end,
+			text: s.text.trim(),
+		})),
 	};
 }

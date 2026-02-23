@@ -20,6 +20,9 @@
     "./tasks/*": {
       "default": "./src/tasks/*.ts"
     },
+    "./services/*": {
+      "default": "./src/services/*.ts"
+    },
     "./routers": {
       "default": "./src/routers/index.ts"
     },

@@ -9,16 +9,25 @@ const {
 	workers,
 } = getE2ERuntimeEnv();
 
+const isCi = Boolean(process.env.CI);
+
 export default defineConfig({
 	testDir: "./e2e",
 	fullyParallel: false,
-	forbidOnly: Boolean(process.env.CI),
-	retries: process.env.CI ? 2 : 0,
+	forbidOnly: isCi,
+	retries: isCi ? 2 : 0,
 	workers,
-	reporter: "line",
+	reporter: isCi
+		? [["line"], ["html", { open: "never", outputFolder: "playwright-report" }]]
+		: "line",
+	expect: {
+		timeout: 10_000,
+	},
 	use: {
 		baseURL,
 		trace: "on-first-retry",
+		actionTimeout: 15_000,
+		navigationTimeout: 30_000,
 	},
 	projects: [
 		{
@@ -32,6 +41,8 @@ export default defineConfig({
 				url: baseURL,
 				reuseExistingServer: reuseExistingServers,
 				timeout: 120_000,
+				stdout: "pipe",
+				stderr: "pipe",
 			}
 		: undefined,
 });

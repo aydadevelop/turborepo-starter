@@ -77,6 +77,12 @@ export const ytFeed = sqliteTable(
 		name: text("name").notNull(),
 		gameTitle: text("game_title").notNull(),
 		searchQuery: text("search_query").notNull(),
+		/**
+		 * Optional YouTube channel ID (UCxxx…) to browse directly for this feed.
+		 * When set, discovery fetches the channel's /videos (or /recent) tab
+		 * instead of running a keyword search — useful for official game channels.
+		 */
+		channelId: text("channel_id"),
 		/** Comma-separated stop-words for candidate filtering */
 		stopWords: text("stop_words"),
 		/** ISO date — only ingest videos published after this */
@@ -177,6 +183,14 @@ export const ytTranscript = sqliteTable(
 		segmentCount: integer("segment_count"),
 		/** Token count for LLM budgeting */
 		tokenCount: integer("token_count"),
+		/** NLP processing status: pending → processed → failed */
+		nlpStatus: text("nlp_status", {
+			enum: ["pending", "processed", "failed"] as const,
+		})
+			.notNull()
+			.default("pending"),
+		/** When NLP marking was completed */
+		markedAt: integer("marked_at", { mode: "timestamp_ms" }),
 		...timestamps,
 	},
 	(table) => [
@@ -255,6 +269,10 @@ export const ytSignal = sqliteTable(
 		/** Surrounding context from transcript */
 		contextBefore: text("context_before"),
 		contextAfter: text("context_after"),
+		/** Character offset where this signal starts in transcript fullText */
+		startOffset: integer("start_offset"),
+		/** Character offset where this signal ends in transcript fullText */
+		endOffset: integer("end_offset"),
 		/** Start time in seconds within the video */
 		timestampStart: integer("timestamp_start"),
 		/** End time in seconds within the video */

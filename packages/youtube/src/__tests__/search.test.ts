@@ -181,6 +181,38 @@ describe("searchYouTube", () => {
 		expect(calledUrl.searchParams.get("q")).toBe("hello world");
 		expect(calledUrl.searchParams.get("hl")).toBe("en");
 	});
+
+	it("appends stop words as minus-prefixed tokens to query", async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			text: () => Promise.resolve(makeYtHtml([])),
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		await searchYouTube({
+			query: "reanimal",
+			maxResults: 5,
+			stopWords: ["shorts", "clip"],
+		});
+
+		const calledUrl = new URL(fetchMock.mock.calls[0][0] as string);
+		expect(calledUrl.searchParams.get("q")).toBe("reanimal -shorts -clip");
+	});
+
+	it("encodes medium duration filter as EgQQARgD sp param", async () => {
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			text: () => Promise.resolve(makeYtHtml([])),
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		await searchYouTube({ query: "test", maxResults: 5, duration: "medium" });
+
+		const calledUrl = new URL(fetchMock.mock.calls[0][0] as string);
+		expect(calledUrl.searchParams.get("sp")).toBe("EgQQARgD");
+	});
 });
 
 describe("searchOptionsSchema", () => {

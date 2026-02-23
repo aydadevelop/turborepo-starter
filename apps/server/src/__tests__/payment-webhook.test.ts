@@ -1,29 +1,13 @@
-import type { PaymentWebhookAdapter } from "@my-app/api/payments/webhooks";
+import {
+	registerPaymentWebhookAdapter,
+	resetPaymentWebhookRegistry,
+} from "@my-app/api/payments/webhooks/registry";
+import type { PaymentWebhookAdapter } from "@my-app/api/payments/webhooks/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const registerMock = vi.fn();
-const getAdapterMock = vi.fn();
-
-vi.mock("@my-app/api/payments/webhooks", () => {
-	class WebhookAuthError extends Error {
-		constructor(msg: string) {
-			super(msg);
-			this.name = "WebhookAuthError";
-		}
-	}
-	class WebhookPayloadError extends Error {
-		constructor(msg: string) {
-			super(msg);
-			this.name = "WebhookPayloadError";
-		}
-	}
-	return {
-		getPaymentWebhookAdapter: getAdapterMock,
-		registerPaymentWebhookAdapter: registerMock,
-		WebhookAuthError,
-		WebhookPayloadError,
-	};
-});
+// The route under test delegates to internalServerRouteProcedures which calls
+// the real adapter registry. We register stub adapters per-test instead of
+// mocking the module, so this test works under both Vitest and Bun.
 
 const sampleNotification = {
 	TransactionId: 12_345,
@@ -32,7 +16,7 @@ const sampleNotification = {
 	Status: "Completed",
 };
 
-const createMockAdapter = (
+const createStubAdapter = (
 	overrides: Partial<PaymentWebhookAdapter> = {}
 ): PaymentWebhookAdapter => ({
 	provider: "cloudpayments",
@@ -51,16 +35,16 @@ const createMockAdapter = (
 });
 
 describe("paymentWebhookRoutes", () => {
-	let mockAdapter: PaymentWebhookAdapter;
+	let stubAdapter: PaymentWebhookAdapter;
 
 	beforeEach(() => {
-		mockAdapter = createMockAdapter();
-		getAdapterMock.mockReset();
-		getAdapterMock.mockReturnValue(mockAdapter);
+		resetPaymentWebhookRegistry();
+		stubAdapter = createStubAdapter();
+		registerPaymentWebhookAdapter(stubAdapter);
 	});
 
 	it("returns 404 for unknown provider", async () => {
-		getAdapterMock.mockReturnValue(null);
+		// No adapter registered for 'unknown'
 		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
 		const response = await paymentWebhookRoutes.request(
@@ -87,13 +71,15 @@ describe("paymentWebhookRoutes", () => {
 	});
 
 	it("returns 401 on authentication failure", async () => {
-		const { WebhookAuthError } = await import("@my-app/api/payments/webhooks");
-		mockAdapter = createMockAdapter({
+		const { WebhookAuthError } = await import(
+			"@my-app/api/payments/webhooks/errors"
+		);
+		stubAdapter = createStubAdapter({
 			authenticateWebhook: vi.fn(() => {
 				throw new WebhookAuthError("Invalid credentials");
 			}),
 		});
-		getAdapterMock.mockReturnValue(mockAdapter);
+		registerPaymentWebhookAdapter(stubAdapter);
 
 		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
@@ -108,14 +94,14 @@ describe("paymentWebhookRoutes", () => {
 
 	it("returns 400 on payload parse failure", async () => {
 		const { WebhookPayloadError } = await import(
-			"@my-app/api/payments/webhooks"
+			"@my-app/api/payments/webhooks/errors"
 		);
-		mockAdapter = createMockAdapter({
+		stubAdapter = createStubAdapter({
 			parseWebhookBody: vi
 				.fn()
 				.mockRejectedValue(new WebhookPayloadError("Unsupported Content-Type")),
 		});
-		getAdapterMock.mockReturnValue(mockAdapter);
+		registerPaymentWebhookAdapter(stubAdapter);
 
 		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
@@ -131,10 +117,10 @@ describe("paymentWebhookRoutes", () => {
 	});
 
 	it("returns 400 on unexpected parse error", async () => {
-		mockAdapter = createMockAdapter({
+		stubAdapter = createStubAdapter({
 			parseWebhookBody: vi.fn().mockRejectedValue(new Error("Unexpected")),
 		});
-		getAdapterMock.mockReturnValue(mockAdapter);
+		registerPaymentWebhookAdapter(stubAdapter);
 
 		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
@@ -160,10 +146,10 @@ describe("paymentWebhookRoutes", () => {
 	});
 
 	it("returns 500 with code 1 on processing error", async () => {
-		mockAdapter = createMockAdapter({
+		stubAdapter = createStubAdapter({
 			processWebhook: vi.fn().mockRejectedValue(new Error("DB error")),
 		});
-		getAdapterMock.mockReturnValue(mockAdapter);
+		registerPaymentWebhookAdapter(stubAdapter);
 
 		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
@@ -187,12 +173,12 @@ describe("paymentWebhookRoutes", () => {
 			"refund",
 			"cancel",
 		]) {
-			(mockAdapter.processWebhook as ReturnType<typeof vi.fn>).mockClear();
+			(stubAdapter.processWebhook as ReturnType<typeof vi.fn>).mockClear();
 			(
-				mockAdapter.parseWebhookBody as ReturnType<typeof vi.fn>
+				stubAdapter.parseWebhookBody as ReturnType<typeof vi.fn>
 			).mockResolvedValue(sampleNotification);
 			(
-				mockAdapter.processWebhook as ReturnType<typeof vi.fn>
+				stubAdapter.processWebhook as ReturnType<typeof vi.fn>
 			).mockResolvedValue({ code: 0 });
 
 			await paymentWebhookRoutes.request(
@@ -200,7 +186,7 @@ describe("paymentWebhookRoutes", () => {
 				{ method: "POST" }
 			);
 
-			expect(mockAdapter.processWebhook).toHaveBeenCalledWith(
+			expect(stubAdapter.processWebhook).toHaveBeenCalledWith(
 				type,
 				sampleNotification
 			);
@@ -215,12 +201,19 @@ describe("paymentWebhookRoutes", () => {
 			{ method: "POST" }
 		);
 
-		expect(mockAdapter.authenticateWebhook).toHaveBeenCalledWith(
+		expect(stubAdapter.authenticateWebhook).toHaveBeenCalledWith(
 			expect.any(Request)
 		);
 	});
 
 	it("looks up adapter by provider param", async () => {
+		const spy = vi
+			.spyOn(
+				await import("@my-app/api/payments/webhooks"),
+				"getPaymentWebhookAdapter"
+			)
+			.mockReturnValue(stubAdapter);
+
 		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
 
 		await paymentWebhookRoutes.request(
@@ -228,6 +221,7 @@ describe("paymentWebhookRoutes", () => {
 			{ method: "POST" }
 		);
 
-		expect(getAdapterMock).toHaveBeenCalledWith("cloudpayments");
+		expect(spy).toHaveBeenCalledWith("cloudpayments");
+		spy.mockRestore();
 	});
 });

@@ -49,51 +49,66 @@ const getQueueName = (batch: MessageBatch<unknown>): string => {
 	return batch.queue;
 };
 
+interface QueueProcessor {
+	fragment: string;
+	run(batch: MessageBatch<unknown>, env: Env): Promise<void>;
+}
+
+const queueProcessors: QueueProcessor[] = [
+	{
+		fragment: "yt-discovery",
+		run: (batch, env) =>
+			processYtDiscoveryBatch(batch, {
+				ytIngestQueue: env.YT_INGEST_QUEUE,
+			}),
+	},
+	{
+		fragment: "yt-ingest",
+		run: (batch, env) =>
+			processYtIngestBatch(batch, {
+				ytVectorizeQueue: env.YT_VECTORIZE_QUEUE,
+				ytNlpQueue: env.YT_NLP_QUEUE,
+				ytTranscribeQueue: env.YT_TRANSCRIBE_QUEUE,
+				ytTranscriptsBucket: env.YT_TRANSCRIPTS_BUCKET,
+			}),
+	},
+	{
+		fragment: "yt-transcribe",
+		run: (batch, env) =>
+			processYtTranscribeBatch(batch, {
+				ytTranscriptsBucket: env.YT_TRANSCRIPTS_BUCKET,
+				ytVectorizeQueue: env.YT_VECTORIZE_QUEUE,
+				ytNlpQueue: env.YT_NLP_QUEUE,
+			}),
+	},
+	{
+		fragment: "yt-vectorize",
+		run: (batch, env) =>
+			processYtVectorizeBatch(batch, env.YT_SIGNALS_VECTORIZE),
+	},
+	{
+		fragment: "yt-nlp",
+		run: (batch, env) =>
+			processYtNlpBatch(batch, {
+				ytClusterQueue: env.YT_CLUSTER_QUEUE,
+			}),
+	},
+	{
+		fragment: "yt-cluster",
+		run: (batch) => processYtClusterBatch(batch),
+	},
+];
+
 const serverApp: ExportedHandler<Env> = {
 	fetch: app.fetch,
 	queue: async (batch, env) => {
 		const queueName = getQueueName(batch);
 
-		if (queueName.includes("yt-discovery")) {
-			await processYtDiscoveryBatch(batch, {
-				ytIngestQueue: env.YT_INGEST_QUEUE,
-			});
-			return;
-		}
-
-		if (queueName.includes("yt-ingest")) {
-			await processYtIngestBatch(batch, {
-				ytVectorizeQueue: env.YT_VECTORIZE_QUEUE,
-				ytNlpQueue: env.YT_NLP_QUEUE,
-				ytTranscribeQueue: env.YT_TRANSCRIBE_QUEUE,
-				ytTranscriptsBucket: env.YT_TRANSCRIPTS_BUCKET,
-			});
-			return;
-		}
-
-		if (queueName.includes("yt-transcribe")) {
-			await processYtTranscribeBatch(batch, {
-				ytTranscriptsBucket: env.YT_TRANSCRIPTS_BUCKET,
-				ytVectorizeQueue: env.YT_VECTORIZE_QUEUE,
-				ytNlpQueue: env.YT_NLP_QUEUE,
-			});
-			return;
-		}
-
-		if (queueName.includes("yt-vectorize")) {
-			await processYtVectorizeBatch(batch, env.YT_SIGNALS_VECTORIZE);
-			return;
-		}
-
-		if (queueName.includes("yt-nlp")) {
-			await processYtNlpBatch(batch, {
-				ytClusterQueue: env.YT_CLUSTER_QUEUE,
-			});
-			return;
-		}
-
-		if (queueName.includes("yt-cluster")) {
-			await processYtClusterBatch(batch);
+		const matchedProcessor = queueProcessors.find(({ fragment }) =>
+			queueName.includes(fragment)
+		);
+		if (matchedProcessor) {
+			await matchedProcessor.run(batch, env);
 			return;
 		}
 

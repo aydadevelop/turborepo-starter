@@ -3,7 +3,7 @@ import { todo } from "@my-app/db/schema/todo";
 import { eq } from "drizzle-orm";
 import z from "zod";
 
-import { publicProcedure } from "../index";
+import { protectedProcedure } from "../index";
 
 const todoOutputSchema = z.object({
 	id: z.number(),
@@ -18,7 +18,7 @@ const d1ResultOutputSchema = z.object({
 });
 
 export const todoRouter = {
-	getAll: publicProcedure
+	getAll: protectedProcedure
 		.route({
 			tags: ["Todo"],
 			summary: "List all todos",
@@ -29,7 +29,7 @@ export const todoRouter = {
 			return await db.select().from(todo);
 		}),
 
-	create: publicProcedure
+	create: protectedProcedure
 		.route({
 			tags: ["Todo"],
 			summary: "Create todo",
@@ -43,7 +43,7 @@ export const todoRouter = {
 			});
 		}),
 
-	toggle: publicProcedure
+	toggle: protectedProcedure
 		.route({
 			tags: ["Todo"],
 			summary: "Toggle todo",
@@ -58,7 +58,7 @@ export const todoRouter = {
 				.where(eq(todo.id, input.id));
 		}),
 
-	delete: publicProcedure
+	delete: protectedProcedure
 		.route({
 			tags: ["Todo"],
 			summary: "Delete todo",

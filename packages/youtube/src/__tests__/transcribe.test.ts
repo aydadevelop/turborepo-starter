@@ -28,6 +28,10 @@ describe("transcribeAudio", () => {
 			text: "This is the transcribed text from the game playtest",
 			duration: 125.5,
 			language: "en",
+			segments: [
+				{ start: 0, end: 3.2, text: "This is the transcribed text" },
+				{ start: 3.2, end: 5.0, text: " from the game playtest" },
+			],
 		});
 
 		const audioBuffer = new ArrayBuffer(1024);
@@ -43,6 +47,12 @@ describe("transcribeAudio", () => {
 		expect(result.durationSeconds).toBe(125.5);
 		expect(result.language).toBe("en");
 		expect(result.model).toBe("whisper-1");
+		expect(result.segments).toHaveLength(2);
+		expect(result.segments[0]).toEqual({
+			start: 0,
+			end: 3.2,
+			text: "This is the transcribed text",
+		});
 
 		expect(createMock).toHaveBeenCalledTimes(1);
 		const callArgs = createMock.mock.calls[0]?.[0] as Record<string, unknown>;
@@ -86,6 +96,33 @@ describe("transcribeAudio", () => {
 
 		expect(result.durationSeconds).toBe(0);
 		expect(result.language).toBe("en");
+		expect(result.segments).toEqual([]);
+	});
+
+	it("maps segments to timecoded entries", async () => {
+		createMock.mockResolvedValue({
+			text: "Hello world.",
+			duration: 4,
+			language: "en",
+			segments: [
+				{ start: 0.0, end: 1.5, text: " Hello" },
+				{ start: 1.5, end: 4.0, text: " world." },
+			],
+		});
+
+		const result = await transcribeAudio(
+			new ArrayBuffer(256),
+			{ model: "whisper-1", contentType: "audio/mp4", fileName: "audio.m4a" },
+			{ apiKey: "test-key" }
+		);
+
+		expect(result.segments).toHaveLength(2);
+		expect(result.segments[0]).toEqual({ start: 0.0, end: 1.5, text: "Hello" });
+		expect(result.segments[1]).toEqual({
+			start: 1.5,
+			end: 4.0,
+			text: "world.",
+		});
 	});
 
 	it("accepts Uint8Array input", async () => {

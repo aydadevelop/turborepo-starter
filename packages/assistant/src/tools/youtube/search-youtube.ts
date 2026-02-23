@@ -2,19 +2,21 @@ import type { AppRouterClient } from "@my-app/api/routers";
 import { tool } from "ai";
 import z from "zod";
 
-export const createSearchYouTubeTool = (client: AppRouterClient) =>
+export const createSemanticSearchTool = (client: AppRouterClient) =>
 	tool({
 		description:
-			"Search YouTube for videos matching a query. Use this to discover new playtest feedback videos before submitting them for processing. Returns YouTube video metadata including titles, channels, and view counts.",
+			"Semantic search across extracted playtest signals with optional feed and type filters. Returns matching signals with video context, timestamps, and relevance scores. Does NOT search YouTube directly — only searches signals already in the database.",
 		inputSchema: z.object({
 			query: z
 				.string()
 				.min(1)
-				.describe("Search query (e.g. 'Starforge Arena playtest feedback')"),
+				.describe(
+					"Search query to match against signal text (e.g. 'camera bug', 'UI lag')"
+				),
 			feedId: z
 				.string()
 				.optional()
-				.describe("Optional feed ID to filter results or context"),
+				.describe("Optional feed ID to filter signals to a specific feed"),
 			type: z
 				.enum([
 					"bug",
@@ -28,7 +30,7 @@ export const createSearchYouTubeTool = (client: AppRouterClient) =>
 					"other",
 				])
 				.optional()
-				.describe("Signal type filter for semantic search"),
+				.describe("Signal type filter"),
 			limit: z.number().int().min(1).max(50).default(10),
 		}),
 		execute: async (input) => {

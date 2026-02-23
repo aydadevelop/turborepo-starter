@@ -59,7 +59,8 @@ vi.mock("../routes/health", () => {
 
 describe("app", () => {
 	beforeEach(() => {
-		vi.resetModules();
+		// vi.resetModules is vitest-only; safe no-op when run under bun test
+		vi.resetModules?.();
 		configurePaymentWebhookAdaptersFromEnvMock.mockReset();
 	});
 

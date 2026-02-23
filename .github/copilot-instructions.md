@@ -68,10 +68,4 @@ This monorepo is the baseline for a reusable Cloudflare starter:
 - Prefer explicit error handling with structured logs over silent failures.
 - Keep infra as code in Alchemy; avoid manual dashboard-only changes.
 
-## Starter Branch Strategy
 
-- Yes: create a dedicated extraction branch before copying to a new repo.
-- Recommended branch name: `codex/starter-v1`.
-- Publish options:
-  - Preserve history by pushing the branch to a new remote.
-  - Use an orphan branch for a clean, single-commit starter history.

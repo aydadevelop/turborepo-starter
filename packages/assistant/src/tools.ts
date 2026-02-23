@@ -7,7 +7,7 @@ import { createWhoAmITool } from "./tools/whoami";
 import { createListClustersTool } from "./tools/youtube/list-clusters";
 import { createListVideosTool } from "./tools/youtube/list-videos";
 import { createSearchSignalsTool } from "./tools/youtube/search-signals";
-import { createSearchYouTubeTool } from "./tools/youtube/search-youtube";
+import { createSemanticSearchTool } from "./tools/youtube/search-youtube";
 import { createSubmitVideoTool } from "./tools/youtube/submit-video";
 import { createTriggerDiscoveryTool } from "./tools/youtube/trigger-discovery";
 import { createUpdateClusterStateTool } from "./tools/youtube/update-cluster-state";
@@ -21,7 +21,7 @@ export const createAssistantTools = (client: AppRouterClient) => {
 		createMockChargeNotification: createMockChargeNotificationTool(client),
 		// YouTube playtest feedback tools
 		ytSearchSignals: createSearchSignalsTool(client),
-		ytSearchYouTube: createSearchYouTubeTool(client),
+		ytSemanticSearch: createSemanticSearchTool(client),
 		ytListVideos: createListVideosTool(client),
 		ytListClusters: createListClustersTool(client),
 		ytSubmitVideo: createSubmitVideoTool(client),

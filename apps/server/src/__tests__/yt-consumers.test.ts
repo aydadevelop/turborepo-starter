@@ -10,6 +10,8 @@ import { bootstrapTestDatabase } from "@my-app/db/test";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const AUDIO_R2_KEY_RE = /^audio\/org-1\/video-1\.(m4a|mp4)$/;
+
 // ─── Test DB setup ───────────────────────────────────────────────────────────
 
 const testDbState = bootstrapTestDatabase({
@@ -273,7 +275,9 @@ describe("yt-ingest-consumer", () => {
 
 		// Audio should be stored in R2
 		expect(mockBucket.put).toHaveBeenCalledTimes(1);
-		expect(mockBucket.put.mock.calls[0]?.[0]).toBe("audio/org-1/video-1.m4a");
+		// downloadAudio may return .mp4 (progressive fallback) or .m4a (adaptive)
+		const r2Key = mockBucket.put.mock.calls[0]?.[0] as string;
+		expect(r2Key).toMatch(AUDIO_R2_KEY_RE);
 
 		// Should dispatch to transcribe queue, NOT vectorize/nlp
 		expect(mockTranscribeQueue.send).toHaveBeenCalledTimes(1);
@@ -282,7 +286,7 @@ describe("yt-ingest-consumer", () => {
 			unknown
 		>;
 		expect(transcribeMsg?.kind).toBe("yt.transcribe.v1");
-		expect(transcribeMsg?.audioR2Key).toBe("audio/org-1/video-1.m4a");
+		expect(transcribeMsg?.audioR2Key).toMatch(AUDIO_R2_KEY_RE);
 	});
 
 	it("marks video as failed on error", async () => {
@@ -374,7 +378,7 @@ describe("yt-vectorize-consumer", () => {
 		expect(queueMessage.ack).toHaveBeenCalledTimes(1);
 	});
 
-	it("marks signals as vectorized", async () => {
+	it("retries when no vectorize index is provided", async () => {
 		await testDbState.db.insert(ytTranscript).values({
 			id: "transcript-vec-2",
 			videoId: "video-1",
@@ -405,12 +409,57 @@ describe("yt-vectorize-consumer", () => {
 		);
 		await processYtVectorizeBatch(makeBatch([queueMessage]));
 
-		expect(queueMessage.ack).toHaveBeenCalledTimes(1);
+		// Without vectorize index, should retry instead of acking
+		expect(queueMessage.retry).toHaveBeenCalledTimes(1);
 
 		const [signal] = await testDbState.db
 			.select()
 			.from(ytSignal)
 			.where(eq(ytSignal.id, "signal-vec-1"));
+		expect(signal?.vectorized).toBe(false);
+	});
+
+	it("marks signals as vectorized when index is available", async () => {
+		await testDbState.db.insert(ytTranscript).values({
+			id: "transcript-vec-3",
+			videoId: "video-1",
+			organizationId: "org-1",
+			source: "youtube_captions",
+		});
+		await testDbState.db.insert(ytSignal).values({
+			id: "signal-vec-2",
+			transcriptId: "transcript-vec-3",
+			videoId: "video-1",
+			organizationId: "org-1",
+			type: "bug",
+			text: "Camera glitch",
+			vectorized: false,
+		});
+
+		const mockVectorizeIndex = { upsert: vi.fn().mockResolvedValue(undefined) };
+		const queueMessage = makeQueueMessage({
+			body: {
+				kind: "yt.vectorize.v1",
+				transcriptId: "transcript-vec-3",
+				videoId: "video-1",
+				organizationId: "org-1",
+			},
+		});
+
+		const { processYtVectorizeBatch } = await import(
+			"../queues/yt-vectorize-consumer"
+		);
+		await processYtVectorizeBatch(
+			makeBatch([queueMessage]),
+			mockVectorizeIndex
+		);
+
+		expect(queueMessage.ack).toHaveBeenCalledTimes(1);
+
+		const [signal] = await testDbState.db
+			.select()
+			.from(ytSignal)
+			.where(eq(ytSignal.id, "signal-vec-2"));
 		expect(signal?.vectorized).toBe(true);
 		expect(signal?.embeddingModel).toBe("text-embedding-3-small");
 	});

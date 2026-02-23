@@ -50,26 +50,33 @@ const handleVectorizeMessage = async (
 
 		// 2. Generate embeddings via OpenRouter/OpenAI
 		// NOTE: In production, call the embeddings API here.
-		// For now, this is a placeholder that marks signals as vectorized.
+		// Without a vectorize index, we cannot actually vectorize — skip and retry later.
+		if (!vectorizeIndex) {
+			console.warn(
+				`[yt-vectorize] No vectorize index available — skipping ${unvectorized.length} signals for transcript ${transcriptId}`
+			);
+			queueMessage.retry({ delaySeconds: 60 });
+			return;
+		}
+
 		console.log(
 			`[yt-vectorize] Processing ${unvectorized.length} signals for transcript ${transcriptId}`
 		);
 
 		// 3. Upsert vectors into Vectorize index
-		if (vectorizeIndex) {
-			// Placeholder: real implementation generates embeddings first
-			// const vectors = unvectorized.map((s) => ({
-			//   id: s.id,
-			//   values: embeddingsMap.get(s.id)!,
-			//   metadata: {
-			//     organizationId,
-			//     videoId,
-			//     type: s.type,
-			//     severity: s.severity,
-			//   },
-			// }));
-			// await vectorizeIndex.upsert(vectors);
-		}
+		// TODO: Replace placeholder with real embeddings API call
+		// const embeddings = await generateEmbeddings(unvectorized.map(s => s.text));
+		// const vectors = unvectorized.map((s, i) => ({
+		//   id: s.id,
+		//   values: embeddings[i],
+		//   metadata: {
+		//     organizationId: _orgId,
+		//     videoId: _videoId,
+		//     type: s.type,
+		//     severity: s.severity,
+		//   },
+		// }));
+		// await vectorizeIndex.upsert(vectors);
 
 		// 4. Mark signals as vectorized
 		for (const signal of unvectorized) {

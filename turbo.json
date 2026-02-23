@@ -58,20 +58,34 @@
       "dependsOn": ["transit"]
     },
     "test": {
-      "dependsOn": ["^test"]
+      "dependsOn": ["^transit"]
     },
     "test:watch": {
       "cache": false,
       "persistent": true
     },
     "test:e2e": {
+      "dependsOn": ["^build"],
       "cache": false,
-      "passThroughEnv": ["PLAYWRIGHT_*", "BASE_PATH"]
+      "passThroughEnv": [
+        "PLAYWRIGHT_*",
+        "BASE_PATH",
+        "PLAYWRIGHT_SKIP_SEED",
+        "PLAYWRIGHT_SEED_SCENARIO",
+        "PLAYWRIGHT_SEED_ANCHOR_DATE"
+      ]
     },
     "test:e2e:ui": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true,
-      "passThroughEnv": ["PLAYWRIGHT_*", "BASE_PATH"]
+      "passThroughEnv": [
+        "PLAYWRIGHT_*",
+        "BASE_PATH",
+        "PLAYWRIGHT_SKIP_SEED",
+        "PLAYWRIGHT_SEED_SCENARIO",
+        "PLAYWRIGHT_SEED_ANCHOR_DATE"
+      ]
     },
     "dev": {
       "env": [

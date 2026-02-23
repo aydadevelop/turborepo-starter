@@ -5,7 +5,22 @@ import z from "zod";
 export const searchOptionsSchema = z.object({
 	query: z.string().trim().min(1).max(500),
 	maxResults: z.number().int().min(1).max(50).default(10),
-	publishedAfter: z.string().optional(),
+	/**
+	 * Approximate date filter — mapped to the closest YouTube bucket:
+	 * hour | today | week | month | year.
+	 * YouTube doesn't support exact ISO date filtering on the search page.
+	 */
+	publishedAfter: z.string().datetime({ offset: true }).optional(),
+	/**
+	 * Duration filter — short: <4 min, medium: 4–20 min, long: >20 min.
+	 * Omit for any length.
+	 */
+	duration: z.enum(["short", "medium", "long"]).optional(),
+	/**
+	 * Words to exclude from results. Each is prepended with `-` and appended
+	 * to the query string — YouTube supports this natively.
+	 */
+	stopWords: z.array(z.string().trim().min(1)).optional(),
 });
 
 export type SearchOptions = z.infer<typeof searchOptionsSchema>;
@@ -20,6 +35,63 @@ export interface SearchResult {
 	title: string;
 	viewCount: number | null;
 	youtubeVideoId: string;
+}
+
+// ─── sp (filter) protobuf encoding ───────────────────────────────────────────
+
+/**
+ * YouTube's `sp` parameter is a base64-encoded protobuf message.
+ * Structure (field 2 = filter wrapper):
+ *   field 1 = uploadDate  (1=hour, 2=today, 3=week, 4=month, 5=year)
+ *   field 2 = type        (1=video, 2=channel, 3=playlist)
+ *   field 3 = duration    (1=short <4m, 2=long >20m)
+ *
+ * We always set type=video. uploadDate and duration are optional.
+ */
+function buildSpParam(
+	publishedAfter: string | undefined,
+	duration: "short" | "medium" | "long" | undefined
+): string {
+	// Map ISO date → upload date bucket
+	let uploadDate = 0;
+	if (publishedAfter) {
+		const msDiff = Date.now() - new Date(publishedAfter).getTime();
+		const hours = msDiff / 3_600_000;
+		if (hours <= 1) {
+			uploadDate = 1;
+		} else if (hours <= 24) {
+			uploadDate = 2;
+		} else if (hours <= 24 * 7) {
+			uploadDate = 3;
+		} else if (hours <= 24 * 31) {
+			uploadDate = 4;
+		} else {
+			uploadDate = 5;
+		}
+	}
+
+	let durationCode = 0;
+	if (duration === "short") {
+		durationCode = 1;
+	} else if (duration === "long") {
+		durationCode = 2;
+	} else if (duration === "medium") {
+		durationCode = 3;
+	}
+
+	// Build inner bytes: always include type=video (field 2 varint 1)
+	const inner: number[] = [];
+	if (uploadDate > 0) {
+		inner.push(0x08, uploadDate);
+	} // field 1, varint
+	inner.push(0x10, 0x01); // field 2 = type = video
+	if (durationCode > 0) {
+		inner.push(0x18, durationCode);
+	} // field 3, varint
+
+	// Wrap in field 2 (length-delimited)
+	const bytes = [0x12, inner.length, ...inner];
+	return Buffer.from(bytes).toString("base64");
 }
 
 // ─── Search Implementation ───────────────────────────────────────────────────
@@ -37,11 +109,19 @@ const USER_AGENT =
 export async function searchYouTube(
 	options: SearchOptions
 ): Promise<SearchResult[]> {
+	// Build query string: append -word for each stop word
+	const exclusions = (options.stopWords ?? [])
+		.map((w) => `-${w.includes(" ") ? `"${w}"` : w}`)
+		.join(" ");
+	const query = exclusions ? `${options.query} ${exclusions}` : options.query;
+
 	const url = new URL(YOUTUBE_SEARCH_URL);
-	url.searchParams.set("q", options.query);
+	url.searchParams.set("q", query);
 	url.searchParams.set("hl", "en");
-	// EgIQAQ== = filter for videos only (exclude channels/playlists)
-	url.searchParams.set("sp", "EgIQAQ%3D%3D");
+	url.searchParams.set(
+		"sp",
+		buildSpParam(options.publishedAfter, options.duration)
+	);
 
 	const response = await fetch(url.toString(), {
 		headers: {

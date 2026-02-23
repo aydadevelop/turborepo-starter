@@ -6,7 +6,7 @@ import {
 	ytVideo,
 } from "@my-app/db/schema/youtube";
 import { ORPCError } from "@orpc/server";
-import { and, desc, eq, like } from "drizzle-orm";
+import { and, desc, eq, inArray, like } from "drizzle-orm";
 import z from "zod";
 import {
 	clusterOutputSchema,
@@ -149,6 +149,23 @@ const videoRouter = {
 				});
 			}
 
+			// P1: Verify feedId belongs to the current organization
+			const [feed] = await db
+				.select({ id: ytFeed.id })
+				.from(ytFeed)
+				.where(
+					and(
+						eq(ytFeed.id, input.feedId),
+						eq(ytFeed.organizationId, context.activeMembership.organizationId)
+					)
+				)
+				.limit(1);
+			if (!feed) {
+				throw new ORPCError("FORBIDDEN", {
+					message: "Feed does not belong to this organization",
+				});
+			}
+
 			const id = crypto.randomUUID();
 			await db.insert(ytVideo).values({
 				id,
@@ -284,6 +301,25 @@ const signalRouter = {
 			const conditions = [
 				eq(ytSignal.organizationId, context.activeMembership.organizationId),
 			];
+			if (input.feedId) {
+				const feedVideos = await db
+					.select({ id: ytVideo.id })
+					.from(ytVideo)
+					.where(
+						and(
+							eq(ytVideo.feedId, input.feedId),
+							eq(
+								ytVideo.organizationId,
+								context.activeMembership.organizationId
+							)
+						)
+					);
+				const feedVideoIds = feedVideos.map((v) => v.id);
+				if (feedVideoIds.length === 0) {
+					return [];
+				}
+				conditions.push(inArray(ytSignal.videoId, feedVideoIds));
+			}
 			if (input.videoId) {
 				conditions.push(eq(ytSignal.videoId, input.videoId));
 			}
@@ -422,6 +458,26 @@ const searchRouter = {
 			const conditions = [
 				eq(ytSignal.organizationId, context.activeMembership.organizationId),
 			];
+			if (input.feedId) {
+				// Filter signals to those belonging to videos in the given feed
+				const feedVideos = await db
+					.select({ id: ytVideo.id })
+					.from(ytVideo)
+					.where(
+						and(
+							eq(ytVideo.feedId, input.feedId),
+							eq(
+								ytVideo.organizationId,
+								context.activeMembership.organizationId
+							)
+						)
+					);
+				const feedVideoIds = feedVideos.map((v) => v.id);
+				if (feedVideoIds.length === 0) {
+					return [];
+				}
+				conditions.push(inArray(ytSignal.videoId, feedVideoIds));
+			}
 			if (input.type) {
 				conditions.push(eq(ytSignal.type, input.type));
 			}
@@ -439,25 +495,23 @@ const searchRouter = {
 				.where(and(...conditions, like(ytSignal.text, `%${input.query}%`)))
 				.limit(input.limit);
 
-			// Enrich with video data
+			// Enrich with video data (single query instead of N+1)
 			const videoIds = [...new Set(signals.map((s) => s.videoId))];
 			const videoMap = new Map<
 				string,
 				{ title: string; youtubeVideoId: string }
 			>();
 			if (videoIds.length > 0) {
-				for (const vid of videoIds) {
-					const [video] = await db
-						.select({
-							title: ytVideo.title,
-							youtubeVideoId: ytVideo.youtubeVideoId,
-						})
-						.from(ytVideo)
-						.where(eq(ytVideo.id, vid))
-						.limit(1);
-					if (video) {
-						videoMap.set(vid, video);
-					}
+				const videos = await db
+					.select({
+						id: ytVideo.id,
+						title: ytVideo.title,
+						youtubeVideoId: ytVideo.youtubeVideoId,
+					})
+					.from(ytVideo)
+					.where(inArray(ytVideo.id, videoIds));
+				for (const video of videos) {
+					videoMap.set(video.id, video);
 				}
 			}
 

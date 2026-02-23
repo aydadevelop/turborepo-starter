@@ -1,11 +1,10 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-const E2E_PORTS = [43_173, 43_100, 43_101, 43_102];
 const e2ePaths = [
 	"packages/infra/.alchemy/my-app/e2e",
 	"packages/infra/.alchemy/out/my-app-server-e2e",
@@ -16,18 +15,6 @@ const e2ePaths = [
 
 const log = (message) => console.log(`[e2e:clean] ${message}`);
 
-const killPort = (port) => {
-	try {
-		execSync(`lsof -ti tcp:${port} | xargs kill 2>/dev/null || true`, {
-			cwd: rootDir,
-			stdio: "ignore",
-		});
-		log(`Port ${port} cleared`);
-	} catch {
-		log(`Port ${port} clear skipped`);
-	}
-};
-
 const removePath = (relativePath) => {
 	const absolutePath = resolve(rootDir, relativePath);
 	rmSync(absolutePath, { force: true, recursive: true });
@@ -36,9 +23,11 @@ const removePath = (relativePath) => {
 
 log("Starting strict e2e cleanup");
 
-for (const port of E2E_PORTS) {
-	killPort(port);
-}
+// Gracefully kill all e2e port processes (SIGTERM → wait → SIGKILL).
+execFileSync("node", [resolve(rootDir, "scripts/e2e-kill-ports.mjs")], {
+	cwd: rootDir,
+	stdio: "inherit",
+});
 
 for (const path of e2ePaths) {
 	removePath(path);

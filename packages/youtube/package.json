@@ -6,6 +6,9 @@
     "./search": {
       "default": "./src/search.ts"
     },
+    "./channel": {
+      "default": "./src/channel.ts"
+    },
     "./subtitles": {
       "default": "./src/subtitles.ts"
     },

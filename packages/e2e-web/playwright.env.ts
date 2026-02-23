@@ -1,4 +1,7 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+
+const ENV_LINE_RE = /\r?\n/;
+
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -61,6 +64,31 @@ export interface PlaywrightRuntimeEnv {
 	workers: number;
 }
 
+/** Minimal .env parser used as a fallback when process.loadEnvFile is unavailable (Bun). */
+const loadEnvFileFallback = (file: string): void => {
+	for (const line of readFileSync(file, "utf-8").split(ENV_LINE_RE)) {
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith("#")) {
+			continue;
+		}
+		const eqIdx = trimmed.indexOf("=");
+		if (eqIdx === -1) {
+			continue;
+		}
+		const key = trimmed.slice(0, eqIdx).trim();
+		let val = trimmed.slice(eqIdx + 1).trim();
+		if (
+			(val.startsWith('"') && val.endsWith('"')) ||
+			(val.startsWith("'") && val.endsWith("'"))
+		) {
+			val = val.slice(1, -1);
+		}
+		if (key && process.env[key] === undefined) {
+			process.env[key] = val;
+		}
+	}
+};
+
 let cached: PlaywrightRuntimeEnv | null = null;
 let envLoaded = false;
 
@@ -70,8 +98,16 @@ const loadRuntimeEnvFiles = (): void => {
 	}
 
 	for (const file of envFilesByPriority) {
-		if (existsSync(file)) {
-			process.loadEnvFile(file);
+		if (!existsSync(file)) {
+			continue;
+		}
+		// process.loadEnvFile is Node.js 22.4+ and not available in Bun.
+		if (
+			typeof (process as { loadEnvFile?: unknown }).loadEnvFile === "function"
+		) {
+			(process as { loadEnvFile: (p: string) => void }).loadEnvFile(file);
+		} else {
+			loadEnvFileFallback(file);
 		}
 	}
 
