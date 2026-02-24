@@ -20,3 +20,28 @@ export function extractYoutubeVideoId(url: string): string | null {
 		return null;
 	}
 }
+
+/**
+ * Fetch basic video metadata via YouTube oEmbed (no API key required).
+ */
+export async function fetchOEmbedMetadata(
+	youtubeVideoId: string
+): Promise<{ title: string; channelName: string | null } | null> {
+	try {
+		const url = `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${youtubeVideoId}`)}&format=json`;
+		const res = await fetch(url);
+		if (!res.ok) {
+			return null;
+		}
+		const data = (await res.json()) as {
+			title?: string;
+			author_name?: string;
+		};
+		return {
+			title: data.title ?? youtubeVideoId,
+			channelName: data.author_name ?? null,
+		};
+	} catch {
+		return null;
+	}
+}

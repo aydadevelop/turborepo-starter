@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import type { ViteUserConfig } from "vitest/config";
 
 export const sharedConfig: ViteUserConfig = {
@@ -11,5 +12,13 @@ export const sharedConfig: ViteUserConfig = {
 			reportsDirectory: "./coverage",
 		},
 		passWithNoTests: true,
+	},
+	resolve: {
+		alias: {
+			// Mock cloudflare:workers module for tests
+			"cloudflare:workers": fileURLToPath(
+				new URL("./cloudflare-workers-mock.ts", import.meta.url)
+			),
+		},
 	},
 };

@@ -63,7 +63,11 @@ describe("queue routing (index.ts)", () => {
 		YT_NLP_QUEUE: { send: vi.fn() },
 		YT_CLUSTER_QUEUE: { send: vi.fn() },
 		YT_TRANSCRIBE_QUEUE: { send: vi.fn() },
-		YT_SIGNALS_VECTORIZE: { upsert: vi.fn() },
+		YT_SIGNALS_VECTORIZE: {
+			upsert: vi.fn(),
+			query: vi.fn().mockResolvedValue({ matches: [] }),
+			queryById: vi.fn().mockResolvedValue({ matches: [] }),
+		},
 		YT_TRANSCRIPTS_BUCKET: { get: vi.fn(), put: vi.fn() },
 		NOTIFICATION_QUEUE: { send: vi.fn() },
 		RECURRING_TASK_QUEUE: { send: vi.fn() },

@@ -1,3 +1,4 @@
+<!-- biome-ignore-all format: TanStack Form component member syntax not supported -->
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
 	import {
@@ -185,8 +186,8 @@
 								}}
 								/>
 								{#if field.state.meta.isTouched}
-									{#each field.state.meta.errors as error}
-										<p class="text-sm text-destructive" role="alert">{error}</p>
+									{#each field.state.meta.errors as err}
+										<p class="text-sm text-destructive" role="alert">{err}</p>
 									{/each}
 								{/if}
 							</div>
@@ -212,8 +213,8 @@
 								}}
 								/>
 								{#if field.state.meta.isTouched}
-									{#each field.state.meta.errors as error}
-										<p class="text-sm text-destructive" role="alert">{error}</p>
+									{#each field.state.meta.errors as err}
+										<p class="text-sm text-destructive" role="alert">{err}</p>
 									{/each}
 								{/if}
 							</div>

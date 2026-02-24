@@ -42,6 +42,20 @@ export const ytVideoStatusSchema = z.enum([
 
 export const ytFeedStatusSchema = z.enum(["active", "paused", "archived"]);
 
+/** Categories a user can toggle on/off for extraction. */
+export const ytExtractionCategorySchema = z.enum([
+	"bug",
+	"ux_friction",
+	"confusion",
+	"praise",
+	"suggestion",
+	"performance",
+	"crash",
+	"exploit",
+]);
+
+export type YtExtractionCategory = z.infer<typeof ytExtractionCategorySchema>;
+
 // ─── Feed Contracts ──────────────────────────────────────────────────────────
 
 export const createFeedInputSchema = z.object({
@@ -61,6 +75,8 @@ export const createFeedInputSchema = z.object({
 	publishedAfter: z.string().trim().optional(),
 	gameVersion: z.string().trim().max(50).optional(),
 	scheduleHint: z.string().trim().max(100).optional(),
+	/** null/undefined = all categories enabled (default). */
+	collectCategories: z.array(ytExtractionCategorySchema).optional(),
 });
 
 export const updateFeedInputSchema = z.object({
@@ -78,6 +94,7 @@ export const updateFeedInputSchema = z.object({
 	gameVersion: z.string().trim().max(50).optional(),
 	scheduleHint: z.string().trim().max(100).optional(),
 	status: ytFeedStatusSchema.optional(),
+	collectCategories: z.array(ytExtractionCategorySchema).nullable().optional(),
 });
 
 export const feedOutputSchema = z.object({
@@ -90,6 +107,7 @@ export const feedOutputSchema = z.object({
 	publishedAfter: z.string().nullable(),
 	gameVersion: z.string().nullable(),
 	scheduleHint: z.string().nullable(),
+	collectCategories: z.array(z.string()).nullable(),
 	status: ytFeedStatusSchema,
 	lastDiscoveryAt: z.string().nullable(),
 	createdAt: z.string(),
@@ -149,15 +167,17 @@ export const signalOutputSchema = z.object({
 	videoId: z.string(),
 	transcriptId: z.string(),
 	type: ytSignalTypeSchema,
-	severity: ytSignalSeveritySchema,
 	text: z.string(),
 	contextBefore: z.string().nullable(),
 	contextAfter: z.string().nullable(),
 	timestampStart: z.number().nullable(),
 	timestampEnd: z.number().nullable(),
 	confidence: z.number().nullable(),
+	severityScore: z.number().nullable(),
+	reasoning: z.string().nullable(),
 	component: z.string().nullable(),
 	gameVersion: z.string().nullable(),
+	tags: z.array(z.string()).nullable(),
 	clusterId: z.string().nullable(),
 	createdAt: z.string(),
 });

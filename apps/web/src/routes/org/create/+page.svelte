@@ -3,10 +3,13 @@
 	import * as Card from "@my-app/ui/components/card";
 	import { Input } from "@my-app/ui/components/input";
 	import { Label } from "@my-app/ui/components/label";
+	import { createQuery } from "@tanstack/svelte-query";
+	import { derived } from "svelte/store";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
+	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { client, queryClient } from "$lib/orpc";
 
 	let orgName = $state("");
@@ -16,6 +19,19 @@
 	let scrolledToBottom = $state(false);
 
 	const sessionQuery = authClient.useSession();
+
+	const orgsQuery = createQuery(
+		derived(sessionQuery, ($session) => ({
+			queryKey: ["user-organizations"],
+			queryFn: async () => {
+				const { data } = await authClient.organization.list();
+				return data ?? [];
+			},
+			enabled: hasAuthenticatedSession($session.data),
+		}))
+	);
+
+	const hasExistingOrg = $derived(($orgsQuery.data?.length ?? 0) > 0);
 
 	$effect(() => {
 		if ($sessionQuery.isPending) return;
@@ -40,12 +56,12 @@
 	const handleSubmit = async () => {
 		const trimmedName = orgName.trim();
 		if (!trimmedName) {
-			errorMessage = "Название организации обязательно.";
+			errorMessage = "Organization name is required.";
 			return;
 		}
 
 		if (!consentChecked) {
-			errorMessage = "Необходимо принять договор оферты.";
+			errorMessage = "You must accept the terms of service.";
 			return;
 		}
 
@@ -68,7 +84,7 @@
 			if (error) {
 				errorMessage =
 					(error as { message?: string }).message ??
-					"Не удалось создать организацию.";
+					"Failed to create organization.";
 				pending = false;
 				return;
 			}
@@ -79,7 +95,7 @@
 			errorMessage =
 				err instanceof Error
 					? err.message
-					: "Произошла ошибка при создании организации.";
+					: "An error occurred while creating the organization.";
 			pending = false;
 		}
 	};
@@ -87,21 +103,38 @@
 
 <div class="mx-auto max-w-2xl px-6 py-10">
 	<div class="mb-8 text-center">
-		<h1 class="text-3xl font-bold">Создание организации</h1>
+		<h1 class="text-3xl font-bold">Create Organization</h1>
 		<p class="mt-2 text-muted-foreground">
-			Создайте организацию для управления вашими лодками и бронированиями
+			Create an organization to manage your YouTube video projects and channels
 		</p>
 	</div>
 
+	{#if hasExistingOrg}
+		<div
+			class="mb-6 flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3 text-sm"
+		>
+			<span class="text-muted-foreground"
+				>You already have an organization.</span
+			>
+			<Button
+				variant="ghost"
+				size="sm"
+				onclick={() => goto(resolve("/dashboard"))}
+			>
+				Go to Dashboard
+			</Button>
+		</div>
+	{/if}
+
 	<Card.Root>
-		<Card.Header> <Card.Title>Данные организации</Card.Title> </Card.Header>
+		<Card.Header> <Card.Title>Organization Details</Card.Title> </Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="space-y-2">
-				<Label for="org-name">Название организации</Label>
+				<Label for="org-name">Organization Name</Label>
 				<Input
 					id="org-name"
 					type="text"
-					placeholder="Моя марина"
+					placeholder="My game"
 					value={orgName}
 					oninput={(e: Event) => (orgName = (e.target as HTMLInputElement).value)}
 				/>
@@ -111,9 +144,9 @@
 
 	<Card.Root class="mt-6">
 		<Card.Header>
-			<Card.Title>Договор оказания услуг (оферта)</Card.Title>
+			<Card.Title>Terms of Service Agreement</Card.Title>
 			<Card.Description>
-				Пожалуйста, прочитайте и примите договор перед созданием организации
+				Please read and accept the agreement before creating your organization
 			</Card.Description>
 		</Card.Header>
 		<Card.Content class="space-y-4">
@@ -121,80 +154,81 @@
 				class="h-80 overflow-y-auto rounded-md border bg-muted/30 p-4 text-sm leading-relaxed"
 				onscroll={handleScroll}
 			>
-				<p class="mb-4 font-bold">Договор оказания услуг (оферта)</p>
+				<p class="mb-4 font-bold">Terms of Service Agreement</p>
 
 				<p class="mb-3">
-					Оферта регулирует отношения между Покупателем и Организатором, которые
-					связаны с оказанием услуг по проведению Мероприятий.
-				</p>
-
-				<p class="mb-3">
-					ИП Тараканов Д. М. (ИНН: 440102978758, ОГРНИП: 325440000017340) не
-					является стороной по договору.
+					This Agreement governs the relationship between the User and the
+					Service Provider in connection with the provision of YouTube video
+					management services.
 				</p>
 
 				<p class="mb-3">
-					Организатор предлагает Покупателю заключить договор оказания услуг по
-					проведению Мероприятия, доступного к бронированию и оплате на Сервисе
-					(Договор), на изложенных в оферте условиях.
+					The platform facilitates YouTube channel and video project management
+					on behalf of registered organizations.
 				</p>
 
-				<p class="mb-4 font-semibold">1. Акцепт</p>
 				<p class="mb-3">
-					1.1. До направления Заказа Покупатель должен внимательно ознакомиться
-					с условиями Соглашения и Договора. Покупатель не вправе оформлять
-					Заказ, если он не согласен с указанными документами.
-				</p>
-				<p class="mb-3">
-					1.2. Договор считается заключенным (акцепт оферты) с момента, когда
-					Покупатель отправил Заказ Организатору через Сервис.
+					By creating an organization, the User agrees to the terms set forth in
+					this Agreement and the platform's Privacy Policy.
 				</p>
 
-				<p class="mb-4 font-semibold">2. Предмет</p>
+				<p class="mb-4 font-semibold">1. Acceptance</p>
 				<p class="mb-3">
-					2.1. Организатор обязуется оказать услуги по проведению Мероприятия
-					(Услуги) в соответствии с Заказом, а Покупатель обязуется принять и
-					оплатить Услуги.
+					1.1. Before creating an organization, the User must carefully read the
+					terms of this Agreement. The User may not proceed if they do not agree
+					to these terms.
+				</p>
+				<p class="mb-3">
+					1.2. This Agreement is considered accepted at the moment the User
+					submits the organization creation form.
 				</p>
 
-				<p class="mb-4 font-semibold">3. Финансовые условия</p>
+				<p class="mb-4 font-semibold">2. Subject Matter</p>
 				<p class="mb-3">
-					3.1. Стоимость Билета на Мероприятие указана на Странице Экскурсии.
-				</p>
-				<p class="mb-3">3.5.1. предоплата в размере 100% стоимости Заказа;</p>
-
-				<p class="mb-4 font-semibold">4. Отмена и возврат</p>
-				<p class="mb-3">
-					4.1. Покупатель вправе отменить Заказ не менее чем за 24 часа до
-					начала Мероприятия.
-				</p>
-				<p class="mb-3">
-					4.2. Возврат денежных средств осуществляется в течение 10 рабочих
-					дней.
+					2.1. The Service Provider grants the User access to tools for managing
+					YouTube channels, video projects, transcriptions, and related media
+					workflows within the platform.
 				</p>
 
-				<p class="mb-4 font-semibold">5. Ответственность</p>
+				<p class="mb-4 font-semibold">3. Financial Terms</p>
 				<p class="mb-3">
-					5.1. Каждая из сторон несет ответственность за ненадлежащее исполнение
-					своих обязательств в соответствии с действующим законодательством РФ.
+					3.1. Subscription pricing is listed on the Pricing page.
+				</p>
+				<p class="mb-3">
+					3.2. Payment is required in full before access is granted.
 				</p>
 
-				<p class="mb-4 font-semibold">6. Персональные данные</p>
+				<p class="mb-4 font-semibold">4. Cancellation and Refunds</p>
 				<p class="mb-3">
-					6.1. Обработка персональных данных осуществляется в соответствии с
-					Политикой конфиденциальности и Федеральным законом «О персональных
-					данных» № 152-ФЗ.
+					4.1. The User may cancel their subscription at any time. Access
+					continues until the end of the current billing period.
+				</p>
+				<p class="mb-3">
+					4.2. Refunds are handled on a case-by-case basis within 10 business
+					days of the request.
 				</p>
 
-				<p class="mb-4 font-semibold">7. Заключительные положения</p>
+				<p class="mb-4 font-semibold">5. Liability</p>
 				<p class="mb-3">
-					7.1. Все споры разрешаются путём переговоров, а при невозможности
-					достижения согласия — в Арбитражном суде Санкт-Петербурга и
-					Ленинградской области.
+					5.1. Each party is responsible for fulfilling their obligations under
+					this Agreement in accordance with applicable law.
+				</p>
+
+				<p class="mb-4 font-semibold">6. Personal Data</p>
+				<p class="mb-3">
+					6.1. Personal data is processed in accordance with the Privacy Policy
+					and applicable data protection regulations.
+				</p>
+
+				<p class="mb-4 font-semibold">7. Governing Law</p>
+				<p class="mb-3">
+					7.1. Disputes shall first be resolved through negotiation. If no
+					agreement is reached, disputes will be submitted to the competent
+					court of jurisdiction.
 				</p>
 
 				<p class="mt-6 text-xs text-muted-foreground">
-					Полный текст договора доступен по запросу. Версия документа:
+					Full agreement text available upon request. Document version:
 					2026-02-14.
 				</p>
 			</div>
@@ -210,11 +244,11 @@
 				<span class="text-sm">
 					{#if !scrolledToBottom}
 						<span class="text-muted-foreground">
-							Прокрутите документ до конца, чтобы принять условия
+							Scroll to the bottom to accept the terms
 						</span>
 					{:else}
-						Я ознакомился(-ась) и принимаю условия
-						<span class="font-medium">Договора оказания услуг (оферты)</span>
+						I have read and agree to the
+						<span class="font-medium">Terms of Service Agreement</span>
 					{/if}
 				</span>
 			</label>
@@ -223,13 +257,14 @@
 				<p class="text-sm text-destructive">{errorMessage}</p>
 			{/if}
 		</Card.Content>
-		<Card.Footer>
+		<Card.Footer class={hasExistingOrg ? "justify-end" : ""}>
 			<Button
+				variant={hasExistingOrg ? "outline" : "default"}
 				onclick={() => void handleSubmit()}
 				disabled={pending || !consentChecked || !orgName.trim()}
-				class="w-full"
+				class={hasExistingOrg ? "" : "w-full"}
 			>
-				{pending ? "Создание..." : "Создать организацию"}
+				{pending ? "Creating..." : "Create Organization"}
 			</Button>
 		</Card.Footer>
 	</Card.Root>

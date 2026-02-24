@@ -163,15 +163,17 @@ if (isDeploying) {
 	}
 }
 
+// Capture whether real Cloudflare API credentials are available BEFORE placeholder
+// overrides. Vectorize has no local emulation and requires real API access.
+const hasRealCloudflareCredentials = !!(
+	readNonEmptyEnv("CLOUDFLARE_API_TOKEN") ||
+	readNonEmptyEnv("CLOUDFLARE_API_KEY")
+);
+
 // In offline local dev, set placeholder credentials so Miniflare boots without
 // requiring a real Cloudflare account discovery network call.
 if (isLocalDevRuntime) {
-	if (
-		!(
-			readNonEmptyEnv("CLOUDFLARE_API_TOKEN") ||
-			readNonEmptyEnv("CLOUDFLARE_API_KEY")
-		)
-	) {
+	if (!hasRealCloudflareCredentials) {
 		process.env.CLOUDFLARE_API_TOKEN = "local-dev-token";
 		console.warn(
 			"[infra] CLOUDFLARE_API_TOKEN is missing; using local placeholder token for offline dev."
@@ -197,26 +199,15 @@ const cloudflareApiOptions: { accountId?: string } = isLocalDevRuntime
 	? { accountId: localCloudflareAccountId }
 	: {};
 
-if (isDeployCommand) {
-	if (!deployApi) {
-		throw new Error(
-			"[infra] Cloudflare API client is unavailable for deploy. Check credentials."
-		);
-	}
-	// Cloudflare rejects script uploads with DO migration metadata when Preview URLs are enabled.
-	// Disable previews (keep workers.dev URL) for all workers before applying resources.
-	await Promise.all(
-		workerScriptNames.map((scriptName) =>
-			enableWorkerSubdomain(deployApi, scriptName, false)
-		)
+if (isDeployCommand && !deployApi) {
+	throw new Error(
+		"[infra] Cloudflare API client is unavailable for deploy. Check credentials."
 	);
 }
 
 const app = await alchemy(appName, {
 	stage,
-	password:
-		process.env.ALCHEMY_PASSWORD ??
-		(isLocalDevRuntime ? "local-dev-password" : undefined),
+	password: process.env.ALCHEMY_PASSWORD ?? "local-dev-password",
 	stateStore: process.env.ALCHEMY_STATE_TOKEN
 		? (scope) => new CloudflareStateStore(scope)
 		: undefined,
@@ -224,7 +215,7 @@ const app = await alchemy(appName, {
 
 const db = await D1Database("database", {
 	migrationsDir: "../../packages/db/src/migrations",
-	adopt: true,
+	adopt: isDeploying,
 	...cloudflareApiOptions,
 });
 
@@ -233,12 +224,12 @@ const TWO_WEEKS_SEC = 60 * 60 * 24 * 14;
 // Creates a queue + dead-letter queue pair with standard retention.
 const createQueuePair = async (name: string) => {
 	const dlq = await Queue(`${name}-dlq`, {
-		adopt: true,
+		adopt: isDeploying,
 		settings: { messageRetentionPeriod: TWO_WEEKS_SEC },
 		...cloudflareApiOptions,
 	});
 	const queue = await Queue(`${name}-queue`, {
-		adopt: true,
+		adopt: isDeploying,
 		dlq,
 		settings: { messageRetentionPeriod: TWO_WEEKS_SEC },
 		...cloudflareApiOptions,
@@ -254,7 +245,7 @@ const { queue: recurringTaskQueue, dlq: recurringTaskDeadLetterQueue } =
 // ─── YouTube Pipeline Infrastructure ─────────────────────────────────────────
 
 const ytTranscriptsBucket = await R2Bucket("yt-transcripts", {
-	adopt: true,
+	adopt: isDeploying,
 	...cloudflareApiOptions,
 });
 
@@ -271,15 +262,23 @@ const { queue: ytTranscribeQueue, dlq: ytTranscribeDlq } =
 	await createQueuePair("yt-transcribe");
 
 // VectorizeIndex always calls the real Cloudflare API (no local emulation).
-// Skip it in e2e mode where only fake credentials are available.
-const ytSignalsVectorize = isE2E
-	? undefined
-	: await VectorizeIndex("yt-signals", {
+// Skip it when real Cloudflare credentials are unavailable (e2e / offline dev).
+const canUseVectorize = !isE2E && (isDeploying || hasRealCloudflareCredentials);
+const ytSignalsVectorize = canUseVectorize
+	? await VectorizeIndex("yt-signals", {
 			dimensions: 1536,
 			metric: "cosine",
-			adopt: true,
+			adopt: isDeploying,
 			...cloudflareApiOptions,
-		});
+		})
+	: undefined;
+
+if (!canUseVectorize && isLocalDevRuntime) {
+	console.warn(
+		"[infra] Vectorize index skipped — no real Cloudflare credentials. " +
+			"Vectorize/cluster pipeline steps will be skipped until credentials are configured."
+	);
+}
 
 const parsePort = (value: string | undefined, fallback: number): number => {
 	if (!value) {
@@ -405,6 +404,10 @@ export const server = await Worker("server", {
 		YT_TRANSCRIBE_QUEUE: ytTranscribeQueue,
 		YT_TRANSCRIPTS_BUCKET: ytTranscriptsBucket,
 		...(ytSignalsVectorize ? { YT_SIGNALS_VECTORIZE: ytSignalsVectorize } : {}),
+		OPEN_ROUTER_API_KEY: alchemy.secret.env(
+			"OPEN_ROUTER_API_KEY",
+			openRouterApiKey
+		),
 		CORS_ORIGIN: getCorsOrigin(),
 		BETTER_AUTH_SECRET: alchemy.secret.env(
 			"BETTER_AUTH_SECRET",
@@ -631,7 +634,7 @@ if (shouldStartTunnel) {
 await app.finalize();
 
 if (isDeployCommand) {
-	// Ensure previews stay disabled after Alchemy finishes applying resources.
+	// Enable workers.dev subdomain for all workers after deployment (previews disabled).
 	if (!deployApi) {
 		throw new Error(
 			"[infra] Cloudflare API client is unavailable for deploy finalization."

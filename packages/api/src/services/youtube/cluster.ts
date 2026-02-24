@@ -1,7 +1,7 @@
-import type { YtClusterQueueMessage } from "../../contracts/youtube-queue";
 import { db } from "@my-app/db";
 import { ytCluster, ytSignal, ytVideo } from "@my-app/db/schema/youtube";
 import { and, eq, sql } from "drizzle-orm";
+import type { YtClusterQueueMessage } from "../../contracts/youtube-queue";
 
 const SIMILARITY_THRESHOLD = 0.85;
 
@@ -14,6 +14,10 @@ export interface VectorizeIndex {
 		vector: unknown,
 		options?: Record<string, unknown>
 	): Promise<VectorizeQueryResult>;
+	queryById(
+		vectorId: string,
+		options?: Record<string, unknown>
+	): Promise<VectorizeQueryResult>;
 }
 
 const clusterTitleFromSignal = (text: string): string => {
@@ -24,16 +28,17 @@ const clusterTitleFromSignal = (text: string): string => {
 	return `${normalized.slice(0, 117)}...`;
 };
 
-const severityWeight = (severity: string): number => {
+/** Fallback severity label → score mapping when severityScore is not set. */
+const severityLabelToScore = (severity: string): number => {
 	switch (severity) {
 		case "critical":
-			return 5;
+			return 10;
 		case "high":
-			return 4;
+			return 8;
 		case "medium":
-			return 3;
+			return 5;
 		case "low":
-			return 2;
+			return 3;
 		case "info":
 			return 1;
 		default:
@@ -80,8 +85,17 @@ const recalculateClusterStats = async (
 		1
 	);
 
-	const impactScore =
-		signalCount * uniqueAuthors * severityWeight(clusterSeverity);
+	// Use max severityScore from signals if available, fall back to label mapping
+	const [scoreResult] = await db
+		.select({
+			maxScore: sql<number | null>`max(${ytSignal.severityScore})`,
+		})
+		.from(ytSignal)
+		.where(eq(ytSignal.clusterId, clusterId));
+	const bestScore =
+		scoreResult?.maxScore ?? severityLabelToScore(clusterSeverity);
+
+	const impactScore = signalCount * uniqueAuthors * bestScore;
 
 	return { signalCount, uniqueAuthors, impactScore };
 };
@@ -89,7 +103,9 @@ const recalculateClusterStats = async (
 interface SignalInfo {
 	gameVersion: string | null;
 	id: string;
+	organizationId: string;
 	severity: string;
+	severityScore: number | null;
 	text: string;
 	type: string;
 }
@@ -99,7 +115,10 @@ const tryMergeIntoExistingCluster = async (
 	signal: SignalInfo,
 	vectorizeIndex: VectorizeIndex
 ): Promise<boolean> => {
-	const results = await vectorizeIndex.query(signal.id, { topK: 5 });
+	const results = await vectorizeIndex.queryById(signal.id, {
+		topK: 5,
+		filter: { organizationId: signal.organizationId },
+	});
 	const bestMatch = results.matches?.find(
 		(m) => m.score >= SIMILARITY_THRESHOLD && m.id !== signal.id
 	);
@@ -183,6 +202,7 @@ export const processYtClusterMessage = async ({
 			organizationId: ytSignal.organizationId,
 			type: ytSignal.type,
 			severity: ytSignal.severity,
+			severityScore: ytSignal.severityScore,
 			text: ytSignal.text,
 			gameVersion: ytSignal.gameVersion,
 		})
@@ -223,13 +243,10 @@ export const processYtClusterMessage = async ({
 		type: signal.type,
 		severity: signal.severity,
 		signalCount: 1,
-		impactScore: 1,
+		impactScore: signal.severityScore ?? severityLabelToScore(signal.severity),
 	});
 
-	await db
-		.update(ytSignal)
-		.set({ clusterId })
-		.where(eq(ytSignal.id, signalId));
+	await db.update(ytSignal).set({ clusterId }).where(eq(ytSignal.id, signalId));
 
 	return "clustered";
 };

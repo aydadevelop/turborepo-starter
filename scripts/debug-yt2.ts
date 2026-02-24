@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import { extractJsonVar, fetchWatchPage } from "../packages/youtube/src/page";
 
 const videoId = "UjayV4GWkPc";

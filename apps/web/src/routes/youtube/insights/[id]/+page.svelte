@@ -69,6 +69,15 @@
 		}
 	};
 
+	const scoreToSeverityLabel = (score: number | null): string => {
+		if (score === null) return "?";
+		if (score >= 10) return "critical";
+		if (score >= 8) return "high";
+		if (score >= 4) return "medium";
+		if (score >= 2) return "low";
+		return "info";
+	};
+
 	const stateColor = (state: string) => {
 		switch (state) {
 			case "open":
@@ -222,10 +231,11 @@
 										</p>
 										<div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
 											<Badge
-												variant={severityColor(signal.severity)}
+												variant={severityColor(scoreToSeverityLabel(signal.severityScore))}
 												class="text-xs"
 											>
-												{signal.severity}
+												{scoreToSeverityLabel(signal.severityScore)}
+												({signal.severityScore ?? "?"})
 											</Badge>
 											<Badge variant="outline" class="text-xs">
 												{signal.type.replace(/_/g, " ")}

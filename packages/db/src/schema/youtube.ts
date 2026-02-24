@@ -40,6 +40,23 @@ export const ytSignalTypeValues = [
 	"other",
 ] as const;
 
+/**
+ * Categories a user can toggle on/off for extraction.
+ * Excludes "other" since that's a catch-all.
+ */
+export const ytExtractionCategoryValues = [
+	"bug",
+	"ux_friction",
+	"confusion",
+	"praise",
+	"suggestion",
+	"performance",
+	"crash",
+	"exploit",
+] as const;
+
+export type YtExtractionCategory = (typeof ytExtractionCategoryValues)[number];
+
 export const ytSignalSeverityValues = [
 	"critical",
 	"high",
@@ -91,6 +108,14 @@ export const ytFeed = sqliteTable(
 		gameVersion: text("game_version"),
 		/** Cron expression or interval hint for scheduling */
 		scheduleHint: text("schedule_hint"),
+		/**
+		 * JSON array of enabled extraction categories.
+		 * null = all categories enabled (default).
+		 * e.g. ["bug", "crash", "performance"] to only extract those types.
+		 */
+		collectCategories: text("collect_categories", { mode: "json" }).$type<
+			string[] | null
+		>(),
 		status: text("status", { enum: ytFeedStatusValues })
 			.notNull()
 			.default("active"),
@@ -177,6 +202,10 @@ export const ytTranscript = sqliteTable(
 		r2Key: text("r2_key"),
 		/** Full plain text of the transcript (for FTS5) */
 		fullText: text("full_text"),
+		/** JSON array of timed segments: [{start, end, text}] in seconds */
+		timedSegments: text("timed_segments", { mode: "json" }).$type<
+			{ start: number; end: number; text: string }[]
+		>(),
 		/** Total duration in seconds */
 		durationSeconds: integer("duration_seconds"),
 		/** Word/segment count */
@@ -279,6 +308,10 @@ export const ytSignal = sqliteTable(
 		timestampEnd: integer("timestamp_end"),
 		/** LLM confidence score 0-100 */
 		confidence: integer("confidence"),
+		/** Numeric severity 0-10 from LLM (used for impact calculation) */
+		severityScore: integer("severity_score"),
+		/** Short reasoning why this qualifies as game feedback */
+		reasoning: text("reasoning"),
 		/** Game area/component this relates to */
 		component: text("component"),
 		/** Version the signal pertains to */
@@ -293,6 +326,8 @@ export const ytSignal = sqliteTable(
 		vectorized: integer("vectorized", { mode: "boolean" })
 			.notNull()
 			.default(false),
+		/** JSON array of extracted tags */
+		tags: text("tags", { mode: "json" }).$type<string[]>(),
 		...timestamps,
 	},
 	(table) => [

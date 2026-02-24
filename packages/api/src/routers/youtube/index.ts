@@ -25,8 +25,9 @@ import {
 	updateFeedInputSchema,
 	videoOutputSchema,
 } from "../../contracts/youtube";
+import { ytQueueKinds } from "../../contracts/youtube-queue";
 import { organizationPermissionProcedure } from "../../index";
-import { extractYoutubeVideoId } from "./utils";
+import { extractYoutubeVideoId, fetchOEmbedMetadata } from "./utils";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -53,16 +54,19 @@ const feedRouter = {
 				publishedAfter: input.publishedAfter,
 				gameVersion: input.gameVersion,
 				scheduleHint: input.scheduleHint,
+				collectCategories: input.collectCategories ?? null,
 			});
 			return {
 				id,
 				name: input.name,
 				gameTitle: input.gameTitle,
 				searchQuery: input.searchQuery,
+				channelId: input.channelId ?? null,
 				stopWords: input.stopWords ?? null,
 				publishedAfter: input.publishedAfter ?? null,
 				gameVersion: input.gameVersion ?? null,
 				scheduleHint: input.scheduleHint ?? null,
+				collectCategories: input.collectCategories ?? null,
 				status: "active" as const,
 				lastDiscoveryAt: null,
 				createdAt: now.toISOString(),
@@ -104,10 +108,12 @@ const feedRouter = {
 				name: f.name,
 				gameTitle: f.gameTitle,
 				searchQuery: f.searchQuery,
+				channelId: f.channelId,
 				stopWords: f.stopWords,
 				publishedAfter: f.publishedAfter,
 				gameVersion: f.gameVersion,
 				scheduleHint: f.scheduleHint,
+				collectCategories: (f.collectCategories as string[] | null) ?? null,
 				status: f.status,
 				lastDiscoveryAt: toISOStringOrNull(f.lastDiscoveryAt),
 				createdAt: f.createdAt.toISOString(),
@@ -167,12 +173,17 @@ const videoRouter = {
 			}
 
 			const id = crypto.randomUUID();
+			const oembed = await fetchOEmbedMetadata(youtubeVideoId);
+			const title = oembed?.title ?? `Pending: ${youtubeVideoId}`;
+			const channelName = oembed?.channelName ?? null;
+
 			await db.insert(ytVideo).values({
 				id,
 				feedId: input.feedId,
 				organizationId: context.activeMembership.organizationId,
 				youtubeVideoId,
-				title: `Pending: ${youtubeVideoId}`,
+				title,
+				channelName,
 				status: "candidate",
 			});
 
@@ -180,8 +191,8 @@ const videoRouter = {
 				id,
 				feedId: input.feedId,
 				youtubeVideoId,
-				title: `Pending: ${youtubeVideoId}`,
-				channelName: null,
+				title,
+				channelName,
 				description: null,
 				duration: null,
 				publishedAt: null,
@@ -202,8 +213,9 @@ const videoRouter = {
 		.output(z.object({ success: z.boolean(), status: z.string() }))
 		.handler(async ({ context, input }) => {
 			const userId = context.session?.user?.id;
+			const organizationId = context.activeMembership.organizationId;
 			const newStatus = input.action === "approve" ? "approved" : "rejected";
-			await db
+			const [updated] = await db
 				.update(ytVideo)
 				.set({
 					status: newStatus,
@@ -215,9 +227,27 @@ const videoRouter = {
 				.where(
 					and(
 						eq(ytVideo.id, input.videoId),
-						eq(ytVideo.organizationId, context.activeMembership.organizationId)
+						eq(ytVideo.organizationId, organizationId)
 					)
+				)
+				.returning({ youtubeVideoId: ytVideo.youtubeVideoId });
+
+			if (
+				input.action === "approve" &&
+				updated?.youtubeVideoId &&
+				context.ytIngestQueue
+			) {
+				await context.ytIngestQueue.send(
+					{
+						kind: ytQueueKinds.ingest,
+						videoId: input.videoId,
+						organizationId,
+						youtubeVideoId: updated.youtubeVideoId,
+					},
+					{ contentType: "json" }
 				);
+			}
+
 			return { success: true, status: newStatus };
 		}),
 
@@ -279,7 +309,7 @@ const videoRouter = {
 
 			await ytDiscoveryQueue.send(
 				{
-					kind: "yt.discovery.v1" as const,
+					kind: ytQueueKinds.discovery,
 					feedId: input.feedId,
 					organizationId: context.activeMembership.organizationId,
 				},
@@ -349,15 +379,17 @@ const signalRouter = {
 				videoId: s.videoId,
 				transcriptId: s.transcriptId,
 				type: s.type,
-				severity: s.severity,
 				text: s.text,
 				contextBefore: s.contextBefore,
 				contextAfter: s.contextAfter,
 				timestampStart: s.timestampStart,
 				timestampEnd: s.timestampEnd,
 				confidence: s.confidence,
+				severityScore: s.severityScore,
+				reasoning: s.reasoning,
 				component: s.component,
 				gameVersion: s.gameVersion,
+				tags: s.tags ?? null,
 				clusterId: s.clusterId,
 				createdAt: s.createdAt.toISOString(),
 			}));
@@ -453,8 +485,11 @@ const searchRouter = {
 		.input(semanticSearchInputSchema)
 		.output(z.array(semanticSearchResultSchema))
 		.handler(async ({ context, input }) => {
-			// TODO: Wire to Vectorize once embeddings pipeline is active.
-			// For now, fall back to FTS5 / LIKE search.
+			// TODO: Wire to Vectorize for vector similarity search.
+			// Embeddings pipeline is active with text-embedding-3-small and rich metadata
+			// (organizationId, videoId, type, severity, severityScore, component, confidence).
+			// Requires injecting EmbeddingProvider + VectorizeIndex into the router context.
+			// For now, fall back to LIKE search.
 			const conditions = [
 				eq(ytSignal.organizationId, context.activeMembership.organizationId),
 			];

@@ -40,10 +40,26 @@ export async function fetchPlayerResponse(
 	});
 
 	if (!res.ok) {
-		throw new Error(`YouTube InnerTube failed: ${res.status}`);
+		throw new Error(
+			`YouTube InnerTube failed: ${res.status} ${res.statusText}`
+		);
 	}
 
-	return res.json() as Promise<Record<string, unknown>>;
+	const data = (await res.json()) as Record<string, unknown>;
+
+	// Log playability so we can detect bot-detection / geo-blocks in production
+	const playability = data.playabilityStatus as
+		| Record<string, unknown>
+		| undefined;
+	const playStatus = playability?.status ?? "UNKNOWN";
+	const playReason = playability?.reason ?? playability?.messages ?? "";
+	if (playStatus !== "OK") {
+		console.warn(
+			`[innertube] playabilityStatus=${playStatus} for videoId=${videoId}: ${playReason}`
+		);
+	}
+
+	return data;
 }
 
 /**

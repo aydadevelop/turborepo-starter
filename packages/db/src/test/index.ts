@@ -13,7 +13,7 @@ import { POST_MIGRATION_TRIGGERS_SQL } from "../triggers";
 // better-sqlite3 loads a native binary that segfaults Bun's module loader.
 // Throw a clear error before the dynamic imports so that `bun test` at the
 // workspace root fails gracefully (error message) instead of hard-crashing.
-if (typeof globalThis.Bun !== "undefined") {
+if ("Bun" in globalThis) {
 	throw new Error(
 		"[db/test] better-sqlite3 is incompatible with Bun's native module loader. " +
 			"Run this suite via vitest: `bun run test` delegates to vitest per package."

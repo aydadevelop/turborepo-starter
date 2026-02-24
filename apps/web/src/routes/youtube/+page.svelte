@@ -81,7 +81,7 @@
 	const createFeedMutation = createMutation(
 		orpc.youtube.feeds.create.mutationOptions({
 			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: ["youtube"] });
+				queryClient.invalidateQueries({ queryKey: orpc.youtube.key() });
 				createOpen = false;
 				resetCreateForm();
 			},
@@ -91,7 +91,7 @@
 	const updateFeedMutation = createMutation(
 		orpc.youtube.feeds.update.mutationOptions({
 			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: ["youtube"] });
+				queryClient.invalidateQueries({ queryKey: orpc.youtube.key() });
 				editOpen = false;
 			},
 		})
@@ -100,7 +100,7 @@
 	const deleteFeedMutation = createMutation(
 		orpc.youtube.feeds.delete.mutationOptions({
 			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: ["youtube"] });
+				queryClient.invalidateQueries({ queryKey: orpc.youtube.key() });
 				deleteOpen = false;
 			},
 		})
@@ -113,7 +113,7 @@
 	const submitVideoMutation = createMutation(
 		orpc.youtube.videos.submit.mutationOptions({
 			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: ["youtube"] });
+				queryClient.invalidateQueries({ queryKey: orpc.youtube.key() });
 				submitUrl = "";
 				submitFeedId = "";
 			},
@@ -123,7 +123,7 @@
 	const reviewVideoMutation = createMutation(
 		orpc.youtube.videos.review.mutationOptions({
 			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: ["youtube"] });
+				queryClient.invalidateQueries({ queryKey: orpc.youtube.key() });
 			},
 		})
 	);
@@ -260,7 +260,7 @@
 	};
 </script>
 
-<div class="space-y-6">
+<div class="container mx-auto space-y-6 p-6">
 	<div class="flex items-center justify-between">
 		<div>
 			<h2 class="text-2xl font-bold">YouTube Feedback</h2>

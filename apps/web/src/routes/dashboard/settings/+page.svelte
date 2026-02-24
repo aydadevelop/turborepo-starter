@@ -249,9 +249,7 @@
 
 		<!-- Profile info -->
 		<Card.Root>
-			<Card.Header>
-				<Card.Title>Profile</Card.Title>
-			</Card.Header>
+			<Card.Header> <Card.Title>Profile</Card.Title> </Card.Header>
 			<Card.Content class="space-y-3 text-sm">
 				<div class="flex items-center justify-between">
 					<span class="text-muted-foreground">Name</span>

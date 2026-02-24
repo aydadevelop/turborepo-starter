@@ -16,8 +16,6 @@
 <Tool {toolPart} {defaultOpen} class={className}>
 	{#snippet children(toolPart)}
 		<ToolHeader {toolPart} />
-		<ToolContent>
-			<ToolDetails {toolPart} />
-		</ToolContent>
+		<ToolContent> <ToolDetails {toolPart} /> </ToolContent>
 	{/snippet}
 </Tool>

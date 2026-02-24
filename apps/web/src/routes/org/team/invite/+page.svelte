@@ -152,9 +152,7 @@
 	</Card.Root>
 
 	<Card.Root class="max-w-lg">
-		<Card.Header>
-			<Card.Title>Role Guide</Card.Title>
-		</Card.Header>
+		<Card.Header> <Card.Title>Role Guide</Card.Title> </Card.Header>
 		<Card.Content>
 			<div class="space-y-3 text-sm">
 				<div>

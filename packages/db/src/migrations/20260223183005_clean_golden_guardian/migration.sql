@@ -1,0 +1,1 @@
+ALTER TABLE `yt_feed` ADD `collect_categories` text DEFAULT 'null';

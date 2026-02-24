@@ -179,7 +179,6 @@ describe("yt-ingest-consumer", () => {
 	});
 
 	it("creates transcript and marks video as ingested (captions path)", async () => {
-		const mockVectorizeQueue = makeMockQueue();
 		const mockNlpQueue = makeMockQueue();
 
 		const queueMessage = makeQueueMessage({
@@ -195,7 +194,6 @@ describe("yt-ingest-consumer", () => {
 			"../queues/yt-ingest-consumer"
 		);
 		await processYtIngestBatch(makeBatch([queueMessage]), {
-			ytVectorizeQueue: mockVectorizeQueue,
 			ytNlpQueue: mockNlpQueue,
 		});
 
@@ -218,14 +216,8 @@ describe("yt-ingest-consumer", () => {
 		expect(transcripts[0]?.source).toBe("youtube_captions");
 
 		// Downstream queues should be called
-		expect(mockVectorizeQueue.send).toHaveBeenCalledTimes(1);
+		// Pipeline: ingest → NLP (vectorize queue no longer dispatched from ingest)
 		expect(mockNlpQueue.send).toHaveBeenCalledTimes(1);
-
-		const vectorizeMsg = mockVectorizeQueue.send.mock.calls[0]?.[0] as Record<
-			string,
-			unknown
-		>;
-		expect(vectorizeMsg?.kind).toBe("yt.vectorize.v1");
 
 		const nlpMsg = mockNlpQueue.send.mock.calls[0]?.[0] as Record<
 			string,
@@ -409,8 +401,8 @@ describe("yt-vectorize-consumer", () => {
 		);
 		await processYtVectorizeBatch(makeBatch([queueMessage]));
 
-		// Without vectorize index, should retry instead of acking
-		expect(queueMessage.retry).toHaveBeenCalledTimes(1);
+		// Without vectorize index, should ack (skip gracefully — index won't appear mid-run)
+		expect(queueMessage.ack).toHaveBeenCalledTimes(1);
 
 		const [signal] = await testDbState.db
 			.select()
@@ -449,10 +441,9 @@ describe("yt-vectorize-consumer", () => {
 		const { processYtVectorizeBatch } = await import(
 			"../queues/yt-vectorize-consumer"
 		);
-		await processYtVectorizeBatch(
-			makeBatch([queueMessage]),
-			mockVectorizeIndex
-		);
+		await processYtVectorizeBatch(makeBatch([queueMessage]), {
+			vectorizeIndex: mockVectorizeIndex,
+		});
 
 		expect(queueMessage.ack).toHaveBeenCalledTimes(1);
 
@@ -461,7 +452,7 @@ describe("yt-vectorize-consumer", () => {
 			.from(ytSignal)
 			.where(eq(ytSignal.id, "signal-vec-2"));
 		expect(signal?.vectorized).toBe(true);
-		expect(signal?.embeddingModel).toBe("text-embedding-3-small");
+		expect(signal?.embeddingModel).toBe("hash-256");
 	});
 
 	it("acks invalid message payloads", async () => {
@@ -494,7 +485,7 @@ describe("yt-nlp-consumer", () => {
 			fullText: "Okay so I found this bug where the camera clips through walls",
 		});
 
-		const mockClusterQueue = makeMockQueue();
+		const mockVectorizeQueue = makeMockQueue();
 		const queueMessage = makeQueueMessage({
 			body: {
 				kind: "yt.nlp.v1",
@@ -506,7 +497,7 @@ describe("yt-nlp-consumer", () => {
 
 		const { processYtNlpBatch } = await import("../queues/yt-nlp-consumer");
 		await processYtNlpBatch(makeBatch([queueMessage]), {
-			ytClusterQueue: mockClusterQueue,
+			ytVectorizeQueue: mockVectorizeQueue,
 		});
 
 		expect(queueMessage.ack).toHaveBeenCalledTimes(1);
@@ -518,13 +509,13 @@ describe("yt-nlp-consumer", () => {
 			.where(eq(ytSignal.videoId, "video-1"));
 		expect(signals.length).toBeGreaterThanOrEqual(1);
 
-		// Should dispatch to cluster queue
-		expect(mockClusterQueue.send).toHaveBeenCalledTimes(1);
-		const clusterMsg = mockClusterQueue.send.mock.calls[0]?.[0] as Record<
+		// Should dispatch to vectorize queue (pipeline: NLP → vectorize → cluster)
+		expect(mockVectorizeQueue.send).toHaveBeenCalledTimes(1);
+		const vectorizeMsg = mockVectorizeQueue.send.mock.calls[0]?.[0] as Record<
 			string,
 			unknown
 		>;
-		expect(clusterMsg?.kind).toBe("yt.cluster.v1");
+		expect(vectorizeMsg?.kind).toBe("yt.vectorize.v1");
 	});
 
 	it("acks when transcript has no fullText", async () => {
@@ -673,7 +664,6 @@ describe("yt-transcribe-consumer", () => {
 				arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
 			}),
 		};
-		const mockVectorizeQueue = makeMockQueue();
 		const mockNlpQueue = makeMockQueue();
 
 		const queueMessage = makeQueueMessage({
@@ -692,7 +682,6 @@ describe("yt-transcribe-consumer", () => {
 		);
 		await processYtTranscribeBatch(makeBatch([queueMessage]), {
 			ytTranscriptsBucket: mockBucket,
-			ytVectorizeQueue: mockVectorizeQueue,
 			ytNlpQueue: mockNlpQueue,
 		});
 
@@ -708,16 +697,15 @@ describe("yt-transcribe-consumer", () => {
 			.where(eq(ytTranscript.id, "transcript-asr-1"));
 		expect(transcript?.source).toBe("whisper_asr");
 
-		// Downstream queues should be dispatched
-		expect(mockVectorizeQueue.send).toHaveBeenCalledTimes(1);
+		// Pipeline: transcribe → NLP (vectorize no longer dispatched from transcribe)
 		expect(mockNlpQueue.send).toHaveBeenCalledTimes(1);
 
-		const vectorizeMsg = mockVectorizeQueue.send.mock.calls[0]?.[0] as Record<
+		const nlpMsg = mockNlpQueue.send.mock.calls[0]?.[0] as Record<
 			string,
 			unknown
 		>;
-		expect(vectorizeMsg?.kind).toBe("yt.vectorize.v1");
-		expect(vectorizeMsg?.transcriptId).toBe("transcript-asr-1");
+		expect(nlpMsg?.kind).toBe("yt.nlp.v1");
+		expect(nlpMsg?.transcriptId).toBe("transcript-asr-1");
 	});
 
 	it("acks when audio not found in R2", async () => {

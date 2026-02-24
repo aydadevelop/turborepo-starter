@@ -7,6 +7,7 @@
 	} from "@my-app/ui/components/select";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { derived } from "svelte/store";
+	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { queryClient } from "$lib/orpc";
@@ -77,4 +78,13 @@
 	<span class="text-xs text-muted-foreground hidden sm:inline">
 		{$orgsQuery.data?.[0]?.name}
 	</span>
+{/if}
+
+{#if hasAuthenticatedSession($sessionQuery.data)}
+	<a
+		href={resolve("/org/create")}
+		class="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap transition-colors"
+	>
+		+ New org
+	</a>
 {/if}

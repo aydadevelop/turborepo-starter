@@ -279,7 +279,7 @@ describe("Story 2.1: NLP Signal Extraction", () => {
 			seedApprovedVideo();
 			seedTranscript();
 
-			const mockClusterQueue = makeMockQueue();
+			const mockVectorizeQueue = makeMockQueue();
 			const queueMessage = makeQueueMessage({
 				body: {
 					kind: "yt.nlp.v1",
@@ -291,7 +291,7 @@ describe("Story 2.1: NLP Signal Extraction", () => {
 
 			const { processYtNlpBatch } = await import("../queues/yt-nlp-consumer");
 			await processYtNlpBatch(makeBatch([queueMessage]), {
-				ytClusterQueue: mockClusterQueue,
+				ytVectorizeQueue: mockVectorizeQueue,
 				analyzeTranscript: makeMockAnalyzer(),
 			});
 
@@ -353,14 +353,15 @@ describe("Story 2.1: NLP Signal Extraction", () => {
 			);
 			expect(withContext.length).toBeGreaterThanOrEqual(1);
 
-			// Cluster queue should be called for EACH signal
-			expect(mockClusterQueue.send).toHaveBeenCalledTimes(signals.length);
-			for (const call of mockClusterQueue.send.mock.calls) {
-				const msg = call[0] as Record<string, unknown>;
-				expect(msg.kind).toBe("yt.cluster.v1");
-				expect(msg.signalId).toBeTruthy();
-				expect(msg.organizationId).toBe("org-1");
-			}
+			// Vectorize queue should be called once (per transcript, not per signal)
+			expect(mockVectorizeQueue.send).toHaveBeenCalledTimes(1);
+			const msg = mockVectorizeQueue.send.mock.calls[0]?.[0] as Record<
+				string,
+				unknown
+			>;
+			expect(msg.kind).toBe("yt.vectorize.v1");
+			expect(msg.transcriptId).toBe("transcript-1");
+			expect(msg.organizationId).toBe("org-1");
 		});
 
 		it("assigns severity based on signal impact (critical > bug, medium > confusion)", async () => {
@@ -378,7 +379,7 @@ describe("Story 2.1: NLP Signal Extraction", () => {
 
 			const { processYtNlpBatch } = await import("../queues/yt-nlp-consumer");
 			await processYtNlpBatch(makeBatch([queueMessage]), {
-				ytClusterQueue: makeMockQueue(),
+				ytVectorizeQueue: makeMockQueue(),
 				analyzeTranscript: makeMockAnalyzer(),
 			});
 
@@ -425,7 +426,7 @@ describe("Story 2.1: NLP Signal Extraction", () => {
 
 			const { processYtNlpBatch } = await import("../queues/yt-nlp-consumer");
 			await processYtNlpBatch(makeBatch([queueMessage]), {
-				ytClusterQueue: makeMockQueue(),
+				ytVectorizeQueue: makeMockQueue(),
 				analyzeTranscript: makeMockAnalyzer(),
 			});
 
@@ -456,7 +457,7 @@ describe("Story 2.1: NLP Signal Extraction", () => {
 
 			const { processYtNlpBatch } = await import("../queues/yt-nlp-consumer");
 			await processYtNlpBatch(makeBatch([queueMessage]), {
-				ytClusterQueue: makeMockQueue(),
+				ytVectorizeQueue: makeMockQueue(),
 				analyzeTranscript: makeMockAnalyzer(),
 			});
 
@@ -506,7 +507,7 @@ describe("Story 2.1: NLP Signal Extraction", () => {
 
 			const { processYtNlpBatch } = await import("../queues/yt-nlp-consumer");
 			await processYtNlpBatch(makeBatch([queueMessage]), {
-				ytClusterQueue: makeMockQueue(),
+				ytVectorizeQueue: makeMockQueue(),
 				analyzeTranscript: makeMockAnalyzer(),
 			});
 
@@ -526,7 +527,7 @@ describe("Story 2.1: NLP Signal Extraction", () => {
 			seedApprovedVideo();
 			seedTranscript();
 
-			const mockClusterQueue = makeMockQueue();
+			const mockVectorizeQueue = makeMockQueue();
 			const queueMessage = makeQueueMessage({
 				body: {
 					kind: "yt.nlp.v1",
@@ -538,7 +539,7 @@ describe("Story 2.1: NLP Signal Extraction", () => {
 
 			const { processYtNlpBatch } = await import("../queues/yt-nlp-consumer");
 			await processYtNlpBatch(makeBatch([queueMessage]), {
-				ytClusterQueue: mockClusterQueue,
+				ytVectorizeQueue: mockVectorizeQueue,
 				analyzeTranscript: makeMockAnalyzer(),
 			});
 
@@ -560,8 +561,8 @@ describe("Story 2.1: NLP Signal Extraction", () => {
 				expect(signal.transcriptId).toBe("transcript-1");
 			}
 
-			// Must dispatch to cluster queue for each signal
-			expect(mockClusterQueue.send).toHaveBeenCalledTimes(signals.length);
+			// Must dispatch to vectorize queue once (per transcript)
+			expect(mockVectorizeQueue.send).toHaveBeenCalledTimes(1);
 		});
 
 		it("does not create signals from empty or very short transcripts", async () => {
@@ -616,7 +617,7 @@ The soundtrack is perfect and the controls feel really tight and responsive.`,
 
 			const { processYtNlpBatch } = await import("../queues/yt-nlp-consumer");
 			await processYtNlpBatch(makeBatch([queueMessage]), {
-				ytClusterQueue: makeMockQueue(),
+				ytVectorizeQueue: makeMockQueue(),
 				analyzeTranscript: makeMockAnalyzer(),
 			});
 
@@ -652,7 +653,7 @@ The soundtrack is perfect and the controls feel really tight and responsive.`,
 
 			const { processYtNlpBatch } = await import("../queues/yt-nlp-consumer");
 			await processYtNlpBatch(makeBatch([queueMessage]), {
-				ytClusterQueue: makeMockQueue(),
+				ytVectorizeQueue: makeMockQueue(),
 				analyzeTranscript: makeMockAnalyzer(),
 			});
 
@@ -713,7 +714,7 @@ The soundtrack is perfect and the controls feel really tight and responsive.`,
 
 			const { processYtNlpBatch } = await import("../queues/yt-nlp-consumer");
 			await processYtNlpBatch(makeBatch([queueMessage]), {
-				ytClusterQueue: makeMockQueue(),
+				ytVectorizeQueue: makeMockQueue(),
 				analyzeTranscript: makeMockAnalyzer(),
 			});
 
@@ -1111,15 +1112,16 @@ describe("Story 1.2: Ingest Pipeline — Extract transcript from video", () => {
 						language: "en",
 						fullText:
 							"the camera clips through walls and the inventory is confusing",
+						rawData: "",
 					},
 				]),
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn(),
 			}));
 
 			const mockNlpQueue = makeMockQueue();
-			const mockVectorizeQueue = makeMockQueue();
 
 			const queueMessage = makeQueueMessage({
 				body: {
@@ -1135,7 +1137,6 @@ describe("Story 1.2: Ingest Pipeline — Extract transcript from video", () => {
 			);
 			await processYtIngestBatch(makeBatch([queueMessage]), {
 				ytNlpQueue: mockNlpQueue,
-				ytVectorizeQueue: mockVectorizeQueue,
 			});
 
 			expect(queueMessage.ack).toHaveBeenCalledTimes(1);
@@ -1155,9 +1156,8 @@ describe("Story 1.2: Ingest Pipeline — Extract transcript from video", () => {
 			expect(transcript?.source).toBe("youtube_captions");
 			expect(transcript?.fullText).toContain("camera clips");
 
-			// Both downstream queues dispatched
+			// NLP queue dispatched (pipeline: ingest → NLP → vectorize → cluster)
 			expect(mockNlpQueue.send).toHaveBeenCalledTimes(1);
-			expect(mockVectorizeQueue.send).toHaveBeenCalledTimes(1);
 		});
 
 		it("falls back to ASR when captions are unavailable", async () => {
@@ -1165,6 +1165,7 @@ describe("Story 1.2: Ingest Pipeline — Extract transcript from video", () => {
 
 			vi.doMock("@my-app/youtube/subtitles", () => ({
 				getSubtitles: vi.fn().mockResolvedValue([]), // No captions
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn().mockResolvedValue({
@@ -1218,6 +1219,7 @@ describe("Story 1.2: Ingest Pipeline — Extract transcript from video", () => {
 				getSubtitles: vi
 					.fn()
 					.mockRejectedValue(new Error("YouTube returned 403")),
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn(),
@@ -1259,7 +1261,10 @@ describe("Story 1.2: Ingest Pipeline — Extract transcript from video", () => {
 			vi.doMock("@my-app/youtube/subtitles", () => ({
 				getSubtitles: vi
 					.fn()
-					.mockResolvedValue([{ language: "en", fullText: "game is buggy" }]),
+					.mockResolvedValue([
+						{ language: "en", fullText: "game is buggy", rawData: "" },
+					]),
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn(),
@@ -1295,7 +1300,10 @@ describe("Story 1.2: Ingest Pipeline — Extract transcript from video", () => {
 			vi.doMock("@my-app/youtube/subtitles", () => ({
 				getSubtitles: vi
 					.fn()
-					.mockResolvedValue([{ language: "en", fullText: "test" }]),
+					.mockResolvedValue([
+						{ language: "en", fullText: "test", rawData: "" },
+					]),
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn(),
@@ -1329,7 +1337,10 @@ describe("Story 1.2: Ingest Pipeline — Extract transcript from video", () => {
 			vi.doMock("@my-app/youtube/subtitles", () => ({
 				getSubtitles: vi
 					.fn()
-					.mockResolvedValue([{ language: "en", fullText: "test" }]),
+					.mockResolvedValue([
+						{ language: "en", fullText: "test", rawData: "" },
+					]),
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn(),
@@ -1366,7 +1377,8 @@ describe("Story 1.2: Ingest Pipeline — Extract transcript from video", () => {
 			vi.doMock("@my-app/youtube/subtitles", () => ({
 				getSubtitles: vi
 					.fn()
-					.mockResolvedValue([{ language: "en", fullText: "ok" }]),
+					.mockResolvedValue([{ language: "en", fullText: "ok", rawData: "" }]),
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn(),
@@ -1392,6 +1404,7 @@ describe("Story 1.2: Ingest Pipeline — Extract transcript from video", () => {
 		it("handles missing video gracefully", async () => {
 			vi.doMock("@my-app/youtube/subtitles", () => ({
 				getSubtitles: vi.fn().mockResolvedValue([]),
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn(),
@@ -1426,6 +1439,7 @@ describe("Story 1.2: Ingest Pipeline — Extract transcript from video", () => {
 
 			vi.doMock("@my-app/youtube/subtitles", () => ({
 				getSubtitles: vi.fn(),
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn(),
@@ -1488,7 +1502,7 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 				.run();
 
 			const mockVectorizeIndex = {
-				query: vi.fn().mockResolvedValue({
+				queryById: vi.fn().mockResolvedValue({
 					matches: [
 						{
 							id: "signal-cam-existing",
@@ -1566,7 +1580,7 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 				.run();
 
 			const mockVectorizeIndex = {
-				query: vi.fn().mockResolvedValue({
+				queryById: vi.fn().mockResolvedValue({
 					matches: [], // No similar signals
 				}),
 			};
@@ -1680,7 +1694,7 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 				.run();
 
 			const mockVectorizeIndex = {
-				query: vi.fn().mockResolvedValue({
+				queryById: vi.fn().mockResolvedValue({
 					matches: [{ id: "signal-impact-1", score: 0.9 }],
 				}),
 			};
@@ -1988,7 +2002,7 @@ describe("Story 3.2: Regression Detection — Don't re-alert after fix", () => {
 				.run();
 
 			const mockVectorizeIndex = {
-				query: vi.fn().mockResolvedValue({
+				queryById: vi.fn().mockResolvedValue({
 					matches: [{ id: "signal-old", score: 0.95 }],
 				}),
 			};
@@ -2067,7 +2081,7 @@ describe("Story 3.2: Regression Detection — Don't re-alert after fix", () => {
 				.run();
 
 			const mockVectorizeIndex = {
-				query: vi.fn().mockResolvedValue({
+				queryById: vi.fn().mockResolvedValue({
 					matches: [{ id: "signal-existing-fixed", score: 0.9 }],
 				}),
 			};
@@ -2237,7 +2251,7 @@ describe("Story 3.2: Regression Detection — Don't re-alert after fix", () => {
 				.run();
 
 			const mockVectorizeIndex = {
-				query: vi.fn().mockResolvedValue({
+				queryById: vi.fn().mockResolvedValue({
 					matches: [{ id: "signal-existing-mvp", score: 0.88 }],
 				}),
 			};
@@ -2866,15 +2880,16 @@ describe("E2E Pipeline: Full flow from discovery to clustered signals", () => {
 						fullText: `okay so I'm playing Stellar Drift and the camera clips 
 through the wall every time I enter the hangar and the inventory UI 
 is really confusing I can't figure out how to equip items`,
+						rawData: "",
 					},
 				]),
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn(),
 			}));
 
 			const mockNlpQueue = makeMockQueue();
-			const mockVectorizeQueue = makeMockQueue();
 
 			const ingestMsg = makeQueueMessage({
 				body: {
@@ -2890,7 +2905,6 @@ is really confusing I can't figure out how to equip items`,
 			);
 			await processYtIngestBatch(makeBatch([ingestMsg]), {
 				ytNlpQueue: mockNlpQueue,
-				ytVectorizeQueue: mockVectorizeQueue,
 			});
 
 			expect(ingestMsg.ack).toHaveBeenCalledTimes(1);
@@ -2907,7 +2921,7 @@ is really confusing I can't figure out how to equip items`,
 			vi.resetModules();
 			vi.doMock("@my-app/db", () => ({ db: testDbState.db }));
 
-			const mockClusterQueue = makeMockQueue();
+			const mockVectorizeQueue = makeMockQueue();
 			const nlpMsg = makeQueueMessage({
 				body: {
 					kind: "yt.nlp.v1",
@@ -2919,7 +2933,7 @@ is really confusing I can't figure out how to equip items`,
 
 			const { processYtNlpBatch } = await import("../queues/yt-nlp-consumer");
 			await processYtNlpBatch(makeBatch([nlpMsg]), {
-				ytClusterQueue: mockClusterQueue,
+				ytVectorizeQueue: mockVectorizeQueue,
 				analyzeTranscript: makeMockAnalyzer(),
 			});
 
@@ -2988,7 +3002,10 @@ is really confusing I can't figure out how to equip items`,
 			vi.doMock("@my-app/youtube/subtitles", () => ({
 				getSubtitles: vi
 					.fn()
-					.mockResolvedValue([{ language: "en", fullText: "test transcript" }]),
+					.mockResolvedValue([
+						{ language: "en", fullText: "test transcript", rawData: "" },
+					]),
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn(),
@@ -3035,7 +3052,7 @@ is really confusing I can't figure out how to equip items`,
 			seedApprovedVideo();
 			seedTranscript();
 
-			const mockClusterQueue = makeMockQueue();
+			const mockVectorizeQueue = makeMockQueue();
 
 			const msg = makeQueueMessage({
 				body: {
@@ -3048,26 +3065,18 @@ is really confusing I can't figure out how to equip items`,
 
 			const { processYtNlpBatch } = await import("../queues/yt-nlp-consumer");
 			await processYtNlpBatch(makeBatch([msg]), {
-				ytClusterQueue: mockClusterQueue,
+				ytVectorizeQueue: mockVectorizeQueue,
 				analyzeTranscript: makeMockAnalyzer(),
 			});
 
-			const signals = await testDbState.db
-				.select()
-				.from(ytSignal)
-				.where(eq(ytSignal.videoId, "video-1"));
-
-			// Each signal should have a cluster queue dispatch
-			expect(mockClusterQueue.send).toHaveBeenCalledTimes(signals.length);
-
-			for (let i = 0; i < signals.length; i++) {
-				const payload = mockClusterQueue.send.mock.calls[i]?.[0] as Record<
-					string,
-					unknown
-				>;
-				expect(payload.kind).toBe("yt.cluster.v1");
-				expect(payload.organizationId).toBe("org-1");
-			}
+			// Vectorize queue should be called once per transcript
+			expect(mockVectorizeQueue.send).toHaveBeenCalledTimes(1);
+			const payload = mockVectorizeQueue.send.mock.calls[0]?.[0] as Record<
+				string,
+				unknown
+			>;
+			expect(payload.kind).toBe("yt.vectorize.v1");
+			expect(payload.organizationId).toBe("org-1");
 		});
 
 		it("all queue messages pass Zod schema validation", async () => {
@@ -3133,6 +3142,7 @@ is really confusing I can't figure out how to equip items`,
 			}));
 			vi.doMock("@my-app/youtube/subtitles", () => ({
 				getSubtitles: vi.fn().mockResolvedValue([]),
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn(),
@@ -3168,6 +3178,7 @@ is really confusing I can't figure out how to equip items`,
 			}));
 			vi.doMock("@my-app/youtube/subtitles", () => ({
 				getSubtitles: vi.fn().mockResolvedValue([]),
+				parseTimedSegments: vi.fn().mockReturnValue([]),
 			}));
 			vi.doMock("@my-app/youtube/download-audio", () => ({
 				downloadAudio: vi.fn(),
@@ -3198,6 +3209,7 @@ is really confusing I can't figure out how to equip items`,
 				}));
 				vi.doMock("@my-app/youtube/subtitles", () => ({
 					getSubtitles: vi.fn().mockResolvedValue([]),
+					parseTimedSegments: vi.fn().mockReturnValue([]),
 				}));
 				vi.doMock("@my-app/youtube/download-audio", () => ({
 					downloadAudio: vi.fn(),

@@ -1,4 +1,5 @@
 // Test different InnerTube clients to find one that returns URLs without n-throttling
+/** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 export {};
 
 const videoId = "UjayV4GWkPc";

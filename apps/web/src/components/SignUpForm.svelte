@@ -1,3 +1,4 @@
+<!-- biome-ignore-all format: TanStack Form component member syntax not supported -->
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
 	import {
@@ -21,10 +22,10 @@
 
 	const resolvePostAuthRedirect = (candidatePath: string | null): string => {
 		if (!candidatePath) {
-			return resolve("/dashboard");
+			return resolve("/org");
 		}
 		if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
-			return resolve("/dashboard");
+			return resolve("/org");
 		}
 		return candidatePath;
 	};
@@ -98,8 +99,8 @@
 								}}
 							/>
 							{#if field.state.meta.isTouched}
-								{#each field.state.meta.errors as error}
-									<p class="text-sm text-destructive" role="alert">{error}</p>
+								{#each field.state.meta.errors as err}
+									<p class="text-sm text-destructive" role="alert">{err}</p>
 								{/each}
 							{/if}
 						</div>
@@ -123,8 +124,8 @@
 								}}
 							/>
 							{#if field.state.meta.isTouched}
-								{#each field.state.meta.errors as error}
-									<p class="text-sm text-destructive" role="alert">{error}</p>
+								{#each field.state.meta.errors as err}
+									<p class="text-sm text-destructive" role="alert">{err}</p>
 								{/each}
 							{/if}
 						</div>
@@ -148,8 +149,8 @@
 								}}
 							/>
 							{#if field.state.meta.isTouched}
-								{#each field.state.meta.errors as error}
-									<p class="text-sm text-destructive" role="alert">{error}</p>
+								{#each field.state.meta.errors as err}
+									<p class="text-sm text-destructive" role="alert">{err}</p>
 								{/each}
 							{/if}
 						</div>

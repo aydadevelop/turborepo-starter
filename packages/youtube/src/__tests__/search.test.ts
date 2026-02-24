@@ -175,7 +175,9 @@ describe("searchYouTube", () => {
 
 		await searchYouTube({ query: "hello world", maxResults: 10 });
 
-		const calledUrl = new URL(fetchMock.mock.calls[0][0] as string);
+		const firstCall = fetchMock.mock.calls[0];
+		expect(firstCall).toBeDefined();
+		const calledUrl = new URL(firstCall?.[0] as string);
 		expect(calledUrl.origin).toBe("https://www.youtube.com");
 		expect(calledUrl.pathname).toBe("/results");
 		expect(calledUrl.searchParams.get("q")).toBe("hello world");
@@ -196,7 +198,9 @@ describe("searchYouTube", () => {
 			stopWords: ["shorts", "clip"],
 		});
 
-		const calledUrl = new URL(fetchMock.mock.calls[0][0] as string);
+		const firstCall = fetchMock.mock.calls[0];
+		expect(firstCall).toBeDefined();
+		const calledUrl = new URL(firstCall?.[0] as string);
 		expect(calledUrl.searchParams.get("q")).toBe("reanimal -shorts -clip");
 	});
 
@@ -210,7 +214,9 @@ describe("searchYouTube", () => {
 
 		await searchYouTube({ query: "test", maxResults: 5, duration: "medium" });
 
-		const calledUrl = new URL(fetchMock.mock.calls[0][0] as string);
+		const firstCall = fetchMock.mock.calls[0];
+		expect(firstCall).toBeDefined();
+		const calledUrl = new URL(firstCall?.[0] as string);
 		expect(calledUrl.searchParams.get("sp")).toBe("EgQQARgD");
 	});
 });

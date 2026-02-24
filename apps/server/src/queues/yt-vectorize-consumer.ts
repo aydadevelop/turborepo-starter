@@ -1,23 +1,24 @@
-import { ytVectorizeQueueMessageSchema } from "@my-app/api/contracts/youtube-queue";
-import { db } from "@my-app/db";
-import { ytSignal } from "@my-app/db/schema/youtube";
-import { eq } from "drizzle-orm";
+import {
+	type QueueProducer,
+	ytVectorizeQueueMessageSchema,
+} from "@my-app/api/contracts/youtube-queue";
+import {
+	type EmbeddingProvider,
+	processYtVectorizeMessage,
+	type VectorizeIndexLike,
+} from "@my-app/api/services/youtube/vectorize";
 
 const MAX_RETRY_ATTEMPTS = 3;
 
-interface VectorizeIndexLike {
-	upsert(
-		vectors: Array<{
-			id: string;
-			values: number[];
-			metadata?: Record<string, string | number | boolean>;
-		}>
-	): Promise<unknown>;
+export interface YtVectorizeDependencies {
+	embeddingProvider?: EmbeddingProvider;
+	vectorizeIndex?: VectorizeIndexLike;
+	ytClusterQueue?: QueueProducer;
 }
 
 const handleVectorizeMessage = async (
 	queueMessage: Message,
-	vectorizeIndex?: VectorizeIndexLike
+	deps: YtVectorizeDependencies
 ) => {
 	const parsed = ytVectorizeQueueMessageSchema.safeParse(queueMessage.body);
 	if (!parsed.success) {
@@ -26,64 +27,27 @@ const handleVectorizeMessage = async (
 		return;
 	}
 
-	const {
-		transcriptId,
-		videoId: _videoId,
-		organizationId: _orgId,
-	} = parsed.data;
+	const { transcriptId } = parsed.data;
 
 	try {
-		// 1. Load signals that haven't been vectorized yet
-		const signals = await db
-			.select()
-			.from(ytSignal)
-			.where(eq(ytSignal.transcriptId, transcriptId));
+		const result = await processYtVectorizeMessage({
+			message: parsed.data,
+			vectorizeIndex: deps.vectorizeIndex,
+			embeddingProvider: deps.embeddingProvider,
+			ytClusterQueue: deps.ytClusterQueue,
+		});
 
-		const unvectorized = signals.filter((s) => !s.vectorized);
-		if (unvectorized.length === 0) {
-			console.log(
-				`[yt-vectorize] No unvectorized signals for transcript ${transcriptId}`
-			);
+		if (result === "no_unvectorized_signals") {
 			queueMessage.ack();
 			return;
 		}
 
-		// 2. Generate embeddings via OpenRouter/OpenAI
-		// NOTE: In production, call the embeddings API here.
-		// Without a vectorize index, we cannot actually vectorize — skip and retry later.
-		if (!vectorizeIndex) {
+		if (result === "missing_vectorize_index") {
 			console.warn(
-				`[yt-vectorize] No vectorize index available — skipping ${unvectorized.length} signals for transcript ${transcriptId}`
+				`[yt-vectorize] No vectorize index available — acking transcript ${transcriptId} (vectorize/cluster steps skipped)`
 			);
-			queueMessage.retry({ delaySeconds: 60 });
+			queueMessage.ack();
 			return;
-		}
-
-		console.log(
-			`[yt-vectorize] Processing ${unvectorized.length} signals for transcript ${transcriptId}`
-		);
-
-		// 3. Upsert vectors into Vectorize index
-		// TODO: Replace placeholder with real embeddings API call
-		// const embeddings = await generateEmbeddings(unvectorized.map(s => s.text));
-		// const vectors = unvectorized.map((s, i) => ({
-		//   id: s.id,
-		//   values: embeddings[i],
-		//   metadata: {
-		//     organizationId: _orgId,
-		//     videoId: _videoId,
-		//     type: s.type,
-		//     severity: s.severity,
-		//   },
-		// }));
-		// await vectorizeIndex.upsert(vectors);
-
-		// 4. Mark signals as vectorized
-		for (const signal of unvectorized) {
-			await db
-				.update(ytSignal)
-				.set({ vectorized: true, embeddingModel: "text-embedding-3-small" })
-				.where(eq(ytSignal.id, signal.id));
 		}
 
 		queueMessage.ack();
@@ -104,9 +68,9 @@ const handleVectorizeMessage = async (
 
 export const processYtVectorizeBatch = async (
 	batch: MessageBatch<unknown>,
-	vectorizeIndex?: VectorizeIndexLike
+	deps: YtVectorizeDependencies = {}
 ) => {
 	for (const queueMessage of batch.messages) {
-		await handleVectorizeMessage(queueMessage, vectorizeIndex);
+		await handleVectorizeMessage(queueMessage, deps);
 	}
 };

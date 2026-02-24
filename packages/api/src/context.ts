@@ -147,11 +147,12 @@ export interface Context {
 	eventBus?: EventBus;
 	notificationQueue?: NotificationQueueProducer;
 	recurringTaskQueue?: NotificationQueueProducer;
-	ytDiscoveryQueue?: NotificationQueueProducer;
 	requestCookies?: Readonly<Record<string, string>>;
 	requestHostname: string;
 	requestUrl: string;
 	session: AuthSession;
+	ytDiscoveryQueue?: NotificationQueueProducer;
+	ytIngestQueue?: NotificationQueueProducer;
 }
 
 /**
@@ -164,6 +165,7 @@ export interface OrganizationContext extends Context {
 	notificationQueue?: NotificationQueueProducer;
 	recurringTaskQueue?: NotificationQueueProducer;
 	ytDiscoveryQueue?: NotificationQueueProducer;
+	ytIngestQueue?: NotificationQueueProducer;
 }
 
 const parseCookiesFromHeader = (
@@ -279,33 +281,20 @@ export async function createContext({
 	const requestCookies = parseCookiesFromHeader(
 		context.req.raw.headers.get("cookie")
 	);
-	const notificationQueueCandidate = (
+	const envQueues = (
 		context as HonoContext & {
 			env?: {
 				NOTIFICATION_QUEUE?: unknown;
 				RECURRING_TASK_QUEUE?: unknown;
 				YT_DISCOVERY_QUEUE?: unknown;
+				YT_INGEST_QUEUE?: unknown;
 			};
 		}
-	).env?.NOTIFICATION_QUEUE;
-	const recurringTaskQueueCandidate = (
-		context as HonoContext & {
-			env?: {
-				NOTIFICATION_QUEUE?: unknown;
-				RECURRING_TASK_QUEUE?: unknown;
-				YT_DISCOVERY_QUEUE?: unknown;
-			};
-		}
-	).env?.RECURRING_TASK_QUEUE;
-	const ytDiscoveryQueueCandidate = (
-		context as HonoContext & {
-			env?: {
-				NOTIFICATION_QUEUE?: unknown;
-				RECURRING_TASK_QUEUE?: unknown;
-				YT_DISCOVERY_QUEUE?: unknown;
-			};
-		}
-	).env?.YT_DISCOVERY_QUEUE;
+	).env;
+	const notificationQueueCandidate = envQueues?.NOTIFICATION_QUEUE;
+	const recurringTaskQueueCandidate = envQueues?.RECURRING_TASK_QUEUE;
+	const ytDiscoveryQueueCandidate = envQueues?.YT_DISCOVERY_QUEUE;
+	const ytIngestQueueCandidate = envQueues?.YT_INGEST_QUEUE;
 	const notificationQueue = isNotificationQueueProducer(
 		notificationQueueCandidate
 	)
@@ -316,8 +305,13 @@ export async function createContext({
 	)
 		? recurringTaskQueueCandidate
 		: undefined;
-	const ytDiscoveryQueue = isNotificationQueueProducer(ytDiscoveryQueueCandidate)
+	const ytDiscoveryQueue = isNotificationQueueProducer(
+		ytDiscoveryQueueCandidate
+	)
 		? ytDiscoveryQueueCandidate
+		: undefined;
+	const ytIngestQueue = isNotificationQueueProducer(ytIngestQueueCandidate)
+		? ytIngestQueueCandidate
 		: undefined;
 	const resolvedNotificationQueue =
 		notificationQueue ??
@@ -339,5 +333,6 @@ export async function createContext({
 		notificationQueue: resolvedNotificationQueue,
 		recurringTaskQueue: resolvedRecurringTaskQueue,
 		ytDiscoveryQueue,
+		ytIngestQueue,
 	};
 }

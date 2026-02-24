@@ -80,7 +80,7 @@
 	const updateStateMutation = createMutation(
 		orpc.youtube.clusters.updateState.mutationOptions({
 			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: ["youtube"] });
+				queryClient.invalidateQueries({ queryKey: orpc.youtube.key() });
 				updateOpen = false;
 			},
 		})
@@ -190,7 +190,7 @@
 	const severityLevels = ["critical", "high", "medium", "low", "info"];
 </script>
 
-<div class="space-y-6">
+<div class="container mx-auto space-y-6 p-6">
 	<!-- ─── Header ─────────────────────────────────────────────────────────── -->
 
 	<div class="flex items-center justify-between">
