@@ -50,6 +50,14 @@ const handleVectorizeMessage = async (
 			return;
 		}
 
+		if (result === "vectorize_unavailable") {
+			console.warn(
+				`[yt-vectorize] Remote binding unavailable — acking transcript ${transcriptId} (signals remain unvectorized)`
+			);
+			queueMessage.ack();
+			return;
+		}
+
 		queueMessage.ack();
 	} catch (error) {
 		console.error(

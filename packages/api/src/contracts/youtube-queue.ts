@@ -54,6 +54,11 @@ export const ytIngestQueueMessageSchema = z.object({
 	youtubeVideoId: z.string().trim().min(1),
 	/** Force audio download + Whisper even if captions are available */
 	forceAsr: z.boolean().default(false),
+	/**
+	 * Whether this feed has ASR enabled. When false, videos without captions
+	 * will fail rather than triggering an expensive audio download.
+	 */
+	enableAsr: z.boolean().default(false),
 });
 
 export type YtIngestQueueMessage = z.infer<typeof ytIngestQueueMessageSchema>;

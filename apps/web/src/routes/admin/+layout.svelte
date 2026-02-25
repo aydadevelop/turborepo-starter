@@ -26,6 +26,7 @@
 		{ href: resolve("/admin"), label: "Overview" },
 		{ href: resolve("/admin/organizations"), label: "Organizations" },
 		{ href: resolve("/admin/users"), label: "Users" },
+		{ href: resolve("/admin/youtube"), label: "YouTube Pipeline" },
 	]);
 
 	const isActive = (href: string) => {

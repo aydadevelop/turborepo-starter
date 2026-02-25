@@ -43,7 +43,11 @@ export const processYtIngestBatch = async (
 	batch: MessageBatch<unknown>,
 	dependencies: YtIngestDependencies
 ) => {
-	for (const queueMessage of batch.messages) {
-		await handleIngestMessage(queueMessage, dependencies);
-	}
+	// Process all messages in the batch concurrently (batchSize=1 in prod,
+	// but parallel here ensures we never sequentially block on slow videos).
+	await Promise.all(
+		batch.messages.map((queueMessage) =>
+			handleIngestMessage(queueMessage, dependencies)
+		)
+	);
 };

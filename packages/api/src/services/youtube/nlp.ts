@@ -451,7 +451,10 @@ function fallbackFromFirstMeaningfulSentence(
 
 // ─── LLM-based extraction (production default) ──────────────────────────────
 
-/** Zod schema for a single extracted signal from LLM output. */
+/** Zod schema for a single extracted signal from LLM output.
+ * All fields are required (OpenAI strict mode mandates every property in `required`).
+ * Optional data uses nullable instead of optional so null can be used when unavailable.
+ */
 const llmSignalSchema = z.object({
 	type: z.enum([
 		"bug",
@@ -470,17 +473,17 @@ const llmSignalSchema = z.object({
 	/** Brief justification why this is genuine game feedback (max 150 chars) */
 	reasoning: z.string().max(150),
 	text: z.string(),
-	/** Video timestamp in seconds where the signal starts */
-	timestampStart: z.number().optional(),
-	/** Video timestamp in seconds where the signal ends */
-	timestampEnd: z.number().optional(),
-	contextBefore: z.string().optional(),
-	contextAfter: z.string().optional(),
+	/** Video timestamp in seconds where the signal starts, or null if unknown */
+	timestampStart: z.number().nullable(),
+	/** Video timestamp in seconds where the signal ends, or null if unknown */
+	timestampEnd: z.number().nullable(),
+	contextBefore: z.string().nullable(),
+	contextAfter: z.string().nullable(),
 	confidence: z.number(),
-	component: z.string().optional(),
-	startOffset: z.number().optional(),
-	endOffset: z.number().optional(),
-	tags: z.array(z.string()).optional(),
+	component: z.string().nullable(),
+	startOffset: z.number().nullable(),
+	endOffset: z.number().nullable(),
+	tags: z.array(z.string()).nullable(),
 });
 
 const llmOutputSchema = z.object({
@@ -491,41 +494,46 @@ const llmOutputSchema = z.object({
  * Creates an LLM-powered transcript analyzer using AI SDK v6.
  *
  * Usage:
- *   import { generateText, Output } from "ai";
+ *   import { generateObject } from "ai";
  *   import { createOpenRouter } from "@openrouter/ai-sdk-provider";
  *
  *   const openrouter = createOpenRouter({ apiKey });
  *   const analyzeTranscript = createLlmAnalyzer({
  *     model: openrouter("openai/gpt-4o-mini"),
- *     generateText,
- *     Output,
+ *     generateObject,
  *   });
  */
 export function createLlmAnalyzer(deps: {
 	model: unknown;
-	generateText: (
+	generateObject: (
 		opts: unknown
-	) => Promise<{ output: z.infer<typeof llmOutputSchema> | undefined }>;
-	Output: { object: (opts: { schema: z.ZodType }) => unknown };
+	) => Promise<{ object: z.infer<typeof llmOutputSchema> }>;
 }): AnalyzeTranscriptFn {
-	const { model, generateText, Output } = deps;
+	const { model, generateObject } = deps;
 
 	return async (
 		text: string,
 		timedSegments?: TimedSegment[],
 		collectCategories?: string[]
 	): Promise<ExtractedSignal[]> => {
-		const { output } = await generateText({
+		const { object } = await generateObject({
 			model,
-			output: Output.object({ schema: llmOutputSchema }),
+			schema: llmOutputSchema,
 			prompt: buildExtractionPrompt(text, timedSegments, collectCategories),
 		});
 
-		if (!output) {
-			return [];
-		}
-
-		return output.signals ?? [];
+		// Map null → undefined to match ExtractedSignal interface (nullable fields become optional)
+		return (object.signals ?? []).map((s) => ({
+			...s,
+			timestampStart: s.timestampStart ?? undefined,
+			timestampEnd: s.timestampEnd ?? undefined,
+			contextBefore: s.contextBefore ?? undefined,
+			contextAfter: s.contextAfter ?? undefined,
+			component: s.component ?? undefined,
+			startOffset: s.startOffset ?? undefined,
+			endOffset: s.endOffset ?? undefined,
+			tags: s.tags ?? undefined,
+		})) as ExtractedSignal[];
 	};
 }
 

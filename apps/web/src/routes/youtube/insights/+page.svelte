@@ -190,7 +190,7 @@
 	const severityLevels = ["critical", "high", "medium", "low", "info"];
 </script>
 
-<div class="container mx-auto space-y-6 p-6">
+<div class="space-y-6">
 	<!-- ─── Header ─────────────────────────────────────────────────────────── -->
 
 	<div class="flex items-center justify-between">

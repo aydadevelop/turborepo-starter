@@ -116,7 +116,7 @@ export const assistantRouter = {
 			const tools = createAssistantTools(context.serverClient);
 
 			const result = streamText({
-				model: openrouter(context.aiModel || "openai/gpt-4o"),
+				model: openrouter(context.aiModel || "openai/gpt-5-nano:nitro"),
 				system: createSystemPrompt(),
 				messages: await convertToModelMessages(input.messages),
 				tools,

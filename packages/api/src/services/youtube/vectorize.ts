@@ -16,6 +16,10 @@ export const EMBEDDING_DIMENSIONS = 1536;
  *  We chunk signals into batches to stay under API limits (≈2000 chars/signal). */
 const MAX_SIGNALS_PER_BATCH = 64;
 
+/** Max retries for transient Vectorize API errors (e.g. "Network connection lost"). */
+const UPSERT_MAX_RETRIES = 3;
+const UPSERT_BASE_DELAY_MS = 500;
+
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 
 export interface VectorizeIndexLike {
@@ -35,7 +39,8 @@ export interface EmbeddingProvider {
 export type ProcessYtVectorizeMessageResult =
 	| "processed"
 	| "no_unvectorized_signals"
-	| "missing_vectorize_index";
+	| "missing_vectorize_index"
+	| "vectorize_unavailable";
 
 export interface ProcessYtVectorizeMessageOptions {
 	embeddingProvider?: EmbeddingProvider;
@@ -123,6 +128,50 @@ function buildVectorMetadata(signal: {
 	return meta;
 }
 
+// ─── Retry helper ────────────────────────────────────────────────────────────
+
+function isRetryableVectorizeError(error: unknown): boolean {
+	if (error instanceof Error && "retryable" in error) {
+		return (error as Error & { retryable: boolean }).retryable === true;
+	}
+	const msg = error instanceof Error ? error.message : String(error);
+	return msg.includes("Network connection lost");
+}
+
+function isRemoteBindingError(error: unknown): boolean {
+	if (error instanceof Error && "remote" in error) {
+		return (error as Error & { remote: boolean }).remote === true;
+	}
+	return false;
+}
+
+async function upsertWithRetry(
+	index: VectorizeIndexLike,
+	vectors: Array<{
+		id: string;
+		values: number[];
+		metadata?: Record<string, string | number | boolean>;
+	}>
+): Promise<void> {
+	for (let attempt = 0; attempt <= UPSERT_MAX_RETRIES; attempt++) {
+		try {
+			await index.upsert(vectors);
+			return;
+		} catch (error) {
+			if (attempt < UPSERT_MAX_RETRIES && isRetryableVectorizeError(error)) {
+				const delay = UPSERT_BASE_DELAY_MS * 2 ** attempt;
+				console.warn(
+					`[yt-vectorize] Vectorize upsert failed (attempt ${attempt + 1}/${UPSERT_MAX_RETRIES + 1}), retrying in ${delay}ms:`,
+					error instanceof Error ? error.message : error
+				);
+				await new Promise((r) => setTimeout(r, delay));
+				continue;
+			}
+			throw error;
+		}
+	}
+}
+
 // ─── Main processor ──────────────────────────────────────────────────────────
 
 export const processYtVectorizeMessage = async ({
@@ -176,7 +225,19 @@ export const processYtVectorizeMessage = async ({
 			metadata: buildVectorMetadata(s),
 		}));
 
-		await vectorizeIndex.upsert(vectors);
+		try {
+			await upsertWithRetry(vectorizeIndex, vectors);
+		} catch (error) {
+			if (isRemoteBindingError(error)) {
+				console.warn(
+					`[yt-vectorize] Remote Vectorize binding unavailable for transcript ${transcriptId} — ` +
+						"preview session may have expired. Signals remain unvectorized for later retry. " +
+						"Restart the dev server to refresh the remote binding."
+				);
+				return "vectorize_unavailable";
+			}
+			throw error;
+		}
 
 		for (const signal of batch) {
 			await db

@@ -1,5 +1,7 @@
 import z from "zod";
-import { fetchPlayerResponse } from "./page";
+import { fetchPlayerResponse, type ProxyEnv } from "./page";
+import type { ProxyEntry } from "./proxy-client";
+import { fetchViaProxy } from "./proxy-fetch";
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -52,9 +54,14 @@ const MIME_TYPES: Record<string, string> = {
  * Compatible with Cloudflare Workers and any fetch-capable runtime.
  */
 export async function downloadAudio(
-	options: DownloadAudioOptions
+	options: DownloadAudioOptions,
+	proxyEnv?: ProxyEnv
 ): Promise<DownloadAudioResult> {
-	const playerData = await fetchPlayerResponse(options.youtubeVideoId);
+	const {
+		data: playerData,
+		proxy,
+		clientUserAgent,
+	} = await fetchPlayerResponse(options.youtubeVideoId, proxyEnv);
 	const streamingData = playerData.streamingData as
 		| Record<string, unknown>
 		| undefined;
@@ -68,7 +75,9 @@ export async function downloadAudio(
 	if (progressiveMp4?.url) {
 		const data = await downloadChunked(
 			progressiveMp4.url,
-			Number(progressiveMp4.contentLength ?? 0)
+			Number(progressiveMp4.contentLength ?? 0),
+			proxy,
+			clientUserAgent
 		);
 		return { data, contentType: "video/mp4", extension: "mp4" };
 	}
@@ -97,7 +106,9 @@ export async function downloadAudio(
 
 	const data = await downloadChunked(
 		chosen.url,
-		Number(chosen.contentLength ?? 0)
+		Number(chosen.contentLength ?? 0),
+		proxy,
+		clientUserAgent
 	);
 
 	const actualExt = chosen.mimeType.includes("webm") ? "opus" : "m4a";
@@ -120,7 +131,9 @@ const ANDROID_UA = "com.google.android.youtube/19.09.37 (Linux; U; Android 11)";
 
 async function downloadChunked(
 	url: string,
-	contentLength: number
+	contentLength: number,
+	proxy: ProxyEntry | null,
+	userAgent: string
 ): Promise<Uint8Array> {
 	const numChunks = Math.ceil(contentLength / CHUNK_SIZE);
 	const chunks: Uint8Array[] = new Array(numChunks);
@@ -136,9 +149,14 @@ async function downloadChunked(
 				// - &range=start-end as a URL query parameter
 				// - &rn=N (range number, 1-based) incremented per chunk
 				const chunkUrl = `${url}&range=${start}-${end}&rn=${idx + 1}`;
-				const res = await fetch(chunkUrl, {
-					headers: { "User-Agent": ANDROID_UA },
-				});
+				const fetchInit: RequestInit = {
+					headers: { "User-Agent": userAgent || ANDROID_UA },
+				};
+				// Route through the same proxy that fetched the player response
+				// so the CDN sees the residential IP that generated the stream URL.
+				const res = proxy
+					? await fetchViaProxy(chunkUrl, proxy, fetchInit)
+					: await fetch(chunkUrl, fetchInit);
 				if (!res.ok) {
 					throw new Error(`Audio stream fetch failed: ${res.status}`);
 				}

@@ -1,7 +1,7 @@
 // Check progressive (non-adaptive) formats from InnerTube
 import { fetchPlayerResponse } from "../packages/youtube/src/page";
 
-const data = await fetchPlayerResponse("UjayV4GWkPc");
+const { data } = await fetchPlayerResponse("UjayV4GWkPc");
 const sd = data.streamingData as Record<string, unknown> | undefined;
 const formats = (sd?.formats ?? []) as Record<string, unknown>[];
 

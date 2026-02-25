@@ -8,6 +8,7 @@ import {
 	D1Database,
 	enableWorkerSubdomain,
 	getAccountSubdomain,
+	KVNamespace,
 	Queue,
 	R2Bucket,
 	SvelteKit,
@@ -145,7 +146,7 @@ const cloudpaymentsPublicId =
 	"";
 const cloudpaymentsApiSecret =
 	readNonEmptyEnv("CLOUDPAYMENTS_API_SECRET") ?? "";
-const aiModel = readNonEmptyEnv("AI_MODEL") ?? "openai/gpt-4o";
+const aiModel = readNonEmptyEnv("AI_MODEL") ?? "openai/gpt-5-nano:nitro";
 const publicCloudpaymentsPublicId =
 	readNonEmptyEnv("PUBLIC_CLOUDPAYMENTS_PUBLIC_ID") ?? "";
 let workersSubdomain = readNonEmptyEnv("CLOUDFLARE_WORKERS_SUBDOMAIN");
@@ -273,6 +274,12 @@ const ytSignalsVectorize = canUseVectorize
 		})
 	: undefined;
 
+// KV for caching 2Captcha proxy lists and ASN data across Worker invocations.
+const ytProxyCacheKv = await KVNamespace("yt-proxy-cache", {
+	adopt: isDeploying,
+	...cloudflareApiOptions,
+});
+
 if (!canUseVectorize && isLocalDevRuntime) {
 	console.warn(
 		"[infra] Vectorize index skipped — no real Cloudflare credentials. " +
@@ -392,6 +399,8 @@ export const server = await Worker("server", {
 	entrypoint: "src/index.ts",
 	compatibility: "node",
 	...cloudflareApiOptions,
+	// Run stuck-ingest recovery every 15 minutes
+	crons: ["*/15 * * * *"],
 	bindings: {
 		DB: db,
 		NOTIFICATION_QUEUE: notificationQueue,
@@ -404,10 +413,12 @@ export const server = await Worker("server", {
 		YT_TRANSCRIBE_QUEUE: ytTranscribeQueue,
 		YT_TRANSCRIPTS_BUCKET: ytTranscriptsBucket,
 		...(ytSignalsVectorize ? { YT_SIGNALS_VECTORIZE: ytSignalsVectorize } : {}),
+		YT_PROXY_CACHE: ytProxyCacheKv,
 		OPEN_ROUTER_API_KEY: alchemy.secret.env(
 			"OPEN_ROUTER_API_KEY",
 			openRouterApiKey
 		),
+		AI_MODEL: aiModel,
 		CORS_ORIGIN: getCorsOrigin(),
 		BETTER_AUTH_SECRET: alchemy.secret.env(
 			"BETTER_AUTH_SECRET",
@@ -425,6 +436,10 @@ export const server = await Worker("server", {
 		CLOUDPAYMENTS_API_SECRET: alchemy.secret.env(
 			"CLOUDPAYMENTS_API_SECRET",
 			cloudpaymentsApiSecret
+		),
+		TWO_CAPTCHA_API_KEY: alchemy.secret.env(
+			"TWO_CAPTCHA_API_KEY",
+			readNonEmptyEnv("TWO_CAPTCHA_API_KEY") ?? ""
 		),
 	},
 	eventSources: [
@@ -453,8 +468,11 @@ export const server = await Worker("server", {
 		{
 			queue: ytIngestQueue,
 			settings: {
-				batchSize: 3,
-				maxConcurrency: 2,
+				// batchSize=1: each worker instance handles one video so slow videos
+				// don't block others (sequential processing per batch).
+				// maxConcurrency=10: up to 10 parallel worker instances.
+				batchSize: 1,
+				maxConcurrency: 10,
 				maxRetries: 3,
 				maxWaitTimeMs: 5000,
 				retryDelay: 60,

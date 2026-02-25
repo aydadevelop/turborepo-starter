@@ -90,7 +90,9 @@
 			}
 
 			queryClient.invalidateQueries({ queryKey: ["organization"] });
-			goto(resolve("/dashboard"));
+			queryClient.invalidateQueries({ queryKey: ["user-organizations"] });
+			queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] });
+			goto(resolve("/youtube/feeds"));
 		} catch (err) {
 			errorMessage =
 				err instanceof Error

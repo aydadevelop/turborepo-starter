@@ -116,6 +116,14 @@ export const ytFeed = sqliteTable(
 		collectCategories: text("collect_categories", { mode: "json" }).$type<
 			string[] | null
 		>(),
+		/**
+		 * When true, audio download + Whisper ASR is used when captions are unavailable.
+		 * Opt-in because ASR is expensive (audio download + transcription).
+		 * Default false — videos without captions will fail rather than triggering ASR.
+		 */
+		enableAsr: integer("enable_asr", { mode: "boolean" })
+			.notNull()
+			.default(false),
 		status: text("status", { enum: ytFeedStatusValues })
 			.notNull()
 			.default("active"),
@@ -163,8 +171,20 @@ export const ytVideo = sqliteTable(
 			onDelete: "set null",
 		}),
 		reviewedAt: integer("reviewed_at", { mode: "timestamp_ms" }),
-		/** R2 key for stored audio, if downloaded */
+		/** R2 key for stored audio, if downloaded via ASR path */
 		audioR2Key: text("audio_r2_key"),
+		/**
+		 * Whether manual (non-auto-generated) captions were found during ingest.
+		 * null = not yet checked (video hasn't been ingested).
+		 */
+		captionsAvailable: integer("captions_available", { mode: "boolean" }),
+		/**
+		 * Whether auto-generated captions were found during ingest.
+		 * null = not yet checked (video hasn't been ingested).
+		 */
+		autoCaptionsAvailable: integer("auto_captions_available", {
+			mode: "boolean",
+		}),
 		/** Pipeline stage tracking */
 		ingestedAt: integer("ingested_at", { mode: "timestamp_ms" }),
 		failureReason: text("failure_reason"),

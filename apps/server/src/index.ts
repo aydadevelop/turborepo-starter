@@ -3,13 +3,19 @@ import type {
 	R2BucketLike,
 } from "@my-app/api/contracts/youtube-queue";
 import type { VectorizeIndex } from "@my-app/api/services/youtube/cluster";
+import { createLlmAnalyzer } from "@my-app/api/services/youtube/nlp";
+import {
+	recoverStuckIngesting,
+	recoverTransientFailures,
+} from "@my-app/api/services/youtube/recovery";
 import {
 	DEFAULT_EMBEDDING_MODEL,
 	type EmbeddingProvider,
 	type VectorizeIndexLike,
 } from "@my-app/api/services/youtube/vectorize";
+import type { KVStore } from "@my-app/youtube/proxy-client";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { embedMany } from "ai";
+import { embedMany, generateObject } from "ai";
 import { app } from "./app";
 import { processRecurringTaskBatch } from "./queues/recurring-task-consumer";
 import { processYtClusterBatch } from "./queues/yt-cluster-consumer";
@@ -20,17 +26,32 @@ import { processYtTranscribeBatch } from "./queues/yt-transcribe-consumer";
 import { processYtVectorizeBatch } from "./queues/yt-vectorize-consumer";
 
 interface Env {
+	AI_MODEL?: string;
 	NOTIFICATION_QUEUE?: QueueProducer;
 	OPEN_ROUTER_API_KEY?: string;
 	RECURRING_TASK_QUEUE?: QueueProducer;
+	TWO_CAPTCHA_API_KEY?: string;
 	YT_CLUSTER_QUEUE?: QueueProducer;
 	YT_DISCOVERY_QUEUE?: QueueProducer;
 	YT_INGEST_QUEUE?: QueueProducer;
 	YT_NLP_QUEUE?: QueueProducer;
+	YT_PROXY_CACHE?: KVStore;
 	YT_SIGNALS_VECTORIZE?: VectorizeIndexLike & VectorizeIndex;
 	YT_TRANSCRIBE_QUEUE?: QueueProducer;
 	YT_TRANSCRIPTS_BUCKET?: R2BucketLike;
 	YT_VECTORIZE_QUEUE?: QueueProducer;
+}
+
+const DEFAULT_NLP_MODEL = "openai/gpt-5-nano:nitro";
+
+function createNlpAnalyzer(env: Env) {
+	if (!env.OPEN_ROUTER_API_KEY) {
+		return undefined;
+	}
+	const openrouter = createOpenRouter({ apiKey: env.OPEN_ROUTER_API_KEY });
+	const model = openrouter(env.AI_MODEL ?? DEFAULT_NLP_MODEL);
+	// biome-ignore lint/suspicious/noExplicitAny: AI SDK type bridging
+	return createLlmAnalyzer({ model, generateObject: generateObject as any });
 }
 
 function createEmbeddingProvider(env: Env): EmbeddingProvider | undefined {
@@ -68,6 +89,10 @@ const queueProcessors: QueueProcessor[] = [
 		fragment: "yt-ingest",
 		run: (batch, env) =>
 			processYtIngestBatch(batch, {
+				proxyEnv: {
+					twoCaptchaApiKey: env.TWO_CAPTCHA_API_KEY,
+					proxyCacheKv: env.YT_PROXY_CACHE,
+				},
 				ytNlpQueue: env.YT_NLP_QUEUE,
 				ytTranscribeQueue: env.YT_TRANSCRIBE_QUEUE,
 				ytTranscriptsBucket: env.YT_TRANSCRIPTS_BUCKET,
@@ -94,6 +119,7 @@ const queueProcessors: QueueProcessor[] = [
 		fragment: "yt-nlp",
 		run: (batch, env) =>
 			processYtNlpBatch(batch, {
+				analyzeTranscript: createNlpAnalyzer(env),
 				ytVectorizeQueue: env.YT_VECTORIZE_QUEUE,
 			}),
 	},
@@ -121,6 +147,36 @@ const serverApp: ExportedHandler<Env> = {
 			notificationQueue: env.NOTIFICATION_QUEUE,
 			recurringTaskQueue: env.RECURRING_TASK_QUEUE,
 		});
+	},
+	scheduled: async (_event, env) => {
+		console.log("[server] Scheduled cron: running stuck-ingest recovery");
+		if (!env.YT_INGEST_QUEUE) {
+			console.warn(
+				"[server] Scheduled: YT_INGEST_QUEUE not bound, skipping recovery"
+			);
+			return;
+		}
+		try {
+			const count = await recoverStuckIngesting({
+				ytIngestQueue: env.YT_INGEST_QUEUE,
+			});
+			console.log(`[server] Scheduled: re-queued ${count} stuck video(s)`);
+		} catch (err) {
+			console.error("[server] Scheduled: stuck-ingest recovery failed:", err);
+		}
+		try {
+			const { requeued, skipped } = await recoverTransientFailures({
+				ytIngestQueue: env.YT_INGEST_QUEUE,
+			});
+			console.log(
+				`[server] Scheduled: transient-failure recovery: ${requeued} re-queued, ${skipped} skipped`
+			);
+		} catch (err) {
+			console.error(
+				"[server] Scheduled: transient-failure recovery failed:",
+				err
+			);
+		}
 	},
 };
 

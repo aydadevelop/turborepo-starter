@@ -77,6 +77,11 @@ export const createFeedInputSchema = z.object({
 	scheduleHint: z.string().trim().max(100).optional(),
 	/** null/undefined = all categories enabled (default). */
 	collectCategories: z.array(ytExtractionCategorySchema).optional(),
+	/**
+	 * Enable audio download + Whisper ASR as fallback when captions are unavailable.
+	 * Default false — opt-in because ASR is expensive.
+	 */
+	enableAsr: z.boolean().optional(),
 });
 
 export const updateFeedInputSchema = z.object({
@@ -95,6 +100,7 @@ export const updateFeedInputSchema = z.object({
 	scheduleHint: z.string().trim().max(100).optional(),
 	status: ytFeedStatusSchema.optional(),
 	collectCategories: z.array(ytExtractionCategorySchema).nullable().optional(),
+	enableAsr: z.boolean().optional(),
 });
 
 export const feedOutputSchema = z.object({
@@ -108,6 +114,7 @@ export const feedOutputSchema = z.object({
 	gameVersion: z.string().nullable(),
 	scheduleHint: z.string().nullable(),
 	collectCategories: z.array(z.string()).nullable(),
+	enableAsr: z.boolean(),
 	status: ytFeedStatusSchema,
 	lastDiscoveryAt: z.string().nullable(),
 	createdAt: z.string(),
@@ -124,6 +131,10 @@ export const reviewVideoInputSchema = z.object({
 	videoId: z.string().trim().min(1),
 	action: z.enum(["approve", "reject"]),
 	rejectionReason: z.string().trim().max(500).optional(),
+});
+
+export const retryIngestInputSchema = z.object({
+	videoId: z.string().trim().min(1),
 });
 
 export const listVideosInputSchema = z.object({
@@ -146,10 +157,43 @@ export const videoOutputSchema = z.object({
 	tags: z.array(z.string()).nullable(),
 	viewCount: z.number().nullable(),
 	status: ytVideoStatusSchema,
+	/** Whether manual captions were found. null = not yet checked. */
+	captionsAvailable: z.boolean().nullable(),
+	/** Whether auto-generated captions were found. null = not yet checked. */
+	autoCaptionsAvailable: z.boolean().nullable(),
+	/** R2 key for stored audio, set after ASR download. null = no audio. */
+	audioR2Key: z.string().nullable(),
 	createdAt: z.string(),
 });
 
+// ─── Transcript Contracts ────────────────────────────────────────────────────
+
+export const getTranscriptInputSchema = z.object({
+	videoId: z.string().trim().min(1),
+});
+
+export const timedSegmentSchema = z.object({
+	start: z.number(),
+	end: z.number(),
+	text: z.string(),
+});
+
+export const transcriptOutputSchema = z.object({
+	id: z.string(),
+	videoId: z.string(),
+	source: z.string(),
+	language: z.string(),
+	durationSeconds: z.number().nullable(),
+	segmentCount: z.number().nullable(),
+	nlpStatus: z.string(),
+	timedSegments: z.array(timedSegmentSchema),
+});
+
 // ─── Signal Contracts ────────────────────────────────────────────────────────
+
+export const retriggerNlpInputSchema = z.object({
+	videoId: z.string().trim().min(1),
+});
 
 export const listSignalsInputSchema = z.object({
 	videoId: z.string().trim().min(1).optional(),
@@ -244,4 +288,21 @@ export const semanticSearchResultSchema = z.object({
 
 export const triggerDiscoveryInputSchema = z.object({
 	feedId: z.string().trim().min(1),
+});
+
+// ─── Channel Search ───────────────────────────────────────────────────────────
+
+export const searchChannelsInputSchema = z.object({
+	query: z.string().trim().min(1).max(200),
+	maxResults: z.number().int().min(1).max(20).default(10),
+});
+
+export const channelSearchResultSchema = z.object({
+	channelId: z.string(),
+	name: z.string(),
+	description: z.string().nullable(),
+	subscriberCount: z.string().nullable(),
+	videoCount: z.string().nullable(),
+	thumbnailUrl: z.string().nullable(),
+	customUrl: z.string().nullable(),
 });

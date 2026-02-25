@@ -1,7 +1,7 @@
 // Quick diagnostic for audio format extraction and CDN fetch via InnerTube
 import { fetchPlayerResponse } from "../packages/youtube/src/page";
 
-const data = await fetchPlayerResponse("UjayV4GWkPc");
+const { data } = await fetchPlayerResponse("UjayV4GWkPc");
 const streamingData = data.streamingData as Record<string, unknown> | undefined;
 const formats = (streamingData?.adaptiveFormats ?? []) as Record<
 	string,

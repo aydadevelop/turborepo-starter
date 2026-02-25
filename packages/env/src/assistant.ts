@@ -14,7 +14,7 @@ export const env = {
 		server: {
 			...baseCloudflareServerSchema,
 			OPEN_ROUTER_API_KEY: z.string().min(1, "OPEN_ROUTER_API_KEY is required"),
-			AI_MODEL: z.string().default("openai/gpt-4o"),
+			AI_MODEL: z.string().default("openai/gpt-5-nano:nitro"),
 		},
 		runtimeEnv: {
 			...pickBaseCloudflareRuntimeEnv(cfEnv),

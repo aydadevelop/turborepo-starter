@@ -35,7 +35,7 @@ export const usageLedger = sqliteTable(
 			onDelete: "set null",
 		}),
 		operation: text("operation", { enum: usageOperationValues }).notNull(),
-		/** Provider model identifier (e.g. "openai/gpt-4o", "text-embedding-3-small") */
+		/** Provider model identifier (e.g. "openai/gpt-5-nano:nitro", "text-embedding-3-small") */
 		model: text("model").notNull(),
 		/** Input tokens consumed (prompts, audio seconds × token rate, etc.) */
 		inputTokens: integer("input_tokens").notNull().default(0),

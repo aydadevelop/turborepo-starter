@@ -2,6 +2,129 @@ import z from "zod";
 import { USER_AGENT } from "./page";
 import type { SearchResult } from "./search.ts";
 
+// ─── Channel Search ───────────────────────────────────────────────────────────
+
+export interface ChannelSearchResult {
+	channelId: string;
+	customUrl: string | null;
+	description: string | null;
+	name: string;
+	subscriberCount: string | null;
+	thumbnailUrl: string | null;
+	videoCount: string | null;
+}
+
+/**
+ * Search YouTube for channels matching the query.
+ *
+ * Uses the public search results page with `type=channel` filter — no API key
+ * required, Cloudflare Workers compatible.
+ */
+export async function searchChannels(
+	query: string,
+	maxResults = 10
+): Promise<ChannelSearchResult[]> {
+	const url = new URL("https://www.youtube.com/results");
+	url.searchParams.set("q", query);
+	url.searchParams.set("hl", "en");
+	// sp = EgIQAg== → protobuf: field2(type=channel), no date/duration filter
+	url.searchParams.set("sp", "EgIQAg%3D%3D");
+
+	const response = await fetch(url.toString(), {
+		headers: {
+			"User-Agent": USER_AGENT,
+			"Accept-Language": "en-US,en;q=0.9",
+		},
+	});
+
+	if (!response.ok) {
+		throw new Error(`YouTube channel search failed: ${response.status}`);
+	}
+
+	const html = await response.text();
+	const data = extractYtInitialData(html);
+	if (!data) {
+		return [];
+	}
+
+	const renderers = collectChannelRenderers(data);
+	return renderers.slice(0, maxResults).map(mapChannelRenderer);
+}
+
+function collectChannelRenderers(node: unknown): Record<string, unknown>[] {
+	if (!node || typeof node !== "object") {
+		return [];
+	}
+	if (Array.isArray(node)) {
+		return node.flatMap(collectChannelRenderers);
+	}
+	const obj = node as Record<string, unknown>;
+	const results: Record<string, unknown>[] = [];
+	if (
+		"channelRenderer" in obj &&
+		obj.channelRenderer &&
+		typeof obj.channelRenderer === "object"
+	) {
+		results.push(obj.channelRenderer as Record<string, unknown>);
+	}
+	for (const value of Object.values(obj)) {
+		results.push(...collectChannelRenderers(value));
+	}
+	return results;
+}
+
+function mapChannelRenderer(cr: Record<string, unknown>): ChannelSearchResult {
+	interface Runs {
+		runs?: { text: string }[];
+	}
+	interface SimpleText {
+		simpleText?: string;
+	}
+
+	const channelId =
+		(
+			cr.navigationEndpoint as
+				| { browseEndpoint?: { browseId?: string } }
+				| undefined
+		)?.browseEndpoint?.browseId ?? String(cr.channelId ?? "");
+
+	const titleRuns = (cr.title as Runs | undefined)?.runs;
+	const name =
+		titleRuns?.[0]?.text ??
+		(cr.title as SimpleText | undefined)?.simpleText ??
+		"";
+
+	const descRuns = (cr.descriptionSnippet as Runs | undefined)?.runs;
+	const description = descRuns?.map((r) => r.text).join("") || null;
+
+	const subscriberCount =
+		(cr.subscriberCountText as SimpleText | undefined)?.simpleText ?? null;
+
+	const videoCount =
+		(cr.videoCountText as SimpleText | undefined)?.simpleText ?? null;
+
+	interface Thumb {
+		height?: number;
+		url: string;
+		width?: number;
+	}
+	const thumbs =
+		(cr.thumbnail as { thumbnails?: Thumb[] } | undefined)?.thumbnails ?? [];
+	const thumbnailUrl = thumbs.at(-1)?.url ?? null;
+
+	const customUrl = (cr.customUrl as string | undefined) ?? null;
+
+	return {
+		channelId,
+		name,
+		description,
+		subscriberCount,
+		videoCount,
+		thumbnailUrl,
+		customUrl,
+	};
+}
+
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
 export const channelVideosOptionsSchema = z.object({

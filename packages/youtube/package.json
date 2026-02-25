@@ -20,6 +20,12 @@
     },
     "./transcribe": {
       "default": "./src/transcribe.ts"
+    },
+    "./page": {
+      "default": "./src/page.ts"
+    },
+    "./proxy-client": {
+      "default": "./src/proxy-client.ts"
     }
   },
   "scripts": {

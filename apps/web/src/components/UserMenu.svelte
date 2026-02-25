@@ -1,32 +1,32 @@
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
-	import { authClient } from "$lib/auth-client";
-	import { queryClient } from "$lib/orpc";
+import { goto } from "$app/navigation";
+import { resolve } from "$app/paths";
+import { page } from "$app/state";
+import { authClient } from "$lib/auth-client";
+import { queryClient } from "$lib/orpc";
 
-	const sessionQuery = authClient.useSession();
+const sessionQuery = authClient.useSession();
 
-	async function handleSignOut() {
-		await authClient.signOut({
-			fetchOptions: {
-				onSuccess: () => {
-					queryClient.clear();
-					window.location.href = resolve("/");
-				},
-				onError: (error) => {
-					console.error("Sign out failed:", error);
-				},
+async function handleSignOut() {
+	await authClient.signOut({
+		fetchOptions: {
+			onSuccess: () => {
+				queryClient.clear();
+				window.location.href = resolve("/");
 			},
-		});
-	}
+			onError: (error) => {
+				console.error("Sign out failed:", error);
+			},
+		},
+	});
+}
 
-	function goToLogin() {
-		goto(
-			`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
-		);
-	}
+function goToLogin() {
+	goto(
+		`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+	);
+}
 </script>
 
 <div class="relative">

@@ -1,73 +1,72 @@
 <script lang="ts">
 	import { Badge } from "@my-app/ui/components/badge";
-	import { createQuery } from "@tanstack/svelte-query";
-	import { derived } from "svelte/store";
-	import { resolve } from "$app/paths";
-	import { authClient } from "$lib/auth-client";
-	import { orpc, queryClient } from "$lib/orpc";
-	import NotificationCenter from "./NotificationCenter.svelte";
-	import OrgSwitcher from "./OrgSwitcher.svelte";
-	import UserMenu from "./UserMenu.svelte";
+import { createQuery } from "@tanstack/svelte-query";
+import { derived } from "svelte/store";
+import { resolve } from "$app/paths";
+import { authClient } from "$lib/auth-client";
+import { orpc, queryClient } from "$lib/orpc";
+import NotificationCenter from "./NotificationCenter.svelte";
+import OrgSwitcher from "./OrgSwitcher.svelte";
+import UserMenu from "./UserMenu.svelte";
 
-	// Stable constant — resolve() depends only on BASE_PATH (build-time),
-	// so these never need to be recreated. Hoisting out of $derived avoids
-	// giving the {#each} block a new array reference on every session tick.
-	const STATIC_LINKS = [
-		{ to: resolve("/"), label: "Home" },
-		{ to: resolve("/chat"), label: "Chat" },
-		{ to: resolve("/dashboard"), label: "Dashboard" },
-		{ to: resolve("/youtube"), label: "YouTube" },
-	] as const;
+// Stable constant — resolve() depends only on BASE_PATH (build-time),
+// so these never need to be recreated. Hoisting out of $derived avoids
+// giving the {#each} block a new array reference on every session tick.
+const STATIC_LINKS = [
+	{ to: resolve("/"), label: "Home" },
+	{ to: resolve("/chat"), label: "Chat" },
+	{ to: resolve("/dashboard"), label: "Dashboard" },
+	{ to: resolve("/youtube"), label: "YouTube" },
+] as const;
 
-	// Stable queryFn — hoisted outside derived() so the function reference
-	// doesn't change on every session store emission.
-	const fetchUserInvitations = async () => {
-		const { data, error } = await authClient.organization.listUserInvitations();
-		if (error) throw error;
-		return data ?? [];
-	};
+// Stable queryFn — hoisted outside derived() so the function reference
+// doesn't change on every session store emission.
+const fetchUserInvitations = async () => {
+	const { data, error } = await authClient.organization.listUserInvitations();
+	if (error) throw error;
+	return data ?? [];
+};
 
-	const sessionQuery = authClient.useSession();
+const sessionQuery = authClient.useSession();
 
-	const isImpersonating = $derived(
-		Boolean(
-			($sessionQuery.data?.session as { impersonatedBy?: string } | undefined)
-				?.impersonatedBy
-		)
-	);
+const isImpersonating = $derived(
+	Boolean(
+		($sessionQuery.data?.session as { impersonatedBy?: string } | undefined)
+			?.impersonatedBy
+	)
+);
 
-	const handleStopImpersonating = async () => {
-		await authClient.admin.stopImpersonating();
-		queryClient.invalidateQueries();
-		window.location.href = resolve("/admin/users");
-	};
+const handleStopImpersonating = async () => {
+	await authClient.admin.stopImpersonating();
+	queryClient.invalidateQueries();
+	window.location.href = resolve("/admin/users");
+};
 
-	const canManageQueryOptions = derived(sessionQuery, ($sessionQuery) => ({
-		...orpc.canManageOrganization.queryOptions(),
-		retry: false,
-		enabled: Boolean($sessionQuery.data),
-	}));
-	const canManageQuery = createQuery(canManageQueryOptions);
+const canManageQueryOptions = derived(sessionQuery, ($sessionQuery) => ({
+	...orpc.canManageOrganization.queryOptions(),
+	retry: false,
+	enabled: Boolean($sessionQuery.data),
+}));
+const canManageQuery = createQuery(canManageQueryOptions);
 
-	const invitationsQueryOptions = derived(sessionQuery, ($sessionQuery) => ({
-		queryKey: ["user-invitations"],
-		queryFn: fetchUserInvitations, // stable reference — no new closure per tick
-		retry: false,
-		enabled: Boolean($sessionQuery.data),
-	}));
-	const invitationsQuery = createQuery(invitationsQueryOptions);
+const invitationsQueryOptions = derived(sessionQuery, ($sessionQuery) => ({
+	queryKey: ["user-invitations"],
+	queryFn: fetchUserInvitations, // stable reference — no new closure per tick
+	retry: false,
+	enabled: Boolean($sessionQuery.data),
+}));
+const invitationsQuery = createQuery(invitationsQueryOptions);
 
-	const isAdmin = $derived(
-		($sessionQuery.data?.user as { role?: string } | undefined)?.role ===
-			"admin"
-	);
-	const hasOrgAccess = $derived(
-		Boolean($canManageQuery.data?.canManageOrganization)
-	);
-	const pendingInvitationCount = $derived(
-		($invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
-			.length
-	);
+const isAdmin = $derived(
+	($sessionQuery.data?.user as { role?: string } | undefined)?.role === "admin"
+);
+const hasOrgAccess = $derived(
+	Boolean($canManageQuery.data?.canManageOrganization)
+);
+const pendingInvitationCount = $derived(
+	($invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
+		.length
+);
 </script>
 
 <header

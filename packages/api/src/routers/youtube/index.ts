@@ -3,23 +3,31 @@ import {
 	ytCluster,
 	ytFeed,
 	ytSignal,
+	ytTranscript,
 	ytVideo,
 } from "@my-app/db/schema/youtube";
+import { searchChannels } from "@my-app/youtube/channel";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, inArray, like } from "drizzle-orm";
 import z from "zod";
 import {
+	channelSearchResultSchema,
 	clusterOutputSchema,
 	createFeedInputSchema,
 	feedOutputSchema,
+	getTranscriptInputSchema,
 	listClustersInputSchema,
 	listSignalsInputSchema,
 	listVideosInputSchema,
+	retriggerNlpInputSchema,
+	retryIngestInputSchema,
 	reviewVideoInputSchema,
+	searchChannelsInputSchema,
 	semanticSearchInputSchema,
 	semanticSearchResultSchema,
 	signalOutputSchema,
 	submitVideoInputSchema,
+	transcriptOutputSchema,
 	triggerDiscoveryInputSchema,
 	updateClusterStateInputSchema,
 	updateFeedInputSchema,
@@ -27,6 +35,7 @@ import {
 } from "../../contracts/youtube";
 import { ytQueueKinds } from "../../contracts/youtube-queue";
 import { organizationPermissionProcedure } from "../../index";
+import { recoverStuckIngesting } from "../../services/youtube/recovery";
 import { extractYoutubeVideoId, fetchOEmbedMetadata } from "./utils";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -50,11 +59,13 @@ const feedRouter = {
 				name: input.name,
 				gameTitle: input.gameTitle,
 				searchQuery: input.searchQuery,
+				channelId: input.channelId ?? null,
 				stopWords: input.stopWords,
 				publishedAfter: input.publishedAfter,
 				gameVersion: input.gameVersion,
 				scheduleHint: input.scheduleHint,
 				collectCategories: input.collectCategories ?? null,
+				enableAsr: input.enableAsr ?? false,
 			});
 			return {
 				id,
@@ -67,6 +78,7 @@ const feedRouter = {
 				gameVersion: input.gameVersion ?? null,
 				scheduleHint: input.scheduleHint ?? null,
 				collectCategories: input.collectCategories ?? null,
+				enableAsr: input.enableAsr ?? false,
 				status: "active" as const,
 				lastDiscoveryAt: null,
 				createdAt: now.toISOString(),
@@ -114,6 +126,7 @@ const feedRouter = {
 				gameVersion: f.gameVersion,
 				scheduleHint: f.scheduleHint,
 				collectCategories: (f.collectCategories as string[] | null) ?? null,
+				enableAsr: f.enableAsr,
 				status: f.status,
 				lastDiscoveryAt: toISOStringOrNull(f.lastDiscoveryAt),
 				createdAt: f.createdAt.toISOString(),
@@ -200,6 +213,9 @@ const videoRouter = {
 				tags: null,
 				viewCount: null,
 				status: "candidate" as const,
+				captionsAvailable: null,
+				autoCaptionsAvailable: null,
+				audioR2Key: null,
 				createdAt: new Date().toISOString(),
 			};
 		}),
@@ -230,25 +246,105 @@ const videoRouter = {
 						eq(ytVideo.organizationId, organizationId)
 					)
 				)
-				.returning({ youtubeVideoId: ytVideo.youtubeVideoId });
+				.returning({
+					youtubeVideoId: ytVideo.youtubeVideoId,
+					feedId: ytVideo.feedId,
+				});
 
 			if (
 				input.action === "approve" &&
 				updated?.youtubeVideoId &&
 				context.ytIngestQueue
 			) {
+				const [feed] = updated.feedId
+					? await db
+							.select({ enableAsr: ytFeed.enableAsr })
+							.from(ytFeed)
+							.where(eq(ytFeed.id, updated.feedId))
+							.limit(1)
+					: [];
 				await context.ytIngestQueue.send(
 					{
 						kind: ytQueueKinds.ingest,
 						videoId: input.videoId,
 						organizationId,
 						youtubeVideoId: updated.youtubeVideoId,
+						enableAsr: feed?.enableAsr ?? false,
 					},
 					{ contentType: "json" }
 				);
 			}
 
 			return { success: true, status: newStatus };
+		}),
+
+	retryIngest: organizationPermissionProcedure({ yt_video: ["update"] })
+		.route({
+			tags: ["YouTube Videos"],
+			summary: "Retry ingestion for a failed video",
+		})
+		.input(retryIngestInputSchema)
+		.output(z.object({ success: z.boolean() }))
+		.handler(async ({ context, input }) => {
+			const organizationId = context.activeMembership.organizationId;
+
+			const [video] = await db
+				.select({
+					youtubeVideoId: ytVideo.youtubeVideoId,
+					status: ytVideo.status,
+					feedId: ytVideo.feedId,
+				})
+				.from(ytVideo)
+				.where(
+					and(
+						eq(ytVideo.id, input.videoId),
+						eq(ytVideo.organizationId, organizationId)
+					)
+				)
+				.limit(1);
+
+			if (!video) {
+				throw new ORPCError("NOT_FOUND", { message: "Video not found" });
+			}
+			if (video.status !== "failed") {
+				throw new ORPCError("BAD_REQUEST", {
+					message: `Cannot retry: video status is '${video.status}', expected 'failed'`,
+				});
+			}
+
+			await db
+				.update(ytVideo)
+				.set({
+					status: "approved",
+					failureReason: null,
+					failedStage: null,
+				})
+				.where(
+					and(
+						eq(ytVideo.id, input.videoId),
+						eq(ytVideo.organizationId, organizationId)
+					)
+				);
+
+			if (context.ytIngestQueue) {
+				const [feed] = await db
+					.select({ enableAsr: ytFeed.enableAsr })
+					.from(ytFeed)
+					.where(eq(ytFeed.id, video.feedId))
+					.limit(1);
+				await context.ytIngestQueue.send(
+					{
+						kind: ytQueueKinds.ingest,
+						videoId: input.videoId,
+						organizationId,
+						youtubeVideoId: video.youtubeVideoId,
+						enableAsr: feed?.enableAsr ?? false,
+					},
+					{ contentType: "json" }
+				);
+			}
+
+			return { success: true };
 		}),
 
 	list: organizationPermissionProcedure({ yt_video: ["read"] })
@@ -287,6 +383,9 @@ const videoRouter = {
 				tags: v.tags,
 				viewCount: v.viewCount,
 				status: v.status,
+				captionsAvailable: v.captionsAvailable,
+				autoCaptionsAvailable: v.autoCaptionsAvailable,
+				audioR2Key: v.audioR2Key,
 				createdAt: v.createdAt.toISOString(),
 			}));
 		}),
@@ -318,11 +417,180 @@ const videoRouter = {
 
 			return { queued: true };
 		}),
+
+	recoverStuck: organizationPermissionProcedure({ yt_video: ["update"] })
+		.route({
+			tags: ["YouTube Videos"],
+			summary: "Re-queue all videos stuck in 'ingesting' status",
+		})
+		.input(
+			z.object({
+				/** Minimum age in minutes before a video is considered stuck (default: 0 = all ingesting) */
+				minAgeMinutes: z.number().int().min(0).max(120).optional().default(0),
+			})
+		)
+		.output(z.object({ requeued: z.number() }))
+		.handler(async ({ context, input }) => {
+			if (!context.ytIngestQueue) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR", {
+					message: "Ingest queue is not available",
+				});
+			}
+			const requeued = await recoverStuckIngesting({
+				ytIngestQueue: context.ytIngestQueue,
+				stuckThresholdMs: input.minAgeMinutes * 60 * 1000,
+			});
+			return { requeued };
+		}),
+};
+
+// ─── Transcript Router ───────────────────────────────────────────────────────
+
+const transcriptRouter = {
+	get: organizationPermissionProcedure({ yt_video: ["read"] })
+		.route({
+			tags: ["YouTube Transcripts"],
+			summary: "Get transcript with timed segments for a video",
+		})
+		.input(getTranscriptInputSchema)
+		.output(transcriptOutputSchema.nullable())
+		.handler(async ({ context, input }) => {
+			const organizationId = context.activeMembership.organizationId;
+
+			// Verify video belongs to org
+			const [video] = await db
+				.select({ id: ytVideo.id })
+				.from(ytVideo)
+				.where(
+					and(
+						eq(ytVideo.id, input.videoId),
+						eq(ytVideo.organizationId, organizationId)
+					)
+				)
+				.limit(1);
+
+			if (!video) {
+				throw new ORPCError("NOT_FOUND", { message: "Video not found" });
+			}
+
+			const [transcript] = await db
+				.select({
+					id: ytTranscript.id,
+					videoId: ytTranscript.videoId,
+					source: ytTranscript.source,
+					language: ytTranscript.language,
+					durationSeconds: ytTranscript.durationSeconds,
+					segmentCount: ytTranscript.segmentCount,
+					nlpStatus: ytTranscript.nlpStatus,
+					timedSegments: ytTranscript.timedSegments,
+				})
+				.from(ytTranscript)
+				.where(
+					and(
+						eq(ytTranscript.videoId, input.videoId),
+						eq(ytTranscript.organizationId, organizationId)
+					)
+				)
+				.limit(1);
+
+			if (!transcript) {
+				return null;
+			}
+
+			return {
+				id: transcript.id,
+				videoId: transcript.videoId,
+				source: transcript.source,
+				language: transcript.language,
+				durationSeconds: transcript.durationSeconds,
+				segmentCount: transcript.segmentCount,
+				nlpStatus: transcript.nlpStatus,
+				timedSegments: (transcript.timedSegments ?? []) as {
+					start: number;
+					end: number;
+					text: string;
+				}[],
+			};
+		}),
 };
 
 // ─── Signal Router ───────────────────────────────────────────────────────────
 
 const signalRouter = {
+	retriggerNlp: organizationPermissionProcedure({ yt_signal: ["update"] })
+		.route({
+			tags: ["YouTube Signals"],
+			summary: "Re-extract signals for a video using the LLM pipeline",
+		})
+		.input(retriggerNlpInputSchema)
+		.output(z.object({ queued: z.boolean(), deletedSignals: z.number() }))
+		.handler(async ({ context, input }) => {
+			const organizationId = context.activeMembership.organizationId;
+
+			const [video] = await db
+				.select({ id: ytVideo.id, organizationId: ytVideo.organizationId })
+				.from(ytVideo)
+				.where(
+					and(
+						eq(ytVideo.id, input.videoId),
+						eq(ytVideo.organizationId, organizationId)
+					)
+				)
+				.limit(1);
+
+			if (!video) {
+				throw new ORPCError("NOT_FOUND", { message: "Video not found" });
+			}
+
+			const [transcript] = await db
+				.select({ id: ytTranscript.id })
+				.from(ytTranscript)
+				.where(eq(ytTranscript.videoId, input.videoId))
+				.limit(1);
+
+			if (!transcript) {
+				throw new ORPCError("BAD_REQUEST", {
+					message:
+						"No transcript found for this video. Ingest the video first.",
+				});
+			}
+
+			// Delete existing signals so re-extraction starts clean
+			const deleted = await db
+				.delete(ytSignal)
+				.where(
+					and(
+						eq(ytSignal.videoId, input.videoId),
+						eq(ytSignal.organizationId, organizationId)
+					)
+				)
+				.returning({ id: ytSignal.id });
+
+			// Reset transcript NLP status so it can be re-processed
+			await db
+				.update(ytTranscript)
+				.set({ nlpStatus: "pending", markedAt: null })
+				.where(eq(ytTranscript.id, transcript.id));
+
+			if (!context.ytNlpQueue) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR", {
+					message: "NLP queue is not available",
+				});
+			}
+
+			await context.ytNlpQueue.send(
+				{
+					kind: ytQueueKinds.nlp,
+					transcriptId: transcript.id,
+					videoId: input.videoId,
+					organizationId,
+				},
+				{ contentType: "json" }
+			);
+
+			return { queued: true, deletedSignals: deleted.length };
+		}),
+
 	list: organizationPermissionProcedure({ yt_signal: ["read"] })
 		.route({ tags: ["YouTube Signals"], summary: "List extracted signals" })
 		.input(listSignalsInputSchema)
@@ -566,12 +834,29 @@ const searchRouter = {
 		}),
 };
 
+// ─── Channel Router ──────────────────────────────────────────────────────────
+
+const channelRouter = {
+	search: organizationPermissionProcedure({ yt_feed: ["read"] })
+		.route({
+			tags: ["YouTube Channels"],
+			summary: "Search YouTube channels by name or game title",
+		})
+		.input(searchChannelsInputSchema)
+		.output(z.array(channelSearchResultSchema))
+		.handler(({ input }) => {
+			return searchChannels(input.query, input.maxResults);
+		}),
+};
+
 // ─── Combined YouTube Router ─────────────────────────────────────────────────
 
 export const youtubeRouter = {
 	feeds: feedRouter,
 	videos: videoRouter,
+	transcripts: transcriptRouter,
 	signals: signalRouter,
 	clusters: clusterRouter,
 	search: searchRouter,
+	channels: channelRouter,
 };

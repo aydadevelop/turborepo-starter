@@ -153,6 +153,7 @@ export interface Context {
 	session: AuthSession;
 	ytDiscoveryQueue?: NotificationQueueProducer;
 	ytIngestQueue?: NotificationQueueProducer;
+	ytNlpQueue?: NotificationQueueProducer;
 }
 
 /**
@@ -166,6 +167,7 @@ export interface OrganizationContext extends Context {
 	recurringTaskQueue?: NotificationQueueProducer;
 	ytDiscoveryQueue?: NotificationQueueProducer;
 	ytIngestQueue?: NotificationQueueProducer;
+	ytNlpQueue?: NotificationQueueProducer;
 }
 
 const parseCookiesFromHeader = (
@@ -288,6 +290,7 @@ export async function createContext({
 				RECURRING_TASK_QUEUE?: unknown;
 				YT_DISCOVERY_QUEUE?: unknown;
 				YT_INGEST_QUEUE?: unknown;
+				YT_NLP_QUEUE?: unknown;
 			};
 		}
 	).env;
@@ -295,6 +298,7 @@ export async function createContext({
 	const recurringTaskQueueCandidate = envQueues?.RECURRING_TASK_QUEUE;
 	const ytDiscoveryQueueCandidate = envQueues?.YT_DISCOVERY_QUEUE;
 	const ytIngestQueueCandidate = envQueues?.YT_INGEST_QUEUE;
+	const ytNlpQueueCandidate = envQueues?.YT_NLP_QUEUE;
 	const notificationQueue = isNotificationQueueProducer(
 		notificationQueueCandidate
 	)
@@ -312,6 +316,9 @@ export async function createContext({
 		: undefined;
 	const ytIngestQueue = isNotificationQueueProducer(ytIngestQueueCandidate)
 		? ytIngestQueueCandidate
+		: undefined;
+	const ytNlpQueue = isNotificationQueueProducer(ytNlpQueueCandidate)
+		? ytNlpQueueCandidate
 		: undefined;
 	const resolvedNotificationQueue =
 		notificationQueue ??
@@ -334,5 +341,6 @@ export async function createContext({
 		recurringTaskQueue: resolvedRecurringTaskQueue,
 		ytDiscoveryQueue,
 		ytIngestQueue,
+		ytNlpQueue,
 	};
 }

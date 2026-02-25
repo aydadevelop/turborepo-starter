@@ -1,0 +1,1 @@
+ALTER TABLE `yt_feed` ADD `enable_asr` integer DEFAULT false NOT NULL;
