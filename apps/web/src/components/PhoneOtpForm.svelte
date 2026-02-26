@@ -1,67 +1,67 @@
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
-import { Input } from "@my-app/ui/components/input";
-import { Label } from "@my-app/ui/components/label";
-import { authClient } from "$lib/auth-client";
-import PhoneInput from "./PhoneInput.svelte";
+	import { Input } from "@my-app/ui/components/input";
+	import { Label } from "@my-app/ui/components/label";
+	import { authClient } from "$lib/auth-client";
+	import PhoneInput from "./PhoneInput.svelte";
 
-const { postAuthRedirectPath }: { postAuthRedirectPath: string } = $props();
+	const { postAuthRedirectPath }: { postAuthRedirectPath: string } = $props();
 
-let phone = $state("");
-let phoneUnmasked = $state("");
-let code = $state("");
-let step = $state<"phone" | "otp">("phone");
-let pending = $state(false);
-let error = $state<string | null>(null);
+	let phone = $state("");
+	let phoneUnmasked = $state("");
+	let code = $state("");
+	let step = $state<"phone" | "otp">("phone");
+	let pending = $state(false);
+	let error = $state<string | null>(null);
 
-const fullPhone = $derived(phoneUnmasked ? `+${phoneUnmasked}` : "");
+	const fullPhone = $derived(phoneUnmasked ? `+${phoneUnmasked}` : "");
 
-const handleSendOtp = async () => {
-	if (!fullPhone) {
-		error = "Phone number is required.";
-		return;
-	}
-	pending = true;
-	error = null;
-	try {
-		const result = await authClient.phoneNumber.sendOtp({
-			phoneNumber: fullPhone,
-		});
-		if (result.error) {
-			error = result.error.message || "Failed to send OTP.";
+	const handleSendOtp = async () => {
+		if (!fullPhone) {
+			error = "Phone number is required.";
 			return;
 		}
-		step = "otp";
-	} catch {
-		error = "Failed to send OTP.";
-	} finally {
-		pending = false;
-	}
-};
+		pending = true;
+		error = null;
+		try {
+			const result = await authClient.phoneNumber.sendOtp({
+				phoneNumber: fullPhone,
+			});
+			if (result.error) {
+				error = result.error.message || "Failed to send OTP.";
+				return;
+			}
+			step = "otp";
+		} catch {
+			error = "Failed to send OTP.";
+		} finally {
+			pending = false;
+		}
+	};
 
-const handleVerifyOtp = async () => {
-	if (!code.trim()) {
-		error = "Enter the verification code.";
-		return;
-	}
-	pending = true;
-	error = null;
-	try {
-		const result = await authClient.phoneNumber.verify({
-			phoneNumber: fullPhone,
-			code: code.trim(),
-		});
-		if (result.error) {
-			error = result.error.message || "Invalid code.";
+	const handleVerifyOtp = async () => {
+		if (!code.trim()) {
+			error = "Enter the verification code.";
 			return;
 		}
-		window.location.href = postAuthRedirectPath;
-	} catch {
-		error = "Verification failed.";
-	} finally {
-		pending = false;
-	}
-};
+		pending = true;
+		error = null;
+		try {
+			const result = await authClient.phoneNumber.verify({
+				phoneNumber: fullPhone,
+				code: code.trim(),
+			});
+			if (result.error) {
+				error = result.error.message || "Invalid code.";
+				return;
+			}
+			window.location.href = postAuthRedirectPath;
+		} catch {
+			error = "Verification failed.";
+		} finally {
+			pending = false;
+		}
+	};
 </script>
 
 <div class="space-y-4">

@@ -398,6 +398,7 @@ export const server = await Worker("server", {
 	cwd: "../../apps/server",
 	entrypoint: "src/index.ts",
 	compatibility: "node",
+	adopt: isDeploying,
 	...cloudflareApiOptions,
 	// Run stuck-ingest recovery every 15 minutes
 	crons: ["*/15 * * * *"],
@@ -535,6 +536,7 @@ export const notifications = await Worker("notifications", {
 	cwd: "../../apps/notifications",
 	entrypoint: "src/index.ts",
 	compatibility: "node",
+	adopt: isDeploying,
 	...cloudflareApiOptions,
 	bindings: {
 		DB: db,
@@ -575,6 +577,7 @@ export const assistant = await Worker("assistant", {
 	cwd: "../../apps/assistant",
 	entrypoint: "src/index.ts",
 	compatibility: "node",
+	adopt: isDeploying,
 	...cloudflareApiOptions,
 	bindings: {
 		DB: db,
@@ -604,6 +607,7 @@ const shouldStartWeb = process.env.ALCHEMY_SKIP_WEB !== "1";
 export const web = shouldStartWeb
 	? await SvelteKit("web", {
 			cwd: "../../apps/web",
+			adopt: isDeploying,
 			...cloudflareApiOptions,
 			bindings: {
 				// When tunnel is active, use relative paths so browser API calls

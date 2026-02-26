@@ -19,17 +19,21 @@
 	import { Button } from "@my-app/ui/components/button";
 	import { createQuery } from "@tanstack/svelte-query";
 	import type { UIMessage } from "ai";
-	import { isToolUIPart } from "ai";
+	import { isToolUIPart, lastAssistantMessageIsCompleteWithApprovalResponses } from "ai";
+	import { derived, toStore } from "svelte/store";
 	import { page } from "$app/state";
 	import { assistantClient } from "$lib/assistant";
 
 	const chatId = $derived(page.params.id ?? "");
+	const chatIdStore = toStore(() => page.params.id ?? "");
 
-	// svelte-ignore state_referenced_locally
-	const chatQuery = createQuery({
-		queryKey: ["assistant", "chat", chatId],
-		queryFn: () => assistantClient.getChat({ chatId }),
-	});
+	const chatQuery = createQuery(
+		derived(chatIdStore, ($chatId) => ({
+			queryKey: ["assistant", "chat", $chatId],
+			queryFn: () => assistantClient.getChat({ chatId: $chatId }),
+			enabled: Boolean($chatId),
+		}))
+	);
 
 	let chat = $state<Chat | null>(null);
 
@@ -53,6 +57,7 @@
 				id: currentId,
 				messages,
 				transport: createORPCChatTransport(assistantClient, currentId),
+				sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
 			});
 		}
 	});
@@ -108,7 +113,15 @@
 														? (part.output as Record<string, unknown>)
 														: undefined,
 												toolCallId: part.toolCallId,
+												approval:
+													"approval" in part && part.approval
+														? { id: (part.approval as { id: string }).id }
+														: undefined,
 											}}
+											onApprove={(id) =>
+												chat?.addToolApprovalResponse({ id, approved: true })}
+											onDeny={(id) =>
+												chat?.addToolApprovalResponse({ id, approved: false })}
 										/>
 									{/each}
 								</div>

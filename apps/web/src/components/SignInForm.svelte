@@ -28,10 +28,10 @@
 
 	const resolvePostAuthRedirect = (candidatePath: string | null): string => {
 		if (!candidatePath) {
-			return resolve("/dashboard");
+			return resolve("/dashboard/settings");
 		}
 		if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
-			return resolve("/dashboard");
+			return resolve("/dashboard/settings");
 		}
 		return candidatePath;
 	};

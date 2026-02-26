@@ -129,7 +129,7 @@
 	};
 </script>
 
-<div class="space-y-6">
+<div class="space-y-4">
 	{#if $fullOrgQuery.isPending}
 		<p class="text-muted-foreground">Loading...</p>
 	{:else if $fullOrgQuery.isError}

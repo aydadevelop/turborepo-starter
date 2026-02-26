@@ -17,7 +17,7 @@
 		const { error } = await authClient.admin.impersonateUser({ userId });
 		impersonating = false;
 		if (error) return;
-		window.location.href = resolve("/dashboard");
+		window.location.href = resolve("/dashboard/settings");
 	};
 
 	const search = writable("");

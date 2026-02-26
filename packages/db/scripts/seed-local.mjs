@@ -696,6 +696,20 @@ const buildSeedData = ({
 	const video4 = "seed_yt_video_4";
 	const video5 = "seed_yt_video_5";
 
+	const channelGameTester = "UCseed1GameTester42xxxxxxxx";
+	const channelIndieReviewer = "UCseed2IndieReviewerxxxxxxx";
+	const channelPCGaming = "UCseed3PCGamingProxxxxxxxx";
+	const channelBugHunter = "UCseed4BugHunterMaxxxxxxxx";
+	const channelCasual = "UCseed5CasualGamerSarahxxx";
+
+	seed.ytUploaderChannels = [
+		{ id: channelGameTester, name: "GameTester42", created_at: now, updated_at: now },
+		{ id: channelIndieReviewer, name: "IndieReviewer", created_at: now, updated_at: now },
+		{ id: channelPCGaming, name: "PCGamingPro", created_at: now, updated_at: now },
+		{ id: channelBugHunter, name: "BugHunterMax", created_at: now, updated_at: now },
+		{ id: channelCasual, name: "CasualGamerSarah", created_at: now, updated_at: now },
+	];
+
 	seed.ytVideos = [
 		{
 			id: video1,
@@ -703,7 +717,7 @@ const buildSeedData = ({
 			organization_id: starterOrgId,
 			youtube_video_id: "abc123fake1",
 			title: "Starforge Arena Alpha - First Impressions & Bugs Found",
-			channel_name: "GameTester42",
+			uploader_channel_id: channelGameTester,
 			description:
 				"My first playtest session with Starforge Arena alpha build. Found several issues including a wall clip bug.",
 			duration: "PT23M15S",
@@ -722,7 +736,7 @@ const buildSeedData = ({
 			organization_id: starterOrgId,
 			youtube_video_id: "def456fake2",
 			title: "STARFORGE ARENA: The UI Is Confusing (Playtest Feedback)",
-			channel_name: "IndieReviewer",
+			uploader_channel_id: channelIndieReviewer,
 			description: "Detailed UI/UX feedback for Starforge Arena playtest.",
 			duration: "PT15M42S",
 			published_at: "2026-02-12",
@@ -740,7 +754,7 @@ const buildSeedData = ({
 			organization_id: starterOrgId,
 			youtube_video_id: "ghi789fake3",
 			title: "Starforge Arena - Great Combat But Performance Issues",
-			channel_name: "PCGamingPro",
+			uploader_channel_id: channelPCGaming,
 			description:
 				"Performance analysis of Starforge Arena. FPS drops in multiplayer.",
 			duration: "PT31M08S",
@@ -759,7 +773,7 @@ const buildSeedData = ({
 			organization_id: starterOrgId,
 			youtube_video_id: "jkl012fake4",
 			title: "Starforge Arena Beta - Matchmaking is BROKEN",
-			channel_name: "BugHunterMax",
+			uploader_channel_id: channelBugHunter,
 			description: "Matchmaking bugs in the beta. Queue times and disconnects.",
 			duration: "PT12M55S",
 			published_at: "2026-02-18",
@@ -776,7 +790,7 @@ const buildSeedData = ({
 			organization_id: starterOrgId,
 			youtube_video_id: "mno345fake5",
 			title: "I Love Starforge Arena But The Tutorial Needs Work",
-			channel_name: "CasualGamerSarah",
+			uploader_channel_id: channelCasual,
 			description: "Positive review with tutorial improvement suggestions.",
 			duration: "PT8M20S",
 			published_at: "2026-02-19",
@@ -1192,6 +1206,7 @@ const collectSeedSql = (seed) => {
 
 	// YouTube tables
 	const ytGroups = [
+		["yt_uploader_channel", seed.ytUploaderChannels],
 		["yt_feed", seed.ytFeeds],
 		["yt_video", seed.ytVideos],
 		["yt_transcript", seed.ytTranscripts],

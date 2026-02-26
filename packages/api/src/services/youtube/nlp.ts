@@ -455,7 +455,7 @@ function fallbackFromFirstMeaningfulSentence(
  * All fields are required (OpenAI strict mode mandates every property in `required`).
  * Optional data uses nullable instead of optional so null can be used when unavailable.
  */
-const llmSignalSchema = z.object({
+export const llmSignalSchema = z.object({
 	type: z.enum([
 		"bug",
 		"crash",
@@ -486,7 +486,7 @@ const llmSignalSchema = z.object({
 	tags: z.array(z.string()).nullable(),
 });
 
-const llmOutputSchema = z.object({
+export const llmOutputSchema = z.object({
 	signals: z.array(llmSignalSchema),
 });
 
@@ -494,36 +494,41 @@ const llmOutputSchema = z.object({
  * Creates an LLM-powered transcript analyzer using AI SDK v6.
  *
  * Usage:
- *   import { generateObject } from "ai";
+ *   import { generateText, Output } from "ai";
  *   import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+ *   import { llmOutputSchema } from "./nlp";
  *
  *   const openrouter = createOpenRouter({ apiKey });
+ *   const model = openrouter("openai/gpt-4o-mini");
  *   const analyzeTranscript = createLlmAnalyzer({
- *     model: openrouter("openai/gpt-4o-mini"),
- *     generateObject,
+ *     extractSignals: async (prompt) => {
+ *       const { output } = await generateText({
+ *         model,
+ *         output: Output.object({ schema: llmOutputSchema }),
+ *         prompt,
+ *       });
+ *       return output ?? { signals: [] };
+ *     },
  *   });
  */
 export function createLlmAnalyzer(deps: {
-	model: unknown;
-	generateObject: (
-		opts: unknown
-	) => Promise<{ object: z.infer<typeof llmOutputSchema> }>;
+	extractSignals: (
+		prompt: string
+	) => Promise<z.infer<typeof llmOutputSchema>>;
 }): AnalyzeTranscriptFn {
-	const { model, generateObject } = deps;
+	const { extractSignals } = deps;
 
 	return async (
 		text: string,
 		timedSegments?: TimedSegment[],
 		collectCategories?: string[]
 	): Promise<ExtractedSignal[]> => {
-		const { object } = await generateObject({
-			model,
-			schema: llmOutputSchema,
-			prompt: buildExtractionPrompt(text, timedSegments, collectCategories),
-		});
+		const result = await extractSignals(
+			buildExtractionPrompt(text, timedSegments, collectCategories),
+		);
 
 		// Map null → undefined to match ExtractedSignal interface (nullable fields become optional)
-		return (object.signals ?? []).map((s) => ({
+		return (result.signals ?? []).map((s) => ({
 			...s,
 			timestampStart: s.timestampStart ?? undefined,
 			timestampEnd: s.timestampEnd ?? undefined,

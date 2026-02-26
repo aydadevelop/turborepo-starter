@@ -43,7 +43,7 @@ const initAuth = () => {
 		openAPI({ disableDefaultReference: true }),
 		passkey({
 			rpID: passkeyRpId,
-			rpName: "Cloudflare App",
+			rpName: "Playpulse",
 		}),
 		phoneNumber({
 			sendOTP: ({ phoneNumber: phone, code }) => {

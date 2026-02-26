@@ -1,32 +1,22 @@
 <script lang="ts">
 	import { Badge } from "@my-app/ui/components/badge";
-	import { Button } from "@my-app/ui/components/button";
 	import * as Card from "@my-app/ui/components/card";
-	import * as Collapsible from "@my-app/ui/components/collapsible";
 	import { Separator } from "@my-app/ui/components/separator";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived, writable } from "svelte/store";
+	import { derived } from "svelte/store";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/stores";
 	import { orpc } from "$lib/orpc";
 
-	const clusterId = $derived($page.params.id);
-
-	// ─── Cluster data (from list filtered by id) ─────────────────────────────
-	// We re-use the list endpoint with a search filter to get our cluster.
-	// A dedicated get-by-id endpoint would be better, but this works.
-
-	const clustersQuery = createQuery(
-		derived(page, () =>
-			orpc.youtube.clusters.list.queryOptions({
-				input: { search: undefined, limit: 100, offset: 0 },
+	// ─── Cluster data ─────────────────────────────────────────────────────────
+	const clusterQuery = createQuery(
+		derived(page, ($p) =>
+			orpc.youtube.clusters.get.queryOptions({
+				input: { clusterId: $p.params.id ?? "" },
 			})
 		)
 	);
-
-	const cluster = $derived(
-		($clustersQuery.data ?? []).find((c: { id: string }) => c.id === clusterId)
-	);
+	const cluster = $derived($clusterQuery.data);
 
 	// ─── Signals for this cluster ────────────────────────────────────────────
 
@@ -131,7 +121,7 @@
 		videoMap.get(internalId) ?? null;
 </script>
 
-<div class="space-y-6">
+<div class="space-y-4">
 	<!-- ─── Breadcrumb + Back ──────────────────────────────────────────────── -->
 
 	<div class="flex items-center gap-2 text-sm text-muted-foreground">
@@ -146,7 +136,7 @@
 
 	<!-- ─── Cluster Header ─────────────────────────────────────────────────── -->
 
-	{#if $clustersQuery.isPending}
+	{#if $clusterQuery.isPending}
 		<p class="text-sm text-muted-foreground">Loading cluster...</p>
 	{:else if !cluster}
 		<p class="text-sm text-destructive">Cluster not found.</p>

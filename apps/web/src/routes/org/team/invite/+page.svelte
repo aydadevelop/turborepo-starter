@@ -82,7 +82,7 @@
 	};
 </script>
 
-<div class="space-y-6">
+<div class="space-y-4">
 	<Card.Root class="max-w-lg">
 		<Card.Header>
 			<Card.Title>Invite Team Member</Card.Title>

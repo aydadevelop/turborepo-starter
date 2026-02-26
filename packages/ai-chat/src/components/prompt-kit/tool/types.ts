@@ -8,6 +8,7 @@ export type ToolState =
 	| "output-denied";
 
 export interface ToolPart {
+	approval?: { id: string };
 	errorText?: string;
 	input?: Record<string, unknown>;
 	output?: Record<string, unknown>;

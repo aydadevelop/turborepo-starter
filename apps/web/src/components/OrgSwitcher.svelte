@@ -1,52 +1,52 @@
 <script lang="ts">
 	import {
-	Content as SelectContent,
-	Item as SelectItem,
-	Root as SelectRoot,
-	Trigger as SelectTrigger,
-} from "@my-app/ui/components/select";
-import { createQuery } from "@tanstack/svelte-query";
-import { derived } from "svelte/store";
-import { resolve } from "$app/paths";
-import { authClient } from "$lib/auth-client";
-import { hasAuthenticatedSession } from "$lib/auth-session";
-import { queryClient } from "$lib/orpc";
+		Content as SelectContent,
+		Item as SelectItem,
+		Root as SelectRoot,
+		Trigger as SelectTrigger,
+	} from "@my-app/ui/components/select";
+	import { createQuery } from "@tanstack/svelte-query";
+	import { derived } from "svelte/store";
+	import { resolve } from "$app/paths";
+	import { authClient } from "$lib/auth-client";
+	import { hasAuthenticatedSession } from "$lib/auth-session";
+	import { queryClient } from "$lib/orpc";
 
-const sessionQuery = authClient.useSession();
+	const sessionQuery = authClient.useSession();
 
-const orgsQueryOptions = derived(sessionQuery, ($session) => ({
-	queryKey: ["user-organizations"],
-	queryFn: async () => {
-		const { data, error } = await authClient.organization.list();
-		if (error) throw error;
-		return data ?? [];
-	},
-	retry: false,
-	enabled: hasAuthenticatedSession($session.data),
-}));
-const orgsQuery = createQuery(orgsQueryOptions);
+	const orgsQueryOptions = derived(sessionQuery, ($session) => ({
+		queryKey: ["user-organizations"],
+		queryFn: async () => {
+			const { data, error } = await authClient.organization.list();
+			if (error) throw error;
+			return data ?? [];
+		},
+		retry: false,
+		enabled: hasAuthenticatedSession($session.data),
+	}));
+	const orgsQuery = createQuery(orgsQueryOptions);
 
-const activeOrgId = $derived(
-	($sessionQuery.data?.session as { activeOrganizationId?: string })
-		?.activeOrganizationId ?? undefined
-);
+	const activeOrgId = $derived(
+		($sessionQuery.data?.session as { activeOrganizationId?: string })
+			?.activeOrganizationId ?? undefined
+	);
 
-let switching = $state(false);
+	let switching = $state(false);
 
-const handleSwitch = async (orgId: string | undefined) => {
-	if (!orgId || orgId === activeOrgId) return;
-	switching = true;
-	const { error } = await authClient.organization.setActive({
-		organizationId: orgId,
-	});
-	switching = false;
-	if (error) return;
-	queryClient.invalidateQueries({ queryKey: ["organization"] });
-	queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] });
-	queryClient.invalidateQueries({ queryKey: ["notifications"] });
-	queryClient.invalidateQueries({ queryKey: ["todos"] });
-	queryClient.invalidateQueries({ queryKey: ["assistant"] });
-};
+	const handleSwitch = async (orgId: string | undefined) => {
+		if (!orgId || orgId === activeOrgId) return;
+		switching = true;
+		const { error } = await authClient.organization.setActive({
+			organizationId: orgId,
+		});
+		switching = false;
+		if (error) return;
+		queryClient.invalidateQueries({ queryKey: ["organization"] });
+		queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] });
+		queryClient.invalidateQueries({ queryKey: ["notifications"] });
+		queryClient.invalidateQueries({ queryKey: ["todos"] });
+		queryClient.invalidateQueries({ queryKey: ["assistant"] });
+	};
 </script>
 
 {#if ($orgsQuery.data?.length ?? 0) > 1}
@@ -78,13 +78,4 @@ const handleSwitch = async (orgId: string | undefined) => {
 	<span class="text-xs text-muted-foreground hidden sm:inline">
 		{$orgsQuery.data?.[0]?.name}
 	</span>
-{/if}
-
-{#if hasAuthenticatedSession($sessionQuery.data)}
-	<a
-		href={resolve("/org/create")}
-		class="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap transition-colors"
-	>
-		+ New org
-	</a>
 {/if}

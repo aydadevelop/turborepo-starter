@@ -1,1 +1,0 @@
-ALTER TABLE `yt_signal` ADD `reasoning` text;

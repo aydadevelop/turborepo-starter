@@ -1,6 +1,6 @@
 import { db } from "@my-app/db";
-import { ytFeed, ytVideo } from "@my-app/db/schema/youtube";
-import { and, eq, gt, isNotNull, lt } from "drizzle-orm";
+import { ytFeed, ytSignal, ytVideo } from "@my-app/db/schema/youtube";
+import { and, eq, gt, isNotNull, isNull, lt } from "drizzle-orm";
 import {
 	type QueueProducer,
 	ytQueueKinds,
@@ -224,4 +224,112 @@ export async function recoverTransientFailures({
 		`[yt-recovery] Transient recovery: ${requeued} re-queued, ${skipped} skipped (permanent/unknown)`
 	);
 	return { requeued, skipped };
+}
+
+// ─── Missing-queue recovery (approved + unclustered) ───────────────────────
+
+export interface RecoverMissingPipelineJobsOptions {
+	/** Minimum age in milliseconds before a row is considered for re-queueing. */
+	minAgeMs?: number;
+	/** Maximum approved videos to re-queue per call (default: 200). */
+	videoLimit?: number;
+	/** Maximum unclustered signals to re-queue per call (default: 500). */
+	signalLimit?: number;
+	ytClusterQueue: QueueProducer;
+	ytIngestQueue: QueueProducer;
+}
+
+/**
+ * Recovers jobs that can be lost during local rebuilds/restarts:
+ * - videos still in "approved" status (ingest message likely never consumed)
+ * - signals that are vectorized but still unclustered (cluster message likely lost)
+ */
+export async function recoverMissingPipelineJobs({
+	ytClusterQueue,
+	ytIngestQueue,
+	minAgeMs = 0,
+	videoLimit = 200,
+	signalLimit = 500,
+}: RecoverMissingPipelineJobsOptions): Promise<{
+	clusterRequeued: number;
+	ingestRequeued: number;
+}> {
+	const cutoff = new Date(Date.now() - minAgeMs);
+
+	const [approvedVideos, unclusteredSignals] = await Promise.all([
+		db
+			.select({
+				id: ytVideo.id,
+				organizationId: ytVideo.organizationId,
+				youtubeVideoId: ytVideo.youtubeVideoId,
+				enableAsr: ytFeed.enableAsr,
+			})
+			.from(ytVideo)
+			.leftJoin(ytFeed, eq(ytVideo.feedId, ytFeed.id))
+			.where(and(eq(ytVideo.status, "approved"), lt(ytVideo.updatedAt, cutoff)))
+			.limit(videoLimit),
+		db
+			.select({
+				id: ytSignal.id,
+				organizationId: ytSignal.organizationId,
+			})
+			.from(ytSignal)
+			.where(
+				and(
+					eq(ytSignal.vectorized, true),
+					isNull(ytSignal.clusterId),
+					lt(ytSignal.updatedAt, cutoff)
+				)
+			)
+			.limit(signalLimit),
+	]);
+
+	let ingestRequeued = 0;
+	for (const video of approvedVideos) {
+		try {
+			await ytIngestQueue.send(
+				{
+					kind: ytQueueKinds.ingest,
+					videoId: video.id,
+					organizationId: video.organizationId,
+					youtubeVideoId: video.youtubeVideoId,
+					forceAsr: false,
+					enableAsr: video.enableAsr ?? false,
+				},
+				{ contentType: "json" }
+			);
+			ingestRequeued++;
+		} catch (err) {
+			console.error(
+				`[yt-recovery] Failed to re-queue approved video ${video.id}:`,
+				err
+			);
+		}
+	}
+
+	let clusterRequeued = 0;
+	for (const signal of unclusteredSignals) {
+		try {
+			await ytClusterQueue.send(
+				{
+					kind: ytQueueKinds.cluster,
+					signalId: signal.id,
+					organizationId: signal.organizationId,
+				},
+				{ contentType: "json" }
+			);
+			clusterRequeued++;
+		} catch (err) {
+			console.error(
+				`[yt-recovery] Failed to re-queue cluster signal ${signal.id}:`,
+				err
+			);
+		}
+	}
+
+	console.log(
+		`[yt-recovery] Missing-jobs recovery: ingest ${ingestRequeued}/${approvedVideos.length}, cluster ${clusterRequeued}/${unclusteredSignals.length}`
+	);
+
+	return { ingestRequeued, clusterRequeued };
 }

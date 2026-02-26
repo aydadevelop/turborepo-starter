@@ -225,6 +225,67 @@
 		(user as { telegramUsername?: string } | undefined)?.telegramUsername ??
 			null
 	);
+
+	// ---------- Invitations ----------
+	const fetchUserInvitations = async () => {
+		const { data, error } = await authClient.organization.listUserInvitations();
+		if (error) throw error;
+		return data ?? [];
+	};
+	const invitationsQueryOptions = derived(sessionQuery, ($session) => ({
+		queryKey: ["user-invitations"],
+		queryFn: fetchUserInvitations,
+		retry: false,
+		enabled: Boolean($session.data),
+	}));
+	const invitationsQuery = createQuery(invitationsQueryOptions);
+
+	const pendingInvitations = $derived(
+		($invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
+	);
+	const pastInvitations = $derived(
+		($invitationsQuery.data ?? []).filter((inv) => inv.status !== "pending")
+	);
+	const pendingInvitationCount = $derived(pendingInvitations.length);
+
+	let pendingActionId = $state<string | null>(null);
+	let invitationError = $state<string | null>(null);
+
+	const handleAccept = async (invitationId: string) => {
+		pendingActionId = invitationId;
+		invitationError = null;
+		const { error } = await authClient.organization.acceptInvitation({
+			invitationId,
+		});
+		pendingActionId = null;
+		if (error) {
+			invitationError =
+				(error as { message?: string }).message ?? "Failed to accept invitation.";
+			return;
+		}
+		queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
+		queryClient.invalidateQueries({ queryKey: ["organization"] });
+	};
+
+	const handleReject = async (invitationId: string) => {
+		pendingActionId = invitationId;
+		invitationError = null;
+		const { error } = await authClient.organization.rejectInvitation({
+			invitationId,
+		});
+		pendingActionId = null;
+		if (error) {
+			invitationError =
+				(error as { message?: string }).message ?? "Failed to reject invitation.";
+			return;
+		}
+		queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
+	};
+
+	const formatDate = (date: Date | string) =>
+		new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(
+			date instanceof Date ? date : new Date(date)
+		);
 </script>
 
 {#if $sessionQuery.isPending}
@@ -236,16 +297,8 @@
 		<p class="text-muted-foreground">Redirecting to login...</p>
 	</div>
 {:else}
-	<div class="max-w-2xl mx-auto p-6 space-y-6">
-		<div class="flex items-center justify-between">
-			<h1 class="text-3xl font-bold">Account Settings</h1>
-			<a
-				href={resolve("/dashboard")}
-				class="text-sm text-muted-foreground transition hover:text-foreground"
-			>
-				&larr; Dashboard
-			</a>
-		</div>
+	<div class="max-w-2xl mx-auto p-6 space-y-4">
+		<h1 class="text-3xl font-bold">Account Settings</h1>
 
 		<!-- Profile info -->
 		<Card.Root>
@@ -464,6 +517,102 @@
 					disabled={passkeyPending}
 				>
 					{passkeyPending ? "Registering..." : "Register Passkey"}
+				</Button>
+			</Card.Footer>
+		</Card.Root>
+
+		<!-- Invitations -->
+		<Card.Root class={pendingInvitationCount > 0 ? "ring-2 ring-primary" : ""}>
+			<Card.Header>
+				<div class="flex items-center gap-2">
+					<Card.Title>Invitations</Card.Title>
+					{#if pendingInvitationCount > 0}
+						<Badge variant="destructive" class="h-5 min-w-5 px-1 text-xs">
+							{pendingInvitationCount}
+						</Badge>
+					{/if}
+				</div>
+				<Card.Description>Organization invitations sent to you.</Card.Description>
+			</Card.Header>
+			<Card.Content class="space-y-3">
+				{#if invitationError}
+					<p class="text-sm text-destructive" role="alert">{invitationError}</p>
+				{/if}
+				{#if $invitationsQuery.isPending}
+					<p class="text-sm text-muted-foreground">Loading...</p>
+				{:else if pendingInvitations.length > 0}
+					<div class="space-y-2">
+						{#each pendingInvitations as inv (inv.id)}
+							<div
+								class="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
+							>
+								<div class="space-y-1">
+									<p class="text-sm font-medium">
+										{inv.organizationName ?? "Organization"}
+									</p>
+									<div
+										class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+									>
+										<span>Role:</span>
+										<Badge variant="secondary">{inv.role ?? "member"}</Badge>
+										{#if inv.expiresAt}
+											<span>&middot; Expires {formatDate(inv.expiresAt)}</span>
+										{/if}
+									</div>
+								</div>
+								<div class="flex gap-2">
+									<Button
+										size="sm"
+										onclick={() => void handleAccept(inv.id)}
+										disabled={pendingActionId === inv.id}
+									>
+										{pendingActionId === inv.id ? "Accepting..." : "Accept"}
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onclick={() => void handleReject(inv.id)}
+										disabled={pendingActionId === inv.id}
+									>
+										Reject
+									</Button>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<p class="text-sm text-muted-foreground">No pending invitations.</p>
+				{/if}
+				{#if pastInvitations.length > 0}
+					<Separator />
+					<p class="text-xs font-medium text-muted-foreground">Past</p>
+					<div class="space-y-2">
+						{#each pastInvitations as inv (inv.id)}
+							<div
+								class="flex items-center justify-between rounded-lg border p-3 text-sm"
+							>
+								<span class="font-medium"
+									>{inv.organizationName ?? "Organization"}</span
+								>
+								<Badge variant={inv.status === "accepted" ? "default" : "outline"}>
+									{inv.status}
+								</Badge>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</Card.Content>
+		</Card.Root>
+
+		<!-- Organizations -->
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Organizations</Card.Title>
+				<Card.Description>Create or join organizations to collaborate.</Card.Description>
+			</Card.Header>
+			<Card.Footer>
+				<Button href={resolve("/org/create")} variant="outline" size="sm">
+					+ New Organization
 				</Button>
 			</Card.Footer>
 		</Card.Root>

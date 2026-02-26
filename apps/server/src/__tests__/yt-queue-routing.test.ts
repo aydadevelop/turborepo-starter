@@ -66,7 +66,7 @@ describe("queue routing (index.ts)", () => {
 		YT_SIGNALS_VECTORIZE: {
 			upsert: vi.fn(),
 			query: vi.fn().mockResolvedValue({ matches: [] }),
-			queryById: vi.fn().mockResolvedValue({ matches: [] }),
+			getByIds: vi.fn().mockResolvedValue([]),
 		},
 		YT_TRANSCRIPTS_BUCKET: { get: vi.fn(), put: vi.fn() },
 		NOTIFICATION_QUEUE: { send: vi.fn() },

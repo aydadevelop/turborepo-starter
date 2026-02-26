@@ -7,6 +7,7 @@
 		createQuery,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
+	import { derived } from "svelte/store";
 	import { setContext } from "svelte";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
@@ -35,15 +36,20 @@
 		}
 	}
 
-	const chatsQuery = createQuery({
-		queryKey: ["assistant", "chats"],
-		queryFn: () => assistantClient.listChats({}),
-		enabled: Boolean($sessionQuery.data),
-	});
+	const chatsQuery = createQuery(
+		derived(sessionQuery, ($session) => ({
+			queryKey: ["assistant", "chats"],
+			queryFn: () => assistantClient.listChats({}),
+			enabled: Boolean($session.data),
+		}))
+	);
 
 	const createChatMutation = createMutation({
 		async mutationFn(title: string) {
-			await ensureSession();
+			const hasSession = await ensureSession();
+			if (!hasSession) {
+				throw new Error("Unable to create chat without an active session");
+			}
 			return assistantClient.createChat({ title });
 		},
 		onSuccess(data) {
@@ -67,7 +73,7 @@
 	setContext("createChatMutation", createChatMutation);
 </script>
 
-<div class="flex h-[calc(100svh-4rem)]">
+<div class="flex h-[calc(100svh-6rem)]">
 	<aside class="flex w-64 shrink-0 flex-col border-r border-border bg-muted/30">
 		<div class="flex items-center justify-between border-b border-border p-3">
 			<h2 class="text-sm font-semibold">Chats</h2>

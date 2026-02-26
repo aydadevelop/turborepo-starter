@@ -30,6 +30,20 @@ export interface VectorizeIndexLike {
 			metadata?: Record<string, string | number | boolean>;
 		}>
 	): Promise<unknown>;
+	getByIds(ids: string[]): Promise<Array<{
+		id: string;
+		values?: number[] | Float32Array | Float64Array;
+		metadata?: Record<string, string | number | boolean> | null;
+	}>>;
+	query(
+		vector: number[],
+		options?: {
+			topK?: number;
+			filter?: Record<string, string | number | boolean>;
+		},
+	): Promise<{ matches?: Array<{ id: string; score: number }> }>;
+	/** Delete vectors by ID. Optional — not all environments support it. */
+	deleteByIds?(ids: string[]): Promise<unknown>;
 }
 
 export interface EmbeddingProvider {

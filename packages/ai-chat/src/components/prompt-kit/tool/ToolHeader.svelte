@@ -25,6 +25,8 @@
 				return Loader2;
 			case "input-available":
 				return Settings;
+			case "approval-requested":
+				return Settings;
 			case "output-available":
 				return CheckCircle2;
 			case "output-error":
@@ -40,6 +42,8 @@
 				return "h-4 w-4 animate-spin text-blue-500";
 			case "input-available":
 				return "h-4 w-4 text-orange-500";
+			case "approval-requested":
+				return "h-4 w-4 text-yellow-500";
 			case "output-available":
 				return "h-4 w-4 text-green-500";
 			case "output-error":

@@ -22,10 +22,10 @@
 
 	const resolvePostAuthRedirect = (candidatePath: string | null): string => {
 		if (!candidatePath) {
-			return resolve("/org");
+			return `${resolve("/org/create")}?reason=new`;
 		}
 		if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
-			return resolve("/org");
+			return `${resolve("/org/create")}?reason=new`;
 		}
 		return candidatePath;
 	};

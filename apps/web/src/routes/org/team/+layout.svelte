@@ -14,7 +14,7 @@
 	$effect(() => {
 		if ($canManageQuery.isPending) return;
 		if (!$canManageQuery.data?.canManageOrganization) {
-			goto(resolve("/dashboard"));
+			goto(resolve("/dashboard/settings"));
 		}
 	});
 </script>

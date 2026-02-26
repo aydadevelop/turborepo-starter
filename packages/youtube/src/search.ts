@@ -4,7 +4,7 @@ import z from "zod";
 
 export const searchOptionsSchema = z.object({
 	query: z.string().trim().min(1).max(500),
-	maxResults: z.number().int().min(1).max(50).default(10),
+	maxResults: z.number().int().min(1).max(200).default(10),
 	/**
 	 * Approximate date filter — mapped to the closest YouTube bucket:
 	 * hour | today | week | month | year.
@@ -118,10 +118,8 @@ export async function searchYouTube(
 	const url = new URL(YOUTUBE_SEARCH_URL);
 	url.searchParams.set("q", query);
 	url.searchParams.set("hl", "en");
-	url.searchParams.set(
-		"sp",
-		buildSpParam(options.publishedAfter, options.duration)
-	);
+	const spParam = buildSpParam(options.publishedAfter, options.duration);
+	url.searchParams.set("sp", spParam);
 
 	const response = await fetch(url.toString(), {
 		headers: {
@@ -154,8 +152,104 @@ export async function searchYouTube(
 		return [];
 	}
 
-	const renderers = collectVideoRenderers(data);
-	return renderers.slice(0, options.maxResults).map(mapVideoRenderer);
+	const results: SearchResult[] =
+		collectVideoRenderers(data).map(mapVideoRenderer);
+
+	// Follow InnerTube continuation tokens to fetch more pages when needed
+	let token = extractSearchContinuationToken(data);
+	while (results.length < options.maxResults && token) {
+		const page = await fetchSearchContinuationPage(token, spParam);
+		results.push(...page.items);
+		token = page.nextToken;
+	}
+
+	return results.slice(0, options.maxResults);
+}
+
+// ─── InnerTube search continuation ───────────────────────────────────────────
+
+const INNERTUBE_CLIENT_VERSION = "2.20240101.00.00";
+
+function extractSearchContinuationToken(node: unknown): string | null {
+	if (!node || typeof node !== "object") {
+		return null;
+	}
+	if (Array.isArray(node)) {
+		for (const item of node) {
+			const found = extractSearchContinuationToken(item);
+			if (found) {
+				return found;
+			}
+		}
+		return null;
+	}
+	const obj = node as Record<string, unknown>;
+	if ("continuationItemRenderer" in obj) {
+		const cir = obj.continuationItemRenderer as
+			| Record<string, unknown>
+			| undefined;
+		const cmd = (
+			cir?.continuationEndpoint as Record<string, unknown> | undefined
+		)?.continuationCommand as Record<string, unknown> | undefined;
+		if (cmd?.token && typeof cmd.token === "string") {
+			return cmd.token;
+		}
+	}
+	for (const value of Object.values(obj)) {
+		const found = extractSearchContinuationToken(value);
+		if (found) {
+			return found;
+		}
+	}
+	return null;
+}
+
+async function fetchSearchContinuationPage(
+	token: string,
+	spParam: string
+): Promise<{ items: SearchResult[]; nextToken: string | null }> {
+	const response = await fetch("https://www.youtube.com/youtubei/v1/search", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"User-Agent": USER_AGENT,
+			"Accept-Language": "en-US,en;q=0.9",
+			"X-YouTube-Client-Name": "1",
+			"X-YouTube-Client-Version": INNERTUBE_CLIENT_VERSION,
+		},
+		body: JSON.stringify({
+			context: {
+				client: {
+					clientName: "WEB",
+					clientVersion: INNERTUBE_CLIENT_VERSION,
+					hl: "en",
+				},
+			},
+			continuation: token,
+			params: spParam,
+		}),
+	});
+
+	if (!response.ok) {
+		return { items: [], nextToken: null };
+	}
+
+	const data = (await response.json()) as Record<string, unknown>;
+	const actions = data.onResponseReceivedCommands as unknown[] | undefined;
+	const appendAction = actions?.[0] as Record<string, unknown> | undefined;
+	const continuationItems = (
+		appendAction?.appendContinuationItemsAction as
+			| Record<string, unknown>
+			| undefined
+	)?.continuationItems as unknown[] | undefined;
+
+	if (!continuationItems) {
+		return { items: [], nextToken: null };
+	}
+
+	const renderers = collectVideoRenderers(continuationItems);
+	const nextToken = extractSearchContinuationToken(continuationItems);
+	return { items: renderers.map(mapVideoRenderer), nextToken };
 }
 
 // ─── ytInitialData Parsing ────────────────────────────────────────────────────

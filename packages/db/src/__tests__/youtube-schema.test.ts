@@ -267,7 +267,7 @@ describe("YouTube Schema", () => {
 		});
 	});
 
-	describe("ytCluster", () => {
+		describe("ytCluster", () => {
 		it("creates a cluster with defaults", async () => {
 			await db.insert(ytCluster).values({
 				id: "cluster-1",
@@ -313,9 +313,9 @@ describe("YouTube Schema", () => {
 			}
 		});
 
-		it("stores versionsAffected as JSON array", async () => {
-			await db.insert(ytCluster).values({
-				id: "cluster-versions",
+			it("stores versionsAffected as JSON array", async () => {
+				await db.insert(ytCluster).values({
+					id: "cluster-versions",
 				organizationId: "org-yt-1",
 				title: "Version bug",
 				versionsAffected: ["0.1.0", "0.2.0", "0.3.0"],
@@ -325,9 +325,58 @@ describe("YouTube Schema", () => {
 				.select()
 				.from(ytCluster)
 				.where(eq(ytCluster.id, "cluster-versions"));
-			expect(row?.versionsAffected).toEqual(["0.1.0", "0.2.0", "0.3.0"]);
+				expect(row?.versionsAffected).toEqual(["0.1.0", "0.2.0", "0.3.0"]);
+			});
+
+			it("stores fingerprint and enforces uniqueness per organization", async () => {
+				await db.insert(ytCluster).values({
+					id: "cluster-fingerprint-1",
+					organizationId: "org-yt-1",
+					title: "Fingerprint cluster",
+					fingerprint: "bug|camera|camera-clips-wall",
+				});
+
+				const [row] = await db
+					.select()
+					.from(ytCluster)
+					.where(eq(ytCluster.id, "cluster-fingerprint-1"));
+				expect(row?.fingerprint).toBe("bug|camera|camera-clips-wall");
+
+				await expect(
+					db.insert(ytCluster).values({
+						id: "cluster-fingerprint-2",
+						organizationId: "org-yt-1",
+						title: "Duplicate fingerprint",
+						fingerprint: "bug|camera|camera-clips-wall",
+					})
+				).rejects.toThrow();
+			});
+
+			it("allows same fingerprint in different organizations", async () => {
+				await db
+					.insert(organization)
+					.values({ id: "org-yt-2", name: "Second Org", slug: "second-org" });
+
+				await db.insert(ytCluster).values({
+					id: "cluster-fingerprint-org1",
+					organizationId: "org-yt-1",
+					title: "Org1",
+					fingerprint: "bug|camera|camera-clips-wall",
+				});
+				await db.insert(ytCluster).values({
+					id: "cluster-fingerprint-org2",
+					organizationId: "org-yt-2",
+					title: "Org2",
+					fingerprint: "bug|camera|camera-clips-wall",
+				});
+
+				const rows = await db
+					.select()
+					.from(ytCluster)
+					.where(eq(ytCluster.fingerprint, "bug|camera|camera-clips-wall"));
+				expect(rows).toHaveLength(2);
+			});
 		});
-	});
 
 	describe("ytSignal", () => {
 		beforeEach(async () => {

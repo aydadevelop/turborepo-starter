@@ -1,14 +1,12 @@
 import type { AppRouterClient } from "@my-app/api/routers";
-import { tool } from "ai";
+import { orpcTool } from "../lib/orpc-tool";
 import z from "zod";
 
 export const createCreateTodoTool = (client: AppRouterClient) =>
-	tool({
-		description: "Create a new todo item.",
-		inputSchema: z.object({
-			text: z.string().trim().min(1).max(240),
-		}),
-		execute: async ({ text }) => {
+	orpcTool(
+		z.object({ text: z.string().trim().min(1).max(240) }),
+		"Create a new todo item.",
+		async ({ text }) => {
 			await client.todo.create({ text });
 			const todos = await client.todo.getAll();
 			return {
@@ -16,4 +14,4 @@ export const createCreateTodoTool = (client: AppRouterClient) =>
 				total: todos.length,
 			};
 		},
-	});
+	);

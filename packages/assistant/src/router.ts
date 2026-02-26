@@ -118,9 +118,11 @@ export const assistantRouter = {
 			const result = streamText({
 				model: openrouter(context.aiModel || "openai/gpt-5-nano:nitro"),
 				system: createSystemPrompt(),
-				messages: await convertToModelMessages(input.messages),
+				messages: await convertToModelMessages(input.messages, {
+					ignoreIncompleteToolCalls: true,
+				}),
 				tools,
-				stopWhen: stepCountIs(5),
+				stopWhen: stepCountIs(10),
 				async onFinish({ steps }) {
 					// Build assistant parts from the completed response
 					const parts: unknown[] = [];

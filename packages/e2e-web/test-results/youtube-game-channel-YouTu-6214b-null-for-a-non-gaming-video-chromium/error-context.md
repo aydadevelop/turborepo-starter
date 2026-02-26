@@ -1,0 +1,69 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - link "Playpulse Playpulse" [ref=e6] [cursor=pointer]:
+          - /url: /
+          - img "Playpulse" [ref=e7]
+          - generic [ref=e8]: Playpulse
+        - navigation [ref=e9]:
+          - link "Chat" [ref=e10] [cursor=pointer]:
+            - /url: /chat
+          - link "YouTube" [ref=e11] [cursor=pointer]:
+            - /url: /youtube
+          - link "Team" [ref=e12] [cursor=pointer]:
+            - /url: /org/team
+          - link "Admin" [ref=e13] [cursor=pointer]:
+            - /url: /admin
+        - generic [ref=e14]:
+          - generic [ref=e15]: Admin
+          - button "Notifications" [ref=e17]:
+            - img
+            - generic [ref=e18]: Notifications
+          - generic [ref=e20]:
+            - generic "admin@admin.com" [ref=e21]: Admin
+            - link "Settings" [ref=e22] [cursor=pointer]:
+              - /url: /dashboard/settings
+            - button "Sign Out" [ref=e23]
+    - main [ref=e24]:
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - heading "Cloudflare SaaS Starter" [level=1] [ref=e28]
+          - paragraph [ref=e29]: SvelteKit + Hono + Better Auth + oRPC + Drizzle + Alchemy.
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - generic [ref=e32]:
+              - generic [ref=e33]: Authentication
+              - paragraph [ref=e34]: Login, orgs, and admin impersonation
+            - paragraph [ref=e36]: Includes email/password, passkeys, organization memberships, and admin impersonation flows.
+            - link "Sign In" [ref=e38] [cursor=pointer]:
+              - /url: /login
+          - generic [ref=e39]:
+            - generic [ref=e40]:
+              - generic [ref=e41]: Dashboard
+              - paragraph [ref=e42]: Profile and SaaS starter actions
+            - paragraph [ref=e44]: Trigger mock payment notifications, schedule recurring reminders, and validate protected API wiring.
+            - link "Go to Settings" [ref=e46] [cursor=pointer]:
+              - /url: /dashboard/settings
+          - generic [ref=e47]:
+            - generic [ref=e48]:
+              - generic [ref=e49]: Assistant
+              - paragraph [ref=e50]: Tool-enabled AI workspace
+            - paragraph [ref=e52]: Chat UI connected to tool calls for identity, todo actions, and queue-backed recurring reminders.
+            - link "Open Assistant" [ref=e54] [cursor=pointer]:
+              - /url: /chat
+          - generic [ref=e55]:
+            - generic [ref=e56]:
+              - generic [ref=e57]: Todo Demo
+              - paragraph [ref=e58]: Minimal oRPC + DB example
+            - paragraph [ref=e60]: Reference CRUD flow with TanStack Query and shared API contracts.
+            - link "Manage Todos" [ref=e62] [cursor=pointer]:
+              - /url: /todos
+  - generic [ref=e63]:
+    - img [ref=e65]
+    - button "Open Tanstack query devtools" [ref=e113] [cursor=pointer]:
+      - img [ref=e114]
+```

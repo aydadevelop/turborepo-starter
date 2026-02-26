@@ -8,6 +8,7 @@ import type { Context as HonoContext } from "hono";
 import { recurringTaskTickMessageSchema } from "./contracts/recurring-task-queue";
 import type { EventBus } from "./lib/event-bus";
 import { processRecurringTaskTick } from "./tasks/recurring";
+import type { VectorizeIndexLike } from "./services/youtube/vectorize";
 
 export interface CreateContextOptions {
 	context: HonoContext;
@@ -151,9 +152,11 @@ export interface Context {
 	requestHostname: string;
 	requestUrl: string;
 	session: AuthSession;
+	ytClusterQueue?: NotificationQueueProducer;
 	ytDiscoveryQueue?: NotificationQueueProducer;
 	ytIngestQueue?: NotificationQueueProducer;
 	ytNlpQueue?: NotificationQueueProducer;
+	ytVectorize?: VectorizeIndexLike;
 }
 
 /**
@@ -165,9 +168,11 @@ export interface OrganizationContext extends Context {
 	eventBus: EventBus;
 	notificationQueue?: NotificationQueueProducer;
 	recurringTaskQueue?: NotificationQueueProducer;
+	ytClusterQueue?: NotificationQueueProducer;
 	ytDiscoveryQueue?: NotificationQueueProducer;
 	ytIngestQueue?: NotificationQueueProducer;
 	ytNlpQueue?: NotificationQueueProducer;
+	ytVectorize?: VectorizeIndexLike;
 }
 
 const parseCookiesFromHeader = (
@@ -288,14 +293,17 @@ export async function createContext({
 			env?: {
 				NOTIFICATION_QUEUE?: unknown;
 				RECURRING_TASK_QUEUE?: unknown;
+				YT_CLUSTER_QUEUE?: unknown;
 				YT_DISCOVERY_QUEUE?: unknown;
 				YT_INGEST_QUEUE?: unknown;
 				YT_NLP_QUEUE?: unknown;
+				YT_SIGNALS_VECTORIZE?: unknown;
 			};
 		}
 	).env;
 	const notificationQueueCandidate = envQueues?.NOTIFICATION_QUEUE;
 	const recurringTaskQueueCandidate = envQueues?.RECURRING_TASK_QUEUE;
+	const ytClusterQueueCandidate = envQueues?.YT_CLUSTER_QUEUE;
 	const ytDiscoveryQueueCandidate = envQueues?.YT_DISCOVERY_QUEUE;
 	const ytIngestQueueCandidate = envQueues?.YT_INGEST_QUEUE;
 	const ytNlpQueueCandidate = envQueues?.YT_NLP_QUEUE;
@@ -308,6 +316,9 @@ export async function createContext({
 		recurringTaskQueueCandidate
 	)
 		? recurringTaskQueueCandidate
+		: undefined;
+	const ytClusterQueue = isNotificationQueueProducer(ytClusterQueueCandidate)
+		? ytClusterQueueCandidate
 		: undefined;
 	const ytDiscoveryQueue = isNotificationQueueProducer(
 		ytDiscoveryQueueCandidate
@@ -331,6 +342,16 @@ export async function createContext({
 			? inlineRecurringTaskQueueProducer
 			: undefined);
 
+	const ytVectorizeCandidate = envQueues?.YT_SIGNALS_VECTORIZE;
+	const ytVectorize =
+		ytVectorizeCandidate &&
+		typeof ytVectorizeCandidate === "object" &&
+		"getByIds" in ytVectorizeCandidate &&
+		typeof (ytVectorizeCandidate as { getByIds?: unknown }).getByIds ===
+			"function"
+			? (ytVectorizeCandidate as VectorizeIndexLike)
+			: undefined;
+
 	return {
 		session,
 		activeMembership,
@@ -339,8 +360,10 @@ export async function createContext({
 		requestCookies,
 		notificationQueue: resolvedNotificationQueue,
 		recurringTaskQueue: resolvedRecurringTaskQueue,
+		ytClusterQueue,
 		ytDiscoveryQueue,
 		ytIngestQueue,
 		ytNlpQueue,
+		ytVectorize,
 	};
 }

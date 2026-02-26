@@ -7,6 +7,11 @@ node_modules
 dist
 build
 *.tsbuildinfo
+.git 
+.agents
+.github
+.vscode
+/scripts
 
 # Environment variables
 .env

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
 	import { Button } from "@my-app/ui/components/button";
 	import { createQuery } from "@tanstack/svelte-query";
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import { orpc } from "$lib/orpc";
 	import SubmitVideoDialog from "./SubmitVideoDialog.svelte";
 
@@ -20,7 +20,9 @@
 
 	const candidateCount = $derived($candidatesQuery.data?.length ?? 0);
 	const hasFeedsLoaded = $derived(!$feedsQuery.isPending);
-	const hasNoFeeds = $derived(hasFeedsLoaded && ($feedsQuery.data?.length ?? 0) === 0);
+	const hasNoFeeds = $derived(
+		hasFeedsLoaded && ($feedsQuery.data?.length ?? 0) === 0
+	);
 
 	const links = [
 		{ href: resolve("/youtube/feeds"), label: "Feeds" },
@@ -32,7 +34,7 @@
 		page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
 </script>
 
-<div class="container mx-auto space-y-6 p-6">
+<div class="mx-auto max-w-6xl space-y-6 p-6">
 	<div class="flex items-center justify-between">
 		<div>
 			<h2 class="text-2xl font-bold">YouTube Feedback</h2>
@@ -40,7 +42,7 @@
 				Manage discovery feeds, review videos, and track playtest insights
 			</p>
 		</div>
-		<Button onclick={() => (addVideoOpen = true)}>Add Video</Button>
+		<Button variant="secondary" onclick={() => (addVideoOpen = true)}>Add Video</Button>
 	</div>
 
 	<nav class="flex gap-1 border-b pb-0">
@@ -66,9 +68,12 @@
 
 	{#if hasNoFeeds && !isActive(resolve("/youtube/feeds"))}
 		<div class="rounded-lg border border-dashed p-8 text-center">
-			<h3 class="mb-2 text-lg font-semibold">Get started with YouTube Feedback</h3>
+			<h3 class="mb-2 text-lg font-semibold">
+				Get started with YouTube Feedback
+			</h3>
 			<p class="mb-4 text-sm text-muted-foreground">
-				Create a discovery feed to start finding and reviewing YouTube videos for your game.
+				Create a discovery feed to start finding and reviewing YouTube videos
+				for your game.
 			</p>
 			<Button href={resolve("/youtube/feeds")}>Create your first feed</Button>
 		</div>
@@ -78,4 +83,3 @@
 </div>
 
 <SubmitVideoDialog bind:open={addVideoOpen} />
-

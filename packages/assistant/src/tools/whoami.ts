@@ -1,5 +1,5 @@
 import type { AppRouterClient } from "@my-app/api/routers";
-import { tool } from "ai";
+import { orpcTool } from "../lib/orpc-tool";
 import z from "zod";
 
 const getUserName = (
@@ -23,11 +23,10 @@ const getUserName = (
 };
 
 export const createWhoAmITool = (client: AppRouterClient) =>
-	tool({
-		description:
-			"Return current authenticated user identity, including display name and active organization role when available.",
-		inputSchema: z.object({}),
-		execute: async () => {
+	orpcTool(
+		z.object({}),
+		"Return current authenticated user identity, including display name and active organization role when available.",
+		async () => {
 			const privateData = await client.privateData();
 			const user = privateData.user;
 
@@ -50,4 +49,4 @@ export const createWhoAmITool = (client: AppRouterClient) =>
 				isAuthenticated: Boolean(user),
 			};
 		},
-	});
+	);

@@ -49,7 +49,7 @@
 	$effect(() => {
 		if ($canManageQuery.isPending) return;
 		if (!$canManageQuery.data?.canManageOrganization) {
-			goto(resolve("/dashboard"));
+			goto(resolve("/dashboard/settings"));
 		}
 	});
 
@@ -124,7 +124,7 @@
 {:else if !$canManageQuery.data?.canManageOrganization}
 	<p class="text-muted-foreground">Access denied</p>
 {:else}
-	<div class="max-w-xl space-y-6">
+	<div class="max-w-xl space-y-4">
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>Organization details</Card.Title>

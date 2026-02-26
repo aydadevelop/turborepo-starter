@@ -68,8 +68,8 @@
 		<p class="text-muted-foreground">Loading...</p>
 	</div>
 {:else if hasAuthenticatedSession($sessionQuery.data)}
-	<div class="mx-auto max-w-4xl px-6 py-6">
-		<div class="mb-6">
+	<div class="mx-auto max-w-6xl px-6 py-6 space-y-4">
+		<div>
 			<h1 class="text-2xl font-bold">Organization</h1>
 			<nav class="mt-3 flex gap-1 border-b">
 				{#if hasOrg && canManage}

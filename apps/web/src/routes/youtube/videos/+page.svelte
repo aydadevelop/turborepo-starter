@@ -5,22 +5,33 @@
 	import * as Select from "@my-app/ui/components/select";
 	import * as Table from "@my-app/ui/components/table";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
-	import { get } from "svelte/store";
-	import { page } from "$app/stores";
+	import { derived, get } from "svelte/store";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
-	import { derived } from "svelte/store";
+	import { page } from "$app/stores";
 	import { orpc, queryClient } from "$lib/orpc";
 
 	// ─── URL-driven filters ───────────────────────────────────────────────────
 
 	const videoLimit = 20;
 
-	const feedFilter = derived(page, ($p) => $p.url.searchParams.get("feed") ?? undefined);
-	const statusFilter = derived(page, ($p) => $p.url.searchParams.get("status") ?? undefined);
-	const videoOffset = derived(page, ($p) => Number($p.url.searchParams.get("offset") ?? 0));
+	const feedFilter = derived(
+		page,
+		($p) => $p.url.searchParams.get("feed") ?? undefined
+	);
+	const statusFilter = derived(
+		page,
+		($p) => $p.url.searchParams.get("status") ?? undefined
+	);
+	const videoOffset = derived(page, ($p) =>
+		Number($p.url.searchParams.get("offset") ?? 0)
+	);
 
-	const setFilters = (params: { feed?: string; status?: string; offset?: number }) => {
+	const setFilters = (params: {
+		feed?: string;
+		status?: string;
+		offset?: number;
+	}) => {
 		const url = new URL(get(page).url);
 		if (params.feed) {
 			url.searchParams.set("feed", params.feed);
@@ -79,6 +90,25 @@
 
 	// ─── Helpers ─────────────────────────────────────────────────────────────
 
+	const limitSymbols = (value: string, max = 72) =>
+		value.length > max ? `${value.slice(0, max - 1)}…` : value;
+
+	const getVideoChannelLabel = (video: {
+		uploaderChannelName: string | null;
+		uploaderChannelId: string | null;
+	}) => video.uploaderChannelName ?? video.uploaderChannelId ?? "—";
+
+	const formatPublishedAt = (publishedAt: string | null) => {
+		if (!publishedAt) {
+			return "—";
+		}
+		const parsed = new Date(publishedAt);
+		if (Number.isNaN(parsed.getTime())) {
+			return publishedAt;
+		}
+		return parsed.toLocaleDateString();
+	};
+
 	const videoStatusColor = (status: string) => {
 		switch (status) {
 			case "ingested":
@@ -98,10 +128,6 @@
 </script>
 
 <div class="space-y-4">
-	<div class="flex items-center justify-between">
-		<h3 class="text-lg font-semibold">Videos</h3>
-	</div>
-
 	<div class="flex gap-2">
 		<Select.Root
 			type="single"
@@ -150,8 +176,8 @@
 				<Table.Root>
 					<Table.Header>
 						<Table.Row>
-							<Table.Head>Title</Table.Head>
-							<Table.Head>Channel</Table.Head>
+							<Table.Head class="max-w-64">Title</Table.Head>
+							<Table.Head class="w-36">Channel</Table.Head>
 							<Table.Head>Sources</Table.Head>
 							<Table.Head>Status</Table.Head>
 							<Table.Head>Published</Table.Head>
@@ -160,17 +186,24 @@
 					</Table.Header>
 					<Table.Body>
 						{#each $videosQuery.data ?? [] as video (video.id)}
+							{@const channelLabel = getVideoChannelLabel(video)}
 							<Table.Row>
-								<Table.Cell>
+								<Table.Cell class="max-w-64">
 									<a
 										href={resolve(`/youtube/videos/${video.id}`)}
-										class="font-medium text-primary hover:underline"
+										title={video.title}
+										class="block truncate font-medium text-primary hover:underline"
 									>
-										{video.title}
+										{limitSymbols(video.title, 96)}
 									</a>
 								</Table.Cell>
-								<Table.Cell class="text-sm text-muted-foreground">
-									{video.channelName ?? "—"}
+								<Table.Cell
+									class="w-36 max-w-[220px] text-sm text-muted-foreground"
+									title={channelLabel !== "—" ? channelLabel : undefined}
+								>
+									<span class="block truncate"
+										>{limitSymbols(channelLabel, 42)}</span
+									>
 								</Table.Cell>
 								<Table.Cell>
 									<div class="flex gap-1">
@@ -193,14 +226,19 @@
 										>{video.status}</Badge
 									>
 								</Table.Cell>
-								<Table.Cell class="text-sm text-muted-foreground">
-									{video.publishedAt ?? "—"}
+								<Table.Cell
+									class="max-w-[160px] text-sm text-muted-foreground"
+									title={video.publishedAt ?? undefined}
+								>
+									<span class="block truncate">
+										{formatPublishedAt(video.publishedAt)}
+									</span>
 								</Table.Cell>
 								<Table.Cell>
 									{#if video.status === "candidate"}
 										<div class="flex gap-1">
 											<Button
-												variant="ghost"
+												variant="outline"
 												size="sm"
 												disabled={$reviewVideoMutation.isPending}
 												onclick={() =>
@@ -212,7 +250,7 @@
 												Approve
 											</Button>
 											<Button
-												variant="ghost"
+												variant="outline"
 												size="sm"
 												disabled={$reviewVideoMutation.isPending}
 												onclick={() =>

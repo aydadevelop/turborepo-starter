@@ -1,6 +1,7 @@
 import { db } from "@my-app/db";
-import { ytTranscript, ytVideo } from "@my-app/db/schema/youtube";
+import { ytGameChannel, ytTranscript, ytVideo } from "@my-app/db/schema/youtube";
 import { downloadAudio } from "@my-app/youtube/download-audio";
+import { getGameChannel } from "@my-app/youtube/game-channel";
 import type { ProxyEnv } from "@my-app/youtube/page";
 import { getSubtitles, parseTimedSegments } from "@my-app/youtube/subtitles";
 import { and, eq } from "drizzle-orm";
@@ -10,12 +11,14 @@ import {
 	type YtIngestQueueMessage,
 	ytQueueKinds,
 } from "../../contracts/youtube-queue";
+import { emitYtNotification } from "./notify";
 
 export interface YtIngestDependencies {
 	proxyEnv?: ProxyEnv;
 	ytNlpQueue?: QueueProducer;
 	ytTranscribeQueue?: QueueProducer;
 	ytTranscriptsBucket?: R2WritableBucketLike;
+	notificationQueue?: QueueProducer;
 }
 
 export interface ProcessYtIngestMessageOptions {
@@ -195,6 +198,13 @@ export const processYtIngestMessage = async ({
 
 	try {
 		const tStatus0 = performance.now();
+		const [videoRow] = await db
+			.select({ title: ytVideo.title, feedId: ytVideo.feedId })
+			.from(ytVideo)
+			.where(
+				and(eq(ytVideo.id, videoId), eq(ytVideo.organizationId, organizationId))
+			)
+			.limit(1);
 		await db
 			.update(ytVideo)
 			.set({ status: "ingesting" })
@@ -266,6 +276,40 @@ export const processYtIngestMessage = async ({
 		console.log(
 			`[yt-ingest] processYtIngestMessage total: ${Math.round(performance.now() - tTotal0)}ms for ${youtubeVideoId}`
 		);
+
+		// Extract and persist game channel metadata (non-fatal — gaming section may not exist)
+		try {
+			const gameChannel = await getGameChannel(youtubeVideoId);
+			if (gameChannel) {
+				const now = new Date();
+				await db
+					.insert(ytGameChannel)
+					.values({ id: gameChannel.channelId, title: gameChannel.title, metaFetchedAt: now })
+					.onConflictDoUpdate({
+						target: ytGameChannel.id,
+						set: { title: gameChannel.title, metaFetchedAt: now },
+					});
+				await db
+					.update(ytVideo)
+					.set({ gameChannelId: gameChannel.channelId })
+					.where(eq(ytVideo.id, videoId));
+				console.log(`[yt-ingest] Game channel saved: ${gameChannel.channelId} (${gameChannel.title})`);
+			}
+		} catch (err) {
+			console.warn(`[yt-ingest] Game channel extraction failed for ${youtubeVideoId}: ${err instanceof Error ? err.message : err}`);
+		}
+
+		await emitYtNotification({
+			organizationId,
+			eventType: "youtube.video.ingested",
+			idempotencyKey: `yt-ingest:${videoId}`,
+			title: `Video ingested: ${videoRow?.title ?? youtubeVideoId}`,
+			ctaUrl: videoRow?.feedId
+				? `/youtube/videos?feed=${videoRow.feedId}&status=ingested`
+				: "/youtube/videos?status=ingested",
+			severity: "info",
+			notificationQueue: dependencies.notificationQueue,
+		});
 	} catch (error) {
 		console.error(
 			`[yt-ingest] processYtIngestMessage failed after ${Math.round(performance.now() - tTotal0)}ms for ${youtubeVideoId}:`,

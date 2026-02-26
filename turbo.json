@@ -116,7 +116,7 @@
       "cache": false
     },
     "db:generate": {
-      "cache": false
+      "cache": false,
     },
     "db:reset:local": {
       "cache": false
@@ -131,5 +131,6 @@
     "destroy": {
       "cache": false
     }
-  }
+  },
+
 }

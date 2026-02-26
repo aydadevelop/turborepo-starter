@@ -78,7 +78,7 @@
 {:else if $invitationsQuery.isError}
 	<p class="text-destructive">Failed to load invitations.</p>
 {:else}
-	<div class="max-w-xl space-y-6">
+	<div class="max-w-xl space-y-4">
 		{#if pendingInvitations.length > 0}
 			<div class="space-y-3">
 				<h2 class="text-sm font-medium text-muted-foreground">Pending</h2>

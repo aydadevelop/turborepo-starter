@@ -258,7 +258,7 @@
 	});
 </script>
 
-<div class="space-y-6">
+<div class="space-y-4">
 	<!-- ─── Breadcrumb ─────────────────────────────────────────────────────── -->
 
 	<div class="flex items-center gap-2 text-sm text-muted-foreground">
@@ -282,8 +282,10 @@
 				<div
 					class="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
 				>
-					{#if video.channelName}
-						<span>{video.channelName}</span>
+					{#if video.uploaderChannelName}
+						<span title={video.uploaderChannelName}
+							>{video.uploaderChannelName}</span
+						>
 						<span>·</span>
 					{/if}
 					{#if video.publishedAt}

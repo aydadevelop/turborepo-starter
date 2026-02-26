@@ -6,6 +6,7 @@ import z from "zod";
 import { ytQueueKinds } from "../../contracts/youtube-queue";
 import {
 	isTransientFailure,
+	recoverMissingPipelineJobs,
 	recoverStuckIngesting,
 	recoverTransientFailures,
 } from "../../services/youtube/recovery";
@@ -153,6 +154,46 @@ export const adminYoutubeRouter = {
 				stuckThresholdMs: input.minAgeMinutes * 60 * 1000,
 			});
 			return { requeued };
+		}),
+
+	/**
+	 * Re-queue likely lost jobs after local rebuild/restart:
+	 * - videos still in approved status (ingest queue message missing)
+	 * - vectorized signals without clusterId (cluster queue message missing)
+	 */
+	recoverMissingJobs: adminProcedure
+		.route({
+			tags: ["Admin / YouTube"],
+			summary: "Re-queue missing ingest/cluster jobs (admin-wide)",
+		})
+		.input(
+			z.object({
+				minAgeMinutes: z.number().int().min(0).max(720).optional().default(0),
+			})
+		)
+		.output(
+			z.object({
+				ingestRequeued: z.number(),
+				clusterRequeued: z.number(),
+			})
+		)
+		.handler(async ({ context, input }) => {
+			if (!context.ytIngestQueue) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR", {
+					message: "YT_INGEST_QUEUE is not bound to this worker",
+				});
+			}
+			if (!context.ytClusterQueue) {
+				throw new ORPCError("INTERNAL_SERVER_ERROR", {
+					message: "YT_CLUSTER_QUEUE is not bound to this worker",
+				});
+			}
+
+			return await recoverMissingPipelineJobs({
+				ytIngestQueue: context.ytIngestQueue,
+				ytClusterQueue: context.ytClusterQueue,
+				minAgeMs: input.minAgeMinutes * 60 * 1000,
+			});
 		}),
 
 	/**

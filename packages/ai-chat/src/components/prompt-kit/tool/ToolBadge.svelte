@@ -33,6 +33,26 @@
 	>
 		Ready
 	</span>
+{:else if state === "approval-requested"}
+	<span
+		class={cn(
+			baseClasses,
+			"bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+			className
+		)}
+	>
+		Approval Required
+	</span>
+{:else if state === "approval-responded"}
+	<span
+		class={cn(
+			baseClasses,
+			"bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+			className
+		)}
+	>
+		Approved
+	</span>
 {:else if state === "output-available"}
 	<span
 		class={cn(

@@ -31,6 +31,10 @@
 		requeued: number;
 		skipped: number;
 	} | null>(null);
+	let recoverMissingResult = $state<{
+		ingestRequeued: number;
+		clusterRequeued: number;
+	} | null>(null);
 	let retryingId = $state<string | null>(null);
 
 	const recoverMutation = createMutation(
@@ -46,6 +50,15 @@
 		orpc.admin.youtube.recoverFailed.mutationOptions({
 			onSuccess: (data) => {
 				recoverFailedResult = data;
+				queryClient.invalidateQueries({ queryKey: orpc.admin.youtube.key() });
+			},
+		})
+	);
+
+	const recoverMissingMutation = createMutation(
+		orpc.admin.youtube.recoverMissingJobs.mutationOptions({
+			onSuccess: (data) => {
+				recoverMissingResult = data;
 				queryClient.invalidateQueries({ queryKey: orpc.admin.youtube.key() });
 			},
 		})
@@ -74,10 +87,20 @@
 	const stats = $derived($statsQuery.data);
 </script>
 
-<div class="space-y-6">
+<div class="space-y-4">
 	<div class="flex items-center justify-between">
 		<h2 class="text-xl font-semibold">YouTube Pipeline</h2>
 		<div class="flex gap-2">
+			<Button
+				variant="outline"
+				size="sm"
+				disabled={$recoverMissingMutation.isPending}
+				onclick={() => $recoverMissingMutation.mutate({ minAgeMinutes: 0 })}
+			>
+				{$recoverMissingMutation.isPending
+					? "Recovering…"
+					: "Recover missing queue jobs"}
+			</Button>
 			<Button
 				variant="outline"
 				size="sm"
@@ -107,6 +130,12 @@
 		<p class="text-sm text-muted-foreground">
 			Transient recovery: {recoverFailedResult.requeued} re-queued,
 			{recoverFailedResult.skipped} permanent/unknown skipped.
+		</p>
+	{/if}
+	{#if recoverMissingResult !== null}
+		<p class="text-sm text-muted-foreground">
+			Missing-jobs recovery: {recoverMissingResult.ingestRequeued} ingest re-queued,
+			{recoverMissingResult.clusterRequeued} cluster re-queued.
 		</p>
 	{/if}
 

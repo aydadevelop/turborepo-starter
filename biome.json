@@ -30,7 +30,13 @@
       "!**/test-results",
       "!**/wrangler.jsonc",
       "!**/.source",
-      "!**/convex/_generated"
+      "!**/convex/_generated",
+      "!**/.git",
+      "!**/.agents",
+      "!**/.github",
+      "!**/.vscode",
+      "!**/scripts",
+      "!**/codex"
     ]
   },
   "formatter": {

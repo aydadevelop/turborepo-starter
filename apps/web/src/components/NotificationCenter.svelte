@@ -1,278 +1,280 @@
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
-import { consumeEventIterator } from "@orpc/client";
-import { createMutation, createQuery } from "@tanstack/svelte-query";
-import { onMount, untrack } from "svelte";
-import { writable } from "svelte/store";
-import { resolve } from "$app/paths";
-import type { authClient } from "$lib/auth-client";
-import { getAuthenticatedUserId } from "$lib/auth-session";
-import {
-	countUnreadNotifications,
-	deriveCursorMs,
-	formatNotificationDateTime,
-	type InAppNotificationItem,
-	markNotificationsViewedLocally,
-	mergeNotificationItems,
-	type NotificationStreamState,
-	notificationSeverityClass,
-	sortNotificationsByDeliveredAtDesc,
-	streamStateLabel,
-} from "$lib/notification-center";
-import { client, orpc } from "$lib/orpc";
+	import { consumeEventIterator } from "@orpc/client";
+	import { createMutation, createQuery } from "@tanstack/svelte-query";
+	import { onMount, untrack } from "svelte";
+	import { writable } from "svelte/store";
+	import { resolve } from "$app/paths";
+	import type { authClient } from "$lib/auth-client";
+	import { getAuthenticatedUserId } from "$lib/auth-session";
+	import {
+		countUnreadNotifications,
+		deriveCursorMs,
+		formatNotificationDateTime,
+		type InAppNotificationItem,
+		markNotificationsViewedLocally,
+		mergeNotificationItems,
+		type NotificationStreamState,
+		notificationSeverityClass,
+		sortNotificationsByDeliveredAtDesc,
+		streamStateLabel,
+	} from "$lib/notification-center";
+	import { client, orpc } from "$lib/orpc";
 
-// Session is passed from Header to avoid a second concurrent useSession()
-// subscription — two independent subscriptions cause duplicate session-change
-// renders across Header + NotificationCenter on every auth tick.
-const {
-	sessionQuery,
-}: { sessionQuery: ReturnType<typeof authClient.useSession> } = $props();
+	// Session is passed from Header to avoid a second concurrent useSession()
+	// subscription — two independent subscriptions cause duplicate session-change
+	// renders across Header + NotificationCenter on every auth tick.
+	const {
+		sessionQuery,
+	}: { sessionQuery: ReturnType<typeof authClient.useSession> } = $props();
 
-const MAX_ITEMS = 20;
-// Use $derived.by() + writable store so that $sessionQuery is tracked
-// via Svelte 5 auto-subscription rather than Svelte 3/4 derived() stores,
-// keeping the pattern consistent with the rest of the codebase.
-const notificationsQueryOpts = $derived.by(() =>
-	orpc.notifications.listMe.queryOptions({
-		input: { limit: MAX_ITEMS },
-		enabled: Boolean(getAuthenticatedUserId($sessionQuery.data)),
-	})
-);
-const notificationsQueryOptsStore = writable(
-	untrack(() => notificationsQueryOpts)
-);
-$effect(() => {
-	notificationsQueryOptsStore.set(notificationsQueryOpts);
-});
-const notificationsQuery = createQuery(notificationsQueryOptsStore);
-const markViewedMutation = createMutation(
-	orpc.notifications.markViewed.mutationOptions({
-		onSuccess: () => {
-			$notificationsQuery.refetch();
-		},
-		onError: (error) => {
-			setLoadError(error, "Failed to update notification");
-		},
-	})
-);
-const markAllViewedMutation = createMutation(
-	orpc.notifications.markAllViewed.mutationOptions({
-		onSuccess: () => {
-			$notificationsQuery.refetch();
-		},
-		onError: (error) => {
-			setLoadError(error, "Failed to mark notifications as viewed");
-		},
-	})
-);
-
-let containerEl = $state<HTMLDivElement | null>(null);
-let isOpen = $state(false);
-let loadError = $state<string | null>(null);
-let streamState = $state<NotificationStreamState>("idle");
-let notifications = $state<InAppNotificationItem[]>([]);
-let unreadCount = $state(0);
-let currentUserId = $state<string | null>(null);
-let cursorMs = $state(0);
-let stopStream: (() => Promise<void>) | null = null;
-const isLoading = $derived(
-	$notificationsQuery.isPending && notifications.length === 0
-);
-
-function setLoadError(error: unknown, fallback: string) {
-	loadError = error instanceof Error ? error.message : fallback;
-}
-
-function syncDerivedStateFromNotifications() {
-	cursorMs = deriveCursorMs(notifications, cursorMs);
-	unreadCount = countUnreadNotifications(notifications);
-}
-
-function closeStream() {
-	if (stopStream) {
-		stopStream().catch((error) => {
-			console.error("Failed to stop notifications stream", error);
-		});
-		stopStream = null;
-	}
-	streamState = "idle";
-}
-
-function startStream() {
-	if (!currentUserId || stopStream) {
-		return;
-	}
-
-	streamState = "connecting";
-	stopStream = consumeEventIterator(
-		client.notifications.streamMe({
-			limit: 20,
-			since: cursorMs > 0 ? cursorMs : undefined,
-		}),
-		{
-			onEvent: (event) => {
-				streamState = "connected";
-				if (event.kind === "ready") {
-					if (event.since > 0) {
-						cursorMs = Math.max(cursorMs, event.since);
-					}
-					return;
-				}
-
-				if (event.kind === "snapshot" && event.scope === "me") {
-					const items = event.items as InAppNotificationItem[];
-					notifications = mergeNotificationItems(notifications, items);
-					syncDerivedStateFromNotifications();
-					if (event.since > 0) {
-						cursorMs = Math.max(cursorMs, event.since);
-					}
-				}
+	const MAX_ITEMS = 20;
+	// Use $derived.by() + writable store so that $sessionQuery is tracked
+	// via Svelte 5 auto-subscription rather than Svelte 3/4 derived() stores,
+	// keeping the pattern consistent with the rest of the codebase.
+	const notificationsQueryOpts = $derived.by(() =>
+		orpc.notifications.listMe.queryOptions({
+			input: { limit: MAX_ITEMS },
+			enabled: Boolean(getAuthenticatedUserId($sessionQuery.data)),
+		})
+	);
+	const notificationsQueryOptsStore = writable(
+		untrack(() => notificationsQueryOpts)
+	);
+	$effect(() => {
+		notificationsQueryOptsStore.set(notificationsQueryOpts);
+	});
+	const notificationsQuery = createQuery(notificationsQueryOptsStore);
+	const markViewedMutation = createMutation(
+		orpc.notifications.markViewed.mutationOptions({
+			onSuccess: () => {
+				$notificationsQuery.refetch();
 			},
 			onError: (error) => {
-				console.error("Notifications stream failed", error);
-				streamState = "error";
+				setLoadError(error, "Failed to update notification");
 			},
-			onFinish: () => {
-				stopStream = null;
+		})
+	);
+	const markAllViewedMutation = createMutation(
+		orpc.notifications.markAllViewed.mutationOptions({
+			onSuccess: () => {
+				$notificationsQuery.refetch();
 			},
+			onError: (error) => {
+				setLoadError(error, "Failed to mark notifications as viewed");
+			},
+		})
+	);
+
+	let containerEl = $state<HTMLDivElement | null>(null);
+	let isOpen = $state(false);
+	let loadError = $state<string | null>(null);
+	let streamState = $state<NotificationStreamState>("idle");
+	let notifications = $state<InAppNotificationItem[]>([]);
+	let unreadCount = $state(0);
+	let currentUserId = $state<string | null>(null);
+	let cursorMs = $state(0);
+	let stopStream: (() => Promise<void>) | null = null;
+	const isLoading = $derived(
+		$notificationsQuery.isPending && notifications.length === 0
+	);
+
+	function setLoadError(error: unknown, fallback: string) {
+		loadError = error instanceof Error ? error.message : fallback;
+	}
+
+	function syncDerivedStateFromNotifications() {
+		cursorMs = deriveCursorMs(notifications, cursorMs);
+		unreadCount = countUnreadNotifications(notifications);
+	}
+
+	function closeStream() {
+		if (stopStream) {
+			stopStream().catch((error) => {
+				console.error("Failed to stop notifications stream", error);
+			});
+			stopStream = null;
 		}
-	);
-}
-
-function markLocallyViewed(notificationIds: string[]) {
-	notifications = markNotificationsViewedLocally(
-		notifications,
-		notificationIds
-	);
-	unreadCount = countUnreadNotifications(notifications);
-}
-
-function markAllAsViewed() {
-	const unreadIds = notifications
-		.filter((item) => !item.viewedAt)
-		.map((item) => item.id);
-	if (unreadIds.length === 0) {
-		return;
+		streamState = "idle";
 	}
 
-	markLocallyViewed(unreadIds);
-	$markAllViewedMutation.mutate({});
-}
+	function startStream() {
+		if (!currentUserId || stopStream) {
+			return;
+		}
 
-function markOneAsViewed(notificationId: string) {
-	const item = notifications.find((entry) => entry.id === notificationId);
-	if (!item || item.viewedAt) {
-		return;
+		streamState = "connecting";
+		stopStream = consumeEventIterator(
+			client.notifications.streamMe({
+				limit: 20,
+				since: cursorMs > 0 ? cursorMs : undefined,
+			}),
+			{
+				onEvent: (event) => {
+					streamState = "connected";
+					if (event.kind === "ready") {
+						if (event.since > 0) {
+							cursorMs = Math.max(cursorMs, event.since);
+						}
+						return;
+					}
+
+					if (event.kind === "snapshot" && event.scope === "me") {
+						const items = event.items as InAppNotificationItem[];
+						notifications = mergeNotificationItems(notifications, items);
+						syncDerivedStateFromNotifications();
+						if (event.since > 0) {
+							cursorMs = Math.max(cursorMs, event.since);
+						}
+					}
+				},
+				onError: (error) => {
+					console.error("Notifications stream failed", error);
+					streamState = "error";
+				},
+				onFinish: () => {
+					stopStream = null;
+				},
+			}
+		);
 	}
 
-	markLocallyViewed([notificationId]);
-	$markViewedMutation.mutate({
-		notificationIds: [notificationId],
-	});
-}
-
-async function openPanel() {
-	if (isOpen) {
-		return;
+	function markLocallyViewed(notificationIds: string[]) {
+		notifications = markNotificationsViewedLocally(
+			notifications,
+			notificationIds
+		);
+		unreadCount = countUnreadNotifications(notifications);
 	}
 
-	isOpen = true;
-	loadError = null;
-	try {
-		await $notificationsQuery.refetch();
-	} catch (error) {
-		setLoadError(error, "Failed to load notifications");
+	function markAllAsViewed() {
+		const unreadIds = notifications
+			.filter((item) => !item.viewedAt)
+			.map((item) => item.id);
+		if (unreadIds.length === 0) {
+			return;
+		}
+
+		markLocallyViewed(unreadIds);
+		$markAllViewedMutation.mutate({});
 	}
-	markAllAsViewed();
-}
 
-function closePanel() {
-	isOpen = false;
-}
+	function markOneAsViewed(notificationId: string) {
+		const item = notifications.find((entry) => entry.id === notificationId);
+		if (!item || item.viewedAt) {
+			return;
+		}
 
-function togglePanel() {
-	if (isOpen) {
+		markLocallyViewed([notificationId]);
+		$markViewedMutation.mutate({
+			notificationIds: [notificationId],
+		});
+	}
+
+	async function openPanel() {
+		if (isOpen) {
+			return;
+		}
+
+		isOpen = true;
+		loadError = null;
+		try {
+			await $notificationsQuery.refetch();
+		} catch (error) {
+			setLoadError(error, "Failed to load notifications");
+		}
+		markAllAsViewed();
+	}
+
+	function closePanel() {
+		isOpen = false;
+	}
+
+	function togglePanel() {
+		if (isOpen) {
+			closePanel();
+			return;
+		}
+		openPanel().catch((error) => {
+			setLoadError(error, "Failed to open notifications");
+		});
+	}
+
+	function handleNotificationClick(notificationId: string) {
+		markOneAsViewed(notificationId);
 		closePanel();
-		return;
-	}
-	openPanel().catch((error) => {
-		setLoadError(error, "Failed to open notifications");
-	});
-}
-
-function handleNotificationClick(notificationId: string) {
-	markOneAsViewed(notificationId);
-	closePanel();
-}
-
-function handleMarkAllClick() {
-	markAllAsViewed();
-}
-
-function handleDocumentPointerDown(event: Event) {
-	if (!(isOpen && containerEl)) {
-		return;
 	}
 
-	const target = event.target;
-	if (!(target instanceof Node)) {
-		return;
+	function handleMarkAllClick() {
+		markAllAsViewed();
 	}
 
-	if (!containerEl.contains(target)) {
-		closePanel();
-	}
-}
+	function handleDocumentPointerDown(event: Event) {
+		if (!(isOpen && containerEl)) {
+			return;
+		}
 
-function resetState() {
-	closeStream();
-	isOpen = false;
-	loadError = null;
-	notifications = [];
-	unreadCount = 0;
-	cursorMs = 0;
-}
+		const target = event.target;
+		if (!(target instanceof Node)) {
+			return;
+		}
 
-$effect(() => {
-	const nextUserId = getAuthenticatedUserId($sessionQuery.data);
-	if (nextUserId === currentUserId) {
-		return;
-	}
-	currentUserId = nextUserId;
-	resetState();
-	if (currentUserId) {
-		startStream();
-	}
-});
-
-$effect(() => {
-	const response = $notificationsQuery.data;
-	if (!response) {
-		return;
+		if (!containerEl.contains(target)) {
+			closePanel();
+		}
 	}
 
-	const nextNotifications = sortNotificationsByDeliveredAtDesc(response.items);
-	const nextCursorMs = deriveCursorMs(nextNotifications);
-
-	notifications = nextNotifications;
-	unreadCount = response.unread;
-	cursorMs = nextCursorMs;
-	loadError = null;
-});
-
-$effect(() => {
-	if ($notificationsQuery.isError) {
-		setLoadError($notificationsQuery.error, "Failed to load notifications");
-	}
-});
-
-onMount(() => {
-	document.addEventListener("pointerdown", handleDocumentPointerDown);
-	return () => {
-		document.removeEventListener("pointerdown", handleDocumentPointerDown);
+	function resetState() {
 		closeStream();
-	};
-});
+		isOpen = false;
+		loadError = null;
+		notifications = [];
+		unreadCount = 0;
+		cursorMs = 0;
+	}
+
+	$effect(() => {
+		const nextUserId = getAuthenticatedUserId($sessionQuery.data);
+		if (nextUserId === currentUserId) {
+			return;
+		}
+		currentUserId = nextUserId;
+		resetState();
+		if (currentUserId) {
+			startStream();
+		}
+	});
+
+	$effect(() => {
+		const response = $notificationsQuery.data;
+		if (!response) {
+			return;
+		}
+
+		const nextNotifications = sortNotificationsByDeliveredAtDesc(
+			response.items
+		);
+		const nextCursorMs = deriveCursorMs(nextNotifications);
+
+		notifications = nextNotifications;
+		unreadCount = response.unread;
+		cursorMs = nextCursorMs;
+		loadError = null;
+	});
+
+	$effect(() => {
+		if ($notificationsQuery.isError) {
+			setLoadError($notificationsQuery.error, "Failed to load notifications");
+		}
+	});
+
+	onMount(() => {
+		document.addEventListener("pointerdown", handleDocumentPointerDown);
+		return () => {
+			document.removeEventListener("pointerdown", handleDocumentPointerDown);
+			closeStream();
+		};
+	});
 </script>
 
 {#if $sessionQuery.data?.user}
@@ -376,11 +378,11 @@ onMount(() => {
 
 				<div class="border-t border-border px-4 py-2">
 					<a
-						href={resolve("/dashboard")}
+						href={resolve("/dashboard/settings")}
 						class="text-xs font-medium text-muted-foreground transition hover:text-foreground"
 						onclick={closePanel}
 					>
-						Open dashboard
+						Open settings
 					</a>
 				</div>
 			</div>

@@ -3,7 +3,7 @@ import type {
 	R2BucketLike,
 } from "@my-app/api/contracts/youtube-queue";
 import type { VectorizeIndex } from "@my-app/api/services/youtube/cluster";
-import { createLlmAnalyzer } from "@my-app/api/services/youtube/nlp";
+import { createLlmAnalyzer, llmOutputSchema } from "@my-app/api/services/youtube/nlp";
 import {
 	recoverStuckIngesting,
 	recoverTransientFailures,
@@ -15,7 +15,7 @@ import {
 } from "@my-app/api/services/youtube/vectorize";
 import type { KVStore } from "@my-app/youtube/proxy-client";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { embedMany, generateObject } from "ai";
+import { embedMany, generateText, Output } from "ai";
 import { app } from "./app";
 import { processRecurringTaskBatch } from "./queues/recurring-task-consumer";
 import { processYtClusterBatch } from "./queues/yt-cluster-consumer";
@@ -50,8 +50,16 @@ function createNlpAnalyzer(env: Env) {
 	}
 	const openrouter = createOpenRouter({ apiKey: env.OPEN_ROUTER_API_KEY });
 	const model = openrouter(env.AI_MODEL ?? DEFAULT_NLP_MODEL);
-	// biome-ignore lint/suspicious/noExplicitAny: AI SDK type bridging
-	return createLlmAnalyzer({ model, generateObject: generateObject as any });
+	return createLlmAnalyzer({
+		extractSignals: async (prompt) => {
+			const { output } = await generateText({
+				model,
+				output: Output.object({ schema: llmOutputSchema }),
+				prompt,
+			});
+			return output ?? { signals: [] };
+		},
+	});
 }
 
 function createEmbeddingProvider(env: Env): EmbeddingProvider | undefined {
@@ -83,6 +91,7 @@ const queueProcessors: QueueProcessor[] = [
 		run: (batch, env) =>
 			processYtDiscoveryBatch(batch, {
 				ytIngestQueue: env.YT_INGEST_QUEUE,
+				notificationQueue: env.NOTIFICATION_QUEUE,
 			}),
 	},
 	{
@@ -96,6 +105,7 @@ const queueProcessors: QueueProcessor[] = [
 				ytNlpQueue: env.YT_NLP_QUEUE,
 				ytTranscribeQueue: env.YT_TRANSCRIBE_QUEUE,
 				ytTranscriptsBucket: env.YT_TRANSCRIPTS_BUCKET,
+				notificationQueue: env.NOTIFICATION_QUEUE,
 			}),
 	},
 	{
@@ -125,7 +135,11 @@ const queueProcessors: QueueProcessor[] = [
 	},
 	{
 		fragment: "yt-cluster",
-		run: (batch, env) => processYtClusterBatch(batch, env.YT_SIGNALS_VECTORIZE),
+		run: (batch, env) =>
+			processYtClusterBatch(batch, {
+				vectorizeIndex: env.YT_SIGNALS_VECTORIZE,
+				notificationQueue: env.NOTIFICATION_QUEUE,
+			}),
 	},
 ];
 

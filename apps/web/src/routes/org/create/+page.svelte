@@ -1,4 +1,5 @@
 <script lang="ts">
+	import * as Alert from "@my-app/ui/components/alert";
 	import { Button } from "@my-app/ui/components/button";
 	import * as Card from "@my-app/ui/components/card";
 	import { Input } from "@my-app/ui/components/input";
@@ -19,6 +20,13 @@
 	let scrolledToBottom = $state(false);
 
 	const sessionQuery = authClient.useSession();
+
+	$effect(() => {
+		const user = $sessionQuery.data?.user;
+		if (user && !orgName) {
+			orgName = user.name || user.email?.split("@")[0] || "";
+		}
+	});
 
 	const orgsQuery = createQuery(
 		derived(sessionQuery, ($session) => ({
@@ -111,6 +119,22 @@
 		</p>
 	</div>
 
+	{#if page.url.searchParams.get('reason') === 'new'}
+		<Alert.Root class="mb-6">
+			<Alert.Title>Welcome! One more step</Alert.Title>
+			<Alert.Description>
+				Your account is ready. Create an organization to start managing your YouTube projects and channels.
+			</Alert.Description>
+		</Alert.Root>
+	{:else if page.url.searchParams.get('reason') === 'required'}
+		<Alert.Root class="mb-6">
+			<Alert.Title>Organization required</Alert.Title>
+			<Alert.Description>
+				You need an organization to access this area. Create one below to continue.
+			</Alert.Description>
+		</Alert.Root>
+	{/if}
+
 	{#if hasExistingOrg}
 		<div
 			class="mb-6 flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3 text-sm"
@@ -121,9 +145,9 @@
 			<Button
 				variant="ghost"
 				size="sm"
-				onclick={() => goto(resolve("/dashboard"))}
+				onclick={() => goto(resolve("/dashboard/settings"))}
 			>
-				Go to Dashboard
+				Go to Settings
 			</Button>
 		</div>
 	{/if}

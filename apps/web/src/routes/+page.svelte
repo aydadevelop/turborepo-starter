@@ -63,8 +63,8 @@
 					</p>
 				</CardContent>
 				<CardFooter>
-					<Button href={resolve("/dashboard")} variant="outline">
-						Go to Dashboard
+					<Button href={resolve("/dashboard/settings")} variant="outline">
+						Go to Settings
 					</Button>
 				</CardFooter>
 			</Card>

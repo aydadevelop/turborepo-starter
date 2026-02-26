@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-
+import {
+	createFeedInputSchema,
+	getClusterInputSchema,
+	listClustersInputSchema,
+	listSignalsInputSchema,
+	updateFeedInputSchema,
+} from "../contracts/youtube";
 import {
 	ytClusterQueueMessageSchema,
 	ytDiscoveryQueueMessageSchema,
@@ -216,5 +222,171 @@ describe("ytClusterQueueMessageSchema", () => {
 			organizationId: "",
 		});
 		expect(result.success).toBe(false);
+	});
+});
+
+describe("getClusterInputSchema", () => {
+	it("accepts a valid clusterId", () => {
+		const result = getClusterInputSchema.safeParse({
+			clusterId: "cluster-1",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects an empty clusterId", () => {
+		const result = getClusterInputSchema.safeParse({
+			clusterId: "   ",
+		});
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("listClustersInputSchema", () => {
+	it("applies sorting and pagination defaults", () => {
+		const result = listClustersInputSchema.safeParse({});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.sortBy).toBe("impactScore");
+			expect(result.data.sortDir).toBe("desc");
+			expect(result.data.limit).toBe(20);
+			expect(result.data.offset).toBe(0);
+		}
+	});
+
+	it("rejects limit above max", () => {
+		const result = listClustersInputSchema.safeParse({
+			limit: 101,
+		});
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("createFeedInputSchema", () => {
+	const base = {
+		name: "Alpha Feed",
+		gameTitle: "Starforge Arena",
+	};
+
+	it("accepts sourceMode=search", () => {
+		const result = createFeedInputSchema.safeParse({
+			...base,
+			sourceMode: "search",
+			searchQuery: "starforge playtest feedback",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts sourceMode=game_channel without searchQuery", () => {
+		const result = createFeedInputSchema.safeParse({
+			...base,
+			sourceMode: "game_channel",
+			scopeChannelId: "UC1234567890123456789012",
+			scopeChannelName: "Official Channel",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts sourceMode=user_channel_query", () => {
+		const result = createFeedInputSchema.safeParse({
+			...base,
+			sourceMode: "user_channel_query",
+			scopeChannelId: "UC1234567890123456789012",
+			scopeChannelName: "Creator Channel",
+			searchQuery: "patch notes",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts sourceMode=playlist", () => {
+		const result = createFeedInputSchema.safeParse({
+			...base,
+			sourceMode: "playlist",
+			playlistId: "PL1234567890abcdefghijkl",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects sourceMode=search without searchQuery", () => {
+		const result = createFeedInputSchema.safeParse({
+			...base,
+			sourceMode: "search",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects mixed mode fields", () => {
+		const result = createFeedInputSchema.safeParse({
+			...base,
+			sourceMode: "search",
+			searchQuery: "alpha",
+			playlistId: "PL1234567890abcdefghijkl",
+		});
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("updateFeedInputSchema", () => {
+	it("accepts switching to sourceMode=playlist", () => {
+		const result = updateFeedInputSchema.safeParse({
+			feedId: "feed-1",
+			sourceMode: "playlist",
+			playlistId: "PL1234567890abcdefghijkl",
+			searchQuery: "",
+			scopeChannelId: null,
+			scopeChannelName: null,
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects sourceMode=search update without searchQuery", () => {
+		const result = updateFeedInputSchema.safeParse({
+			feedId: "feed-1",
+			sourceMode: "search",
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("accepts nullable stop-word fields", () => {
+		const result = updateFeedInputSchema.safeParse({
+			feedId: "feed-1",
+			sourceMode: "search",
+			searchQuery: "playtest",
+			searchStopWords: null,
+			titleStopWords: null,
+		});
+		expect(result.success).toBe(true);
+	});
+});
+
+describe("listSignalsInputSchema", () => {
+	it("accepts clustered filter", () => {
+		const clustered = listSignalsInputSchema.safeParse({ clustered: true });
+		const unclustered = listSignalsInputSchema.safeParse({ clustered: false });
+		expect(clustered.success).toBe(true);
+		expect(unclustered.success).toBe(true);
+	});
+
+	it("applies defaults and keeps clustered undefined when omitted", () => {
+		const result = listSignalsInputSchema.safeParse({});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.clustered).toBeUndefined();
+			expect(result.data.sortBy).toBe("createdAt");
+			expect(result.data.sortDir).toBe("desc");
+			expect(result.data.limit).toBe(20);
+			expect(result.data.offset).toBe(0);
+		}
+	});
+
+	it("accepts clustered filter with additional list constraints", () => {
+		const result = listSignalsInputSchema.safeParse({
+			clustered: false,
+			type: "bug",
+			severity: "high",
+			search: "stuck on loading",
+			limit: 50,
+			offset: 10,
+		});
+		expect(result.success).toBe(true);
 	});
 });

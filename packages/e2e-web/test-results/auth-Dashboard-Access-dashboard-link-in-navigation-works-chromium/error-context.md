@@ -1,0 +1,56 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - link "Playpulse Playpulse" [ref=e6] [cursor=pointer]:
+          - /url: /
+          - img "Playpulse" [ref=e7]
+          - generic [ref=e8]: Playpulse
+        - navigation [ref=e9]:
+          - link "Chat" [ref=e10] [cursor=pointer]:
+            - /url: /chat
+          - link "YouTube" [ref=e11] [cursor=pointer]:
+            - /url: /youtube
+        - button "Sign In" [ref=e15]
+    - main [ref=e16]:
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - heading "Cloudflare SaaS Starter" [level=1] [ref=e20]
+          - paragraph [ref=e21]: SvelteKit + Hono + Better Auth + oRPC + Drizzle + Alchemy.
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - generic [ref=e24]:
+              - generic [ref=e25]: Authentication
+              - paragraph [ref=e26]: Login, orgs, and admin impersonation
+            - paragraph [ref=e28]: Includes email/password, passkeys, organization memberships, and admin impersonation flows.
+            - link "Sign In" [ref=e30] [cursor=pointer]:
+              - /url: /login
+          - generic [ref=e31]:
+            - generic [ref=e32]:
+              - generic [ref=e33]: Dashboard
+              - paragraph [ref=e34]: Profile and SaaS starter actions
+            - paragraph [ref=e36]: Trigger mock payment notifications, schedule recurring reminders, and validate protected API wiring.
+            - link "Go to Settings" [ref=e38] [cursor=pointer]:
+              - /url: /dashboard/settings
+          - generic [ref=e39]:
+            - generic [ref=e40]:
+              - generic [ref=e41]: Assistant
+              - paragraph [ref=e42]: Tool-enabled AI workspace
+            - paragraph [ref=e44]: Chat UI connected to tool calls for identity, todo actions, and queue-backed recurring reminders.
+            - link "Open Assistant" [ref=e46] [cursor=pointer]:
+              - /url: /chat
+          - generic [ref=e47]:
+            - generic [ref=e48]:
+              - generic [ref=e49]: Todo Demo
+              - paragraph [ref=e50]: Minimal oRPC + DB example
+            - paragraph [ref=e52]: Reference CRUD flow with TanStack Query and shared API contracts.
+            - link "Manage Todos" [ref=e54] [cursor=pointer]:
+              - /url: /todos
+  - generic [ref=e55]:
+    - img [ref=e57]
+    - button "Open Tanstack query devtools" [ref=e105] [cursor=pointer]:
+      - img [ref=e106]
+```

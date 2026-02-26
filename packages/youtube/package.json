@@ -9,6 +9,9 @@
     "./channel": {
       "default": "./src/channel.ts"
     },
+    "./game-channel": {
+      "default": "./src/game-channel.ts"
+    },
     "./subtitles": {
       "default": "./src/subtitles.ts"
     },
@@ -26,6 +29,9 @@
     },
     "./proxy-client": {
       "default": "./src/proxy-client.ts"
+    },
+    "./playlist": {
+      "default": "./src/playlist.ts"
     }
   },
   "scripts": {

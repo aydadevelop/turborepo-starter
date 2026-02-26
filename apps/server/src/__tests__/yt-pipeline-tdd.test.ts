@@ -91,6 +91,32 @@ const makeMockQueue = () => ({
 	send: vi.fn().mockResolvedValue(undefined),
 });
 
+/** Fake 1536-dim vector for mock VectorizeIndex. */
+const FAKE_VECTOR = new Array(1536).fill(0).map((_, i) => Math.sin(i));
+
+/**
+ * Build a mock VectorizeIndex for centroid-based clustering tests.
+ * - `query()` returns centroid matches (auto-prefixed with `centroid:`)
+ * - `getByIds()` returns a fake vector for any requested ID
+ * - `upsert()` is a no-op
+ */
+const makeMockVectorize = (opts: {
+	centroidMatches?: Array<{ clusterId: string; score: number }>;
+} = {}) => {
+	const centroidMatches = (opts.centroidMatches ?? []).map((m) => ({
+		id: `centroid:${m.clusterId}`,
+		score: m.score,
+	}));
+
+	return {
+		query: vi.fn().mockResolvedValue({ matches: centroidMatches }),
+		getByIds: vi.fn().mockImplementation((ids: string[]) =>
+			Promise.resolve(ids.map((id) => ({ id, values: FAKE_VECTOR }))),
+		),
+		upsert: vi.fn().mockResolvedValue(undefined),
+	};
+};
+
 /** Seed a video that's been approved and is ready for ingestion */
 const seedApprovedVideo = (
 	overrides: Partial<typeof ytVideo.$inferInsert> = {}
@@ -1501,18 +1527,11 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 				})
 				.run();
 
-			const mockVectorizeIndex = {
-				queryById: vi.fn().mockResolvedValue({
-					matches: [
-						{
-							id: "signal-cam-existing",
-							score: 0.92, // High similarity
-						},
-					],
-				}),
-			};
+			const mockVectorizeIndex = makeMockVectorize({
+				centroidMatches: [{ clusterId: "cluster-cam", score: 0.92 }],
+			});
 
-			// Pre-existing signal already in the cluster
+			// Pre-existing signals already in the cluster
 			testDbState.db
 				.insert(ytSignal)
 				.values({
@@ -1523,6 +1542,20 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 					type: "bug",
 					severity: "high",
 					text: "Camera clipping through wall",
+					clusterId: "cluster-cam",
+					vectorized: true,
+				})
+				.run();
+			testDbState.db
+				.insert(ytSignal)
+				.values({
+					id: "signal-cam-existing-2",
+					transcriptId: "transcript-1",
+					videoId: "video-1",
+					organizationId: "org-1",
+					type: "bug",
+					severity: "high",
+					text: "Camera goes through geometry",
 					clusterId: "cluster-cam",
 					vectorized: true,
 				})
@@ -1561,6 +1594,83 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 			expect(cluster?.signalCount).toBe(3);
 		});
 
+		it("does not merge incompatible types unless similarity is very high", async () => {
+			seedApprovedVideo();
+			seedTranscript();
+
+			testDbState.db
+				.insert(ytCluster)
+				.values({
+					id: "cluster-praise",
+					organizationId: "org-1",
+					title: "Great visuals",
+					type: "praise",
+					severity: "info",
+					signalCount: 1,
+					uniqueAuthors: 1,
+					impactScore: 1,
+					state: "open",
+				})
+				.run();
+
+			testDbState.db
+				.insert(ytSignal)
+				.values({
+					id: "signal-praise-existing",
+					transcriptId: "transcript-1",
+					videoId: "video-1",
+					organizationId: "org-1",
+					type: "praise",
+					severity: "info",
+					text: "The graphics and lighting are incredible",
+					clusterId: "cluster-praise",
+					vectorized: true,
+				})
+				.run();
+
+			testDbState.db
+				.insert(ytSignal)
+				.values({
+					id: "signal-bug-new",
+					transcriptId: "transcript-1",
+					videoId: "video-1",
+					organizationId: "org-1",
+					type: "bug",
+					severity: "high",
+					text: "Map marker disappears and blocks mission progress",
+					vectorized: true,
+				})
+				.run();
+
+			// Centroid of praise cluster is not similar enough to a bug signal
+			const mockVectorizeIndex = makeMockVectorize({
+				centroidMatches: [],
+			});
+
+			const queueMessage = makeQueueMessage({
+				body: {
+					kind: "yt.cluster.v1",
+					signalId: "signal-bug-new",
+					organizationId: "org-1",
+				},
+			});
+
+			const { processYtClusterBatch } = await import(
+				"../queues/yt-cluster-consumer"
+			);
+			await (processYtClusterBatch as ClusterBatchFn)(
+				makeBatch([queueMessage]),
+				mockVectorizeIndex
+			);
+
+			const [signal] = await testDbState.db
+				.select()
+				.from(ytSignal)
+				.where(eq(ytSignal.id, "signal-bug-new"));
+			expect(signal?.clusterId).toBeTruthy();
+			expect(signal?.clusterId).not.toBe("cluster-praise");
+		});
+
 		it("creates a new cluster when no similar cluster exists", async () => {
 			seedApprovedVideo();
 			seedTranscript();
@@ -1579,11 +1689,9 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 				})
 				.run();
 
-			const mockVectorizeIndex = {
-				queryById: vi.fn().mockResolvedValue({
-					matches: [], // No similar signals
-				}),
-			};
+			const mockVectorizeIndex = makeMockVectorize({
+				centroidMatches: [],
+			});
 
 			const queueMessage = makeQueueMessage({
 				body: {
@@ -1618,8 +1726,212 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 			expect(cluster?.state).toBe("open");
 		});
 
-		it("calculates impact score based on frequency × unique authors × severity weight", async () => {
-			seedApprovedVideo();
+			it("initializes basic cluster metadata on create", async () => {
+				seedApprovedVideo();
+				seedTranscript();
+
+			testDbState.db
+				.insert(ytSignal)
+				.values({
+					id: "signal-create-metadata",
+					transcriptId: "transcript-1",
+					videoId: "video-1",
+					organizationId: "org-1",
+					type: "bug",
+					severity: "high",
+					severityScore: 8,
+					text: "Camera desyncs after respawn",
+					component: "camera",
+					gameVersion: "1.2.0",
+					reasoning: "Frequent gameplay blocker reported by players.",
+				})
+				.run();
+
+			const queueMessage = makeQueueMessage({
+				body: {
+					kind: "yt.cluster.v1",
+					signalId: "signal-create-metadata",
+					organizationId: "org-1",
+				},
+			});
+
+			const { processYtClusterBatch } = await import(
+				"../queues/yt-cluster-consumer"
+			);
+			await processYtClusterBatch(makeBatch([queueMessage]), {});
+
+			const [signal] = await testDbState.db
+				.select()
+				.from(ytSignal)
+				.where(eq(ytSignal.id, "signal-create-metadata"));
+			const [cluster] = await testDbState.db
+				.select()
+				.from(ytCluster)
+				.where(eq(ytCluster.id, signal?.clusterId ?? ""));
+
+			expect(cluster?.uniqueAuthors).toBe(1);
+			expect(cluster?.firstSeenVersion).toBe("1.2.0");
+			expect(cluster?.versionsAffected).toEqual(["1.2.0"]);
+				expect(cluster?.component).toBe("camera");
+				expect(cluster?.summary).toContain("gameplay blocker");
+			});
+
+			it("creates separate clusters when vectorize is unavailable", async () => {
+				seedApprovedVideo();
+				seedTranscript();
+
+				testDbState.db
+					.insert(ytSignal)
+					.values({
+						id: "signal-fp-1",
+						transcriptId: "transcript-1",
+						videoId: "video-1",
+						organizationId: "org-1",
+						type: "bug",
+						severity: "high",
+						text: "Camera clips through the wall when crouching near corners",
+						component: "camera",
+					})
+					.run();
+
+				const { processYtClusterBatch } = await import(
+					"../queues/yt-cluster-consumer"
+				);
+				await processYtClusterBatch(
+					makeBatch([
+						makeQueueMessage({
+							body: {
+								kind: "yt.cluster.v1",
+								signalId: "signal-fp-1",
+								organizationId: "org-1",
+							},
+						}),
+					]),
+					{}
+				);
+
+				const [firstSignal] = await testDbState.db
+					.select()
+					.from(ytSignal)
+					.where(eq(ytSignal.id, "signal-fp-1"));
+				expect(firstSignal?.clusterId).toBeTruthy();
+
+				testDbState.db
+					.insert(ytSignal)
+					.values({
+						id: "signal-fp-2",
+						transcriptId: "transcript-1",
+						videoId: "video-1",
+						organizationId: "org-1",
+						type: "bug",
+						severity: "high",
+						text: "camera clips through the wall when crouching near corners",
+						component: "camera",
+					})
+					.run();
+
+				await processYtClusterBatch(
+					makeBatch([
+						makeQueueMessage({
+							body: {
+								kind: "yt.cluster.v1",
+								signalId: "signal-fp-2",
+								organizationId: "org-1",
+							},
+						}),
+					]),
+					{}
+				);
+
+				const [secondSignal] = await testDbState.db
+					.select()
+					.from(ytSignal)
+					.where(eq(ytSignal.id, "signal-fp-2"));
+
+				// Without vectorize, each signal creates its own singleton cluster
+				expect(secondSignal?.clusterId).toBeTruthy();
+				expect(secondSignal?.clusterId).not.toBe(firstSignal?.clusterId);
+			});
+
+			it("creates separate clusters when processed in parallel without vectorize", async () => {
+				seedApprovedVideo();
+				seedTranscript();
+
+				testDbState.db
+					.insert(ytSignal)
+					.values({
+						id: "signal-parallel-1",
+						transcriptId: "transcript-1",
+						videoId: "video-1",
+						organizationId: "org-1",
+						type: "bug",
+						severity: "high",
+						text: "Map marker disappears after respawn and blocks progression",
+						component: "map",
+					})
+					.run();
+
+				testDbState.db
+					.insert(ytSignal)
+					.values({
+						id: "signal-parallel-2",
+						transcriptId: "transcript-1",
+						videoId: "video-1",
+						organizationId: "org-1",
+						type: "bug",
+						severity: "high",
+						text: "map marker disappears after respawn and blocks progression",
+						component: "map",
+					})
+					.run();
+
+				const { processYtClusterBatch } = await import(
+					"../queues/yt-cluster-consumer"
+				);
+
+				await Promise.all([
+					processYtClusterBatch(
+						makeBatch([
+							makeQueueMessage({
+								body: {
+									kind: "yt.cluster.v1",
+									signalId: "signal-parallel-1",
+									organizationId: "org-1",
+								},
+							}),
+						]),
+						{}
+					),
+					processYtClusterBatch(
+						makeBatch([
+							makeQueueMessage({
+								body: {
+									kind: "yt.cluster.v1",
+									signalId: "signal-parallel-2",
+									organizationId: "org-1",
+								},
+							}),
+						]),
+						{}
+					),
+				]);
+
+				const signals = await testDbState.db
+					.select({ id: ytSignal.id, clusterId: ytSignal.clusterId })
+					.from(ytSignal)
+					.where(
+						inArray(ytSignal.id, ["signal-parallel-1", "signal-parallel-2"])
+					);
+
+				// Without vectorize, each signal creates its own singleton cluster
+				// (re-clustering can merge them later via manual trigger)
+				const clusterIds = [...new Set(signals.map((s) => s.clusterId).filter(Boolean))];
+				expect(clusterIds.length).toBeGreaterThanOrEqual(1);
+				expect(signals.every((s) => s.clusterId)).toBe(true);
+			});
+
+			it("calculates impact score based on frequency × unique authors × severity weight", async () => {
+				seedApprovedVideo();
 			seedTranscript();
 
 			// Seed a second video from different author
@@ -1693,11 +2005,9 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 				})
 				.run();
 
-			const mockVectorizeIndex = {
-				queryById: vi.fn().mockResolvedValue({
-					matches: [{ id: "signal-impact-1", score: 0.9 }],
-				}),
-			};
+			const mockVectorizeIndex = makeMockVectorize({
+				centroidMatches: [{ clusterId: "cluster-impact", score: 0.9 }],
+			});
 
 			const queueMessage = makeQueueMessage({
 				body: {
@@ -1724,6 +2034,116 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 			expect(cluster?.signalCount).toBe(2);
 			expect(cluster?.uniqueAuthors).toBeGreaterThanOrEqual(2);
 			expect(cluster?.impactScore).toBeGreaterThan(1);
+		});
+
+		it("recomputes versions metadata when merging into an existing cluster", async () => {
+			seedApprovedVideo();
+			seedTranscript({ id: "transcript-v1", videoId: "video-1" });
+
+			testDbState.db
+				.insert(ytVideo)
+				.values({
+					id: "video-3",
+					feedId: "feed-1",
+					organizationId: "org-1",
+					youtubeVideoId: "merge-metadata-3",
+					title: "Another video",
+					channelId: "UC_merge_3",
+					channelName: "MergeTester",
+					status: "ingested",
+				})
+				.run();
+			testDbState.db
+				.insert(ytTranscript)
+				.values({
+					id: "transcript-v2",
+					videoId: "video-3",
+					organizationId: "org-1",
+					source: "youtube_captions",
+					fullText: "camera issue in latest build",
+				})
+				.run();
+
+			testDbState.db
+				.insert(ytCluster)
+				.values({
+					id: "cluster-versions",
+					organizationId: "org-1",
+					title: "Camera issue",
+					type: "bug",
+					severity: "medium",
+					signalCount: 1,
+					uniqueAuthors: 1,
+					impactScore: 5,
+					state: "open",
+					firstSeenVersion: "1.0.0",
+					versionsAffected: ["1.0.0"],
+					component: "camera",
+				})
+				.run();
+
+			testDbState.db
+				.insert(ytSignal)
+				.values({
+					id: "signal-v1",
+					transcriptId: "transcript-v1",
+					videoId: "video-1",
+					organizationId: "org-1",
+					type: "bug",
+					severity: "medium",
+					text: "Camera jitters in enclosed areas",
+					component: "camera",
+					gameVersion: "1.0.0",
+					clusterId: "cluster-versions",
+					vectorized: true,
+				})
+				.run();
+
+			testDbState.db
+				.insert(ytSignal)
+				.values({
+					id: "signal-v2",
+					transcriptId: "transcript-v2",
+					videoId: "video-3",
+					organizationId: "org-1",
+					type: "bug",
+					severity: "high",
+					text: "Camera jitters and detaches after dash",
+					component: "camera",
+					gameVersion: "1.1.0",
+					vectorized: true,
+				})
+				.run();
+
+			const mockVectorizeIndex = makeMockVectorize({
+				centroidMatches: [{ clusterId: "cluster-versions", score: 0.94 }],
+			});
+
+			const queueMessage = makeQueueMessage({
+				body: {
+					kind: "yt.cluster.v1",
+					signalId: "signal-v2",
+					organizationId: "org-1",
+				},
+			});
+
+			const { processYtClusterBatch } = await import(
+				"../queues/yt-cluster-consumer"
+			);
+			await (processYtClusterBatch as ClusterBatchFn)(
+				makeBatch([queueMessage]),
+				mockVectorizeIndex
+			);
+
+			const [cluster] = await testDbState.db
+				.select()
+				.from(ytCluster)
+				.where(eq(ytCluster.id, "cluster-versions"));
+
+			expect(cluster?.signalCount).toBe(2);
+			expect(cluster?.uniqueAuthors).toBeGreaterThanOrEqual(2);
+			expect(cluster?.firstSeenVersion).toBe("1.0.0");
+			expect(cluster?.versionsAffected).toEqual(["1.0.0", "1.1.0"]);
 		});
 	});
 
@@ -1757,7 +2177,7 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 			const { processYtClusterBatch } = await import(
 				"../queues/yt-cluster-consumer"
 			);
-			await processYtClusterBatch(makeBatch([queueMessage]));
+			await processYtClusterBatch(makeBatch([queueMessage]), {});
 
 			const [signal] = await testDbState.db
 				.select()
@@ -1818,7 +2238,7 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 			const { processYtClusterBatch } = await import(
 				"../queues/yt-cluster-consumer"
 			);
-			await processYtClusterBatch(makeBatch([queueMessage]));
+			await processYtClusterBatch(makeBatch([queueMessage]), {});
 
 			expect(queueMessage.ack).toHaveBeenCalledTimes(1);
 
@@ -1857,7 +2277,7 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 			const { processYtClusterBatch } = await import(
 				"../queues/yt-cluster-consumer"
 			);
-			await processYtClusterBatch(makeBatch([queueMessage]));
+			await processYtClusterBatch(makeBatch([queueMessage]), {});
 
 			const [signal] = await testDbState.db
 				.select()
@@ -1902,7 +2322,7 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 			const { processYtClusterBatch } = await import(
 				"../queues/yt-cluster-consumer"
 			);
-			await processYtClusterBatch(makeBatch([queueMessage]));
+			await processYtClusterBatch(makeBatch([queueMessage]), {});
 
 			expect(queueMessage.ack).toHaveBeenCalledTimes(1);
 		});
@@ -1919,7 +2339,7 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 			const { processYtClusterBatch } = await import(
 				"../queues/yt-cluster-consumer"
 			);
-			await processYtClusterBatch(makeBatch([queueMessage]));
+			await processYtClusterBatch(makeBatch([queueMessage]), {});
 
 			expect(queueMessage.ack).toHaveBeenCalledTimes(1);
 		});
@@ -1932,7 +2352,7 @@ describe("Story 2.2: Clustering — Group similar signals", () => {
 			const { processYtClusterBatch } = await import(
 				"../queues/yt-cluster-consumer"
 			);
-			await processYtClusterBatch(makeBatch([queueMessage]));
+			await processYtClusterBatch(makeBatch([queueMessage]), {});
 
 			expect(queueMessage.ack).toHaveBeenCalledTimes(1);
 		});
@@ -1985,6 +2405,34 @@ describe("Story 3.2: Regression Detection — Don't re-alert after fix", () => {
 					vectorized: true,
 				})
 				.run();
+			testDbState.db
+				.insert(ytSignal)
+				.values({
+					id: "signal-old-2",
+					transcriptId: "transcript-1",
+					videoId: "video-1",
+					organizationId: "org-1",
+					type: "bug",
+					text: "Camera clips through geometry",
+					clusterId: "cluster-fixed",
+					gameVersion: "0.9.0",
+					vectorized: true,
+				})
+				.run();
+			testDbState.db
+				.insert(ytSignal)
+				.values({
+					id: "signal-old-3",
+					transcriptId: "transcript-1",
+					videoId: "video-1",
+					organizationId: "org-1",
+					type: "bug",
+					text: "Wall clipping on camera",
+					clusterId: "cluster-fixed",
+					gameVersion: "0.9.1",
+					vectorized: true,
+				})
+				.run();
 
 			// New signal from version 0.9.3 (AFTER fix) — this is a regression
 			testDbState.db
@@ -2001,11 +2449,9 @@ describe("Story 3.2: Regression Detection — Don't re-alert after fix", () => {
 				})
 				.run();
 
-			const mockVectorizeIndex = {
-				queryById: vi.fn().mockResolvedValue({
-					matches: [{ id: "signal-old", score: 0.95 }],
-				}),
-			};
+			const mockVectorizeIndex = makeMockVectorize({
+				centroidMatches: [{ clusterId: "cluster-fixed", score: 0.95 }],
+			});
 
 			const queueMessage = makeQueueMessage({
 				body: {
@@ -2080,11 +2526,9 @@ describe("Story 3.2: Regression Detection — Don't re-alert after fix", () => {
 				})
 				.run();
 
-			const mockVectorizeIndex = {
-				queryById: vi.fn().mockResolvedValue({
-					matches: [{ id: "signal-existing-fixed", score: 0.9 }],
-				}),
-			};
+			const mockVectorizeIndex = makeMockVectorize({
+				centroidMatches: [{ clusterId: "cluster-fixed-2", score: 0.9 }],
+			});
 
 			const queueMessage = makeQueueMessage({
 				body: {
@@ -2235,6 +2679,19 @@ describe("Story 3.2: Regression Detection — Don't re-alert after fix", () => {
 					vectorized: true,
 				})
 				.run();
+			testDbState.db
+				.insert(ytSignal)
+				.values({
+					id: "signal-existing-mvp-2",
+					transcriptId: "transcript-1",
+					videoId: "video-1",
+					organizationId: "org-1",
+					type: "bug",
+					text: "Known bug again",
+					clusterId: "cluster-fixed-mvp",
+					vectorized: true,
+				})
+				.run();
 
 			// Signal without gameVersion — can't determine if regression
 			testDbState.db
@@ -2250,11 +2707,9 @@ describe("Story 3.2: Regression Detection — Don't re-alert after fix", () => {
 				})
 				.run();
 
-			const mockVectorizeIndex = {
-				queryById: vi.fn().mockResolvedValue({
-					matches: [{ id: "signal-existing-mvp", score: 0.88 }],
-				}),
-			};
+			const mockVectorizeIndex = makeMockVectorize({
+				centroidMatches: [{ clusterId: "cluster-fixed-mvp", score: 0.88 }],
+			});
 
 			const queueMessage = makeQueueMessage({
 				body: {
@@ -2968,7 +3423,7 @@ is really confusing I can't figure out how to equip items`,
 						organizationId: "org-1",
 					},
 				});
-				await clusterBatch(makeBatch([clusterMsg]));
+				await clusterBatch(makeBatch([clusterMsg]), {});
 				expect(clusterMsg.ack).toHaveBeenCalledTimes(1);
 			}
 

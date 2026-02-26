@@ -18,7 +18,7 @@
 			return;
 		}
 		if ((user as { role?: string }).role !== "admin") {
-			goto(resolve("/dashboard"));
+			goto(resolve("/dashboard/settings"));
 		}
 	});
 

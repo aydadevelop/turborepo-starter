@@ -27,7 +27,7 @@
     "dev:server:clean": "bun run db:reset:local && bun run dev:server",
     "db:push": "turbo run db:push --filter=@my-app/db",
     "db:migrate": "turbo run db:migrate --filter=@my-app/db",
-    "db:generate": "turbo run db:generate --filter=@my-app/db",
+    "db:generate": "TURBO_UI=false turbo run db:generate --filter=@my-app/db",
     "db:reset:local": "turbo run db:reset:local --filter=@my-app/db",
     "db:seed": "turbo run db:seed --filter=@my-app/db --",
     "db:studio": "turbo run db:studio --filter=@my-app/db",

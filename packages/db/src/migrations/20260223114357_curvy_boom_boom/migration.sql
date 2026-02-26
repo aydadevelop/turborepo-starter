@@ -1,1 +1,0 @@
-ALTER TABLE `yt_feed` ADD `channel_id` text;

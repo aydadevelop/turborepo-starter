@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { CollapsibleContent } from "@my-app/ui/components/collapsible";
-import { cn } from "@my-app/ui/lib/utils";
-import type { Snippet } from "svelte";
+	import { cn } from "@my-app/ui/lib/utils";
+	import type { Snippet } from "svelte";
 
-let {
-	class: className,
-	children,
-}: {
-	class?: string;
-	children: Snippet;
-} = $props();
+	let {
+		class: className,
+		children,
+	}: {
+		class?: string;
+		children: Snippet;
+	} = $props();
 </script>
 
 <CollapsibleContent
