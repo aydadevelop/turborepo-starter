@@ -21,7 +21,6 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
     "@my-app/config": "*",
-    "@my-app/infra": "*",
     "@types/node": "^22.19.11",
     "typescript": "^5",
     "ultracite": "^7.2.3"

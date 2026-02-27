@@ -12,7 +12,7 @@
 	// Paths that require an active organization. The root /, /login,
 	// /org/*, and /invitations are intentionally excluded so users can
 	// always reach the org-creation or invitation-acceptance flows.
-	const ORG_REQUIRED_PREFIXES = ["/chat", "/youtube", "/dashboard"];
+	const ORG_REQUIRED_PREFIXES = ["/chat", "/dashboard"];
 
 	const sessionQuery = authClient.useSession();
 

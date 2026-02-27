@@ -2,12 +2,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type BetterSqliteDatabase from "better-sqlite3";
 import { sql } from "drizzle-orm";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 
 import { relations } from "../relations";
-// biome-ignore lint/performance/noNamespaceImport: required by drizzle schema object
-import * as schema from "../schema";
 import { POST_MIGRATION_TRIGGERS_SQL } from "../triggers";
 
 // better-sqlite3 loads a native binary that segfaults Bun's module loader.
@@ -32,8 +29,17 @@ const migrationsFolder = path.resolve(
 );
 
 type TestSqliteClient = BetterSqliteDatabase.Database;
+const createRawTestDatabase = () => {
+	const db = drizzle(":memory:", { relations });
+	db.$client.pragma("journal_mode = WAL");
+	migrateDb(db, { migrationsFolder });
+	if (POST_MIGRATION_TRIGGERS_SQL.trim().length > 0) {
+		db.$client.exec(POST_MIGRATION_TRIGGERS_SQL);
+	}
+	return db;
+};
 
-export type TestDatabase = BetterSQLite3Database<typeof schema> & {
+export type TestDatabase = ReturnType<typeof createRawTestDatabase> & {
 	$client: TestSqliteClient;
 };
 
@@ -50,17 +56,8 @@ export const createTestDatabase = (): {
 	db: TestDatabase;
 	close: () => void;
 } => {
-	const db = drizzle(":memory:", { schema, relations });
-	db.$client.pragma("journal_mode = WAL");
-	migrateDb(db, { migrationsFolder });
-	if (POST_MIGRATION_TRIGGERS_SQL.trim().length > 0) {
-		db.$client.exec(POST_MIGRATION_TRIGGERS_SQL);
-	}
-
-	return {
-		db,
-		close: () => db.$client.close(),
-	};
+	const db = createRawTestDatabase() as TestDatabase;
+	return { db, close: () => db.$client.close() };
 };
 
 export const clearTestDatabase = (db: TestDatabase): void => {

@@ -100,7 +100,7 @@
 			queryClient.invalidateQueries({ queryKey: ["organization"] });
 			queryClient.invalidateQueries({ queryKey: ["user-organizations"] });
 			queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] });
-			goto(resolve("/youtube/feeds"));
+			goto(resolve("/dashboard/settings"));
 		} catch (err) {
 			errorMessage =
 				err instanceof Error
@@ -115,7 +115,7 @@
 	<div class="mb-8 text-center">
 		<h1 class="text-3xl font-bold">Create Organization</h1>
 		<p class="mt-2 text-muted-foreground">
-			Create an organization to manage your YouTube video projects and channels
+			Create an organization to manage your workspace settings and team access
 		</p>
 	</div>
 
@@ -123,7 +123,7 @@
 		<Alert.Root class="mb-6">
 			<Alert.Title>Welcome! One more step</Alert.Title>
 			<Alert.Description>
-				Your account is ready. Create an organization to start managing your YouTube projects and channels.
+				Your account is ready. Create an organization to start managing your workspace.
 			</Alert.Description>
 		</Alert.Root>
 	{:else if page.url.searchParams.get('reason') === 'required'}
@@ -184,13 +184,13 @@
 
 				<p class="mb-3">
 					This Agreement governs the relationship between the User and the
-					Service Provider in connection with the provision of YouTube video
+					Service Provider in connection with the provision of workspace
 					management services.
 				</p>
 
 				<p class="mb-3">
-					The platform facilitates YouTube channel and video project management
-					on behalf of registered organizations.
+					The platform facilitates organization-level collaboration and workflow
+					management on behalf of registered organizations.
 				</p>
 
 				<p class="mb-3">
@@ -212,8 +212,8 @@
 				<p class="mb-4 font-semibold">2. Subject Matter</p>
 				<p class="mb-3">
 					2.1. The Service Provider grants the User access to tools for managing
-					YouTube channels, video projects, transcriptions, and related media
-					workflows within the platform.
+					tasks, reminders, notifications, and related operational workflows
+					within the platform.
 				</p>
 
 				<p class="mb-4 font-semibold">3. Financial Terms</p>

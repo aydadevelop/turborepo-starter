@@ -14,7 +14,6 @@
 	const STATIC_LINKS = [
 		// { to: resolve("/"), label: "Home" },
 		{ to: resolve("/chat"), label: "Chat" },
-		{ to: resolve("/youtube"), label: "YouTube" },
 	] as const;
 
 	// Stable queryFn — hoisted outside derived() so the function reference

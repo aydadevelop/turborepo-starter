@@ -2,14 +2,12 @@ import { auth } from "@my-app/auth";
 import { db } from "@my-app/db";
 import { member } from "@my-app/db/schema/auth";
 import { notificationQueueMessageSchema } from "@my-app/notifications/contracts";
-import type { KVStore } from "@my-app/youtube/proxy-client";
 import { and, asc, eq } from "drizzle-orm";
 import type { Context as HonoContext } from "hono";
 
 import { recurringTaskTickMessageSchema } from "./contracts/recurring-task-queue";
 import type { EventBus } from "./lib/event-bus";
 import { processRecurringTaskTick } from "./tasks/recurring";
-import type { VectorizeIndexLike } from "./services/youtube/vectorize";
 
 export interface CreateContextOptions {
 	context: HonoContext;
@@ -153,13 +151,6 @@ export interface Context {
 	requestHostname: string;
 	requestUrl: string;
 	session: AuthSession;
-	twoCaptchaApiKey?: string;
-	ytClusterQueue?: NotificationQueueProducer;
-	ytDiscoveryQueue?: NotificationQueueProducer;
-	ytIngestQueue?: NotificationQueueProducer;
-	ytNlpQueue?: NotificationQueueProducer;
-	ytProxyCacheKv?: KVStore;
-	ytVectorize?: VectorizeIndexLike;
 }
 
 /**
@@ -171,11 +162,6 @@ export interface OrganizationContext extends Context {
 	eventBus: EventBus;
 	notificationQueue?: NotificationQueueProducer;
 	recurringTaskQueue?: NotificationQueueProducer;
-	ytClusterQueue?: NotificationQueueProducer;
-	ytDiscoveryQueue?: NotificationQueueProducer;
-	ytIngestQueue?: NotificationQueueProducer;
-	ytNlpQueue?: NotificationQueueProducer;
-	ytVectorize?: VectorizeIndexLike;
 }
 
 const parseCookiesFromHeader = (
@@ -296,22 +282,11 @@ export async function createContext({
 			env?: {
 				NOTIFICATION_QUEUE?: unknown;
 				RECURRING_TASK_QUEUE?: unknown;
-				TWO_CAPTCHA_API_KEY?: string;
-				YT_CLUSTER_QUEUE?: unknown;
-				YT_DISCOVERY_QUEUE?: unknown;
-				YT_INGEST_QUEUE?: unknown;
-				YT_NLP_QUEUE?: unknown;
-				YT_PROXY_CACHE?: unknown;
-				YT_SIGNALS_VECTORIZE?: unknown;
 			};
 		}
 	).env;
 	const notificationQueueCandidate = envQueues?.NOTIFICATION_QUEUE;
 	const recurringTaskQueueCandidate = envQueues?.RECURRING_TASK_QUEUE;
-	const ytClusterQueueCandidate = envQueues?.YT_CLUSTER_QUEUE;
-	const ytDiscoveryQueueCandidate = envQueues?.YT_DISCOVERY_QUEUE;
-	const ytIngestQueueCandidate = envQueues?.YT_INGEST_QUEUE;
-	const ytNlpQueueCandidate = envQueues?.YT_NLP_QUEUE;
 	const notificationQueue = isNotificationQueueProducer(
 		notificationQueueCandidate
 	)
@@ -321,20 +296,6 @@ export async function createContext({
 		recurringTaskQueueCandidate
 	)
 		? recurringTaskQueueCandidate
-		: undefined;
-	const ytClusterQueue = isNotificationQueueProducer(ytClusterQueueCandidate)
-		? ytClusterQueueCandidate
-		: undefined;
-	const ytDiscoveryQueue = isNotificationQueueProducer(
-		ytDiscoveryQueueCandidate
-	)
-		? ytDiscoveryQueueCandidate
-		: undefined;
-	const ytIngestQueue = isNotificationQueueProducer(ytIngestQueueCandidate)
-		? ytIngestQueueCandidate
-		: undefined;
-	const ytNlpQueue = isNotificationQueueProducer(ytNlpQueueCandidate)
-		? ytNlpQueueCandidate
 		: undefined;
 	const resolvedNotificationQueue =
 		notificationQueue ??
@@ -347,26 +308,6 @@ export async function createContext({
 			? inlineRecurringTaskQueueProducer
 			: undefined);
 
-	const ytVectorizeCandidate = envQueues?.YT_SIGNALS_VECTORIZE;
-	const ytVectorize =
-		ytVectorizeCandidate &&
-		typeof ytVectorizeCandidate === "object" &&
-		"getByIds" in ytVectorizeCandidate &&
-		typeof (ytVectorizeCandidate as { getByIds?: unknown }).getByIds ===
-			"function"
-			? (ytVectorizeCandidate as VectorizeIndexLike)
-			: undefined;
-
-	const twoCaptchaApiKey = envQueues?.TWO_CAPTCHA_API_KEY?.trim() || undefined;
-	const ytProxyCacheKvCandidate = envQueues?.YT_PROXY_CACHE;
-	const ytProxyCacheKv =
-		ytProxyCacheKvCandidate &&
-		typeof ytProxyCacheKvCandidate === "object" &&
-		"get" in ytProxyCacheKvCandidate &&
-		typeof (ytProxyCacheKvCandidate as { get?: unknown }).get === "function"
-			? (ytProxyCacheKvCandidate as KVStore)
-			: undefined;
-
 	return {
 		session,
 		activeMembership,
@@ -375,12 +316,5 @@ export async function createContext({
 		requestCookies,
 		notificationQueue: resolvedNotificationQueue,
 		recurringTaskQueue: resolvedRecurringTaskQueue,
-		twoCaptchaApiKey,
-		ytClusterQueue,
-		ytDiscoveryQueue,
-		ytIngestQueue,
-		ytNlpQueue,
-		ytProxyCacheKv,
-		ytVectorize,
 	};
 }

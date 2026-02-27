@@ -41,25 +41,16 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**", ".svelte-kit/**", "build/**"]
     },
-    "transit": {
-      "dependsOn": ["^transit"]
-    },
     "//#format-and-lint": {},
     "//#format-and-lint:fix": {
       "cache": false
     },
-    "lint": {
-      "dependsOn": ["transit"]
-    },
+    "lint": {},
     "lint:fix": {
       "cache": false
     },
-    "check-types": {
-      "dependsOn": ["transit"]
-    },
-    "test": {
-      "dependsOn": ["^transit"]
-    },
+    "check-types": {},
+    "test": {},
     "test:watch": {
       "cache": false,
       "persistent": true

@@ -8,12 +8,8 @@ import {
 	D1Database,
 	enableWorkerSubdomain,
 	getAccountSubdomain,
-	KVNamespace,
 	Queue,
-	R2Bucket,
 	SvelteKit,
-	VectorizeIndex,
-	VectorizeMetadataIndex,
 	Worker,
 } from "alchemy/cloudflare";
 import { CloudflareStateStore } from "alchemy/state";
@@ -166,7 +162,7 @@ if (isDeploying) {
 }
 
 // Capture whether real Cloudflare API credentials are available BEFORE placeholder
-// overrides. Vectorize has no local emulation and requires real API access.
+// overrides.
 const hasRealCloudflareCredentials = !!(
 	readNonEmptyEnv("CLOUDFLARE_API_TOKEN") ||
 	readNonEmptyEnv("CLOUDFLARE_API_KEY")
@@ -243,66 +239,6 @@ const { queue: notificationQueue, dlq: notificationDeadLetterQueue } =
 	await createQueuePair("notification");
 const { queue: recurringTaskQueue, dlq: recurringTaskDeadLetterQueue } =
 	await createQueuePair("recurring-task");
-
-// ─── YouTube Pipeline Infrastructure ─────────────────────────────────────────
-
-const ytTranscriptsBucket = await R2Bucket("yt-transcripts", {
-	adopt: isDeploying,
-	...cloudflareApiOptions,
-});
-
-const { queue: ytDiscoveryQueue, dlq: ytDiscoveryDlq } =
-	await createQueuePair("yt-discovery");
-const { queue: ytIngestQueue, dlq: ytIngestDlq } =
-	await createQueuePair("yt-ingest");
-const { queue: ytVectorizeQueue, dlq: ytVectorizeDlq } =
-	await createQueuePair("yt-vectorize");
-const { queue: ytNlpQueue, dlq: ytNlpDlq } = await createQueuePair("yt-nlp");
-const { queue: ytClusterQueue, dlq: ytClusterDlq } =
-	await createQueuePair("yt-cluster");
-const { queue: ytTranscribeQueue, dlq: ytTranscribeDlq } =
-	await createQueuePair("yt-transcribe");
-
-// VectorizeIndex always calls the real Cloudflare API (no local emulation).
-// Skip it when real Cloudflare credentials are unavailable (e2e / offline dev).
-const canUseVectorize = !isE2E && (isDeploying || hasRealCloudflareCredentials);
-const ytSignalsVectorize = canUseVectorize
-	? await VectorizeIndex("yt-signals", {
-			dimensions: 1536,
-			metric: "cosine",
-			adopt: isDeploying,
-			...cloudflareApiOptions,
-		})
-	: undefined;
-
-// Required for metadata-filtered ANN queries in clustering.
-// Note: vectors inserted before index creation need re-upsert/recreate to become filterable.
-if (ytSignalsVectorize) {
-	await VectorizeMetadataIndex("yt-signals-kind", {
-		index: ytSignalsVectorize,
-		propertyName: "kind",
-		indexType: "string",
-	});
-
-	await VectorizeMetadataIndex("yt-signals-organization-id", {
-		index: ytSignalsVectorize,
-		propertyName: "organizationId",
-		indexType: "string",
-	});
-}
-
-// KV for caching 2Captcha proxy lists and ASN data across Worker invocations.
-const ytProxyCacheKv = await KVNamespace("yt-proxy-cache", {
-	adopt: isDeploying,
-	...cloudflareApiOptions,
-});
-
-if (!canUseVectorize && isLocalDevRuntime) {
-	console.warn(
-		"[infra] Vectorize index skipped — no real Cloudflare credentials. " +
-			"Vectorize/cluster pipeline steps will be skipped until credentials are configured."
-	);
-}
 
 const parsePort = (value: string | undefined, fallback: number): number => {
 	if (!value) {
@@ -417,21 +353,10 @@ export const server = await Worker("server", {
 	compatibility: "node",
 	adopt: isDeploying,
 	...cloudflareApiOptions,
-	// Run stuck-ingest recovery every 15 minutes
-	crons: ["*/15 * * * *"],
 	bindings: {
 		DB: db,
 		NOTIFICATION_QUEUE: notificationQueue,
 		RECURRING_TASK_QUEUE: recurringTaskQueue,
-		YT_DISCOVERY_QUEUE: ytDiscoveryQueue,
-		YT_INGEST_QUEUE: ytIngestQueue,
-		YT_VECTORIZE_QUEUE: ytVectorizeQueue,
-		YT_NLP_QUEUE: ytNlpQueue,
-		YT_CLUSTER_QUEUE: ytClusterQueue,
-		YT_TRANSCRIBE_QUEUE: ytTranscribeQueue,
-		YT_TRANSCRIPTS_BUCKET: ytTranscriptsBucket,
-		...(ytSignalsVectorize ? { YT_SIGNALS_VECTORIZE: ytSignalsVectorize } : {}),
-		YT_PROXY_CACHE: ytProxyCacheKv,
 		OPEN_ROUTER_API_KEY: alchemy.secret.env(
 			"OPEN_ROUTER_API_KEY",
 			openRouterApiKey
@@ -455,10 +380,6 @@ export const server = await Worker("server", {
 			"CLOUDPAYMENTS_API_SECRET",
 			cloudpaymentsApiSecret
 		),
-		TWO_CAPTCHA_API_KEY: alchemy.secret.env(
-			"TWO_CAPTCHA_API_KEY",
-			readNonEmptyEnv("TWO_CAPTCHA_API_KEY") ?? ""
-		),
 	},
 	eventSources: [
 		{
@@ -470,75 +391,6 @@ export const server = await Worker("server", {
 				maxWaitTimeMs: 1500,
 				retryDelay: 30,
 				deadLetterQueue: recurringTaskDeadLetterQueue,
-			},
-		},
-		{
-			queue: ytDiscoveryQueue,
-			settings: {
-				batchSize: 5,
-				maxConcurrency: 1,
-				maxRetries: 3,
-				maxWaitTimeMs: 2000,
-				retryDelay: 60,
-				deadLetterQueue: ytDiscoveryDlq,
-			},
-		},
-		{
-			queue: ytIngestQueue,
-			settings: {
-				// batchSize=1: each worker instance handles one video so slow videos
-				// don't block others (sequential processing per batch).
-				// maxConcurrency=10: up to 10 parallel worker instances.
-				batchSize: 1,
-				maxConcurrency: 10,
-				maxRetries: 3,
-				maxWaitTimeMs: 5000,
-				retryDelay: 60,
-				deadLetterQueue: ytIngestDlq,
-			},
-		},
-		{
-			queue: ytVectorizeQueue,
-			settings: {
-				batchSize: 5,
-				maxConcurrency: 2,
-				maxRetries: 3,
-				maxWaitTimeMs: 3000,
-				retryDelay: 30,
-				deadLetterQueue: ytVectorizeDlq,
-			},
-		},
-		{
-			queue: ytNlpQueue,
-			settings: {
-				batchSize: 3,
-				maxConcurrency: 1,
-				maxRetries: 3,
-				maxWaitTimeMs: 5000,
-				retryDelay: 60,
-				deadLetterQueue: ytNlpDlq,
-			},
-		},
-		{
-			queue: ytClusterQueue,
-			settings: {
-				batchSize: 5,
-				maxConcurrency: 1,
-				maxRetries: 3,
-				maxWaitTimeMs: 3000,
-				retryDelay: 30,
-				deadLetterQueue: ytClusterDlq,
-			},
-		},
-		{
-			queue: ytTranscribeQueue,
-			settings: {
-				batchSize: 2,
-				maxConcurrency: 1,
-				maxRetries: 3,
-				maxWaitTimeMs: 10_000,
-				retryDelay: 120,
-				deadLetterQueue: ytTranscribeDlq,
 			},
 		},
 	],

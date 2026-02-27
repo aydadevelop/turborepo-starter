@@ -1,5 +1,10 @@
 {
   "mcpServers": {
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/",
+      "type": "remote",
+      "bearer_token_env_var": "GITHUB_PAT_TOKEN"
+    },
     "context7": {
       "command": "bunx",
       "args": ["@upstash/context7-mcp"],
@@ -10,6 +15,7 @@
       "args": ["mcp-remote", "https://docs.mcp.cloudflare.com/sse"],
       "type": "stdio"
     },
+
     "better-auth": {
       "command": "bunx",
       "args": [

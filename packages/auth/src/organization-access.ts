@@ -8,10 +8,6 @@ export const organizationStatements = {
 	support: ["create", "read", "update", "delete"],
 	intake: ["create", "read", "update", "delete"],
 	notification: ["create", "read", "update", "delete"],
-	yt_feed: ["create", "read", "update", "delete"],
-	yt_video: ["create", "read", "update", "delete"],
-	yt_signal: ["create", "read", "update", "delete"],
-	yt_cluster: ["create", "read", "update", "delete"],
 } as const;
 
 export const organizationAccessControl = createAccessControl(
@@ -29,10 +25,6 @@ export const orgOwnerAc = organizationAccessControl.newRole({
 	support: ["create", "read", "update", "delete"],
 	intake: ["create", "read", "update", "delete"],
 	notification: ["create", "read", "update", "delete"],
-	yt_feed: ["create", "read", "update", "delete"],
-	yt_video: ["create", "read", "update", "delete"],
-	yt_signal: ["create", "read", "update", "delete"],
-	yt_cluster: ["create", "read", "update", "delete"],
 });
 
 export const orgAdminAc = organizationAccessControl.newRole({
@@ -46,10 +38,6 @@ export const orgAdminAc = organizationAccessControl.newRole({
 	support: ["create", "read", "update", "delete"],
 	intake: ["create", "read", "update", "delete"],
 	notification: ["create", "read", "update", "delete"],
-	yt_feed: ["create", "read", "update", "delete"],
-	yt_video: ["create", "read", "update", "delete"],
-	yt_signal: ["create", "read", "update", "delete"],
-	yt_cluster: ["create", "read", "update", "delete"],
 });
 
 export const managerAc = organizationAccessControl.newRole({
@@ -63,10 +51,6 @@ export const managerAc = organizationAccessControl.newRole({
 	support: ["create", "read", "update"],
 	intake: ["create", "read", "update"],
 	notification: ["create", "read", "update"],
-	yt_feed: ["create", "read", "update"],
-	yt_video: ["create", "read", "update"],
-	yt_signal: ["read"],
-	yt_cluster: ["create", "read", "update"],
 });
 
 export const agentAc = organizationAccessControl.newRole({
@@ -80,10 +64,6 @@ export const agentAc = organizationAccessControl.newRole({
 	support: ["create", "read", "update"],
 	intake: ["create", "read"],
 	notification: ["create", "read"],
-	yt_feed: ["read"],
-	yt_video: ["create", "read"],
-	yt_signal: ["read"],
-	yt_cluster: ["read"],
 });
 
 export const memberAc = organizationAccessControl.newRole({
@@ -97,10 +77,6 @@ export const memberAc = organizationAccessControl.newRole({
 	support: ["read"],
 	intake: ["read"],
 	notification: ["read"],
-	yt_feed: ["read"],
-	yt_video: ["read"],
-	yt_signal: ["read"],
-	yt_cluster: ["read"],
 });
 
 export const customerAc = organizationAccessControl.newRole({
@@ -114,10 +90,6 @@ export const customerAc = organizationAccessControl.newRole({
 	support: ["read"],
 	intake: [],
 	notification: [],
-	yt_feed: [],
-	yt_video: [],
-	yt_signal: [],
-	yt_cluster: [],
 });
 
 export const organizationRoles = {
