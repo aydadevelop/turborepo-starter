@@ -371,18 +371,21 @@ async function setCachedBalance(
 		.catch((e) => console.warn("[proxy] KV balance write error:", e));
 }
 
-async function hasInsufficientFlowMarker(kv?: KVStore): Promise<boolean> {
-	if (!kv) {
-		return false;
-	}
-
+async function getInsufficientFlowMarker(
+	kv?: KVStore,
+): Promise<{ until: number } | null> {
+	if (!kv) return null;
 	try {
 		const marker = await kv.get<{ until?: number }>(KV_KEY_INSUFFICIENT_FLOW, {
 			type: "json",
 		});
-		return !!marker;
+		if (!marker) return null;
+		// If `until` was stored, use it; otherwise treat as a legacy marker and
+		// apply a conservative default of now + full cooldown.
+		const until = typeof marker.until === "number" ? marker.until : Date.now() + INSUFFICIENT_FLOW_COOLDOWN_MS;
+		return { until };
 	} catch {
-		return false;
+		return null;
 	}
 }
 
@@ -404,13 +407,18 @@ function inInsufficientFlowCooldown(now: number): boolean {
  * Mark proxy provider as temporarily unavailable due to insufficient flow.
  * This prevents repeated failing CONNECT attempts for a short interval.
  */
-export async function markProxyInsufficientFlow(kv?: KVStore): Promise<void> {
+export async function markProxyInsufficientFlow(
+	kv?: KVStore,
+	reason?: string,
+): Promise<void> {
 	const now = Date.now();
 	insufficientFlowUntil = now + INSUFFICIENT_FLOW_COOLDOWN_MS;
+	const reasonSuffix = reason ? ` reason=${JSON.stringify(reason.slice(0, 200))}` : "";
+	console.warn(
+		`[proxy] Marking insufficient-flow cooldown until ${new Date(insufficientFlowUntil).toISOString()} (${INSUFFICIENT_FLOW_COOLDOWN_MS / 1000}s)${reasonSuffix}`,
+	);
 
-	if (!kv) {
-		return;
-	}
+	if (!kv) return;
 
 	await kv
 		.put(
@@ -435,18 +443,27 @@ async function shouldSkipProxyDueToKnownZeroBalance(
 	kv?: KVStore
 ): Promise<boolean> {
 	if (inInsufficientFlowCooldown(now)) {
+		const remainingSec = Math.ceil((insufficientFlowUntil - now) / 1000);
 		console.warn(
-			"[proxy] Skipping proxy usage during insufficient-flow cooldown"
+			`[proxy] Skipping proxy — insufficient-flow cooldown active, ${remainingSec}s remaining (until ${new Date(insufficientFlowUntil).toISOString()})`,
 		);
 		return true;
 	}
 
-	if (await hasInsufficientFlowMarker(kv)) {
-		insufficientFlowUntil = now + INSUFFICIENT_FLOW_COOLDOWN_MS;
-		console.warn(
-			"[proxy] Skipping proxy usage due to persisted insufficient-flow marker"
-		);
-		return true;
+	const kvMarker = await getInsufficientFlowMarker(kv);
+	if (kvMarker) {
+		if (kvMarker.until <= now) {
+			// KV TTL hasn't evicted it yet but the until timestamp already passed
+			await clearInsufficientFlowMarker(kv);
+		} else {
+			// Restore in-memory state from KV using the stored until timestamp
+			insufficientFlowUntil = kvMarker.until;
+			const remainingSec = Math.ceil((kvMarker.until - now) / 1000);
+			console.warn(
+				`[proxy] Skipping proxy — restored insufficient-flow marker from KV, ${remainingSec}s remaining (until ${new Date(kvMarker.until).toISOString()})`,
+			);
+			return true;
+		}
 	}
 
 	const cachedBalance = await getCachedBalance(kv);

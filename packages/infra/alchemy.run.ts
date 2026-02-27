@@ -13,6 +13,7 @@ import {
 	R2Bucket,
 	SvelteKit,
 	VectorizeIndex,
+	VectorizeMetadataIndex,
 	Worker,
 } from "alchemy/cloudflare";
 import { CloudflareStateStore } from "alchemy/state";
@@ -273,6 +274,22 @@ const ytSignalsVectorize = canUseVectorize
 			...cloudflareApiOptions,
 		})
 	: undefined;
+
+// Required for metadata-filtered ANN queries in clustering.
+// Note: vectors inserted before index creation need re-upsert/recreate to become filterable.
+if (ytSignalsVectorize) {
+	await VectorizeMetadataIndex("yt-signals-kind", {
+		index: ytSignalsVectorize,
+		propertyName: "kind",
+		indexType: "string",
+	});
+
+	await VectorizeMetadataIndex("yt-signals-organization-id", {
+		index: ytSignalsVectorize,
+		propertyName: "organizationId",
+		indexType: "string",
+	});
+}
 
 // KV for caching 2Captcha proxy lists and ASN data across Worker invocations.
 const ytProxyCacheKv = await KVNamespace("yt-proxy-cache", {

@@ -219,6 +219,8 @@
 
 	let recreateError = $state<string | null>(null);
 	let recreateSummary = $state<string | null>(null);
+	let refreshMetadataError = $state<string | null>(null);
+	let refreshMetadataSummary = $state<string | null>(null);
 
 	const recreateClustersMutation = createMutation(
 		orpc.youtube.clusters.recreate.mutationOptions({
@@ -237,13 +239,43 @@
 		})
 	);
 
+	const refreshVectorMetadataMutation = createMutation(
+		orpc.youtube.feeds.refreshVectorMetadata.mutationOptions({
+			onSuccess: (result) => {
+				queryClient.invalidateQueries({ queryKey: orpc.youtube.key() });
+				refreshMetadataError = null;
+				refreshMetadataSummary =
+					`Vector metadata refreshed: signals ${result.signalVectorsUpdated} updated (${result.missingSignalVectors} missing), ` +
+					`centroids ${result.centroidVectorsUpdated} updated (${result.missingCentroidVectors} missing).`;
+			},
+			onError: (error) => {
+				refreshMetadataSummary = null;
+				refreshMetadataError =
+					error instanceof Error
+						? error.message
+						: "Failed to refresh vector metadata";
+			},
+		})
+	);
+
 	const handleRecreateClusters = async () => {
 		recreateError = null;
+		refreshMetadataError = null;
+		refreshMetadataSummary = null;
 		const confirmed = window.confirm(
 			"This will clear current cluster assignments and re-enqueue all vectorized signals for clustering. Continue?"
 		);
 		if (!confirmed) return;
 		await $recreateClustersMutation.mutateAsync({ confirm: "RECREATE" });
+	};
+
+	const handleRefreshVectorMetadata = async () => {
+		recreateError = null;
+		recreateSummary = null;
+		refreshMetadataError = null;
+		await $refreshVectorMetadataMutation.mutateAsync({
+			confirm: "SYNC_METADATA",
+		});
 	};
 
 	const openUpdateDialog = (cluster: {
@@ -398,7 +430,36 @@
 		</div>
 	{/if}
 
+	{#if refreshMetadataSummary || refreshMetadataError}
+		<div class="flex items-center gap-2">
+			{#if refreshMetadataSummary}
+				<p class="text-xs text-muted-foreground">{refreshMetadataSummary}</p>
+			{/if}
+			{#if refreshMetadataError}
+				<p class="text-xs text-destructive">{refreshMetadataError}</p>
+			{/if}
+			<Button
+				variant="outline"
+				size="sm"
+				disabled={$refreshVectorMetadataMutation.isPending}
+				onclick={() => void handleRefreshVectorMetadata()}
+			>
+				{$refreshVectorMetadataMutation.isPending ? "Refreshing..." : "Retry"}
+			</Button>
+		</div>
+	{/if}
+
 	<div class="flex flex-wrap items-center justify-end gap-2">
+		<Button
+			variant="outline"
+			size="sm"
+			disabled={$refreshVectorMetadataMutation.isPending}
+			onclick={() => void handleRefreshVectorMetadata()}
+		>
+			{$refreshVectorMetadataMutation.isPending
+				? "Refreshing Metadata..."
+				: "Refresh Vector Metadata"}
+		</Button>
 		<Button
 			variant="outline"
 			size="sm"

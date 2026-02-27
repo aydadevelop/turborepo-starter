@@ -2,6 +2,7 @@ import { auth } from "@my-app/auth";
 import { db } from "@my-app/db";
 import { member } from "@my-app/db/schema/auth";
 import { notificationQueueMessageSchema } from "@my-app/notifications/contracts";
+import type { KVStore } from "@my-app/youtube/proxy-client";
 import { and, asc, eq } from "drizzle-orm";
 import type { Context as HonoContext } from "hono";
 
@@ -152,10 +153,12 @@ export interface Context {
 	requestHostname: string;
 	requestUrl: string;
 	session: AuthSession;
+	twoCaptchaApiKey?: string;
 	ytClusterQueue?: NotificationQueueProducer;
 	ytDiscoveryQueue?: NotificationQueueProducer;
 	ytIngestQueue?: NotificationQueueProducer;
 	ytNlpQueue?: NotificationQueueProducer;
+	ytProxyCacheKv?: KVStore;
 	ytVectorize?: VectorizeIndexLike;
 }
 
@@ -293,10 +296,12 @@ export async function createContext({
 			env?: {
 				NOTIFICATION_QUEUE?: unknown;
 				RECURRING_TASK_QUEUE?: unknown;
+				TWO_CAPTCHA_API_KEY?: string;
 				YT_CLUSTER_QUEUE?: unknown;
 				YT_DISCOVERY_QUEUE?: unknown;
 				YT_INGEST_QUEUE?: unknown;
 				YT_NLP_QUEUE?: unknown;
+				YT_PROXY_CACHE?: unknown;
 				YT_SIGNALS_VECTORIZE?: unknown;
 			};
 		}
@@ -352,6 +357,16 @@ export async function createContext({
 			? (ytVectorizeCandidate as VectorizeIndexLike)
 			: undefined;
 
+	const twoCaptchaApiKey = envQueues?.TWO_CAPTCHA_API_KEY?.trim() || undefined;
+	const ytProxyCacheKvCandidate = envQueues?.YT_PROXY_CACHE;
+	const ytProxyCacheKv =
+		ytProxyCacheKvCandidate &&
+		typeof ytProxyCacheKvCandidate === "object" &&
+		"get" in ytProxyCacheKvCandidate &&
+		typeof (ytProxyCacheKvCandidate as { get?: unknown }).get === "function"
+			? (ytProxyCacheKvCandidate as KVStore)
+			: undefined;
+
 	return {
 		session,
 		activeMembership,
@@ -360,10 +375,12 @@ export async function createContext({
 		requestCookies,
 		notificationQueue: resolvedNotificationQueue,
 		recurringTaskQueue: resolvedRecurringTaskQueue,
+		twoCaptchaApiKey,
 		ytClusterQueue,
 		ytDiscoveryQueue,
 		ytIngestQueue,
 		ytNlpQueue,
+		ytProxyCacheKv,
 		ytVectorize,
 	};
 }

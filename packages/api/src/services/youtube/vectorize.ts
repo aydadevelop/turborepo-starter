@@ -105,11 +105,7 @@ function buildEmbeddingText(signal: {
 
 // ─── Metadata builder ────────────────────────────────────────────────────────
 
-/**
- * Build rich metadata for Vectorize filtering.
- * Cloudflare Vectorize supports metadata filtering on string/number/boolean fields.
- */
-function buildVectorMetadata(signal: {
+export const buildVectorMetadata = (signal: {
 	organizationId: string;
 	videoId: string;
 	transcriptId: string;
@@ -126,6 +122,7 @@ function buildVectorMetadata(signal: {
 		transcriptId: signal.transcriptId,
 		type: signal.type,
 		severity: signal.severity,
+		kind: "signal",
 	};
 	if (signal.severityScore !== null) {
 		meta.severityScore = signal.severityScore;

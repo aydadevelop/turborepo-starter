@@ -93,11 +93,15 @@ const makeMockQueue = () => ({
 
 /** Fake 1536-dim vector for mock VectorizeIndex. */
 const FAKE_VECTOR = new Array(1536).fill(0).map((_, i) => Math.sin(i));
+/** Vector orthogonal to FAKE_VECTOR (cosine similarity ≈ -1). */
+const DISSIMILAR_VECTOR = FAKE_VECTOR.map((v) => -v);
 
 /**
  * Build a mock VectorizeIndex for centroid-based clustering tests.
  * - `query()` returns centroid matches (auto-prefixed with `centroid:`)
- * - `getByIds()` returns a fake vector for any requested ID
+ * - `getByIds()` returns FAKE_VECTOR for signal IDs; for centroid IDs it returns
+ *   FAKE_VECTOR when centroidMatches lists them (they should be similar) or
+ *   DISSIMILAR_VECTOR when centroidMatches is empty (simulates unrelated centroids)
  * - `upsert()` is a no-op
  */
 const makeMockVectorize = (opts: {
@@ -107,11 +111,17 @@ const makeMockVectorize = (opts: {
 		id: `centroid:${m.clusterId}`,
 		score: m.score,
 	}));
+	const hasCentroidMatches = centroidMatches.length > 0;
 
 	return {
 		query: vi.fn().mockResolvedValue({ matches: centroidMatches }),
 		getByIds: vi.fn().mockImplementation((ids: string[]) =>
-			Promise.resolve(ids.map((id) => ({ id, values: FAKE_VECTOR }))),
+			Promise.resolve(ids.map((id) => ({
+				id,
+				values: (!hasCentroidMatches && id.startsWith("centroid:"))
+					? DISSIMILAR_VECTOR
+					: FAKE_VECTOR,
+			}))),
 		),
 		upsert: vi.fn().mockResolvedValue(undefined),
 	};

@@ -41,6 +41,8 @@ import {
 	listVideosInputSchema,
 	recreateClustersInputSchema,
 	recreateClustersOutputSchema,
+	refreshVectorMetadataInputSchema,
+	refreshVectorMetadataOutputSchema,
 	retriggerNlpInputSchema,
 	retryIngestInputSchema,
 	reviewVideoInputSchema,
@@ -66,12 +68,31 @@ import { organizationPermissionProcedure } from "../../index";
 import { pacmapTo2D } from "../../services/youtube/pacmap";
 import { projectTo2D } from "../../services/youtube/pca";
 import { recoverStuckIngesting } from "../../services/youtube/recovery";
+import { buildVectorMetadata } from "../../services/youtube/vectorize";
 import { extractYoutubeVideoId, fetchOEmbedMetadata } from "./utils";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const toISOStringOrNull = (d: Date | null | undefined) =>
 	d ? d.toISOString() : null;
+
+const VECTORIZE_BATCH_SIZE = 20;
+
+const chunkArray = <T>(items: T[], size: number): T[][] => {
+	if (items.length === 0) return [];
+	const chunks: T[][] = [];
+	for (let i = 0; i < items.length; i += size) {
+		chunks.push(items.slice(i, i + size));
+	}
+	return chunks;
+};
+
+const toVectorValues = (
+	values: number[] | Float32Array | Float64Array | undefined,
+): number[] | null => {
+	if (!values) return null;
+	return Array.isArray(values) ? values : Array.from(values);
+};
 
 // ─── Feed Router ─────────────────────────────────────────────────────────────
 
@@ -363,6 +384,142 @@ const feedRouter = {
 				queuedSignals: messages.length,
 				clearedClusters: existingClusters.length,
 				clearedAssignments: clusteredSignals.length,
+			};
+		}),
+
+	refreshVectorMetadata: organizationPermissionProcedure({
+		yt_cluster: ["update"],
+		yt_signal: ["update"],
+	})
+		.route({
+			tags: ["YouTube Clusters"],
+			summary: "Re-upsert metadata for existing signal and centroid vectors",
+		})
+			.input(refreshVectorMetadataInputSchema.optional())
+		.output(refreshVectorMetadataOutputSchema)
+		.handler(async ({ context }) => {
+			if (!context.ytVectorize) {
+				throw new ORPCError("PRECONDITION_FAILED", {
+					message:
+						"YT_SIGNALS_VECTORIZE binding is not available for this environment",
+				});
+			}
+
+			const organizationId = context.activeMembership.organizationId;
+
+			const [signals, clusters] = await Promise.all([
+				db
+					.select({
+						id: ytSignal.id,
+						organizationId: ytSignal.organizationId,
+						text: ytSignal.text,
+						type: ytSignal.type,
+						severity: ytSignal.severity,
+						confidence: ytSignal.confidence,
+						component: ytSignal.component,
+						gameVersion: ytSignal.gameVersion,
+						videoId: ytSignal.videoId,
+						clusterId: ytSignal.clusterId,
+					})
+					.from(ytSignal)
+					.where(
+						and(
+							eq(ytSignal.organizationId, organizationId),
+							eq(ytSignal.vectorized, true)
+						)
+					),
+				db
+					.select({ id: ytCluster.id })
+					.from(ytCluster)
+					.where(eq(ytCluster.organizationId, organizationId)),
+			]);
+
+			let signalVectorsUpdated = 0;
+			let centroidVectorsUpdated = 0;
+			let missingSignalVectors = 0;
+			let missingCentroidVectors = 0;
+
+			for (const signalBatch of chunkArray(signals, VECTORIZE_BATCH_SIZE)) {
+				const ids = signalBatch.map((signal) => signal.id);
+				const vectors = await context.ytVectorize.getByIds(ids);
+				const vectorById = new Map(
+					vectors.map((vector) => [vector.id, toVectorValues(vector.values)])
+				);
+
+				const upserts: Array<{
+					id: string;
+					values: number[];
+					metadata: ReturnType<typeof buildVectorMetadata>;
+				}> = [];
+
+				for (const signal of signalBatch) {
+					const values = vectorById.get(signal.id);
+					if (!values) {
+						missingSignalVectors++;
+						continue;
+					}
+
+					upserts.push({
+						id: signal.id,
+						values,
+						metadata: buildVectorMetadata(signal),
+					});
+				}
+
+				if (upserts.length > 0) {
+					await context.ytVectorize.upsert(upserts);
+					signalVectorsUpdated += upserts.length;
+				}
+			}
+
+			const centroidIds = clusters.map((cluster) => `centroid:${cluster.id}`);
+			for (const centroidBatch of chunkArray(centroidIds, VECTORIZE_BATCH_SIZE)) {
+				const vectors = await context.ytVectorize.getByIds(centroidBatch);
+				const vectorById = new Map(
+					vectors.map((vector) => [vector.id, toVectorValues(vector.values)])
+				);
+
+				const upserts: Array<{
+					id: string;
+					values: number[];
+					metadata: {
+						kind: "centroid";
+						organizationId: string;
+						clusterId: string;
+					};
+				}> = [];
+
+				for (const centroidId of centroidBatch) {
+					const values = vectorById.get(centroidId);
+					if (!values) {
+						missingCentroidVectors++;
+						continue;
+					}
+
+					const clusterId = centroidId.slice("centroid:".length);
+					upserts.push({
+						id: centroidId,
+						values,
+						metadata: {
+							kind: "centroid",
+							organizationId,
+							clusterId,
+						},
+					});
+				}
+
+				if (upserts.length > 0) {
+					await context.ytVectorize.upsert(upserts);
+					centroidVectorsUpdated += upserts.length;
+				}
+			}
+
+			return {
+				ok: true as const,
+				signalVectorsUpdated,
+				centroidVectorsUpdated,
+				missingSignalVectors,
+				missingCentroidVectors,
 			};
 		}),
 };
@@ -1523,11 +1680,7 @@ const vectorRouter = {
 
 			// Vectorize getByIds has a max of 20 IDs per call — batch accordingly
 			const ids = signals.map((s) => s.id);
-			const BATCH_SIZE = 20;
-			const batches: string[][] = [];
-			for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-				batches.push(ids.slice(i, i + BATCH_SIZE));
-			}
+			const batches = chunkArray(ids, VECTORIZE_BATCH_SIZE);
 			const vectorResults = (
 				await Promise.all(
 					batches.map((batch) => context.ytVectorize!.getByIds(batch))
@@ -1537,9 +1690,8 @@ const vectorRouter = {
 			// Build a map of id → values
 			const vectorMap = new Map<string, number[]>();
 			for (const v of vectorResults) {
-				if (v.values) {
-					vectorMap.set(v.id, Array.from(v.values));
-				}
+				const values = toVectorValues(v.values);
+				if (values) vectorMap.set(v.id, values);
 			}
 
 			// Filter to signals that have vectors

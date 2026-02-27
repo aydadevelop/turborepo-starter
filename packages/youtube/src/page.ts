@@ -220,10 +220,7 @@ async function attemptInnertubeClient(
 			} catch (proxyErr) {
 				const proxyErrText = String(proxyErr);
 				if (INSUFFICIENT_FLOW_RE.test(proxyErrText)) {
-					console.warn(
-						"[proxy] Detected insufficient flow from proxy provider; enabling temporary cooldown"
-					);
-					await markProxyInsufficientFlow(proxyEnv?.proxyCacheKv);
+					await markProxyInsufficientFlow(proxyEnv?.proxyCacheKv, proxyErrText);
 				}
 				console.warn(
 					`[proxy] Proxy fetch failed for ${clientName}, falling back to direct: ${proxyErr}`
@@ -290,6 +287,8 @@ export async function fetchPlayerResponse(
 		console.log(
 			`[proxy] Using residential proxy ${proxyRef.value.host}:${proxyRef.value.port} for videoId=${videoId}`
 		);
+	} else if (proxyEnv?.twoCaptchaApiKey) {
+		console.log(`[proxy] No proxy available for videoId=${videoId} — proceeding direct`);
 	}
 
 	for (const [clientName, config] of CLIENT_CONFIGS) {

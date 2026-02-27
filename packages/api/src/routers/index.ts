@@ -1,5 +1,10 @@
 import type { RouterClient } from "@orpc/server";
 import { ORPCError } from "@orpc/server";
+import {
+	fetchAccountInfo,
+	fetchBalance,
+	getProxy,
+} from "@my-app/youtube/proxy-client";
 import z from "zod";
 
 import {
@@ -25,6 +30,86 @@ export const appRouter = {
 		.output(z.string())
 		.handler(() => {
 			return "OK";
+		}),
+	ping: publicProcedure
+		.route({
+			tags: ["System"],
+			summary: "oRPC ping",
+			description: "Public no-auth probe. Returns server timestamp and version. Useful for post-deploy verification.",
+		})
+		.output(
+			z.object({
+				ok: z.literal(true),
+				ts: z.string().datetime(),
+				v: z.string(),
+			})
+		)
+		.handler(() => ({
+			ok: true as const,
+			ts: new Date().toISOString(),
+			v: "1",
+		})),
+	proxyHealth: publicProcedure
+		.route({
+			tags: ["System"],
+			summary: "Proxy health check",
+			description: "Runs proxy client checks server-side and returns status. No auth required.",
+		})
+		.output(
+			z.object({
+				configured: z.boolean(),
+				account: z
+					.object({
+						username: z.string(),
+						status: z.number(),
+						useFlow: z.number(),
+						totalFlow: z.number(),
+						whitelistedIps: z.array(z.string()),
+					})
+					.nullable(),
+				balance: z.number().nullable(),
+				proxy: z
+					.object({ host: z.string(), port: z.number() })
+					.nullable(),
+				cooldownActive: z.boolean(),
+				ts: z.string().datetime(),
+			})
+		)
+		.handler(async ({ context }) => {
+			const { twoCaptchaApiKey, ytProxyCacheKv } = context;
+			if (!twoCaptchaApiKey) {
+				return {
+					configured: false,
+					account: null,
+					balance: null,
+					proxy: null,
+					cooldownActive: false,
+					ts: new Date().toISOString(),
+				};
+			}
+
+			const [account, balance, proxy] = await Promise.all([
+				fetchAccountInfo(twoCaptchaApiKey, ytProxyCacheKv).catch(() => null),
+				fetchBalance(twoCaptchaApiKey, ytProxyCacheKv).catch(() => null),
+				getProxy(twoCaptchaApiKey, ytProxyCacheKv).catch(() => null),
+			]);
+
+			return {
+				configured: true,
+				account: account
+					? {
+							username: account.username,
+							status: account.status,
+							useFlow: account.useFlow,
+							totalFlow: account.totalFlow,
+							whitelistedIps: account.whitelistedIps,
+						}
+					: null,
+				balance,
+				proxy,
+				cooldownActive: proxy === null && !!twoCaptchaApiKey,
+				ts: new Date().toISOString(),
+			};
 		}),
 	privateData: protectedProcedure
 		.route({

@@ -18,6 +18,8 @@ import {
 	fetchAsns,
 	fetchBalance,
 	generateWhitelistConnections,
+	getProxy,
+	markProxyInsufficientFlow,
 } from "../packages/youtube/src/proxy-client";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -212,6 +214,33 @@ try {
 	const isTimeout = msg.includes("aborted") || msg.includes("timed out");
 	console.log(isTimeout ? "timed out" : `FAILED (${msg})`);
 }
+
+// ─── 6. getProxy() decision debug ───────────────────────────────────────────
+// Tests the full proxy selection path including cooldown logic.
+
+console.log("\n[6/6] getProxy() full decision path …");
+const debugProxy = await getProxy(apiKey);
+if (debugProxy) {
+	console.log(`  ✓ Resolved proxy: ${debugProxy.host}:${debugProxy.port}`);
+	console.log("  (This is what the CF Worker picks on each invocation)");
+} else {
+	console.log("  ✗ getProxy() returned null — proxy will NOT be used.");
+	console.log("  Possible causes:");
+	console.log("    • insufficient-flow cooldown active (see log above)");
+	console.log("    • 2Captcha balance is zero or quota exhausted");
+	console.log("    • Egress IP not whitelisted and account fallback failed");
+}
+
+// Simulate a temporary cooldown and verify it clears correctly.
+if (process.argv.includes("--test-cooldown")) {
+	console.log("\n[cooldown test] Simulating insufficient-flow mark …");
+	await markProxyInsufficientFlow(undefined, "debug-proxy: test trigger");
+	const duringCooldown = await getProxy(apiKey);
+	console.log(
+		`  getProxy() during cooldown: ${duringCooldown ? `${duringCooldown.host}:${duringCooldown.port}` : "null (correct)"}`
+	);
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 
 console.log(`\n${"=".repeat(50)}`);

@@ -17,22 +17,32 @@ import { emitYtNotification } from "./notify";
 /**
  * Minimum cosine similarity between a signal vector and a **cluster centroid**
  * to consider merging. Higher = tighter, more clusters.
- * 0.75 is reasonable for centroid matching (vs. 0.64 for single-linkage).
+ * 0.78 works well for text-embedding-3-small where same-domain texts
+ * (e.g. game bug reports) routinely score 0.60-0.75 even on different topics.
  */
-const CENTROID_SIMILARITY_THRESHOLD = 0.65;
+const CENTROID_SIMILARITY_THRESHOLD = 0.78;
 
 /**
  * Maximum cosine *distance* (1 - similarity) from centroid to any member.
  * If adding a signal would push the cluster beyond this radius, reject the merge.
  * Prevents cluster sprawl even when centroid similarity is above threshold.
  */
-const MAX_CLUSTER_RADIUS = 0.4;
+const MAX_CLUSTER_RADIUS = 0.25;
 
 /** How many nearest centroid candidates to fetch from Vectorize. */
 const CENTROID_TOP_K = 10;
 
+/**
+ * Maximum number of DB-known clusters to evaluate in the brute-force fallback.
+ * Keeps the `getByIds` call bounded when the org has many clusters.
+ */
+const FALLBACK_MAX_CLUSTERS = 200;
+
 /** Vectorize ID prefix for centroid vectors. */
 const CENTROID_PREFIX = "centroid:";
+
+/** Cloudflare Vectorize getByIds request cap. */
+const VECTORIZE_GET_BY_IDS_MAX = 20;
 
 // ─── Severity / helpers ──────────────────────────────────────────────────────
 
@@ -53,6 +63,21 @@ type SignalSeverity = (typeof ytSignalSeverityValues)[number];
 
 /** Re-export so the consumer can keep using VectorizeIndex as a type name. */
 export type VectorizeIndex = VectorizeIndexLike;
+
+interface VectorizeQueryByIdLike {
+	queryById: (
+		id: string,
+		options: {
+			topK: number;
+			filter: { kind: string; organizationId: string };
+		},
+	) => Promise<{ matches?: Array<{ id: string; score: number }> }>;
+}
+
+const hasQueryById = (
+	index: VectorizeIndexLike,
+): index is VectorizeIndexLike & VectorizeQueryByIdLike =>
+	typeof (index as { queryById?: unknown }).queryById === "function";
 
 const clusterTitleFromSignal = (text: string): string => {
 	const normalized = text.trim().replace(/\s+/g, " ");
@@ -133,6 +158,33 @@ const toNumberArray = (
 ): number[] | null => {
 	if (!v) return null;
 	return Array.isArray(v) ? v : Array.from(v);
+};
+
+/** Cosine similarity between two L2-normalized vectors (dot product). */
+const cosineSimilarity = (a: number[], b: number[]): number => {
+	let dot = 0;
+	for (let i = 0; i < a.length; i++) dot += (a[i] ?? 0) * (b[i] ?? 0);
+	return dot;
+};
+
+const getVectorsByIds = async (
+	vectorizeIndex: VectorizeIndexLike,
+	ids: string[],
+): Promise<Array<{ id: string; values?: number[] | Float32Array | Float64Array }>> => {
+	if (ids.length === 0) return [];
+
+	const results: Array<{
+		id: string;
+		values?: number[] | Float32Array | Float64Array;
+	}> = [];
+
+	for (let i = 0; i < ids.length; i += VECTORIZE_GET_BY_IDS_MAX) {
+		const batch = ids.slice(i, i + VECTORIZE_GET_BY_IDS_MAX);
+		const batchResults = await vectorizeIndex.getByIds(batch);
+		results.push(...batchResults);
+	}
+
+	return results;
 };
 
 // ─── DB helpers ──────────────────────────────────────────────────────────────
@@ -276,23 +328,40 @@ interface CentroidMatch {
 /**
  * Find the best cluster centroid match for a signal vector.
  *
- * Flow:
- *   1. query() Vectorize with the signal's actual vector to find nearest centroids
- *   2. Filter: similarity ≥ threshold
- *   3. Compactness gate: estimate new radius if this signal were added
- *   4. Return the best match (or null)
+ * Two-phase approach to handle Vectorize eventual consistency:
+ *   Phase 1: query() Vectorize ANN index (fast, but eventually consistent)
+ *   Phase 2: If Phase 1 returns no usable centroids, fall back to getByIds()
+ *            for all DB-known cluster centroids (immediately consistent after upsert)
  */
 const findBestCentroidMatch = async (
+	signalId: string,
 	signalVector: number[],
 	organizationId: string,
 	validClusterIds: Set<string>,
 	vectorizeIndex: VectorizeIndexLike,
 ): Promise<CentroidMatch | null> => {
-	// Query Vectorize for nearest centroid vectors
-	const results = await vectorizeIndex.query(signalVector, {
-		topK: CENTROID_TOP_K,
-		filter: { kind: "centroid", organizationId },
-	});
+	// ── Phase 1: ANN query (fast path) ──────────────────────────────────
+	let results: { matches?: Array<{ id: string; score: number }> } | null = null;
+
+	if (hasQueryById(vectorizeIndex)) {
+		try {
+			results = await vectorizeIndex.queryById(signalId, {
+				topK: CENTROID_TOP_K,
+				filter: { kind: "centroid", organizationId },
+			});
+		} catch (error) {
+			console.warn(
+				`[yt-cluster] queryById failed for signal=${signalId.slice(-8)}; falling back to query(vector): ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+	}
+
+	if (!results) {
+		results = await vectorizeIndex.query(signalVector, {
+			topK: CENTROID_TOP_K,
+			filter: { kind: "centroid", organizationId },
+		});
+	}
 
 	const matches = results.matches ?? [];
 	console.debug(
@@ -310,11 +379,83 @@ const findBestCentroidMatch = async (
 	console.debug(
 		`[yt-cluster] Above threshold ${CENTROID_SIMILARITY_THRESHOLD}: ${aboveThreshold.length}`,
 	);
-	if (aboveThreshold.length === 0) return null;
 
-	// Fetch centroid vectors for compactness check
-	const centroidIds = aboveThreshold.map((m) => m.id);
-	const centroidVectors = await vectorizeIndex.getByIds(centroidIds);
+	// Try ANN matches first
+	let allAnnStale = false;
+	if (aboveThreshold.length > 0) {
+		const annBest = await pickBestFromCandidates(
+			aboveThreshold.map((m) => ({ id: m.id, score: m.score })),
+			validClusterIds,
+			vectorizeIndex,
+		);
+		if (annBest) return annBest;
+		// All above-threshold ANN matches were stale (deleted clusters still in Vectorize)
+		allAnnStale = true;
+	}
+
+	// ── Phase 2: DB-driven fallback (getByIds is immediately consistent) ─
+	// Only activate when:
+	//   a) ANN returned zero matches (eventual consistency lag after recent upsert)
+	//   b) All above-threshold ANN matches were stale clusters
+	// Do NOT fallback when ANN found centroids but none were similar enough —
+	// that means ANN is working and the signal genuinely doesn't match.
+	const annFoundButBelowThreshold = matches.length > 0 && aboveThreshold.length === 0;
+	if (annFoundButBelowThreshold) {
+		console.debug(
+			`[yt-cluster] ANN returned ${matches.length} centroid(s) but none above threshold — skipping fallback`,
+		);
+		return null;
+	}
+
+	if (validClusterIds.size === 0) return null;
+
+	console.debug(
+		`[yt-cluster] Entering Phase 2 fallback (annMatches=${matches.length}, allAnnStale=${allAnnStale})`,
+	);
+
+	const clusterIdsToProbe = [...validClusterIds].slice(0, FALLBACK_MAX_CLUSTERS);
+	const centroidIdsToFetch = clusterIdsToProbe.map((id) => `${CENTROID_PREFIX}${id}`);
+
+	// getByIds reads from the write log, not the ANN index → no eventual consistency lag
+	const centroidVectors = await getVectorsByIds(vectorizeIndex, centroidIdsToFetch);
+
+	const fallbackCandidates: Array<{ id: string; score: number }> = [];
+	for (const vec of centroidVectors) {
+		const arr = toNumberArray(vec.values);
+		if (!arr) continue;
+		const score = cosineSimilarity(signalVector, arr);
+		if (score >= CENTROID_SIMILARITY_THRESHOLD) {
+			fallbackCandidates.push({ id: vec.id, score });
+		}
+	}
+
+	if (fallbackCandidates.length === 0) {
+		console.debug("[yt-cluster] Fallback: no centroids above threshold either");
+		return null;
+	}
+
+	console.debug(
+		`[yt-cluster] Fallback: ${fallbackCandidates.length} centroid(s) above threshold from getByIds (${centroidIdsToFetch.length} probed)`,
+	);
+
+	// Sort descending by score for consistent selection
+	fallbackCandidates.sort((a, b) => b.score - a.score);
+
+	return pickBestFromCandidates(fallbackCandidates, validClusterIds, vectorizeIndex);
+};
+
+/**
+ * Given scored centroid candidates, resolve their vectors and apply compactness gate.
+ * Returns the best valid match or null.
+ */
+const pickBestFromCandidates = async (
+	candidates: Array<{ id: string; score: number }>,
+	validClusterIds: Set<string>,
+	vectorizeIndex: VectorizeIndexLike,
+): Promise<CentroidMatch | null> => {
+	const centroidIds = candidates.map((m) => m.id);
+	const centroidVectors = await getVectorsByIds(vectorizeIndex, centroidIds);
+
 	const vectorById = new Map(
 		centroidVectors
 			.filter((v) => v.values)
@@ -324,7 +465,7 @@ const findBestCentroidMatch = async (
 	let best: CentroidMatch | null = null;
 	let staleCount = 0;
 
-	for (const match of aboveThreshold) {
+	for (const match of candidates) {
 		const centroidVec = vectorById.get(match.id);
 		if (!centroidVec) continue;
 
@@ -334,9 +475,6 @@ const findBestCentroidMatch = async (
 			continue;
 		}
 
-		// Compactness gate: estimate radius after adding this signal.
-		// Distance from signal to centroid is (1 - similarity).
-		// If this distance exceeds MAX_CLUSTER_RADIUS, skip.
 		const distFromCentroid = 1 - match.score;
 		if (distFromCentroid > MAX_CLUSTER_RADIUS) continue;
 
@@ -456,7 +594,7 @@ export const processYtClusterMessage = async ({
 		return createSingletonCluster(db, signal, null, notificationQueue);
 	}
 
-	const signalVectors = await vectorizeIndex.getByIds([signalId]);
+	const signalVectors = await getVectorsByIds(vectorizeIndex, [signalId]);
 	const signalVector = toNumberArray(signalVectors[0]?.values);
 
 	if (!signalVector) {
@@ -474,6 +612,7 @@ export const processYtClusterMessage = async ({
 
 	// ── Step 3: Find best centroid match ─────────────────────────────────
 	const match = await findBestCentroidMatch(
+		signalId,
 		signalVector,
 		organizationId,
 		validClusterIds,

@@ -733,6 +733,18 @@ export const recreateClustersOutputSchema = z.object({
 	clearedAssignments: z.number().int().nonnegative(),
 });
 
+export const refreshVectorMetadataInputSchema = z.object({
+	confirm: z.literal("SYNC_METADATA"),
+});
+
+export const refreshVectorMetadataOutputSchema = z.object({
+	ok: z.literal(true),
+	signalVectorsUpdated: z.number().int().nonnegative(),
+	centroidVectorsUpdated: z.number().int().nonnegative(),
+	missingSignalVectors: z.number().int().nonnegative(),
+	missingCentroidVectors: z.number().int().nonnegative(),
+});
+
 export const clusterOutputSchema = z.object({
 	id: z.string(),
 	title: z.string(),
