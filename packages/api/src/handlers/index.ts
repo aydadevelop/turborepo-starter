@@ -2,8 +2,8 @@ import { ORPCError } from "@orpc/server";
 
 import {
 	organizationPermissionProcedure,
-	protectedProcedure,
 	publicProcedure,
+	sessionProcedure,
 } from "../index";
 import { adminRouter } from "./admin/router";
 import { consentRouter } from "./consent";
@@ -21,7 +21,7 @@ export const appRouter = publicProcedure.router({
 		ts: new Date().toISOString(),
 		v: "1",
 	})),
-	privateData: protectedProcedure.privateData.handler(({ context }) => {
+	privateData: sessionProcedure.privateData.handler(({ context }) => {
 		return {
 			message: "This is private",
 			user: context.session?.user,

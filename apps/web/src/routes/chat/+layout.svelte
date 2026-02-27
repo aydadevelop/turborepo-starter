@@ -17,13 +17,24 @@
 
 	const { children } = $props();
 
+	type SessionData = typeof authClient.$Infer.Session;
+
+	const hasSessionUser = (
+		data: SessionData | null | undefined
+	): data is NonNullable<SessionData> & {
+		session: object;
+		user: { id: string };
+	} => Boolean(data?.session && data?.user?.id);
+
 	const sessionQuery = authClient.useSession();
 	const queryClient = useQueryClient();
 
 	let isSigningIn = $state(false);
+	let attemptedAutoSession = $state(false);
+	let retryAutoSessionTimer: ReturnType<typeof setTimeout> | null = null;
 
 	async function ensureSession(): Promise<boolean> {
-		if ($sessionQuery.data) return true;
+		if (hasSessionUser($sessionQuery.data)) return true;
 		if (isSigningIn) return false;
 		isSigningIn = true;
 		try {
@@ -36,11 +47,49 @@
 		}
 	}
 
+	$effect(() => {
+		return () => {
+			if (retryAutoSessionTimer) {
+				clearTimeout(retryAutoSessionTimer);
+			}
+		};
+	});
+
+	$effect(() => {
+		if ($sessionQuery.isPending) {
+			return;
+		}
+
+		if (hasSessionUser($sessionQuery.data)) {
+			attemptedAutoSession = false;
+			return;
+		}
+
+		if (attemptedAutoSession || isSigningIn) {
+			return;
+		}
+
+		attemptedAutoSession = true;
+		ensureSession()
+			.then((success) => {
+				if (success) {
+					return;
+				}
+				if (retryAutoSessionTimer) {
+					clearTimeout(retryAutoSessionTimer);
+				}
+				retryAutoSessionTimer = setTimeout(() => {
+					attemptedAutoSession = false;
+				}, 3000);
+			})
+			.catch(() => undefined);
+	});
+
 	const chatsQuery = createQuery(
 		derived(sessionQuery, ($session) => ({
 			queryKey: ["assistant", "chats"],
 			queryFn: () => assistantClient.listChats({}),
-			enabled: Boolean($session.data),
+			enabled: hasSessionUser($session.data),
 		}))
 	);
 

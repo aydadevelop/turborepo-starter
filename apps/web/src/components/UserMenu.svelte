@@ -9,6 +9,12 @@
 	import { queryClient } from "$lib/orpc";
 
 	const sessionQuery = authClient.useSession();
+	const hasSessionUser = $derived(
+		Boolean($sessionQuery.data?.session && $sessionQuery.data?.user?.id)
+	);
+	const isFullyAuthenticated = $derived(
+		hasAuthenticatedSession($sessionQuery.data)
+	);
 
 	let { pendingInvitationCount = 0 }: { pendingInvitationCount?: number } =
 		$props();
@@ -37,29 +43,31 @@
 <div class="relative">
 	{#if $sessionQuery.isPending}
 		<div class="h-8 w-24 animate-pulse rounded bg-muted"></div>
-	{:else if hasAuthenticatedSession($sessionQuery.data)}
-		{@const user = $sessionQuery.data.user}
+	{:else if hasSessionUser}
+		{@const user = $sessionQuery.data?.user}
 		<div class="flex items-center gap-3">
 			<span
 				class="text-sm text-muted-foreground hidden sm:inline"
-				title={user.email}
+				title={user?.email}
 			>
-				{user.name || user.email?.split('@')[0] || 'User'}
+				{user?.name || user?.email?.split('@')[0] || 'Anonymous'}
 			</span>
-			<a
-				href={resolve("/dashboard/settings")}
-				class="relative text-sm text-muted-foreground transition hover:text-foreground"
-			>
-				Settings
-				{#if pendingInvitationCount > 0}
-					<Badge
-						variant="destructive"
-						class="absolute -right-5 -top-2 h-5 min-w-5 px-1 text-xs"
-					>
-						{pendingInvitationCount}
-					</Badge>
-				{/if}
-			</a>
+			{#if isFullyAuthenticated}
+				<a
+					href={resolve("/dashboard/settings")}
+					class="relative text-sm text-muted-foreground transition hover:text-foreground"
+				>
+					Settings
+					{#if pendingInvitationCount > 0}
+						<Badge
+							variant="destructive"
+							class="absolute -right-5 -top-2 h-5 min-w-5 px-1 text-xs"
+						>
+							{pendingInvitationCount}
+						</Badge>
+					{/if}
+				</a>
+			{/if}
 			<Button
 				variant="destructive"
 				size="sm"

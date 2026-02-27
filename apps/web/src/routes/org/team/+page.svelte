@@ -140,7 +140,9 @@
 		<!-- Members -->
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Members ({org.members?.length ?? 0})</Card.Title>
+				<Card.Title data-testid="org-team-members-title">
+					Members ({org.members?.length ?? 0})
+				</Card.Title>
 				<Card.Description>Manage team members and their roles</Card.Description>
 			</Card.Header>
 			<Card.Content class="p-0">

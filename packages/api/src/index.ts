@@ -12,7 +12,7 @@ export const o = implement(appContract).$context<Context>();
 
 export const publicProcedure = o;
 
-const hasAuthenticatedSessionUser = (context: Context): boolean => {
+const getSessionUser = (context: Context) => {
 	const user = context.session?.user as
 		| {
 				id?: string | null;
@@ -21,6 +21,16 @@ const hasAuthenticatedSessionUser = (context: Context): boolean => {
 		  }
 		| undefined;
 
+	return user;
+};
+
+const hasSessionUser = (context: Context): boolean => {
+	const user = getSessionUser(context);
+	return Boolean(user?.id);
+};
+
+const hasNonAnonymousSessionUser = (context: Context): boolean => {
+	const user = getSessionUser(context);
 	if (!user?.id) {
 		return false;
 	}
@@ -28,8 +38,15 @@ const hasAuthenticatedSessionUser = (context: Context): boolean => {
 	return !(user.isAnonymous ?? user.is_anonymous ?? false);
 };
 
-const requireAuth = o.middleware(({ context, next }) => {
-	if (!hasAuthenticatedSessionUser(context)) {
+const requireSession = o.middleware(({ context, next }) => {
+	if (!hasSessionUser(context)) {
+		throw new ORPCError("UNAUTHORIZED");
+	}
+	return next();
+});
+
+const requireAuthenticatedUser = o.middleware(({ context, next }) => {
+	if (!hasNonAnonymousSessionUser(context)) {
 		throw new ORPCError("UNAUTHORIZED");
 	}
 	return next();
@@ -73,7 +90,10 @@ const requireOrganizationPermission = (permission: OrganizationPermission) =>
 		return next();
 	});
 
-export const protectedProcedure = publicProcedure.use(requireAuth);
+export const sessionProcedure = publicProcedure.use(requireSession);
+export const protectedProcedure = sessionProcedure.use(
+	requireAuthenticatedUser
+);
 export const organizationProcedure = protectedProcedure
 	.use(requireActiveOrganization)
 	.use(flushEvents);

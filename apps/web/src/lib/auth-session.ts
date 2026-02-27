@@ -2,8 +2,9 @@ import type { authClient } from "./auth-client";
 
 type SessionData = typeof authClient.$Infer.Session;
 
-const isAnonymousUser = (user: SessionData["user"] | null | undefined): boolean =>
-	Boolean(user?.isAnonymous);
+const isAnonymousUser = (
+	user: SessionData["user"] | null | undefined
+): boolean => Boolean(user?.isAnonymous);
 
 export function hasAuthenticatedSession(
 	data: SessionData | null | undefined

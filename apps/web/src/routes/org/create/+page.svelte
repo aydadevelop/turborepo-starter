@@ -150,13 +150,14 @@
 				consentTypes: ["service_agreement"],
 			});
 
-			const { error } = await authClient.organization.create({
-				name: trimmedName,
-				slug: trimmedName
-					.toLowerCase()
-					.replace(/[^a-zа-яё0-9]+/gu, "-")
-					.replace(/^-+|-+$/g, ""),
-			});
+			const { data: createdOrganization, error } =
+				await authClient.organization.create({
+					name: trimmedName,
+					slug: trimmedName
+						.toLowerCase()
+						.replace(/[^a-zа-яё0-9]+/gu, "-")
+						.replace(/^-+|-+$/g, ""),
+				});
 
 			if (error) {
 				errorMessage = toFriendlyOrgCreateError(
@@ -166,8 +167,17 @@
 				return;
 			}
 
+			const createdOrganizationId =
+				(createdOrganization as { id?: string } | null)?.id ?? null;
+			if (createdOrganizationId) {
+				await authClient.organization.setActive({
+					organizationId: createdOrganizationId,
+				});
+			}
+
 			await Promise.all([
 				queryClient.invalidateQueries({ queryKey: ["organization"] }),
+				queryClient.invalidateQueries({ queryKey: ["organization", "full"] }),
 				queryClient.invalidateQueries({ queryKey: ["user-organizations"] }),
 				queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] }),
 			]);
@@ -240,6 +250,7 @@
 					id="org-name"
 					type="text"
 					placeholder="My game"
+					data-testid="org-create-name-input"
 					value={orgName}
 					oninput={(e: Event) => (orgName = (e.target as HTMLInputElement).value)}
 				/>
@@ -257,6 +268,7 @@
 		<Card.Content class="space-y-4">
 			<div
 				class="h-80 overflow-y-auto rounded-md border bg-muted/30 p-4 text-sm leading-relaxed"
+				data-testid="org-create-terms-scroll"
 				onscroll={handleScroll}
 			>
 				<p class="mb-4 font-bold">Terms of Service Agreement</p>
@@ -341,6 +353,7 @@
 			<label class="flex items-start gap-3 cursor-pointer select-none">
 				<input
 					type="checkbox"
+					data-testid="org-create-consent-checkbox"
 					class="mt-0.5 h-4 w-4 shrink-0 rounded border border-input accent-primary"
 					checked={consentChecked}
 					disabled={!scrolledToBottom}
@@ -365,6 +378,7 @@
 		<Card.Footer class={hasExistingOrg ? "justify-end" : ""}>
 			<Button
 				variant={hasExistingOrg ? "outline" : "default"}
+				data-testid="org-create-submit-button"
 				onclick={() => void handleSubmit()}
 				disabled={pending || !consentChecked || !orgName.trim()}
 				class={hasExistingOrg ? "" : "w-full"}
