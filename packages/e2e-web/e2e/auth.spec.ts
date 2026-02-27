@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { signInAsSeedAdmin } from "./utils/auth";
 import { url } from "./utils/url";
 
 const LOGIN_URL_PATTERN = /\/login/;
@@ -41,10 +42,13 @@ test.describe("Dashboard Access", () => {
 		await expect(page).toHaveURL(LOGIN_URL_PATTERN);
 	});
 
-	test("dashboard link in navigation works", async ({ page }) => {
+	test("chat link in navigation works for authenticated user", async ({
+		page,
+	}) => {
+		await signInAsSeedAdmin(page);
 		await page.goto(url("/"));
-		await page.getByTestId("nav-link-dashboard").click();
-		await expect(page).toHaveURL(url("/dashboard"));
+		await page.getByTestId("nav-link-chat").click();
+		await expect(page).toHaveURL(url("/chat"));
 	});
 });
 

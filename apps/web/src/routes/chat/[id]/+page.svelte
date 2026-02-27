@@ -6,7 +6,9 @@
 		ChatContainerContent,
 		ChatContainerRoot,
 		ChatContainerScrollAnchor,
+		isToolUIPart,
 		Loader,
+		lastAssistantMessageIsCompleteWithToolCalls,
 		Message,
 		MessageContent,
 		PromptInput,
@@ -14,12 +16,11 @@
 		PromptInputActions,
 		PromptInputTextarea,
 		ToolComposed,
+		type UIMessage,
 	} from "@my-app/ai-chat";
 	import { createORPCChatTransport } from "@my-app/assistant/transport";
 	import { Button } from "@my-app/ui/components/button";
 	import { createQuery } from "@tanstack/svelte-query";
-	import type { UIMessage } from "ai";
-	import { isToolUIPart, lastAssistantMessageIsCompleteWithApprovalResponses } from "ai";
 	import { derived, toStore } from "svelte/store";
 	import { page } from "$app/state";
 	import { assistantClient } from "$lib/assistant";
@@ -57,7 +58,7 @@
 				id: currentId,
 				messages,
 				transport: createORPCChatTransport(assistantClient, currentId),
-				sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+				sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
 			});
 		}
 	});

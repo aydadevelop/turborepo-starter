@@ -11,13 +11,15 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
+	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { queryClient } from "$lib/orpc";
 	import PhoneInput from "../../../components/PhoneInput.svelte";
 
 	const sessionQuery = authClient.useSession();
 
 	$effect(() => {
-		if (!($sessionQuery.isPending || $sessionQuery.data)) {
+		if ($sessionQuery.isPending) return;
+		if (!hasAuthenticatedSession($sessionQuery.data)) {
 			goto(
 				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
 			);
@@ -33,7 +35,7 @@
 			return data ?? [];
 		},
 		retry: false,
-		enabled: Boolean($session.data),
+		enabled: hasAuthenticatedSession($session.data),
 	}));
 	const accountsQuery = createQuery(accountsQueryOptions);
 
@@ -236,7 +238,7 @@
 		queryKey: ["user-invitations"],
 		queryFn: fetchUserInvitations,
 		retry: false,
-		enabled: Boolean($session.data),
+		enabled: hasAuthenticatedSession($session.data),
 	}));
 	const invitationsQuery = createQuery(invitationsQueryOptions);
 
@@ -260,7 +262,8 @@
 		pendingActionId = null;
 		if (error) {
 			invitationError =
-				(error as { message?: string }).message ?? "Failed to accept invitation.";
+				(error as { message?: string }).message ??
+				"Failed to accept invitation.";
 			return;
 		}
 		queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
@@ -276,23 +279,25 @@
 		pendingActionId = null;
 		if (error) {
 			invitationError =
-				(error as { message?: string }).message ?? "Failed to reject invitation.";
+				(error as { message?: string }).message ??
+				"Failed to reject invitation.";
 			return;
 		}
 		queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
 	};
 
 	const formatDate = (date: Date | string) =>
-		new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(
-			date instanceof Date ? date : new Date(date)
-		);
+		new Intl.DateTimeFormat("en-US", {
+			dateStyle: "medium",
+			timeStyle: "short",
+		}).format(date instanceof Date ? date : new Date(date));
 </script>
 
 {#if $sessionQuery.isPending}
 	<div class="flex items-center justify-center min-h-[50vh]">
 		<p class="text-muted-foreground">Loading...</p>
 	</div>
-{:else if !$sessionQuery.data}
+{:else if !hasAuthenticatedSession($sessionQuery.data)}
 	<div class="flex items-center justify-center min-h-[50vh]">
 		<p class="text-muted-foreground">Redirecting to login...</p>
 	</div>
@@ -532,7 +537,9 @@
 						</Badge>
 					{/if}
 				</div>
-				<Card.Description>Organization invitations sent to you.</Card.Description>
+				<Card.Description
+					>Organization invitations sent to you.</Card.Description
+				>
 			</Card.Header>
 			<Card.Content class="space-y-3">
 				{#if invitationError}
@@ -594,7 +601,9 @@
 								<span class="font-medium"
 									>{inv.organizationName ?? "Organization"}</span
 								>
-								<Badge variant={inv.status === "accepted" ? "default" : "outline"}>
+								<Badge
+									variant={inv.status === "accepted" ? "default" : "outline"}
+								>
 									{inv.status}
 								</Badge>
 							</div>
@@ -608,7 +617,9 @@
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>Organizations</Card.Title>
-				<Card.Description>Create or join organizations to collaborate.</Card.Description>
+				<Card.Description
+					>Create or join organizations to collaborate.</Card.Description
+				>
 			</Card.Header>
 			<Card.Footer>
 				<Button href={resolve("/org/create")} variant="outline" size="sm">

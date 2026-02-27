@@ -7,8 +7,8 @@
 		createQuery,
 		useQueryClient,
 	} from "@tanstack/svelte-query";
-	import { derived } from "svelte/store";
 	import { setContext } from "svelte";
+	import { derived } from "svelte/store";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -122,7 +122,7 @@
 				</p>
 			{/if}
 
-			{#if !$chatsQuery.isLoading && !$chatsQuery.data?.length}
+			{#if !($chatsQuery.isLoading || $chatsQuery.data?.length)}
 				<p
 					class="px-2 py-4 text-center text-xs text-muted-foreground"
 					data-testid="chat-empty-state"

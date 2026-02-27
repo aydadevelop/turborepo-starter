@@ -8,9 +8,6 @@
     "./*": {
       "default": "./src/*.ts"
     },
-    "./contracts/*": {
-      "default": "./src/contracts/*.ts"
-    },
     "./payments/webhooks": {
       "default": "./src/payments/webhooks/index.ts"
     },
@@ -23,11 +20,11 @@
     "./services/*": {
       "default": "./src/services/*.ts"
     },
-    "./routers": {
-      "default": "./src/routers/index.ts"
+    "./handlers": {
+      "default": "./src/handlers/index.ts"
     },
-    "./routers/*": {
-      "default": "./src/routers/*.ts"
+    "./handlers/*": {
+      "default": "./src/handlers/*.ts"
     }
   },
   "scripts": {
@@ -38,6 +35,7 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
+    "@my-app/api-contract": "*",
     "@my-app/auth": "*",
     "@my-app/db": "*",
     "@my-app/env": "*",

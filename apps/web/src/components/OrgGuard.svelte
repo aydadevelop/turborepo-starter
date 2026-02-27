@@ -42,7 +42,11 @@
 		if (!onProtectedPath) return;
 
 		if (($orgsQuery.data?.length ?? 0) === 0) {
-			goto(`${resolve("/org/create")}?reason=required`, { replaceState: true });
+			const nextPath = `${page.url.pathname}${page.url.search}`;
+			goto(
+				`${resolve("/org/create")}?reason=required&next=${encodeURIComponent(nextPath)}`,
+				{ replaceState: true }
+			);
 		}
 	});
 </script>

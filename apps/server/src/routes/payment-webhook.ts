@@ -1,4 +1,4 @@
-import { internalServerRouteProcedures } from "@my-app/api/routers/internal/server-routes";
+import { internalServerRouteProcedures } from "@my-app/api/handlers/internal/server-routes";
 import { createProcedureClient } from "@orpc/server";
 import { Hono } from "hono";
 

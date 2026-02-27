@@ -1,11 +1,11 @@
-import type { AppRouterClient } from "@my-app/api/routers";
+import type { AppContractClient } from "@my-app/api-contract/routers";
 import { createMockChargeNotificationTool } from "./tools/create-mock-charge-notification";
 import { createCreateTodoTool } from "./tools/create-todo";
 import { createListTodosTool } from "./tools/list-todos";
 import { createScheduleRecurringReminderTool } from "./tools/schedule-recurring-reminder";
 import { createWhoAmITool } from "./tools/whoami";
 
-export const createAssistantTools = (client: AppRouterClient) => {
+export const createAssistantTools = (client: AppContractClient) => {
 	return {
 		whoami: createWhoAmITool(client),
 		listTodos: createListTodosTool(client),

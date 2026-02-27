@@ -3,6 +3,7 @@
 	import { derived } from "svelte/store";
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
+	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { orpc, queryClient } from "$lib/orpc";
 	import NotificationCenter from "./NotificationCenter.svelte";
 	import OrgSwitcher from "./OrgSwitcher.svelte";
@@ -42,7 +43,7 @@
 	const canManageQueryOptions = derived(sessionQuery, ($sessionQuery) => ({
 		...orpc.canManageOrganization.queryOptions(),
 		retry: false,
-		enabled: Boolean($sessionQuery.data),
+		enabled: hasAuthenticatedSession($sessionQuery.data),
 	}));
 	const canManageQuery = createQuery(canManageQueryOptions);
 
@@ -50,7 +51,7 @@
 		queryKey: ["user-invitations"],
 		queryFn: fetchUserInvitations, // stable reference — no new closure per tick
 		retry: false,
-		enabled: Boolean($sessionQuery.data),
+		enabled: hasAuthenticatedSession($sessionQuery.data),
 	}));
 	const invitationsQuery = createQuery(invitationsQueryOptions);
 
@@ -93,10 +94,8 @@
 		class="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4"
 	>
 		<a href={resolve("/")} class="flex items-center gap-3">
-			<img src={resolve("/icon6.svg")} alt="Playpulse" class="h-9 w-9 rounded-full" />
-			<span class="text-sm font-semibold text-muted-foreground">
-				Playpulse
-			</span>
+			<img src="/icon6.svg" alt="Starter" class="h-9 w-9 rounded-full">
+			<span class="text-sm font-semibold text-muted-foreground"> Starter </span>
 		</a>
 		<nav
 			class="hidden items-center gap-6 text-sm text-muted-foreground md:flex"

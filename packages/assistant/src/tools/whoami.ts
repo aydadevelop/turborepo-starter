@@ -1,6 +1,6 @@
-import type { AppRouterClient } from "@my-app/api/routers";
-import { orpcTool } from "../lib/orpc-tool";
+import type { AppContractClient } from "@my-app/api-contract/routers";
 import z from "zod";
+import { orpcTool } from "../lib/orpc-tool";
 
 const getUserName = (
 	user: Record<string, unknown> | undefined
@@ -22,7 +22,7 @@ const getUserName = (
 	return null;
 };
 
-export const createWhoAmITool = (client: AppRouterClient) =>
+export const createWhoAmITool = (client: AppContractClient) =>
 	orpcTool(
 		z.object({}),
 		"Return current authenticated user identity, including display name and active organization role when available.",
@@ -48,5 +48,5 @@ export const createWhoAmITool = (client: AppRouterClient) =>
 				organizationId,
 				isAuthenticated: Boolean(user),
 			};
-		},
+		}
 	);

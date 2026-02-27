@@ -8,7 +8,7 @@ import { z } from "zod";
 export function orpcTool<TSchema extends z.ZodType>(
 	inputSchema: TSchema,
 	description: string,
-	execute: (input: z.infer<TSchema>) => Promise<unknown>,
+	execute: (input: z.infer<TSchema>) => Promise<unknown>
 ) {
 	return tool({ description, inputSchema, execute });
 }
@@ -23,8 +23,9 @@ export function orpcTool<TSchema extends z.ZodType>(
  */
 export function llmSafe<T extends z.ZodTypeAny>(schema: T) {
 	return z.preprocess((raw) => {
-		if (typeof raw !== "object" || raw === null || Array.isArray(raw))
+		if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
 			return raw;
+		}
 		return Object.fromEntries(
 			Object.entries(raw as Record<string, unknown>).map(([k, v]) => [
 				k,
@@ -42,7 +43,7 @@ export function llmSafe<T extends z.ZodTypeAny>(schema: T) {
 export function orpcMutationTool<TSchema extends z.ZodType>(
 	inputSchema: TSchema,
 	description: string,
-	execute: (input: z.infer<TSchema>) => Promise<unknown>,
+	execute: (input: z.infer<TSchema>) => Promise<unknown>
 ) {
 	return tool({ description, inputSchema, execute, needsApproval: true });
 }

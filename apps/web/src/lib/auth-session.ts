@@ -1,20 +1,31 @@
 import type { authClient } from "./auth-client";
 
-type SessionData =
-	ReturnType<typeof authClient.useSession> extends {
-		subscribe: (cb: (v: { data: infer D }) => void) => void;
-	}
-		? D
-		: never;
+type SessionData = typeof authClient.$Infer.Session;
+
+const isAnonymousUser = (user: SessionData["user"] | null | undefined): boolean =>
+	Boolean(user?.isAnonymous);
 
 export function hasAuthenticatedSession(
 	data: SessionData | null | undefined
-): data is NonNullable<SessionData> & { session: object; user: object } {
-	return Boolean(data?.session && data?.user);
+): data is NonNullable<SessionData> & {
+	session: object;
+	user: { id: string };
+} {
+	const user = data?.user;
+	if (!(data?.session && user?.id)) {
+		return false;
+	}
+
+	return !isAnonymousUser(user);
 }
 
 export function getAuthenticatedUserId(
 	data: SessionData | null | undefined
 ): string | null {
-	return (data?.user as { id?: string } | undefined)?.id ?? null;
+	const user = data?.user;
+	if (!user?.id || isAnonymousUser(user)) {
+		return null;
+	}
+
+	return user.id;
 }

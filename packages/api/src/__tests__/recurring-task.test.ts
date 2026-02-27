@@ -7,7 +7,7 @@ vi.mock("@my-app/notifications/pusher", () => ({
 }));
 
 const { createRecurringTaskTickMessage, recurringTaskTickMessageSchema } =
-	await import("../contracts/recurring-task-queue");
+	await import("@my-app/api-contract/contracts/recurring-task-queue");
 const { processRecurringTaskTick, scheduleRecurringTask } = await import(
 	"../tasks/recurring"
 );

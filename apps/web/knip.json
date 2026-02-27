@@ -1,0 +1,4 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreDependencies": ["@my-app/ai-chat", "@my-app/assistant", "@my-app/ui"]
+}

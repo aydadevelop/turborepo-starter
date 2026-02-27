@@ -4,6 +4,7 @@ import { SEED_CREDENTIALS } from "./seed";
 import { url } from "./url";
 
 const { serverURL: SERVER_URL } = getPlaywrightRuntimeEnv();
+const LEADING_SLASHES_RE = /^\/+/;
 
 interface BrowserFetchResult {
 	contentType: string | null;
@@ -81,7 +82,27 @@ export const signInWithEmail = async (
 };
 
 export const signInAsSeedOwner = async (page: Page) =>
-	await signInWithEmail(page, SEED_CREDENTIALS.owner);
+	await signInWithEmail(page, SEED_CREDENTIALS.admin);
 
 export const signInAsSeedAdmin = async (page: Page) =>
 	await signInWithEmail(page, SEED_CREDENTIALS.admin);
+
+export const signInAsSeedOperator = async (page: Page) =>
+	await signInWithEmail(page, SEED_CREDENTIALS.operator);
+
+export const rpcRequest = async (
+	page: Page,
+	options: {
+		path: string;
+		input?: unknown;
+	}
+) => {
+	const normalizedPath = options.path.replace(LEADING_SLASHES_RE, "");
+	return await browserRequest(page, {
+		path: `/rpc/${normalizedPath}`,
+		method: "POST",
+		body: {
+			json: options.input ?? null,
+		},
+	});
+};

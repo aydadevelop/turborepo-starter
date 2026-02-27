@@ -1,131 +1,158 @@
 <!-- biome-ignore-all format: TanStack Form component member syntax not supported -->
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardFooter,
-		CardHeader,
-		CardTitle,
-	} from "@my-app/ui/components/card";
-	import { Input } from "@my-app/ui/components/input";
-	import { Label } from "@my-app/ui/components/label";
-	import { createForm } from "@tanstack/svelte-form";
-	import { onMount } from "svelte";
-	import { z } from "zod";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
-	import { authClient } from "$lib/auth-client";
-	import PhoneOtpForm from "./PhoneOtpForm.svelte";
-	import TelegramLogin from "./TelegramLogin.svelte";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@my-app/ui/components/card";
+import { Input } from "@my-app/ui/components/input";
+import { Label } from "@my-app/ui/components/label";
+import { createForm } from "@tanstack/svelte-form";
+import { onMount } from "svelte";
+import { z } from "zod";
+import { goto } from "$app/navigation";
+import { resolve } from "$app/paths";
+import { page } from "$app/state";
+import { authClient } from "$lib/auth-client";
+import PhoneOtpForm from "./PhoneOtpForm.svelte";
+import TelegramLogin from "./TelegramLogin.svelte";
 
-	let { switchToSignUp } = $props<{ switchToSignUp: () => void }>();
+let { switchToSignUp } = $props<{ switchToSignUp: () => void }>();
 
-	type AuthMethod = "email" | "phone";
-	let authMethod = $state<AuthMethod>("email");
+type AuthMethod = "email" | "phone";
+let authMethod = $state<AuthMethod>("email");
 
-	const resolvePostAuthRedirect = (candidatePath: string | null): string => {
-		if (!candidatePath) {
-			return resolve("/dashboard/settings");
-		}
-		if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
-			return resolve("/dashboard/settings");
-		}
-		return candidatePath;
-	};
+const resolvePostAuthRedirect = (candidatePath: string | null): string => {
+	if (!candidatePath) {
+		return resolve("/dashboard/settings");
+	}
+	if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
+		return resolve("/dashboard/settings");
+	}
+	return candidatePath;
+};
 
-	const postAuthRedirectPath = $derived(
-		resolvePostAuthRedirect(page.url.searchParams.get("next"))
-	);
-	let passkeyError = $state<string | null>(null);
-	let passkeyPending = $state(false);
+const postAuthRedirectPath = $derived(
+	resolvePostAuthRedirect(page.url.searchParams.get("next"))
+);
+let passkeyError = $state<string | null>(null);
+let passkeyPending = $state(false);
+let submitError = $state<string | null>(null);
 
-	const handlePasskeySignIn = async (autoFill = false) => {
-		if (typeof window === "undefined" || !("PublicKeyCredential" in window)) {
-			passkeyError = "Passkeys are not supported in this browser.";
-			return;
-		}
+const formatFormError = (error: unknown): string => {
+	if (typeof error === "string" && error.trim().length > 0) {
+		return error;
+	}
 
-		passkeyError = null;
-		if (!autoFill) {
-			passkeyPending = true;
-		}
-		try {
-			let signInSucceeded = false;
-			const { error } = await authClient.signIn.passkey({
-				autoFill,
-				fetchOptions: {
-					onSuccess: () => {
-						signInSucceeded = true;
-						window.location.href = postAuthRedirectPath;
-					},
-				},
-			});
-
-			if (signInSucceeded) return;
-
-			if (error) {
-				// Conditional mediation errors (e.g. ceremony aborted) are expected
-				if (autoFill) return;
-				passkeyError = error.message || "Passkey sign in failed.";
-			}
-		} catch {
-			// Conditional mediation can be aborted — don't surface those errors
-			if (autoFill) return;
-			passkeyError = "Passkey sign in failed.";
-		} finally {
-			passkeyPending = false;
-		}
-	};
-
-	onMount(() => {
-		if (typeof window === "undefined" || !("PublicKeyCredential" in window)) {
-			return;
+	if (typeof error === "object" && error !== null) {
+		const maybeError = error as {
+			message?: unknown;
+			error?: { message?: unknown };
+		};
+		if (
+			typeof maybeError.error?.message === "string" &&
+			maybeError.error.message.trim().length > 0
+		) {
+			return maybeError.error.message;
 		}
 		if (
-			typeof PublicKeyCredential.isConditionalMediationAvailable !== "function"
+			typeof maybeError.message === "string" &&
+			maybeError.message.trim().length > 0
 		) {
-			return;
+			return maybeError.message;
 		}
+	}
 
-		PublicKeyCredential.isConditionalMediationAvailable()
-			.then((isAvailable) => {
-				if (!isAvailable) {
-					return;
-				}
-				handlePasskeySignIn(true);
-			})
-			.catch(() => {
-				// Ignore conditional UI probing errors and keep manual passkey login.
-			});
-	});
+	return "Please check the form and try again.";
+};
 
-	const validationSchema = z.object({
-		email: z.email("Invalid email address"),
-		password: z.string().min(1, "Password is required"),
-	});
+const handlePasskeySignIn = async (autoFill = false) => {
+	if (typeof window === "undefined" || !("PublicKeyCredential" in window)) {
+		passkeyError = "Passkeys are not supported in this browser.";
+		return;
+	}
 
-	const form = createForm(() => ({
-		defaultValues: { email: "", password: "" },
-		onSubmit: async ({ value }) => {
-			await authClient.signIn.email(
-				{ email: value.email, password: value.password },
-				{
-					onSuccess: () => goto(postAuthRedirectPath),
-					onError: (error) => {
-						console.error(
-							error.error.message || "Sign in failed. Please try again."
-						);
-					},
-				}
-			);
-		},
-		validators: {
-			onSubmit: validationSchema,
-		},
-	}));
+	passkeyError = null;
+	if (!autoFill) {
+		passkeyPending = true;
+	}
+	try {
+		let signInSucceeded = false;
+		const { error } = await authClient.signIn.passkey({
+			autoFill,
+			fetchOptions: {
+				onSuccess: () => {
+					signInSucceeded = true;
+					window.location.href = postAuthRedirectPath;
+				},
+			},
+		});
+
+		if (signInSucceeded) return;
+
+		if (error) {
+			// Conditional mediation errors (e.g. ceremony aborted) are expected
+			if (autoFill) return;
+			passkeyError = error.message || "Passkey sign in failed.";
+		}
+	} catch {
+		// Conditional mediation can be aborted — don't surface those errors
+		if (autoFill) return;
+		passkeyError = "Passkey sign in failed.";
+	} finally {
+		passkeyPending = false;
+	}
+};
+
+onMount(() => {
+	if (typeof window === "undefined" || !("PublicKeyCredential" in window)) {
+		return;
+	}
+	if (
+		typeof PublicKeyCredential.isConditionalMediationAvailable !== "function"
+	) {
+		return;
+	}
+
+	PublicKeyCredential.isConditionalMediationAvailable()
+		.then((isAvailable) => {
+			if (!isAvailable) {
+				return;
+			}
+			handlePasskeySignIn(true);
+		})
+		.catch(() => {
+			// Ignore conditional UI probing errors and keep manual passkey login.
+		});
+});
+
+const validationSchema = z.object({
+	email: z.email("Invalid email address"),
+	password: z.string().min(1, "Password is required"),
+});
+
+const form = createForm(() => ({
+	defaultValues: { email: "", password: "" },
+	onSubmit: async ({ value }) => {
+		submitError = null;
+		await authClient.signIn.email(
+			{ email: value.email, password: value.password },
+			{
+				onSuccess: () => goto(postAuthRedirectPath),
+				onError: (error) => {
+					submitError = formatFormError(error);
+				},
+			}
+		);
+	},
+	validators: {
+		onSubmit: validationSchema,
+	},
+}));
 </script>
 
 <div class="mx-auto mt-10 w-full max-w-md p-6">
@@ -187,7 +214,9 @@
 								/>
 								{#if field.state.meta.isTouched}
 									{#each field.state.meta.errors as err}
-										<p class="text-sm text-destructive" role="alert">{err}</p>
+										<p class="text-sm text-destructive" role="alert">
+											{formatFormError(err)}
+										</p>
 									{/each}
 								{/if}
 							</div>
@@ -214,12 +243,17 @@
 								/>
 								{#if field.state.meta.isTouched}
 									{#each field.state.meta.errors as err}
-										<p class="text-sm text-destructive" role="alert">{err}</p>
+										<p class="text-sm text-destructive" role="alert">
+											{formatFormError(err)}
+										</p>
 									{/each}
 								{/if}
 							</div>
 						{/snippet}
 					</form.Field>
+					{#if submitError}
+						<p class="text-sm text-destructive" role="alert">{submitError}</p>
+					{/if}
 
 					<form.Subscribe
 						selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}

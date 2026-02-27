@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
-    "@my-app/api": "*",
+    "@my-app/api-contract": "*",
     "@my-app/config": "*",
     "@my-app/vitest-config": "*",
     "typescript": "^5",

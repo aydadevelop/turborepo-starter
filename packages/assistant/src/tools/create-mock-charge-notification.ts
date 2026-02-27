@@ -1,8 +1,8 @@
-import type { AppRouterClient } from "@my-app/api/routers";
-import { orpcMutationTool } from "../lib/orpc-tool";
+import type { AppContractClient } from "@my-app/api-contract/routers";
 import z from "zod";
+import { orpcMutationTool } from "../lib/orpc-tool";
 
-export const createMockChargeNotificationTool = (client: AppRouterClient) =>
+export const createMockChargeNotificationTool = (client: AppContractClient) =>
 	orpcMutationTool(
 		z.object({
 			amountCents: z.number().int().positive().max(10_000_000),
@@ -13,5 +13,5 @@ export const createMockChargeNotificationTool = (client: AppRouterClient) =>
 		async (input) => {
 			const result = await client.payments.createMockChargeNotification(input);
 			return result;
-		},
+		}
 	);

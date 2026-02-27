@@ -2,24 +2,12 @@ import { db } from "@my-app/db";
 import { invitation, member, organization, user } from "@my-app/db/schema/auth";
 import { ORPCError } from "@orpc/server";
 import { and, count, desc, eq, inArray, like, or, type SQL } from "drizzle-orm";
-import { createSelectSchema } from "drizzle-orm/zod";
-import z from "zod";
-import { successOutputSchema } from "../../contracts/shared";
 import { buildUpdatePayload } from "../../lib/db-helpers";
 import { adminProcedure } from "../shared/admin";
-import { paginatedOutput, paginationInput } from "./shared";
-
-const organizationOutputSchema = createSelectSchema(organization);
-const memberOutputSchema = createSelectSchema(member);
-const invitationOutputSchema = createSelectSchema(invitation);
-const userOutputSchema = createSelectSchema(user);
 
 export const adminOrganizationsRouter = {
-	listOrgs: adminProcedure
-		.route({ summary: "List all organizations" })
-		.input(paginationInput.extend({ search: z.string().trim().optional() }))
-		.output(paginatedOutput(organizationOutputSchema))
-		.handler(async ({ input }) => {
+	listOrgs: adminProcedure.admin.organizations.listOrgs.handler(
+		async ({ input }) => {
 			const where = input.search
 				? or(
 						like(organization.name, `%${input.search}%`),
@@ -39,13 +27,11 @@ export const adminOrganizationsRouter = {
 			]);
 
 			return { items, total: countRows[0]?.value ?? 0 };
-		}),
+		}
+	),
 
-	getOrg: adminProcedure
-		.route({ summary: "Get organization by ID" })
-		.input(z.object({ id: z.string().trim().min(1) }))
-		.output(organizationOutputSchema)
-		.handler(async ({ input }) => {
+	getOrg: adminProcedure.admin.organizations.getOrg.handler(
+		async ({ input }) => {
 			const [org] = await db
 				.select()
 				.from(organization)
@@ -59,21 +45,11 @@ export const adminOrganizationsRouter = {
 			}
 
 			return org;
-		}),
+		}
+	),
 
-	updateOrg: adminProcedure
-		.route({ summary: "Update an organization" })
-		.input(
-			z.object({
-				id: z.string().trim().min(1),
-				name: z.string().trim().min(1).optional(),
-				slug: z.string().trim().min(1).optional(),
-				logo: z.string().trim().optional(),
-				metadata: z.string().trim().optional(),
-			})
-		)
-		.output(successOutputSchema)
-		.handler(async ({ input }) => {
+	updateOrg: adminProcedure.admin.organizations.updateOrg.handler(
+		async ({ input }) => {
 			const { id, ...fields } = input;
 			const payload = buildUpdatePayload(fields);
 
@@ -90,24 +66,11 @@ export const adminOrganizationsRouter = {
 			}
 
 			return { success: true };
-		}),
+		}
+	),
 
-	listMembers: adminProcedure
-		.route({ summary: "List members of an organization" })
-		.input(
-			paginationInput.extend({
-				organizationId: z.string().trim().min(1),
-			})
-		)
-		.output(
-			paginatedOutput(
-				memberOutputSchema.extend({
-					userName: z.string().optional(),
-					userEmail: z.string().optional(),
-				})
-			)
-		)
-		.handler(async ({ input }) => {
+	listMembers: adminProcedure.admin.organizations.listMembers.handler(
+		async ({ input }) => {
 			const where = eq(member.organizationId, input.organizationId);
 
 			const [items, countRows] = await Promise.all([
@@ -134,18 +97,11 @@ export const adminOrganizationsRouter = {
 				})),
 				total: countRows[0]?.value ?? 0,
 			};
-		}),
+		}
+	),
 
-	updateMemberRole: adminProcedure
-		.route({ summary: "Change a member's role within an organization" })
-		.input(
-			z.object({
-				memberId: z.string().trim().min(1),
-				role: z.string().trim().min(1),
-			})
-		)
-		.output(successOutputSchema)
-		.handler(async ({ input }) => {
+	updateMemberRole: adminProcedure.admin.organizations.updateMemberRole.handler(
+		async ({ input }) => {
 			const [updated] = await db
 				.update(member)
 				.set({ role: input.role })
@@ -159,13 +115,11 @@ export const adminOrganizationsRouter = {
 			}
 
 			return { success: true };
-		}),
+		}
+	),
 
-	removeMember: adminProcedure
-		.route({ summary: "Remove a member from an organization" })
-		.input(z.object({ memberId: z.string().trim().min(1) }))
-		.output(successOutputSchema)
-		.handler(async ({ input }) => {
+	removeMember: adminProcedure.admin.organizations.removeMember.handler(
+		async ({ input }) => {
 			const [deleted] = await db
 				.delete(member)
 				.where(eq(member.id, input.memberId))
@@ -178,20 +132,11 @@ export const adminOrganizationsRouter = {
 			}
 
 			return { success: true };
-		}),
+		}
+	),
 
-	listInvitations: adminProcedure
-		.route({ summary: "List invitations for an organization" })
-		.input(
-			paginationInput.extend({
-				organizationId: z.string().trim().min(1),
-				status: z
-					.enum(["pending", "accepted", "rejected", "cancelled"])
-					.optional(),
-			})
-		)
-		.output(paginatedOutput(invitationOutputSchema))
-		.handler(async ({ input }) => {
+	listInvitations: adminProcedure.admin.organizations.listInvitations.handler(
+		async ({ input }) => {
 			const where = and(
 				eq(invitation.organizationId, input.organizationId),
 				input.status ? eq(invitation.status, input.status) : undefined
@@ -209,25 +154,11 @@ export const adminOrganizationsRouter = {
 			]);
 
 			return { items: rows, total: countRows[0]?.value ?? 0 };
-		}),
+		}
+	),
 
-	listUsers: adminProcedure
-		.route({ summary: "List all users" })
-		.input(
-			paginationInput.extend({
-				search: z.string().trim().optional(),
-				role: z.string().trim().optional(),
-				banned: z.boolean().optional(),
-			})
-		)
-		.output(
-			paginatedOutput(
-				userOutputSchema.extend({
-					organizationCount: z.number(),
-				})
-			)
-		)
-		.handler(async ({ input }) => {
+	listUsers: adminProcedure.admin.organizations.listUsers.handler(
+		async ({ input }) => {
 			const conditions: SQL[] = [];
 
 			if (input.search) {
@@ -260,7 +191,6 @@ export const adminOrganizationsRouter = {
 			]);
 			const total = countRows[0]?.value ?? 0;
 
-			// Count memberships per user in a single query
 			const userIds = users.map((u) => u.id);
 			const membershipCounts =
 				userIds.length > 0
@@ -285,22 +215,11 @@ export const adminOrganizationsRouter = {
 				})),
 				total,
 			};
-		}),
+		}
+	),
 
-	getUser: adminProcedure
-		.route({ summary: "Get user by ID" })
-		.input(z.object({ id: z.string().trim().min(1) }))
-		.output(
-			userOutputSchema.extend({
-				memberships: z.array(
-					memberOutputSchema.extend({
-						organizationName: z.string().optional(),
-						organizationSlug: z.string().optional(),
-					})
-				),
-			})
-		)
-		.handler(async ({ input }) => {
+	getUser: adminProcedure.admin.organizations.getUser.handler(
+		async ({ input }) => {
 			const [dbUser] = await db
 				.select()
 				.from(user)
@@ -329,5 +248,6 @@ export const adminOrganizationsRouter = {
 					organizationSlug: m.organizationSlug ?? undefined,
 				})),
 			};
-		}),
+		}
+	),
 };

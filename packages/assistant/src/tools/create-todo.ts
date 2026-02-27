@@ -1,8 +1,8 @@
-import type { AppRouterClient } from "@my-app/api/routers";
-import { orpcTool } from "../lib/orpc-tool";
+import type { AppContractClient } from "@my-app/api-contract/routers";
 import z from "zod";
+import { orpcTool } from "../lib/orpc-tool";
 
-export const createCreateTodoTool = (client: AppRouterClient) =>
+export const createCreateTodoTool = (client: AppContractClient) =>
 	orpcTool(
 		z.object({ text: z.string().trim().min(1).max(240) }),
 		"Create a new todo item.",
@@ -13,5 +13,5 @@ export const createCreateTodoTool = (client: AppRouterClient) =>
 				created: true,
 				total: todos.length,
 			};
-		},
+		}
 	);

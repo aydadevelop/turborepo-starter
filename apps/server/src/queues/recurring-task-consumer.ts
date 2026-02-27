@@ -1,5 +1,5 @@
-import { recurringTaskTickMessageSchema } from "@my-app/api/contracts/recurring-task-queue";
 import { processRecurringTaskTick } from "@my-app/api/tasks/recurring";
+import { recurringTaskTickMessageSchema } from "@my-app/api-contract/contracts/recurring-task-queue";
 
 const MAX_RETRY_ATTEMPTS = 5;
 

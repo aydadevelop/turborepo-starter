@@ -1,0 +1,36 @@
+{
+  "name": "@my-app/api-contract",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/routers/index.ts"
+    },
+    "./contracts/*": {
+      "default": "./src/contracts/*.ts"
+    },
+    "./routers": {
+      "default": "./src/routers/index.ts"
+    },
+    "./routers/*": {
+      "default": "./src/routers/*.ts"
+    },
+    "./routers/admin/*": {
+      "default": "./src/routers/admin/*.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit -p tsconfig.json",
+    "lint": "cd ../.. && biome check --config-path biome.json packages/api-contract",
+    "lint:fix": "cd ../.. && biome check --config-path biome.json packages/api-contract --write"
+  },
+  "dependencies": {
+    "@orpc/contract": "^1.13.4",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
+    "@my-app/config": "*",
+    "typescript": "^5",
+    "ultracite": "^7.2.3"
+  }
+}

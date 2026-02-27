@@ -20,6 +20,69 @@
 	let scrolledToBottom = $state(false);
 
 	const sessionQuery = authClient.useSession();
+	const defaultPostCreatePath = resolve("/dashboard/settings");
+
+	const resolvePostCreateRedirect = (candidatePath: string | null): string => {
+		if (!candidatePath) {
+			return defaultPostCreatePath;
+		}
+		if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
+			return defaultPostCreatePath;
+		}
+		// Never bounce back into org creation after successful creation.
+		if (candidatePath.startsWith(resolve("/org/create"))) {
+			return defaultPostCreatePath;
+		}
+		return candidatePath;
+	};
+
+	const postCreateRedirectPath = $derived(
+		resolvePostCreateRedirect(page.url.searchParams.get("next"))
+	);
+
+	const extractErrorMessage = (error: unknown, fallback: string): string => {
+		if (error instanceof Error && error.message.trim().length > 0) {
+			return error.message;
+		}
+
+		if (typeof error === "string" && error.trim().length > 0) {
+			return error;
+		}
+
+		if (typeof error === "object" && error !== null) {
+			const maybeError = error as {
+				message?: unknown;
+				error?: { message?: unknown };
+			};
+
+			if (
+				typeof maybeError.error?.message === "string" &&
+				maybeError.error.message.trim().length > 0
+			) {
+				return maybeError.error.message;
+			}
+			if (
+				typeof maybeError.message === "string" &&
+				maybeError.message.trim().length > 0
+			) {
+				return maybeError.message;
+			}
+		}
+
+		return fallback;
+	};
+
+	const toFriendlyOrgCreateError = (message: string): string => {
+		const normalized = message.toLowerCase();
+		if (
+			normalized.includes("unauthorized") ||
+			normalized.includes("forbidden")
+		) {
+			return "You need to sign in with an email account before creating an organization.";
+		}
+
+		return message;
+	};
 
 	$effect(() => {
 		const user = $sessionQuery.data?.user;
@@ -43,7 +106,7 @@
 
 	$effect(() => {
 		if ($sessionQuery.isPending) return;
-		if (!$sessionQuery.data) {
+		if (!hasAuthenticatedSession($sessionQuery.data)) {
 			goto(
 				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
 			);
@@ -62,6 +125,12 @@
 	};
 
 	const handleSubmit = async () => {
+		if (!hasAuthenticatedSession($sessionQuery.data)) {
+			errorMessage =
+				"You need to sign in with an email account before creating an organization.";
+			return;
+		}
+
 		const trimmedName = orgName.trim();
 		if (!trimmedName) {
 			errorMessage = "Organization name is required.";
@@ -90,22 +159,30 @@
 			});
 
 			if (error) {
-				errorMessage =
-					(error as { message?: string }).message ??
-					"Failed to create organization.";
+				errorMessage = toFriendlyOrgCreateError(
+					extractErrorMessage(error, "Failed to create organization.")
+				);
 				pending = false;
 				return;
 			}
 
-			queryClient.invalidateQueries({ queryKey: ["organization"] });
-			queryClient.invalidateQueries({ queryKey: ["user-organizations"] });
-			queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] });
-			goto(resolve("/dashboard/settings"));
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: ["organization"] }),
+				queryClient.invalidateQueries({ queryKey: ["user-organizations"] }),
+				queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] }),
+			]);
+
+			const orgsResult = await authClient.organization.list();
+			queryClient.setQueryData(["user-organizations"], orgsResult.data ?? []);
+
+			goto(postCreateRedirectPath, { replaceState: true });
 		} catch (err) {
-			errorMessage =
-				err instanceof Error
-					? err.message
-					: "An error occurred while creating the organization.";
+			errorMessage = toFriendlyOrgCreateError(
+				extractErrorMessage(
+					err,
+					"An error occurred while creating the organization."
+				)
+			);
 			pending = false;
 		}
 	};
@@ -123,14 +200,16 @@
 		<Alert.Root class="mb-6">
 			<Alert.Title>Welcome! One more step</Alert.Title>
 			<Alert.Description>
-				Your account is ready. Create an organization to start managing your workspace.
+				Your account is ready. Create an organization to start managing your
+				workspace.
 			</Alert.Description>
 		</Alert.Root>
 	{:else if page.url.searchParams.get('reason') === 'required'}
 		<Alert.Root class="mb-6">
 			<Alert.Title>Organization required</Alert.Title>
 			<Alert.Description>
-				You need an organization to access this area. Create one below to continue.
+				You need an organization to access this area. Create one below to
+				continue.
 			</Alert.Description>
 		</Alert.Root>
 	{/if}
@@ -145,7 +224,7 @@
 			<Button
 				variant="ghost"
 				size="sm"
-				onclick={() => goto(resolve("/dashboard/settings"))}
+				onclick={() => goto(postCreateRedirectPath)}
 			>
 				Go to Settings
 			</Button>

@@ -1,4 +1,4 @@
-import type { AppRouterClient } from "@my-app/api/routers";
+import type { AppContractClient } from "@my-app/api-contract/routers";
 import type { AssistantContext } from "@my-app/assistant/context";
 import { assistantRouter } from "@my-app/assistant/router";
 import { auth } from "@my-app/auth";
@@ -20,7 +20,7 @@ const rpcHandler = new RPCHandler(assistantRouter, {
 const createServerClient = (
 	cookie: string,
 	fetchFn: typeof fetch
-): AppRouterClient => {
+): AppContractClient => {
 	const link = new RPCLink({
 		url: `${env.SERVER_URL}/rpc`,
 		fetch(request, init) {

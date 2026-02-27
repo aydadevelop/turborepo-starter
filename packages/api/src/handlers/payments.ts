@@ -1,63 +1,30 @@
 import { notificationsPusher } from "@my-app/notifications/pusher";
 import { ORPCError } from "@orpc/server";
-import z from "zod";
+
 import { organizationPermissionProcedure, publicProcedure } from "../index";
 import { getPaymentWebhookAdapter } from "../payments/webhooks";
-
-const providerOutputSchema = z.object({
-	provider: z.string(),
-	configured: z.boolean(),
-	supportedWebhookTypes: z.array(z.string()),
-});
-
-const createMockChargeInputSchema = z.object({
-	amountCents: z.number().int().positive().max(10_000_000),
-	currency: z.string().trim().min(3).max(8).default("USD"),
-	description: z.string().trim().min(1).max(200),
-});
-
-const createMockChargeOutputSchema = z.object({
-	eventIdempotencyKey: z.string(),
-	queued: z.boolean(),
-});
 
 const PAYMENT_PROVIDERS = ["cloudpayments"] as const;
 
 export const paymentsRouter = {
-	providers: publicProcedure
-		.route({
-			tags: ["Payments"],
-			summary: "List payment providers",
-			description:
-				"Returns configured payment webhook providers and supported webhook types.",
-		})
-		.output(z.array(providerOutputSchema))
-		.handler(() => {
-			return PAYMENT_PROVIDERS.map((provider) => {
-				const adapter = getPaymentWebhookAdapter(provider);
-				return {
-					provider,
-					configured: Boolean(adapter),
-					supportedWebhookTypes: adapter
-						? [...adapter.supportedWebhookTypes]
-						: [],
-				};
-			});
-		}),
+	providers: publicProcedure.payments.providers.handler(() => {
+		return PAYMENT_PROVIDERS.map((provider) => {
+			const adapter = getPaymentWebhookAdapter(provider);
+			return {
+				provider,
+				configured: Boolean(adapter),
+				supportedWebhookTypes: adapter
+					? [...adapter.supportedWebhookTypes]
+					: [],
+			};
+		});
+	}),
 
 	createMockChargeNotification: organizationPermissionProcedure({
 		payment: ["create"],
 		notification: ["create"],
-	})
-		.route({
-			tags: ["Payments"],
-			summary: "Emit mock charge notification",
-			description:
-				"Creates a notification event that simulates a successful charge for SaaS testing flows.",
-		})
-		.input(createMockChargeInputSchema)
-		.output(createMockChargeOutputSchema)
-		.handler(async ({ context, input }) => {
+	}).payments.createMockChargeNotification.handler(
+		async ({ context, input }) => {
 			const userId = context.session?.user?.id;
 			if (!userId) {
 				throw new ORPCError("UNAUTHORIZED");
@@ -106,5 +73,6 @@ export const paymentsRouter = {
 				eventIdempotencyKey,
 				queued: pusherResult.queued,
 			};
-		}),
+		}
+	),
 };

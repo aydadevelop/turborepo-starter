@@ -3,30 +3,35 @@
 	import { Button } from "@my-app/ui/components/button";
 	import * as Card from "@my-app/ui/components/card";
 	import { createQuery } from "@tanstack/svelte-query";
+	import { derived } from "svelte/store";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
+	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { queryClient } from "$lib/orpc";
 
 	const sessionQuery = authClient.useSession();
 
-	const invitationsQuery = createQuery({
-		queryKey: ["user-invitations"],
-		queryFn: async () => {
-			const { data, error } =
-				await authClient.organization.listUserInvitations();
-			if (error) throw error;
-			return data ?? [];
-		},
-	});
+	const invitationsQuery = createQuery(
+		derived(sessionQuery, ($session) => ({
+			queryKey: ["user-invitations"],
+			queryFn: async () => {
+				const { data, error } =
+					await authClient.organization.listUserInvitations();
+				if (error) throw error;
+				return data ?? [];
+			},
+			enabled: hasAuthenticatedSession($session.data),
+		}))
+	);
 
 	let pendingId = $state<string | null>(null);
 	let errorMessage = $state<string | null>(null);
 
 	$effect(() => {
 		if ($sessionQuery.isPending) return;
-		if (!$sessionQuery.data) {
+		if (!hasAuthenticatedSession($sessionQuery.data)) {
 			goto(
 				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
 			);

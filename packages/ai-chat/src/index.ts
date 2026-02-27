@@ -1,4 +1,9 @@
 export { Chat } from "@ai-sdk/svelte";
+export {
+	isToolUIPart,
+	lastAssistantMessageIsCompleteWithToolCalls,
+	type UIMessage,
+} from "ai";
 export * from "./components/prompt-kit/chat-container/index.js";
 export * from "./components/prompt-kit/loader/index.js";
 export * from "./components/prompt-kit/markdown/index.js";

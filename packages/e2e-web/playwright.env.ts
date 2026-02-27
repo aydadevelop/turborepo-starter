@@ -6,11 +6,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULTS = {
-	baseURL: "http://localhost:43173",
+	baseURL: "http://127.0.0.1:43173",
 	serverURL: "http://127.0.0.1:43100",
 	assistantURL: "http://127.0.0.1:43102",
 	workersCi: 1,
-	workersLocal: 2,
+	workersLocal: 1,
 	webServerCommand: "bun run dev:web:e2e",
 	backendServerCommand: "bun run dev:infra:e2e",
 } as const;

@@ -1,70 +1,97 @@
 <!-- biome-ignore-all format: TanStack Form component member syntax not supported -->
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardFooter,
-		CardHeader,
-		CardTitle,
-	} from "@my-app/ui/components/card";
-	import { Input } from "@my-app/ui/components/input";
-	import { Label } from "@my-app/ui/components/label";
-	import { createForm } from "@tanstack/svelte-form";
-	import { z } from "zod";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
-	import { authClient } from "$lib/auth-client";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@my-app/ui/components/card";
+import { Input } from "@my-app/ui/components/input";
+import { Label } from "@my-app/ui/components/label";
+import { createForm } from "@tanstack/svelte-form";
+import { z } from "zod";
+import { goto } from "$app/navigation";
+import { resolve } from "$app/paths";
+import { page } from "$app/state";
+import { authClient } from "$lib/auth-client";
 
-	let { switchToSignIn } = $props<{ switchToSignIn: () => void }>();
+let { switchToSignIn } = $props<{ switchToSignIn: () => void }>();
 
-	const resolvePostAuthRedirect = (candidatePath: string | null): string => {
-		if (!candidatePath) {
-			return `${resolve("/org/create")}?reason=new`;
+const resolvePostAuthRedirect = (candidatePath: string | null): string => {
+	if (!candidatePath) {
+		return `${resolve("/org/create")}?reason=new`;
+	}
+	if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
+		return `${resolve("/org/create")}?reason=new`;
+	}
+	return candidatePath;
+};
+
+const postAuthRedirectPath = $derived(
+	resolvePostAuthRedirect(page.url.searchParams.get("next"))
+);
+let submitError = $state<string | null>(null);
+
+const formatFormError = (error: unknown): string => {
+	if (typeof error === "string" && error.trim().length > 0) {
+		return error;
+	}
+
+	if (typeof error === "object" && error !== null) {
+		const maybeError = error as {
+			message?: unknown;
+			error?: { message?: unknown };
+		};
+		if (
+			typeof maybeError.error?.message === "string" &&
+			maybeError.error.message.trim().length > 0
+		) {
+			return maybeError.error.message;
 		}
-		if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
-			return `${resolve("/org/create")}?reason=new`;
+		if (
+			typeof maybeError.message === "string" &&
+			maybeError.message.trim().length > 0
+		) {
+			return maybeError.message;
 		}
-		return candidatePath;
-	};
+	}
 
-	const postAuthRedirectPath = $derived(
-		resolvePostAuthRedirect(page.url.searchParams.get("next"))
-	);
+	return "Please check the form and try again.";
+};
 
-	const validationSchema = z.object({
-		name: z.string().min(2, "Name must be at least 2 characters"),
-		email: z.email("Invalid email address"),
-		password: z.string().min(8, "Password must be at least 8 characters"),
-	});
+const validationSchema = z.object({
+	name: z.string().min(2, "Name must be at least 2 characters"),
+	email: z.email("Invalid email address"),
+	password: z.string().min(8, "Password must be at least 8 characters"),
+});
 
-	const form = createForm(() => ({
-		defaultValues: { name: "", email: "", password: "" },
-		onSubmit: async ({ value }) => {
-			await authClient.signUp.email(
-				{
-					email: value.email,
-					password: value.password,
-					name: value.name,
+const form = createForm(() => ({
+	defaultValues: { name: "", email: "", password: "" },
+	onSubmit: async ({ value }) => {
+		submitError = null;
+		await authClient.signUp.email(
+			{
+				email: value.email,
+				password: value.password,
+				name: value.name,
+			},
+			{
+				onSuccess: () => {
+					goto(postAuthRedirectPath);
 				},
-				{
-					onSuccess: () => {
-						goto(postAuthRedirectPath);
-					},
-					onError: (error) => {
-						console.error(
-							error.error.message || "Sign up failed. Please try again."
-						);
-					},
-				}
-			);
-		},
-		validators: {
-			onSubmit: validationSchema,
-		},
-	}));
+				onError: (error) => {
+					submitError = formatFormError(error);
+				},
+			}
+		);
+	},
+	validators: {
+		onSubmit: validationSchema,
+	},
+}));
 </script>
 
 <div class="mx-auto mt-10 w-full max-w-md p-6">
@@ -100,7 +127,9 @@
 							/>
 							{#if field.state.meta.isTouched}
 								{#each field.state.meta.errors as err}
-									<p class="text-sm text-destructive" role="alert">{err}</p>
+									<p class="text-sm text-destructive" role="alert">
+										{formatFormError(err)}
+									</p>
 								{/each}
 							{/if}
 						</div>
@@ -125,7 +154,9 @@
 							/>
 							{#if field.state.meta.isTouched}
 								{#each field.state.meta.errors as err}
-									<p class="text-sm text-destructive" role="alert">{err}</p>
+									<p class="text-sm text-destructive" role="alert">
+										{formatFormError(err)}
+									</p>
 								{/each}
 							{/if}
 						</div>
@@ -150,12 +181,17 @@
 							/>
 							{#if field.state.meta.isTouched}
 								{#each field.state.meta.errors as err}
-									<p class="text-sm text-destructive" role="alert">{err}</p>
+									<p class="text-sm text-destructive" role="alert">
+										{formatFormError(err)}
+									</p>
 								{/each}
 							{/if}
 						</div>
 					{/snippet}
 				</form.Field>
+				{#if submitError}
+					<p class="text-sm text-destructive" role="alert">{submitError}</p>
+				{/if}
 
 				<form.Subscribe
 					selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}

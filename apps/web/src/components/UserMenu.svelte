@@ -5,6 +5,7 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
+	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { queryClient } from "$lib/orpc";
 
 	const sessionQuery = authClient.useSession();
@@ -36,7 +37,7 @@
 <div class="relative">
 	{#if $sessionQuery.isPending}
 		<div class="h-8 w-24 animate-pulse rounded bg-muted"></div>
-	{:else if $sessionQuery.data?.user}
+	{:else if hasAuthenticatedSession($sessionQuery.data)}
 		{@const user = $sessionQuery.data.user}
 		<div class="flex items-center gap-3">
 			<span

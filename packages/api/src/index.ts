@@ -1,4 +1,5 @@
-import { ORPCError, os } from "@orpc/server";
+import { appContract } from "@my-app/api-contract/routers";
+import { implement, ORPCError } from "@orpc/server";
 
 import type { Context } from "./context";
 import { EventBus } from "./lib/event-bus";
@@ -7,7 +8,7 @@ import {
 	type OrganizationPermission,
 } from "./organization";
 
-export const o = os.$context<Context>();
+export const o = implement(appContract).$context<Context>();
 
 export const publicProcedure = o;
 

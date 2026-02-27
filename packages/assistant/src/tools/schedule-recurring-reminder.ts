@@ -1,8 +1,10 @@
-import type { AppRouterClient } from "@my-app/api/routers";
-import { orpcMutationTool } from "../lib/orpc-tool";
+import type { AppContractClient } from "@my-app/api-contract/routers";
 import z from "zod";
+import { orpcMutationTool } from "../lib/orpc-tool";
 
-export const createScheduleRecurringReminderTool = (client: AppRouterClient) =>
+export const createScheduleRecurringReminderTool = (
+	client: AppContractClient
+) =>
 	orpcMutationTool(
 		z.object({
 			title: z.string().trim().min(1).max(200),
@@ -16,5 +18,5 @@ export const createScheduleRecurringReminderTool = (client: AppRouterClient) =>
 		async (input) => {
 			const result = await client.tasks.scheduleRecurringReminder(input);
 			return result;
-		},
+		}
 	);

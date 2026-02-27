@@ -20,6 +20,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
     "@cloudflare/workers-types": "^4.20260228.0",
+    "@my-app/api-contract": "*",
     "@my-app/config": "*",
     "@my-app/vitest-config": "*",
     "@types/node": "^22.19.11",

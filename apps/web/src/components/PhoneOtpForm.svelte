@@ -12,28 +12,28 @@
 	let code = $state("");
 	let step = $state<"phone" | "otp">("phone");
 	let pending = $state(false);
-	let error = $state<string | null>(null);
+	let formError = $state<string | null>(null);
 
 	const fullPhone = $derived(phoneUnmasked ? `+${phoneUnmasked}` : "");
 
 	const handleSendOtp = async () => {
 		if (!fullPhone) {
-			error = "Phone number is required.";
+			formError = "Phone number is required.";
 			return;
 		}
 		pending = true;
-		error = null;
+		formError = null;
 		try {
 			const result = await authClient.phoneNumber.sendOtp({
 				phoneNumber: fullPhone,
 			});
 			if (result.error) {
-				error = result.error.message || "Failed to send OTP.";
+				formError = result.error.message || "Failed to send OTP.";
 				return;
 			}
 			step = "otp";
 		} catch {
-			error = "Failed to send OTP.";
+			formError = "Failed to send OTP.";
 		} finally {
 			pending = false;
 		}
@@ -41,23 +41,23 @@
 
 	const handleVerifyOtp = async () => {
 		if (!code.trim()) {
-			error = "Enter the verification code.";
+			formError = "Enter the verification code.";
 			return;
 		}
 		pending = true;
-		error = null;
+		formError = null;
 		try {
 			const result = await authClient.phoneNumber.verify({
 				phoneNumber: fullPhone,
 				code: code.trim(),
 			});
 			if (result.error) {
-				error = result.error.message || "Invalid code.";
+				formError = result.error.message || "Invalid code.";
 				return;
 			}
 			window.location.href = postAuthRedirectPath;
 		} catch {
-			error = "Verification failed.";
+			formError = "Verification failed.";
 		} finally {
 			pending = false;
 		}
@@ -105,13 +105,13 @@
 			onclick={() => {
 				step = "phone";
 				code = "";
-				error = null;
+				formError = null;
 			}}
 		>
 			Change phone number
 		</Button>
 	{/if}
-	{#if error}
-		<p class="text-sm text-destructive" role="alert">{error}</p>
+	{#if formError}
+		<p class="text-sm text-destructive" role="alert">{formError}</p>
 	{/if}
 </div>

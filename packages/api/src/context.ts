@@ -1,3 +1,4 @@
+import { recurringTaskTickMessageSchema } from "@my-app/api-contract/contracts/recurring-task-queue";
 import { auth } from "@my-app/auth";
 import { db } from "@my-app/db";
 import { member } from "@my-app/db/schema/auth";
@@ -5,7 +6,6 @@ import { notificationQueueMessageSchema } from "@my-app/notifications/contracts"
 import { and, asc, eq } from "drizzle-orm";
 import type { Context as HonoContext } from "hono";
 
-import { recurringTaskTickMessageSchema } from "./contracts/recurring-task-queue";
 import type { EventBus } from "./lib/event-bus";
 import { processRecurringTaskTick } from "./tasks/recurring";
 
@@ -249,14 +249,9 @@ const getActiveOrganizationId = (session: AuthSession) => {
 
 	const authSession = session.session as typeof session.session & {
 		activeOrganizationId?: string | null;
-		active_organization_id?: string | null;
 	};
 
-	return (
-		authSession.activeOrganizationId ??
-		authSession.active_organization_id ??
-		null
-	);
+	return authSession.activeOrganizationId ?? null;
 };
 
 export async function createContext({

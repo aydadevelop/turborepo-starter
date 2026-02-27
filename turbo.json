@@ -41,6 +41,10 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**", ".svelte-kit/**", "build/**"]
     },
+    "analyze:bundle": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
     "//#format-and-lint": {},
     "//#format-and-lint:fix": {
       "cache": false
@@ -51,6 +55,15 @@
     },
     "check-types": {},
     "test": {},
+    "test:bundle-size": {
+      "dependsOn": ["build"]
+    },
+    "test:deps": {},
+    "test:perf": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "passThroughEnv": ["PLAYWRIGHT_*", "BASE_PATH", "PERF_*"]
+    },
     "test:watch": {
       "cache": false,
       "persistent": true
@@ -107,7 +120,7 @@
       "cache": false
     },
     "db:generate": {
-      "cache": false,
+      "cache": false
     },
     "db:reset:local": {
       "cache": false
@@ -122,6 +135,5 @@
     "destroy": {
       "cache": false
     }
-  },
-
+  }
 }

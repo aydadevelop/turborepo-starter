@@ -3,10 +3,13 @@ import { db } from "@my-app/db";
 import * as schema from "@my-app/db/schema/auth";
 import { env } from "@my-app/env/server";
 import type { BetterAuthPlugin } from "better-auth";
-import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { admin, anonymous, openAPI, phoneNumber } from "better-auth/plugins";
+import { betterAuth } from "better-auth/minimal";
+import { openAPI } from "better-auth/plugins";
+import { admin } from "better-auth/plugins/admin";
+import { anonymous } from "better-auth/plugins/anonymous";
 import { organization } from "better-auth/plugins/organization";
+import { phoneNumber } from "better-auth/plugins/phone-number";
 import { telegram } from "better-auth-telegram";
 import { asc, eq } from "drizzle-orm";
 
@@ -23,6 +26,7 @@ const parseCorsOrigins = (value: string | undefined) =>
 
 const TRAILING_SLASH_RE = /\/+$/;
 const WORKERS_DEV_RE = /\.([^.]+\.workers\.dev)$/;
+const SESSION_COOKIE_CACHE_MAX_AGE_SECONDS = 5 * 60;
 
 const initAuth = () => {
 	const corsOrigins = parseCorsOrigins(env.CORS_ORIGIN);
@@ -96,13 +100,12 @@ const initAuth = () => {
 				trustedProviders: ["email-password"],
 			},
 		},
-		// uncomment cookieCache setting when ready to deploy to Cloudflare using *.workers.dev domains
-		// session: {
-		//   cookieCache: {
-		//     enabled: true,
-		//     maxAge: 60,
-		//   },
-		// },
+		session: {
+			cookieCache: {
+				enabled: true,
+				maxAge: SESSION_COOKIE_CACHE_MAX_AGE_SECONDS,
+			},
+		},
 		secret: env.BETTER_AUTH_SECRET,
 		baseURL: env.SERVER_URL,
 		advanced: {

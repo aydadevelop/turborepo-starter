@@ -1,10 +1,10 @@
-import { notificationsPusher } from "@my-app/notifications/pusher";
-
-import type { NotificationQueueProducer } from "../context";
 import {
 	createRecurringTaskTickMessage,
 	type RecurringTaskTickMessage,
-} from "../contracts/recurring-task-queue";
+} from "@my-app/api-contract/contracts/recurring-task-queue";
+import { notificationsPusher } from "@my-app/notifications/pusher";
+
+import type { NotificationQueueProducer } from "../context";
 
 export interface RecurringTaskQueueProducer {
 	send(
