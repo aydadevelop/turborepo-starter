@@ -92,6 +92,7 @@ if (isE2E) {
 	loadEnvFile("./.env.e2e");
 }
 loadEnvFile("./.env");
+loadEnvFile("../../.env");
 
 loadEnvFile(serverStageEnvPath);
 loadEnvFile("../../apps/server/.env");

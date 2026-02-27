@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build:rolldown": "node ../../node_modules/rolldown-vite/bin/vite.js build",
     "analyze:bundle": "ANALYZE_BUNDLE=1 vite build",
+    "analyze:bundle:rolldown": "ANALYZE_BUNDLE=1 node ../../node_modules/rolldown-vite/bin/vite.js build",
     "preview": "vite preview",
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -14,7 +16,12 @@
     "lint": "cd ../.. && biome check --config-path biome.json apps/web",
     "lint:fix": "cd ../.. && biome check --config-path biome.json apps/web --write",
     "dev:vite": "vite dev",
+    "dev:rolldown": "node ../../node_modules/rolldown-vite/bin/vite.js dev",
+    "profile:vite": "vite --profile",
+    "debug:transform": "vite --debug transform",
+    "debug:plugin-transform": "vite --debug plugin-transform",
     "test:bundle-size": "bun run build && size-limit && node ./scripts/check-page-size.mjs",
+    "test:bundle-size:rolldown": "bun run build:rolldown && size-limit && node ./scripts/check-page-size.mjs",
     "test:deps": "knip --production --dependencies",
     "test:perf": "PLAYWRIGHT_MANAGED_SERVERS=1 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.e2e.config.ts e2e/performance.spec.ts",
     "test:frontend:dev": "PLAYWRIGHT_MANAGED_SERVERS=1 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.e2e.config.ts",
@@ -55,6 +62,7 @@
     "typescript": "^5",
     "ultracite": "^7.2.3",
     "vite": "^7.1.2",
-    "vite-bundle-analyzer": "^1.3.6"
+    "vite-bundle-analyzer": "^1.3.6",
+    "rolldown-vite": "7.3.1"
   }
 }

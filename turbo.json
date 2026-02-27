@@ -41,8 +41,17 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**", ".svelte-kit/**", "build/**"]
     },
+    "build:rolldown": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", ".svelte-kit/**", "build/**"]
+    },
     "analyze:bundle": {
       "dependsOn": ["build"],
+      "cache": false
+    },
+    "analyze:bundle:rolldown": {
+      "dependsOn": ["build:rolldown"],
       "cache": false
     },
     "//#format-and-lint": {},
@@ -57,6 +66,9 @@
     "test": {},
     "test:bundle-size": {
       "dependsOn": ["build"]
+    },
+    "test:bundle-size:rolldown": {
+      "dependsOn": ["build:rolldown"]
     },
     "test:deps": {},
     "test:perf": {
@@ -106,6 +118,10 @@
       "persistent": true
     },
     "dev:vite": {
+      "cache": false,
+      "persistent": true
+    },
+    "dev:rolldown": {
       "cache": false,
       "persistent": true
     },
