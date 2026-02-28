@@ -13,7 +13,7 @@
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { queryClient } from "$lib/orpc";
-	import PhoneInput from "../../../components/PhoneInput.svelte";
+	import PhoneInput from "../../../../components/PhoneInput.svelte";
 
 	const sessionQuery = authClient.useSession();
 

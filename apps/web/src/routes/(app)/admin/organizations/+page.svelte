@@ -1,30 +1,30 @@
 <script lang="ts">
 	import { Badge } from "@my-app/ui/components/badge";
-	import { Button } from "@my-app/ui/components/button";
-	import * as Card from "@my-app/ui/components/card";
-	import { Input } from "@my-app/ui/components/input";
-	import * as Table from "@my-app/ui/components/table";
-	import { createQuery } from "@tanstack/svelte-query";
-	import { derived, writable } from "svelte/store";
-	import { resolve } from "$app/paths";
-	import { orpc } from "$lib/orpc";
+import { Button } from "@my-app/ui/components/button";
+import * as Card from "@my-app/ui/components/card";
+import { Input } from "@my-app/ui/components/input";
+import * as Table from "@my-app/ui/components/table";
+import { createQuery } from "@tanstack/svelte-query";
+import { derived, writable } from "svelte/store";
+import { resolve } from "$app/paths";
+import { orpc } from "$lib/orpc";
 
-	const search = writable("");
-	const currentOffset = writable(0);
-	const limit = 20;
+const search = writable("");
+const currentOffset = writable(0);
+const limit = 20;
 
-	const orgsQuery = createQuery(
-		derived([search, currentOffset], ([$search, $currentOffset]) =>
-			orpc.admin.organizations.listOrgs.queryOptions({
-				input: { limit, offset: $currentOffset, search: $search || undefined },
-			})
-		)
-	);
+const orgsQuery = createQuery(
+	derived([search, currentOffset], ([$search, $currentOffset]) =>
+		orpc.admin.organizations.listOrgs.queryOptions({
+			input: { limit, offset: $currentOffset, search: $search || undefined },
+		})
+	)
+);
 
-	const totalPages = $derived(
-		Math.max(1, Math.ceil(($orgsQuery.data?.total ?? 0) / limit))
-	);
-	const currentPage = $derived(Math.floor($currentOffset / limit) + 1);
+const totalPages = $derived(
+	Math.max(1, Math.ceil(($orgsQuery.data?.total ?? 0) / limit))
+);
+const currentPage = $derived(Math.floor($currentOffset / limit) + 1);
 </script>
 
 <div class="space-y-4">

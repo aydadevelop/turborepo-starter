@@ -69,6 +69,7 @@
 </script>
 
 <header
+	data-testid="app-shell-header"
 	class="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur"
 >
 	{#if isImpersonating}

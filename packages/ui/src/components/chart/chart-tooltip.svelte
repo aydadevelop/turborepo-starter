@@ -1,9 +1,17 @@
 <script lang="ts">
-	import { cn, type WithElementRef, type WithoutChildren } from "@my-app/ui/lib/utils";
-	import type { HTMLAttributes } from "svelte/elements";
-	import { getPayloadConfigFromPayload, useChart, type TooltipPayload } from "./chart-utils.js";
+	import {
+		cn,
+		type WithElementRef,
+		type WithoutChildren,
+	} from "@my-app/ui/lib/utils";
 	import { getTooltipContext, Tooltip as TooltipPrimitive } from "layerchart";
 	import type { Snippet } from "svelte";
+	import type { HTMLAttributes } from "svelte/elements";
+	import {
+		getPayloadConfigFromPayload,
+		type TooltipPayload,
+		useChart,
+	} from "./chart-utils.js";
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	function defaultFormatter(value: any, _payload: TooltipPayload[]) {
@@ -33,7 +41,8 @@
 		hideIndicator?: boolean;
 		labelClassName?: string;
 		labelFormatter?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
-			((value: any, payload: TooltipPayload[]) => string | number | Snippet) | null;
+			| ((value: any, payload: TooltipPayload[]) => string | number | Snippet)
+			| null;
 		formatter?: Snippet<
 			[
 				{
@@ -68,7 +77,9 @@
 		return labelFormatter(value, tooltipCtx.payload);
 	});
 
-	const nestLabel = $derived(tooltipCtx.payload.length === 1 && indicator !== "dot");
+	const nestLabel = $derived(
+		tooltipCtx.payload.length === 1 && indicator !== "dot"
+	);
 </script>
 
 {#snippet TooltipLabel()}
@@ -115,7 +126,7 @@
 						})}
 					{:else}
 						{#if itemConfig?.icon}
-							<itemConfig.icon />
+							<itemConfig .icon />
 						{:else if !hideIndicator}
 							<div
 								style="--color-bg: {indicatorColor}; --color-border: {indicatorColor};"
@@ -146,7 +157,9 @@
 								</span>
 							</div>
 							{#if item.value !== undefined}
-								<span class="text-foreground font-mono font-medium tabular-nums">
+								<span
+									class="text-foreground font-mono font-medium tabular-nums"
+								>
 									{item.value.toLocaleString()}
 								</span>
 							{/if}

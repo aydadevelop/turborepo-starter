@@ -22,7 +22,7 @@
 </script>
 
 <div class={cn("flex", containerSizes[size], className)}>
-	{#each Array(3) as _, i}
+	{#each Array.from({ length: 3 }) as _, i}
 		<!-- svelte-ignore element_invalid_self_closing_tag -->
 		<div
 			class={cn(

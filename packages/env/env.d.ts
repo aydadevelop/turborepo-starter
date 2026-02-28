@@ -1,28 +1,28 @@
 // Keep this declaration lightweight and local so env typing does not pull
 // infrastructure runtime modules into every TypeScript project.
-export type CloudflareEnv = {
-  DB: D1Database;
-  SERVER_WORKER: Fetcher;
-  CORS_ORIGIN?: string;
-  BETTER_AUTH_SECRET?: string;
-  SERVER_URL?: string;
-  BETTER_AUTH_URL?: string;
-  OPEN_ROUTER_API_KEY?: string;
-  AI_MODEL?: string;
-  POLAR_ACCESS_TOKEN?: string;
-  POLAR_SUCCESS_URL?: string;
-  POLAR_PRODUCT_ID?: string;
-  TELEGRAM_BOT_TOKEN?: string;
-  TELEGRAM_BOT_USERNAME?: string;
-  TELEGRAM_BOT_API_BASE_URL?: string;
-  CLOUDPAYMENTS_PUBLIC_ID?: string;
-  CLOUDPAYMENTS_API_SECRET?: string;
-  PUBLIC_SERVER_URL?: string;
-  PUBLIC_ASSISTANT_URL?: string;
-  PUBLIC_BASE_PATH?: string;
-  PUBLIC_CLOUDPAYMENTS_PUBLIC_ID?: string;
-  [key: string]: unknown;
-};
+export interface CloudflareEnv {
+	AI_MODEL?: string;
+	BETTER_AUTH_SECRET?: string;
+	BETTER_AUTH_URL?: string;
+	CLOUDPAYMENTS_API_SECRET?: string;
+	CLOUDPAYMENTS_PUBLIC_ID?: string;
+	CORS_ORIGIN?: string;
+	DB: D1Database;
+	OPEN_ROUTER_API_KEY?: string;
+	POLAR_ACCESS_TOKEN?: string;
+	POLAR_PRODUCT_ID?: string;
+	POLAR_SUCCESS_URL?: string;
+	PUBLIC_ASSISTANT_URL?: string;
+	PUBLIC_BASE_PATH?: string;
+	PUBLIC_CLOUDPAYMENTS_PUBLIC_ID?: string;
+	PUBLIC_SERVER_URL?: string;
+	SERVER_URL?: string;
+	SERVER_WORKER: Fetcher;
+	TELEGRAM_BOT_API_BASE_URL?: string;
+	TELEGRAM_BOT_TOKEN?: string;
+	TELEGRAM_BOT_USERNAME?: string;
+	[key: string]: unknown;
+}
 
 declare global {
 	type Env = CloudflareEnv;

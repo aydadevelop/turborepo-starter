@@ -1,51 +1,51 @@
 <script lang="ts">
 	import { Badge } from "@my-app/ui/components/badge";
-	import { Button } from "@my-app/ui/components/button";
-	import * as Card from "@my-app/ui/components/card";
-	import { Input } from "@my-app/ui/components/input";
-	import * as Table from "@my-app/ui/components/table";
-	import { createQuery } from "@tanstack/svelte-query";
-	import { derived, writable } from "svelte/store";
-	import { resolve } from "$app/paths";
-	import { authClient } from "$lib/auth-client";
-	import { orpc } from "$lib/orpc";
+import { Button } from "@my-app/ui/components/button";
+import * as Card from "@my-app/ui/components/card";
+import { Input } from "@my-app/ui/components/input";
+import * as Table from "@my-app/ui/components/table";
+import { createQuery } from "@tanstack/svelte-query";
+import { derived, writable } from "svelte/store";
+import { resolve } from "$app/paths";
+import { authClient } from "$lib/auth-client";
+import { orpc } from "$lib/orpc";
 
-	let impersonating = $state(false);
+let impersonating = $state(false);
 
-	const handleImpersonate = async (userId: string) => {
-		impersonating = true;
-		const { error } = await authClient.admin.impersonateUser({ userId });
-		impersonating = false;
-		if (error) return;
-		window.location.href = resolve("/dashboard/settings");
-	};
+const handleImpersonate = async (userId: string) => {
+	impersonating = true;
+	const { error } = await authClient.admin.impersonateUser({ userId });
+	impersonating = false;
+	if (error) return;
+	window.location.href = resolve("/dashboard/settings");
+};
 
-	const search = writable("");
-	const roleFilter = writable("");
-	const bannedFilter = writable<boolean | undefined>(undefined);
-	const currentOffset = writable(0);
-	const limit = 20;
+const search = writable("");
+const roleFilter = writable("");
+const bannedFilter = writable<boolean | undefined>(undefined);
+const currentOffset = writable(0);
+const limit = 20;
 
-	const usersQuery = createQuery(
-		derived(
-			[search, roleFilter, bannedFilter, currentOffset],
-			([$search, $roleFilter, $bannedFilter, $currentOffset]) =>
-				orpc.admin.organizations.listUsers.queryOptions({
-					input: {
-						limit,
-						offset: $currentOffset,
-						search: $search || undefined,
-						role: $roleFilter || undefined,
-						banned: $bannedFilter,
-					},
-				})
-		)
-	);
+const usersQuery = createQuery(
+	derived(
+		[search, roleFilter, bannedFilter, currentOffset],
+		([$search, $roleFilter, $bannedFilter, $currentOffset]) =>
+			orpc.admin.organizations.listUsers.queryOptions({
+				input: {
+					limit,
+					offset: $currentOffset,
+					search: $search || undefined,
+					role: $roleFilter || undefined,
+					banned: $bannedFilter,
+				},
+			})
+	)
+);
 
-	const totalPages = $derived(
-		Math.max(1, Math.ceil(($usersQuery.data?.total ?? 0) / limit))
-	);
-	const currentPage = $derived(Math.floor($currentOffset / limit) + 1);
+const totalPages = $derived(
+	Math.max(1, Math.ceil(($usersQuery.data?.total ?? 0) / limit))
+);
+const currentPage = $derived(Math.floor($currentOffset / limit) + 1);
 </script>
 
 <div class="space-y-4">

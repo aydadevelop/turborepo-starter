@@ -35,7 +35,7 @@
 
 <div class={cn("relative", sizeClasses[size], className)}>
 	<div class="absolute h-full w-full">
-		{#each Array(12) as _, i}
+		{#each Array.from({ length: 12 }) as _, i}
 			<div
 				class="bg-primary absolute animate-[spinner-fade_1.2s_linear_infinite] rounded-full"
 				style:top="0"

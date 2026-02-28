@@ -1,23 +1,23 @@
 <!-- biome-ignore-all format: TanStack Form component member syntax not supported -->
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardFooter,
-		CardHeader,
-		CardTitle,
-	} from "@my-app/ui/components/card";
-	import { Input } from "@my-app/ui/components/input";
-	import { Label } from "@my-app/ui/components/label";
-	import { createForm } from "@tanstack/svelte-form";
-	import { z } from "zod";
-	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
-	import { authClient } from "$lib/auth-client";
-	import { queryClient } from "$lib/orpc";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@my-app/ui/components/card";
+import { Input } from "@my-app/ui/components/input";
+import { Label } from "@my-app/ui/components/label";
+import { createForm } from "@tanstack/svelte-form";
+import { z } from "zod";
+import { goto } from "$app/navigation";
+import { resolve } from "$app/paths";
+import { page } from "$app/state";
+import { authClient } from "$lib/auth-client";
+import { queryClient } from "$lib/orpc";
 
 let { switchToSignIn } = $props<{ switchToSignIn: () => void }>();
 
@@ -83,7 +83,9 @@ const form = createForm(() => ({
 				onSuccess: async () => {
 					await Promise.all([
 						queryClient.invalidateQueries({ queryKey: ["organization"] }),
-						queryClient.invalidateQueries({ queryKey: ["organization", "full"] }),
+						queryClient.invalidateQueries({
+							queryKey: ["organization", "full"],
+						}),
 						queryClient.invalidateQueries({
 							queryKey: ["user-organizations"],
 						}),

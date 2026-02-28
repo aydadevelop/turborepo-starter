@@ -28,7 +28,7 @@
 </script>
 
 <div class={cn("flex items-center gap-0.5", containerSizes[size], className)}>
-	{#each Array(5) as _, i}
+	{#each Array.from({ length: 5 }) as _, i}
 		<div
 			class={cn(
 				"bg-primary animate-[wave_1s_ease-in-out_infinite] rounded-full",

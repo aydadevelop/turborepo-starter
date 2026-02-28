@@ -1,14 +1,18 @@
 <script lang="ts">
-	import { THEMES, type ChartConfig } from "./chart-utils.js";
+	import { type ChartConfig, THEMES } from "./chart-utils.js";
 
 	let { id, config }: { id: string; config: ChartConfig } = $props();
 
 	const colorConfig = $derived(
-		config ? Object.entries(config).filter(([, config]) => config.theme || config.color) : null
+		config
+			? Object.entries(config).filter(
+					([, config]) => config.theme || config.color
+				)
+			: null
 	);
 
 	const themeContents = $derived.by(() => {
-		if (!colorConfig || !colorConfig.length) return;
+		if (!(colorConfig && colorConfig.length)) return;
 
 		const themeContents = [];
 		for (let [_theme, prefix] of Object.entries(THEMES)) {
@@ -30,8 +34,6 @@
 
 {#if themeContents}
 	{#key id}
-		<svelte:element this={"style"}>
-			{themeContents}
-		</svelte:element>
+		<svelte:element this={"style"}> {themeContents} </svelte:element>
 	{/key}
 {/if}
