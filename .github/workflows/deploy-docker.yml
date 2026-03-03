@@ -1,18 +1,6 @@
 name: Deploy (Docker)
 
 on:
-  push:
-    branches: [main]
-    # Only trigger when application code changes — infra-only or docs changes skip this.
-    paths:
-      - "apps/**"
-      - "packages/**"
-      - "Dockerfile"
-      - "Dockerfile.web"
-      - "docker-compose.yml"
-      - ".dockerignore"
-      - "bun.lock"
-      - "package.json"
   workflow_dispatch:
     inputs:
       environment:
