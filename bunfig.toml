@@ -8,7 +8,7 @@
 # It would otherwise pick up ALL *.test.ts and *.spec.ts files, including
 # Playwright specs and Vitest-only tests that crash the Bun runtime.
 #
-# The real native-module crash (better-sqlite3) is also prevented by a
+# The real native-module crash (pg) is also prevented by a
 # runtime guard in packages/db/src/test/index.ts as a second line of defence.
 
 [test]

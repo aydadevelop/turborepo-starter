@@ -1,17 +1,17 @@
 # Better-T-Stack Project Rules
 
-This repository is the source template for a reusable Cloudflare full-stack starter.
+This repository is a full-stack Docker/Node.js starter.
 
 ## Starter Target Stack
 
 - Frontend: SvelteKit (Svelte 5) + shadcn-svelte
-- Backend: Hono (Cloudflare Workers runtime)
+- Backend: Hono (Node.js via @hono/node-server)
 - API layer: oRPC (contract-first)
-- Database: Drizzle + D1 (SQLite)
-- Infra: Alchemy
+- Database: Drizzle + PostgreSQL
+- Queues: pg-boss
 - Build system: Turborepo
 - Testing: Vitest (+ e2e workspace tests)
-- Runtime/deploy: Cloudflare Workers + Queues
+- Runtime/deploy: Docker Compose
 - Package manager target for starter: Bun
 
 ## Recommended Starter Extraction Flow
@@ -27,7 +27,6 @@ This repository is the source template for a reusable Cloudflare full-stack star
    - Remove npm lockfile and npm-only command docs.
 5. Validate baseline before publishing:
    - `turbo run lint check-types test build`
-   - `turbo run deploy --filter=@*/infra -- --stage dev`
 6. Publish to new repository:
    - Keep history: push `codex/starter-v1` to new remote `main`.
    - Clean history: create orphan branch and commit once.
@@ -52,17 +51,17 @@ This repository is the source template for a reusable Cloudflare full-stack star
 - Put business logic in package services/routers.
 - Use middleware for cross-cutting behavior (auth, cors, error handling).
 
-### Drizzle + D1
+### Drizzle + PostgreSQL
 
 - Keep schema and migrations in `packages/db`.
 - Do not introduce migration drift between local and deployed stages.
 - Keep seeders deterministic for starter demos/tests.
 
-### Alchemy + Cloudflare Queues
+### pg-boss Queues
 
-- Define resources in `packages/infra/alchemy.run.ts`.
-- Bind queues through Alchemy and consume via Worker `queue` handler.
 - Use message schemas and DLQs by default for async workloads.
+- Validate queue message payloads with `safeParse` before processing.
+- Use explicit retry limits and dead-letter strategy.
 
 ### Svelte + shadcn-svelte
 
@@ -76,5 +75,5 @@ This repository is the source template for a reusable Cloudflare full-stack star
 - Hiding task logic in root scripts instead of package scripts.
 - Putting business/domain logic in Hono entrypoint files.
 - Queue consumers that process unvalidated payloads.
-- Manual Cloudflare resource edits that are not captured in Alchemy.
+- Manual infrastructure changes that are not captured in Docker Compose or code.
 - Starter defaults that include sensitive env values or product-specific secrets.

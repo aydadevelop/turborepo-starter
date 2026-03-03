@@ -3,22 +3,18 @@ import { bootstrapTestDatabase } from "@my-app/db/test";
 import { describe, expect, it, vi } from "vitest";
 
 const testDbState = bootstrapTestDatabase({
-	seed: (db) => {
-		db.insert(organization)
-			.values({
-				id: "org-1",
-				name: "Test Org",
-				slug: "test-org",
-			})
-			.run();
-		db.insert(user)
-			.values({
-				id: "user-1",
-				name: "Test User",
-				email: "user-1@example.com",
-				emailVerified: true,
-			})
-			.run();
+	seed: async (db) => {
+		await db.insert(organization).values({
+			id: "org-1",
+			name: "Test Org",
+			slug: "test-org",
+		});
+		await db.insert(user).values({
+			id: "user-1",
+			name: "Test User",
+			email: "user-1@example.com",
+			emailVerified: true,
+		});
 	},
 });
 
@@ -47,15 +43,12 @@ describe("db-helpers", () => {
 
 	describe("requireManaged", () => {
 		it("returns the row when it belongs to the organization", async () => {
-			testDbState.db
-				.insert(member)
-				.values({
-					id: "member-2",
-					organizationId: "org-1",
-					userId: "user-1",
-					role: "manager",
-				})
-				.run();
+			await testDbState.db.insert(member).values({
+				id: "member-2",
+				organizationId: "org-1",
+				userId: "user-1",
+				role: "manager",
+			});
 
 			const result = await requireManaged(member, "member-2", "org-1");
 			expect(result.id).toBe("member-2");
@@ -71,15 +64,12 @@ describe("db-helpers", () => {
 		});
 
 		it("throws NOT_FOUND when org does not match", async () => {
-			testDbState.db
-				.insert(member)
-				.values({
-					id: "member-3",
-					organizationId: "org-1",
-					userId: "user-1",
-					role: "member",
-				})
-				.run();
+			await testDbState.db.insert(member).values({
+				id: "member-3",
+				organizationId: "org-1",
+				userId: "user-1",
+				role: "member",
+			});
 
 			await expect(
 				requireManaged(member, "member-3", "org-wrong")
@@ -91,15 +81,12 @@ describe("db-helpers", () => {
 
 	describe("requireOwned", () => {
 		it("returns the row when both columns match", async () => {
-			testDbState.db
-				.insert(member)
-				.values({
-					id: "member-4",
-					organizationId: "org-1",
-					userId: "user-1",
-					role: "member",
-				})
-				.run();
+			await testDbState.db.insert(member).values({
+				id: "member-4",
+				organizationId: "org-1",
+				userId: "user-1",
+				role: "member",
+			});
 
 			const result = await requireOwned(
 				member,

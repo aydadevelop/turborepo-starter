@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import pg from "pg";
+
+const { Client } = pg;
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../../..");
 const seedScriptPath = path.resolve(__dirname, "./seed-local.mjs");
-const localD1Dir = path.resolve(
-	repoRoot,
-	".alchemy/miniflare/v3/d1/miniflare-D1DatabaseObject"
-);
+
+const DEFAULT_DATABASE_URL =
+	"postgresql://postgres:postgres@localhost:5432/myapp";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -25,35 +27,28 @@ const getArgValue = (flagName) => {
 	return args[index + 1];
 };
 
-export const hasLocalSqliteDatabase = (d1Dir = localD1Dir) => {
-	if (!existsSync(d1Dir)) {
-		return false;
-	}
-
-	return readdirSync(d1Dir).some(
-		(name) =>
-			name.endsWith(".sqlite") &&
-			!name.includes("-wal") &&
-			!name.includes("-shm")
-	);
-};
-
-export const waitForLocalD1 = async ({
+export const waitForDatabase = async ({
 	timeoutMs = 60_000,
 	pollIntervalMs = 500,
-	d1Dir = localD1Dir,
+	connectionString = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
 } = {}) => {
 	const startedAt = Date.now();
 
 	while (Date.now() - startedAt < timeoutMs) {
-		if (hasLocalSqliteDatabase(d1Dir)) {
+		const client = new Client({ connectionString });
+		try {
+			await client.connect();
+			await client.query("SELECT 1");
+			await client.end();
 			return;
+		} catch {
+			await client.end().catch(() => {});
+			await delay(pollIntervalMs);
 		}
-		await delay(pollIntervalMs);
 	}
 
 	throw new Error(
-		`Timed out waiting for local D1 sqlite files under ${d1Dir}.`
+		`Timed out waiting for PostgreSQL at ${connectionString.replace(/\/\/.*@/, "//***@")}`
 	);
 };
 
@@ -66,7 +61,7 @@ export const bootstrapLocalE2EDatabase = async ({
 	const resolvedAnchorDate =
 		anchorDate ?? process.env.PLAYWRIGHT_SEED_ANCHOR_DATE ?? "2026-03-15";
 
-	await waitForLocalD1();
+	await waitForDatabase();
 
 	execFileSync(
 		"node",

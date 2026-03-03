@@ -1,7 +1,7 @@
 import { db } from "@my-app/db";
 import { assistantChat, assistantMessage } from "@my-app/db/schema/assistant";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { ORPCError, os, streamToEventIterator, type } from "@orpc/server";
+import { implement, ORPCError, streamToEventIterator } from "@orpc/server";
 import {
 	convertToModelMessages,
 	stepCountIs,
@@ -9,13 +9,13 @@ import {
 	type UIMessage,
 } from "ai";
 import { desc, eq } from "drizzle-orm";
-import z from "zod";
 
 import type { AssistantContext } from "./context";
+import { assistantContract } from "./contract";
 import { createSystemPrompt } from "./system-prompt";
 import { createAssistantTools } from "./tools";
 
-const o = os.$context<AssistantContext>();
+const o = implement(assistantContract).$context<AssistantContext>();
 
 /** Fix legacy tool-invocation parts that were stored without proper state. */
 function sanitizeParts(parts: unknown[]): UIMessage["parts"] {
@@ -77,107 +77,106 @@ const requireUserId = (context: AssistantContext): string => {
 	return userId;
 };
 
-export const assistantRouter = {
-	chat: authenticatedProcedure
-		.input(type<{ chatId: string; messages: UIMessage[] }>())
-		.handler(async ({ input, context }) => {
-			const userId = requireUserId(context);
+export const assistantRouter = o.router({
+	chat: authenticatedProcedure.chat.handler(async ({ input, context }) => {
+		const userId = requireUserId(context);
 
-			// Verify ownership
-			const existing = await db
-				.select({ id: assistantChat.id, userId: assistantChat.userId })
-				.from(assistantChat)
-				.where(eq(assistantChat.id, input.chatId))
-				.get();
+		// Verify ownership
+		const existing = await db
+			.select({ id: assistantChat.id, userId: assistantChat.userId })
+			.from(assistantChat)
+			.where(eq(assistantChat.id, input.chatId))
+			.limit(1)
+			.then((rows) => rows[0]);
 
-			if (!existing || existing.userId !== userId) {
-				throw new ORPCError("NOT_FOUND", {
-					message: "Chat not found",
-				});
-			}
-
-			// Save the latest user message before streaming
-			const lastUserMessage = input.messages.at(-1);
-			if (lastUserMessage?.role === "user") {
-				await db
-					.insert(assistantMessage)
-					.values({
-						id: lastUserMessage.id,
-						chatId: input.chatId,
-						role: "user",
-						parts: lastUserMessage.parts as unknown[],
-					})
-					.onConflictDoNothing();
-			}
-
-			const openrouter = createOpenRouter({
-				apiKey: context.openRouterApiKey,
+		if (!existing || existing.userId !== userId) {
+			throw new ORPCError("NOT_FOUND", {
+				message: "Chat not found",
 			});
-			const tools = createAssistantTools(context.serverClient);
+		}
 
-			const result = streamText({
-				model: openrouter(context.aiModel || "openai/gpt-5-nano:nitro"),
-				system: createSystemPrompt(),
-				messages: await convertToModelMessages(input.messages, {
-					ignoreIncompleteToolCalls: true,
-				}),
-				tools,
-				stopWhen: stepCountIs(10),
-				async onFinish({ steps }) {
-					// Build assistant parts from the completed response
-					const parts: unknown[] = [];
+		// Save the latest user message before streaming
+		const lastUserMessage = input.messages.at(-1);
+		if (lastUserMessage?.role === "user") {
+			await db
+				.insert(assistantMessage)
+				.values({
+					id: lastUserMessage.id,
+					chatId: input.chatId,
+					role: "user",
+					parts: lastUserMessage.parts as unknown[],
+				})
+				.onConflictDoNothing();
+		}
 
-					for (const step of steps) {
-						if (step.text) {
-							parts.push({ type: "text", text: step.text });
-						}
+		const openrouter = createOpenRouter({
+			apiKey: context.openRouterApiKey,
+		});
+		const tools = createAssistantTools(context.serverClient);
 
-						// Build a map of tool results by toolCallId
-						const resultMap = new Map<string, unknown>();
-						for (const tr of step.toolResults) {
-							resultMap.set(tr.toolCallId, tr.output);
-						}
+		const result = streamText({
+			model: openrouter(context.aiModel || "openai/gpt-5-nano:nitro"),
+			system: createSystemPrompt(),
+			messages: await convertToModelMessages(
+				input.messages as unknown as UIMessage[],
+				{ ignoreIncompleteToolCalls: true }
+			),
+			tools,
+			stopWhen: stepCountIs(10),
+			async onFinish({ steps }) {
+				// Build assistant parts from the completed response
+				const parts: unknown[] = [];
 
-						for (const tc of step.toolCalls) {
-							if (resultMap.has(tc.toolCallId)) {
-								parts.push({
-									type: `tool-${tc.toolName}`,
-									toolCallId: tc.toolCallId,
-									state: "output-available",
-									input: tc.input,
-									output: resultMap.get(tc.toolCallId),
-								});
-							} else {
-								parts.push({
-									type: `tool-${tc.toolName}`,
-									toolCallId: tc.toolCallId,
-									state: "input-available",
-									input: tc.input,
-								});
-							}
-						}
+				for (const step of steps) {
+					if (step.text) {
+						parts.push({ type: "text", text: step.text });
 					}
 
-					if (parts.length > 0) {
-						await db
-							.insert(assistantMessage)
-							.values({
-								id: crypto.randomUUID(),
-								chatId: input.chatId,
-								role: "assistant",
-								parts,
-							})
-							.onConflictDoNothing();
+					// Build a map of tool results by toolCallId
+					const resultMap = new Map<string, unknown>();
+					for (const tr of step.toolResults) {
+						resultMap.set(tr.toolCallId, tr.output);
 					}
-				},
-			});
 
-			return streamToEventIterator(result.toUIMessageStream());
-		}),
+					for (const tc of step.toolCalls) {
+						if (resultMap.has(tc.toolCallId)) {
+							parts.push({
+								type: `tool-${tc.toolName}`,
+								toolCallId: tc.toolCallId,
+								state: "output-available",
+								input: tc.input,
+								output: resultMap.get(tc.toolCallId),
+							});
+						} else {
+							parts.push({
+								type: `tool-${tc.toolName}`,
+								toolCallId: tc.toolCallId,
+								state: "input-available",
+								input: tc.input,
+							});
+						}
+					}
+				}
 
-	createChat: authenticatedProcedure
-		.input(z.object({ title: z.string().default("New Chat") }))
-		.handler(async ({ input, context }) => {
+				if (parts.length > 0) {
+					await db
+						.insert(assistantMessage)
+						.values({
+							id: crypto.randomUUID(),
+							chatId: input.chatId,
+							role: "assistant",
+							parts,
+						})
+						.onConflictDoNothing();
+				}
+			},
+		});
+
+		return streamToEventIterator(result.toUIMessageStream());
+	}),
+
+	createChat: authenticatedProcedure.createChat.handler(
+		async ({ input, context }) => {
 			const userId = requireUserId(context);
 			const id = crypto.randomUUID();
 
@@ -188,12 +187,13 @@ export const assistantRouter = {
 			});
 
 			return { id, title: input.title };
-		}),
+		}
+	),
 
-	listChats: authenticatedProcedure.handler(({ context }) => {
+	listChats: authenticatedProcedure.listChats.handler(async ({ context }) => {
 		const userId = requireUserId(context);
 
-		return db
+		const rows = await db
 			.select({
 				id: assistantChat.id,
 				title: assistantChat.title,
@@ -203,18 +203,24 @@ export const assistantRouter = {
 			.from(assistantChat)
 			.where(eq(assistantChat.userId, userId))
 			.orderBy(desc(assistantChat.updatedAt));
+
+		return rows.map((r) => ({
+			...r,
+			createdAt: r.createdAt.toISOString(),
+			updatedAt: r.updatedAt.toISOString(),
+		}));
 	}),
 
-	getChat: authenticatedProcedure
-		.input(z.object({ chatId: z.string() }))
-		.handler(async ({ input, context }) => {
+	getChat: authenticatedProcedure.getChat.handler(
+		async ({ input, context }) => {
 			const userId = requireUserId(context);
 
 			const chatRecord = await db
 				.select()
 				.from(assistantChat)
 				.where(eq(assistantChat.id, input.chatId))
-				.get();
+				.limit(1)
+				.then((rows) => rows[0]);
 
 			if (!chatRecord || chatRecord.userId !== userId) {
 				throw new ORPCError("NOT_FOUND", {
@@ -229,26 +235,33 @@ export const assistantRouter = {
 				.orderBy(assistantMessage.createdAt);
 
 			return {
-				...chatRecord,
+				id: chatRecord.id,
+				title: chatRecord.title,
+				userId: chatRecord.userId,
+				createdAt: chatRecord.createdAt.toISOString(),
+				updatedAt: chatRecord.updatedAt.toISOString(),
 				messages: messages.map((m) => ({
 					id: m.id,
 					role: m.role as UIMessage["role"],
-					parts: sanitizeParts(m.parts as UIMessage["parts"]),
-					createdAt: m.createdAt,
+					parts: sanitizeParts(
+						m.parts as UIMessage["parts"]
+					) as unknown as Record<string, unknown>[],
+					createdAt: m.createdAt.toISOString(),
 				})),
 			};
-		}),
+		}
+	),
 
-	deleteChat: authenticatedProcedure
-		.input(z.object({ chatId: z.string() }))
-		.handler(async ({ input, context }) => {
+	deleteChat: authenticatedProcedure.deleteChat.handler(
+		async ({ input, context }) => {
 			const userId = requireUserId(context);
 
 			const chatRecord = await db
 				.select({ id: assistantChat.id, userId: assistantChat.userId })
 				.from(assistantChat)
 				.where(eq(assistantChat.id, input.chatId))
-				.get();
+				.limit(1)
+				.then((rows) => rows[0]);
 
 			if (!chatRecord || chatRecord.userId !== userId) {
 				throw new ORPCError("NOT_FOUND", {
@@ -259,18 +272,19 @@ export const assistantRouter = {
 			await db.delete(assistantChat).where(eq(assistantChat.id, input.chatId));
 
 			return { success: true };
-		}),
+		}
+	),
 
-	updateChatTitle: authenticatedProcedure
-		.input(z.object({ chatId: z.string(), title: z.string() }))
-		.handler(async ({ input, context }) => {
+	updateChatTitle: authenticatedProcedure.updateChatTitle.handler(
+		async ({ input, context }) => {
 			const userId = requireUserId(context);
 
 			const chatRecord = await db
 				.select({ id: assistantChat.id, userId: assistantChat.userId })
 				.from(assistantChat)
 				.where(eq(assistantChat.id, input.chatId))
-				.get();
+				.limit(1)
+				.then((rows) => rows[0]);
 
 			if (!chatRecord || chatRecord.userId !== userId) {
 				throw new ORPCError("NOT_FOUND", {
@@ -284,7 +298,8 @@ export const assistantRouter = {
 				.where(eq(assistantChat.id, input.chatId));
 
 			return { success: true };
-		}),
-};
+		}
+	),
+});
 
 export type AssistantRouter = typeof assistantRouter;

@@ -8,6 +8,9 @@
     "./router": {
       "default": "./src/router.ts"
     },
+    "./contract": {
+      "default": "./src/contract.ts"
+    },
     "./context": {
       "default": "./src/context.ts"
     },
@@ -29,6 +32,7 @@
     "@my-app/db": "*",
     "@openrouter/ai-sdk-provider": "^2.2.3",
     "@orpc/client": "^1.12.2",
+    "@orpc/contract": "^1.13.4",
     "@orpc/server": "^1.12.2",
     "ai": "^6.0.86",
     "better-auth": "^1.2.14",

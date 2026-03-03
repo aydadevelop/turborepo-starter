@@ -8,6 +8,7 @@
 		ChatContainerScrollAnchor,
 		isToolUIPart,
 		Loader,
+		lastAssistantMessageIsCompleteWithApprovalResponses,
 		lastAssistantMessageIsCompleteWithToolCalls,
 		Message,
 		MessageContent,
@@ -24,13 +25,14 @@
 	import { derived, toStore } from "svelte/store";
 	import { page } from "$app/state";
 	import { assistantClient } from "$lib/assistant";
+	import { queryKeys } from "$lib/query-keys";
 
 	const chatId = $derived(page.params.id ?? "");
 	const chatIdStore = toStore(() => page.params.id ?? "");
 
 	const chatQuery = createQuery(
 		derived(chatIdStore, ($chatId) => ({
-			queryKey: ["assistant", "chat", $chatId],
+			queryKey: queryKeys.assistant.chat($chatId),
 			queryFn: () => assistantClient.getChat({ chatId: $chatId }),
 			enabled: Boolean($chatId),
 		}))
@@ -58,7 +60,9 @@
 				id: currentId,
 				messages,
 				transport: createORPCChatTransport(assistantClient, currentId),
-				sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+				sendAutomaticallyWhen: (options) =>
+					lastAssistantMessageIsCompleteWithToolCalls(options) ||
+					lastAssistantMessageIsCompleteWithApprovalResponses(options),
 			});
 		}
 	});

@@ -12,7 +12,7 @@ export interface TunnelOptions {
 	ngrokDomain?: string;
 	/** Local port for the reverse proxy (default: 4040) */
 	proxyPort?: number;
-	/** URLs of services to proxy – taken directly from alchemy worker outputs */
+	/** URLs of services to proxy */
 	upstreams: {
 		web?: string;
 		server: string;
@@ -23,7 +23,6 @@ export interface TunnelOptions {
 
 /**
  * Starts a local reverse-proxy and opens an ngrok tunnel.
- * Meant to be called from alchemy.run.ts after workers are up.
  * Returns the public ngrok URL.
  */
 export function startTunnel(opts: TunnelOptions): Promise<string> {

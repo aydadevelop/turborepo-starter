@@ -11,20 +11,18 @@
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { queryClient } from "$lib/orpc";
+	import { queryKeys } from "$lib/query-keys";
+	import { userOrganizationsQueryOptions } from "$lib/query-options";
 
 	const sessionQuery = authClient.useSession();
 
-	const orgsQueryOptions = derived(sessionQuery, ($session) => ({
-		queryKey: ["user-organizations"],
-		queryFn: async () => {
-			const { data, error } = await authClient.organization.list();
-			if (error) throw error;
-			return data ?? [];
-		},
-		retry: false,
-		enabled: hasAuthenticatedSession($session.data),
-	}));
-	const orgsQuery = createQuery(orgsQueryOptions);
+	const orgsQuery = createQuery(
+		derived(sessionQuery, ($session) =>
+			userOrganizationsQueryOptions({
+				enabled: hasAuthenticatedSession($session.data),
+			})
+		)
+	);
 
 	const activeOrgId = $derived(
 		($sessionQuery.data?.session as { activeOrganizationId?: string })
@@ -41,11 +39,11 @@
 		});
 		switching = false;
 		if (error) return;
-		queryClient.invalidateQueries({ queryKey: ["organization"] });
-		queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] });
-		queryClient.invalidateQueries({ queryKey: ["notifications"] });
-		queryClient.invalidateQueries({ queryKey: ["todos"] });
-		queryClient.invalidateQueries({ queryKey: ["assistant"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
+		queryClient.invalidateQueries({ queryKey: queryKeys.org.canManage });
+		queryClient.invalidateQueries({ queryKey: queryKeys.notifications.root });
+		queryClient.invalidateQueries({ queryKey: queryKeys.todos.root });
+		queryClient.invalidateQueries({ queryKey: queryKeys.assistant.root });
 	};
 </script>
 

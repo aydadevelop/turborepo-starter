@@ -11,7 +11,7 @@ import { env } from "$env/dynamic/public";
 
 const TRAILING_SLASHES = /\/+$/;
 const ABSOLUTE_URL = /^https?:\/\//;
-const DEFAULT_SERVER_URL = "http://localhost:43100";
+const DEFAULT_SERVER_URL = "http://localhost:3000";
 
 function resolveServerUrl(): string {
 	const raw = (env.PUBLIC_SERVER_URL ?? DEFAULT_SERVER_URL).replace(

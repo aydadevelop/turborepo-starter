@@ -1,5 +1,8 @@
-import { env } from "@my-app/env/server";
-import { drizzle } from "drizzle-orm/d1";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { relations } from "./relations";
 
-export const db = drizzle(env.DB, { relations });
+const databaseUrl =
+	process.env.DATABASE_URL ??
+	"postgresql://postgres:postgres@localhost:5432/myapp";
+
+export const db = drizzle(databaseUrl, { relations });

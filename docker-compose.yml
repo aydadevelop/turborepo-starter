@@ -1,0 +1,244 @@
+# Docker Compose for local development and VPS deployment
+# Usage:
+#   docker compose up -d        # start all services
+#   docker compose up -d db     # start only Postgres
+#   docker compose logs -f      # follow logs
+#
+# ── Observability (Loki + Grafana) ───────────────────────────────────────────
+# Install the Loki Docker log driver ONCE on your VPS before first deploy:
+#   docker plugin install grafana/loki-docker-driver:3.0.0 --alias loki --grant-all-permissions
+# Set LOKI_URL in your VPS .env (default works on the same host):
+#   LOKI_URL=http://loki:3100/loki/api/v1/push
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Reusable log-driver fragment — YAML-merge into any app service with <<: *loki-logging
+x-loki-logging: &loki-logging
+  logging:
+    driver: loki
+    options:
+      loki-url: "${LOKI_URL:-http://loki:3100/loki/api/v1/push}"
+      loki-retries: "3"
+      loki-batch-size: "400"
+
+services:
+  db:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: myapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  server:
+    <<: *loki-logging
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: server
+    image: ${SERVER_IMAGE:-}
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-3000}:3000"
+    env_file: .env
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/myapp
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  assistant:
+    <<: *loki-logging
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: assistant
+    image: ${ASSISTANT_IMAGE:-}
+    restart: unless-stopped
+    ports:
+      - "${ASSISTANT_PORT:-3001}:3001"
+    env_file: .env
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/myapp
+      SERVER_URL: http://server:3000
+    depends_on:
+      db:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  notifications:
+    <<: *loki-logging
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: notifications
+    image: ${NOTIFICATIONS_IMAGE:-}
+    restart: unless-stopped
+    ports:
+      - "${NOTIFICATIONS_PORT:-3002}:3002"
+    env_file: .env
+    environment:
+      PORT: 3002
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/myapp
+      SERVER_URL: http://server:3000       # internal Docker network — bypasses Traefik
+      SMTP_HOST: smtp-server
+      SMTP_PORT: "25"
+    depends_on:
+      db:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+      smtp-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3002/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  web:
+    <<: *loki-logging
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    image: ${WEB_IMAGE:-}
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3003}:3000"
+    env_file: .env
+    environment:
+      PORT: 3000
+      ORIGIN: ${CORS_ORIGIN:-http://localhost:3003}
+      # SSR fetches stay on the internal Docker network — never leave the host:
+      INTERNAL_SERVER_URL: http://server:3000
+      INTERNAL_ASSISTANT_URL: http://assistant:3001
+    depends_on:
+      server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ── Mail (dev only — captures all outgoing emails, never relays) ─────────
+  smtp-server:
+    image: rnwood/smtp4dev:v3
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5025:80"    # web UI — view captured emails at http://localhost:5025
+      # SMTP port 25 is NOT exposed to the host; apps connect via smtp-server:25
+    environment:
+      ServerOptions__Urls: "http://*:80"
+      ServerOptions__TcpPort: "25"
+      ServerOptions__HostName: smtp-server
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # ── Reverse proxy ────────────────────────────────────────────────────────
+  # In local dev Traefik is available but SSL is disabled (no ACME).
+  # In production, use docker-compose.prod.yml which enables Let's Encrypt.
+  traefik:
+    image: traefik:v3.3
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"          # dashboard on :8080 (local only)
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:8080:8080"          # dashboard — localhost only
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik/acme.json:/acme.json"
+
+  # ── Observability ─────────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:3.4.2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3110}:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-change-me}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+      # Alerting
+      GF_ALERTING_ENABLED: "true"
+      GF_UNIFIED_ALERTING_ENABLED: "true"
+      # Telegram contact point (set in .env)
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      GRAFANA_ALERT_EMAIL: ${GRAFANA_ALERT_EMAIL:-ops@localhost}
+      # SMTP (uses smtp4dev in dev; override in prod .env for real relay)
+      GF_SMTP_ENABLED: "true"
+      GF_SMTP_HOST: ${SMTP_HOST:-smtp-server}:${SMTP_PORT:-25}
+      GF_SMTP_FROM_ADDRESS: ${SMTP_FROM:-grafana@localhost}
+      GF_SMTP_FROM_NAME: "Grafana Alerts"
+      GF_SMTP_SKIP_VERIFY: "true"   # smtp4dev has no TLS; disable in prod if relay requires it
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  loki_data:
+  grafana_data:
+
+# ── Observability access ──────────────────────────────────────────────────────
+# Grafana: http://<vps-ip>:3110  (admin / ${GRAFANA_PASSWORD:-change-me})
+# Loki is bound to 127.0.0.1 only — not exposed externally.
+# Logs flow automatically from app containers via the loki Docker log driver.

@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 // Mock @my-app/db before any module that transitively imports it
-// (event-bus → notifications/pusher → db → env/server → cloudflare:workers)
 vi.doMock("@my-app/db", () => ({ db: {} }));
 
 const mockPusher = vi.fn().mockResolvedValue(undefined);

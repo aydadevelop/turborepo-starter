@@ -1,47 +1,24 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import type BetterSqliteDatabase from "better-sqlite3";
 import { sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 
 import { relations } from "../relations";
-import { POST_MIGRATION_TRIGGERS_SQL } from "../triggers";
 
-// better-sqlite3 loads a native binary that segfaults Bun's module loader.
-// Throw a clear error before the dynamic imports so that `bun test` at the
-// workspace root fails gracefully (error message) instead of hard-crashing.
-if ("Bun" in globalThis) {
-	throw new Error(
-		"[db/test] better-sqlite3 is incompatible with Bun's native module loader. " +
-			"Run this suite via vitest: `bun run test` delegates to vitest per package."
-	);
-}
+const TEST_DATABASE_URL =
+	process.env.TEST_DATABASE_URL ??
+	"postgresql://postgres:postgres@localhost:5432/myapp_test";
 
-// Dynamic top-level await so the native module is never touched in Bun.
-const { drizzle } = await import("drizzle-orm/better-sqlite3");
-const { migrate: migrateDb } = await import(
-	"drizzle-orm/better-sqlite3/migrator"
-);
-
-const migrationsFolder = path.resolve(
-	path.dirname(fileURLToPath(import.meta.url)),
-	"../migrations"
-);
-
-type TestSqliteClient = BetterSqliteDatabase.Database;
-const createRawTestDatabase = () => {
-	const db = drizzle(":memory:", { relations });
-	db.$client.pragma("journal_mode = WAL");
-	migrateDb(db, { migrationsFolder });
-	if (POST_MIGRATION_TRIGGERS_SQL.trim().length > 0) {
-		db.$client.exec(POST_MIGRATION_TRIGGERS_SQL);
-	}
-	return db;
+const createRawTestDatabase = async () => {
+	const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+	await client.connect();
+	const db = drizzle({ client, relations });
+	return { db, client };
 };
 
-export type TestDatabase = ReturnType<typeof createRawTestDatabase> & {
-	$client: TestSqliteClient;
-};
+export type TestDatabase = Awaited<
+	ReturnType<typeof createRawTestDatabase>
+>["db"];
 
 export type TestDatabaseSeed = (db: TestDatabase) => void | Promise<void>;
 
@@ -52,76 +29,93 @@ export interface BootstrapTestDatabaseOptions {
 
 let testBootstrapCounter = 0;
 
-export const createTestDatabase = (): {
+export const createTestDatabase = async (): Promise<{
 	db: TestDatabase;
-	close: () => void;
-} => {
-	const db = createRawTestDatabase() as TestDatabase;
-	return { db, close: () => db.$client.close() };
+	close: () => Promise<void>;
+}> => {
+	const { db, client } = await createRawTestDatabase();
+	return { db, close: () => client.end() };
 };
 
-export const clearTestDatabase = (db: TestDatabase): void => {
-	const tables = db.$client
-		.prepare(
-			"SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != '__drizzle_migrations'"
-		)
-		.all() as { name: string }[];
+export const clearTestDatabase = async (db: TestDatabase): Promise<void> => {
+	const result = await db.execute(sql`
+		SELECT tablename FROM pg_tables
+		WHERE schemaname = 'public'
+		AND tablename != '__drizzle_migrations'
+	`);
 
-	db.$client.pragma("foreign_keys = OFF");
-	for (const { name } of tables) {
-		db.run(sql.raw(`DELETE FROM ${name}`));
+	const tables = (result.rows as { tablename: string }[]).map(
+		(r) => r.tablename
+	);
+
+	if (tables.length > 0) {
+		await db.execute(
+			sql.raw(
+				`TRUNCATE TABLE ${tables.map((t) => `"${t}"`).join(", ")} CASCADE`
+			)
+		);
 	}
-	db.$client.pragma("foreign_keys = ON");
 };
 
 export const bootstrapTestDatabase = (
 	options: BootstrapTestDatabaseOptions = {}
 ): {
 	db: TestDatabase;
-	close: () => void;
+	close: () => Promise<void>;
 } => {
-	const testDbState = createTestDatabase();
+	let testDb: TestDatabase;
+	let closeFn: () => Promise<void>;
 	const seedStrategy = options.seedStrategy ?? "beforeAll";
-	const savepointName = `test_bootstrap_${testBootstrapCounter++}`;
-	let savepointActive = false;
+
+	// Expose a proxy that defers to the real db once connected
+	const state = {
+		db: undefined as unknown as TestDatabase,
+		close: async () => {
+			await closeFn?.();
+		},
+	};
 
 	beforeAll(async () => {
-		testDbState.db.run(sql`PRAGMA foreign_keys = ON`);
+		const result = await createTestDatabase();
+		testDb = result.db;
+		closeFn = result.close;
+		state.db = testDb;
 
 		if (seedStrategy === "beforeAll" && options.seed) {
-			await options.seed(testDbState.db);
+			await options.seed(testDb);
 		}
 	});
 
 	beforeEach(async () => {
 		if (seedStrategy === "beforeEach") {
-			clearTestDatabase(testDbState.db);
+			await clearTestDatabase(testDb);
 			if (options.seed) {
-				await options.seed(testDbState.db);
+				await options.seed(testDb);
 			}
 			return;
 		}
 
-		testDbState.db.run(sql.raw(`SAVEPOINT ${savepointName}`));
-		savepointActive = true;
+		// Use a savepoint for beforeAll strategy
+		await testDb.execute(sql.raw(`SAVEPOINT test_sp_${testBootstrapCounter}`));
 	});
 
-	afterEach(() => {
-		if (seedStrategy === "beforeEach" || !savepointActive) {
+	afterEach(async () => {
+		if (seedStrategy === "beforeEach") {
 			return;
 		}
 
-		try {
-			testDbState.db.run(sql.raw(`ROLLBACK TO SAVEPOINT ${savepointName}`));
-			testDbState.db.run(sql.raw(`RELEASE SAVEPOINT ${savepointName}`));
-		} finally {
-			savepointActive = false;
-		}
+		await testDb.execute(
+			sql.raw(`ROLLBACK TO SAVEPOINT test_sp_${testBootstrapCounter}`)
+		);
+		await testDb.execute(
+			sql.raw(`RELEASE SAVEPOINT test_sp_${testBootstrapCounter}`)
+		);
 	});
 
-	afterAll(() => {
-		testDbState.close();
+	afterAll(async () => {
+		testBootstrapCounter++;
+		await closeFn?.();
 	});
 
-	return testDbState;
+	return state;
 };

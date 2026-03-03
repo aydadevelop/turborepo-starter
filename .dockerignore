@@ -1,0 +1,58 @@
+# Version control
+.git
+
+# Dependencies — never copy local installs; Docker rebuilds them
+**/node_modules
+
+# Build outputs — rebuilt fresh in Docker
+**/.svelte-kit
+**/dist
+**/build
+**/*.tsbuildinfo
+.turbo
+**/.turbo
+
+# Test and e2e artefacts (turbo prune keeps only needed packages,
+# but these patterns catch leftover test files inside kept packages)
+**/test-results
+**/playwright-report
+**/coverage
+**/.nyc_output
+
+# CI/CD, docs, dev scripts
+.github
+docs
+scripts
+
+# Dev-only config not needed inside containers
+# NOTE: turbo.json and bunfig.toml are required by turbo prune — do NOT exclude them
+biome.json
+bts.jsonc
+knip.json
+
+# Environment files — always injected at runtime, never baked in
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# Docker files themselves
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Editor and OS artefacts
+.vscode
+.idea
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Misc
+*.log
+*.tgz
+.cache
+tmp
+temp
+.alchemy

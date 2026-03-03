@@ -1,0 +1,16 @@
+{
+  "name": "@my-app/queue",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./producer": "./src/producer.ts",
+    "./worker": "./src/worker.ts"
+  },
+  "dependencies": {
+    "pg-boss": "^12.14.0"
+  },
+  "devDependencies": {
+    "@my-app/config": "*",
+    "typescript": "^5"
+  }
+}

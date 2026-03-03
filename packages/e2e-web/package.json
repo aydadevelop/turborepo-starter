@@ -5,7 +5,7 @@
   "scripts": {
     "dev:web:e2e": "turbo run dev:vite --filter=web -- --mode e2e --host 127.0.0.1 --port 43173 --strictPort",
     "dev:web:e2e:clean": "node ../../scripts/e2e-kill-ports.mjs 43173 && bun run dev:web:e2e",
-    "dev:infra:e2e": "STAGE=e2e bun run --cwd ../.. dev:server",
+    "dev:infra:e2e": "node ../../scripts/ensure-db.mjs && set -a && . ../../.env && set +a && SERVER_PORT=43100 NOTIFICATIONS_PORT=43101 ASSISTANT_PORT=43102 turbo run dev --filter=server --filter=assistant --filter=notifications",
     "dev:infra:e2e:clean": "node ../../scripts/e2e-kill-ports.mjs 43100 43101 43102 && turbo run db:reset:local --filter=@my-app/db && bun run dev:infra:e2e",
     "test:e2e": "node ../../scripts/e2e-kill-ports.mjs && PLAYWRIGHT_REUSE_SERVERS=0 playwright test -c playwright.config.ts",
     "test:e2e:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 bun run test:e2e",
@@ -13,13 +13,13 @@
     "test:e2e:ui:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 bun run test:e2e:ui"
   },
   "dependencies": {
-    "@my-app/infra": "*",
     "web": "*"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
-    "@libsql/client": "0.15.15",
     "@playwright/test": "^1.58.1",
+    "@types/pg": "^8.15.4",
+    "pg": "^8.16.3",
     "ultracite": "^7.2.3"
   }
 }

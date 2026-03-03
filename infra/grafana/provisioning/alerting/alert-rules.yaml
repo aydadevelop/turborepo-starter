@@ -1,0 +1,185 @@
+apiVersion: 1
+
+# Alert rules evaluated against Loki logs.
+# Loki datasource UID must match the uid set in datasources/loki.yaml.
+
+groups:
+  - orgId: 1
+    name: service-health
+    folder: App Alerts
+    interval: 1m           # evaluate every minute
+    rules:
+
+      # ── Server service down ────────────────────────────────────────────────
+      # Fires when the server container emits no logs for 5 minutes.
+      # "No data" is also treated as Alerting (container may be dead).
+      - uid: alert-server-down
+        title: "server: no logs (service may be down)"
+        condition: threshold
+        noDataState: Alerting
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: critical
+          compose_service: server
+        annotations:
+          summary: "server container has not emitted logs in 5 min — check docker compose ps"
+          runbook: "ssh deploy@VPS 'cd /srv/app && docker compose ps && docker compose logs server --tail 50'"
+        data:
+          - refId: log_count
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({compose_service="server"}[5m])'
+              queryType: range
+              refId: log_count
+          - refId: threshold
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              refId: threshold
+              expression: log_count
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+                  operator: { type: and }
+                  query: { params: [threshold] }
+                  reducer: { type: last }
+                  type: query
+
+      # ── Assistant service down ─────────────────────────────────────────────
+      - uid: alert-assistant-down
+        title: "assistant: no logs (service may be down)"
+        condition: threshold
+        noDataState: Alerting
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: warning
+          compose_service: assistant
+        annotations:
+          summary: "assistant container has not emitted logs in 5 min"
+          runbook: "ssh deploy@VPS 'cd /srv/app && docker compose logs assistant --tail 50'"
+        data:
+          - refId: log_count
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({compose_service="assistant"}[5m])'
+              queryType: range
+              refId: log_count
+          - refId: threshold
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              refId: threshold
+              expression: log_count
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+                  operator: { type: and }
+                  query: { params: [threshold] }
+                  reducer: { type: last }
+                  type: query
+
+      # ── Notifications service down ─────────────────────────────────────────
+      - uid: alert-notifications-down
+        title: "notifications: no logs (service may be down)"
+        condition: threshold
+        noDataState: Alerting
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: warning
+          compose_service: notifications
+        annotations:
+          summary: "notifications container has not emitted logs in 5 min"
+        data:
+          - refId: log_count
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({compose_service="notifications"}[5m])'
+              queryType: range
+              refId: log_count
+          - refId: threshold
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              refId: threshold
+              expression: log_count
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+                  operator: { type: and }
+                  query: { params: [threshold] }
+                  reducer: { type: last }
+                  type: query
+
+      # ── Web (SvelteKit) down ───────────────────────────────────────────────
+      - uid: alert-web-down
+        title: "web: no logs (service may be down)"
+        condition: threshold
+        noDataState: Alerting
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: critical
+          compose_service: web
+        annotations:
+          summary: "web container has not emitted logs in 5 min — site may be unreachable"
+        data:
+          - refId: log_count
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: loki
+            model:
+              expr: 'count_over_time({compose_service="web"}[5m])'
+              queryType: range
+              refId: log_count
+          - refId: threshold
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              refId: threshold
+              expression: log_count
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+                  operator: { type: and }
+                  query: { params: [threshold] }
+                  reducer: { type: last }
+                  type: query
+
+  # ── Application error rate ─────────────────────────────────────────────────
+  - orgId: 1
+    name: error-rate
+    folder: App Alerts
+    interval: 2m
+    rules:
+      - uid: alert-high-error-rate
+        title: "High error rate in logs"
+        condition: threshold
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "More than 10 errors/min detected across all app services"
+          runbook: "Check Grafana → Explore → Loki: {compose_service=~\"server|assistant|notifications|web\"} |= \"error\""
+        data:
+          - refId: error_count
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: loki
+            model:
+              expr: 'sum(count_over_time({compose_service=~"server|assistant|notifications|web"} |~ "(?i)(error|exception|panic|fatal)" [5m]))'
+              queryType: range
+              refId: error_count
+          - refId: threshold
+            datasourceUid: "__expr__"
+            model:
+              type: threshold
+              refId: threshold
+              expression: error_count
+              conditions:
+                - evaluator: { type: gt, params: [50] }   # >50 errors in 5 min window
+                  operator: { type: and }
+                  query: { params: [threshold] }
+                  reducer: { type: last }
+                  type: query

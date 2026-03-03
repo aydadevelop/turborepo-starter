@@ -11,14 +11,28 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  TURBO_LOG_ORDER: grouped
 
 jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: myapp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,190 +54,83 @@ jobs:
         with:
           bun-version: 1.2.22
 
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ github.ref_name }}-
+            turbo-${{ runner.os }}-
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            bunx turbo run build --affected
-          else
-            bun run build
-          fi
-
-      - name: Lint
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            bunx turbo run lint --affected
-          else
-            bun run lint
-          fi
-
-      - name: Type check
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            bunx turbo run check-types --affected
-          else
-            bun run check-types
-          fi
-
-      - name: Test
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            bunx turbo run test --affected
-          else
-            bun run test
-          fi
+      - name: Build, Lint, Type Check & Test
+        run: bunx turbo run build lint check-types test ${{ github.event_name == 'pull_request' && '--affected' || '' }}
 
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
 
-      - name: E2E test
+      - name: Push DB schema & seed
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            bunx turbo run test:e2e --affected
-          else
-            bun run test:e2e
-          fi
+          bun run db:push
+          bun run db:seed -- --scenario baseline
         env:
-          PUBLIC_SERVER_URL: http://localhost:3000
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myapp
+
+      - name: E2E test
+        run: bunx turbo run test:e2e --filter=@my-app/e2e-web ${{ github.event_name == 'pull_request' && '--affected' || '' }}
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myapp
+          BETTER_AUTH_SECRET: ci-e2e-secret
+          BETTER_AUTH_URL: http://127.0.0.1:43100
+          SERVER_URL: http://127.0.0.1:43100
+          CORS_ORIGIN: http://127.0.0.1:43173
+          OPEN_ROUTER_API_KEY: ci-e2e-placeholder
+          AI_MODEL: openai/gpt-5-nano
+          PUBLIC_SERVER_URL: http://127.0.0.1:43100
+          PUBLIC_ASSISTANT_URL: http://127.0.0.1:43102
+          PLAYWRIGHT_SKIP_SEED: "1"
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: apps/web/playwright-report
+          path: |
+            packages/e2e-web/playwright-report
+            packages/e2e-web/test-results
           retention-days: 7
 
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
     needs: build
-    # Only deploy on push to main or PR events
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    # Deploy to VPS only on push to main. PRs get no preview environment
+    # (Docker/VPS doesn't support per-PR envs the way Cloudflare Workers do).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
-      name: ${{ github.event_name == 'push' && 'production' || format('pr-{0}', github.event.number) }}
-      url: ${{ steps.deploy.outputs.web_url }}
+      name: production
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.2.22
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build packages
-        run: bun run build
-        env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ vars.TURBO_TEAM }}
-
-      - name: Deploy to Cloudflare
-        id: deploy
-        run: |
-          STAGE=${{ github.event_name == 'push' && 'prod' || format('pr-{0}', github.event.number) }}
-          echo "Deploying stage: $STAGE"
-
-          # Run deploy and capture output
-          bun run deploy -- --stage $STAGE 2>&1 | tee deploy.log
-
-          # Extract URLs from deploy output
-          WEB_URL=$(grep -oP 'Web\s+->\s+\K(https?://[^\s]+)' deploy.log || echo "")
-          SERVER_URL=$(grep -oP 'Server\s+->\s+\K(https?://[^\s]+)' deploy.log || echo "")
-
-          echo "web_url=$WEB_URL" >> $GITHUB_OUTPUT
-          echo "server_url=$SERVER_URL" >> $GITHUB_OUTPUT
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          ALCHEMY_PASSWORD: ${{ secrets.ALCHEMY_PASSWORD }}
-          ALCHEMY_STATE_TOKEN: ${{ secrets.ALCHEMY_STATE_TOKEN }}
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-          OPEN_ROUTER_API_KEY: ${{ secrets.OPEN_ROUTER_API_KEY }}
-          POLAR_ACCESS_TOKEN: ${{ secrets.POLAR_ACCESS_TOKEN }}
-
-      - name: Comment PR with preview URL
-        if: github.event_name == 'pull_request'
+      - name: Trigger Docker deploy
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const webUrl = '${{ steps.deploy.outputs.web_url }}';
-            const serverUrl = '${{ steps.deploy.outputs.server_url }}';
-
-            const body = `## 🚀 Preview Deployment
-
-            | App | URL |
-            |-----|-----|
-            | Web | ${webUrl || 'N/A'} |
-            | Server | ${serverUrl || 'N/A'} |
-
-            *Deployed from commit ${context.sha.substring(0, 7)}*`;
-
-            // Find existing comment
-            const { data: comments } = await github.rest.issues.listComments({
+            await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              workflow_id: 'deploy-docker.yml',
+              ref: 'main',
+              inputs: { environment: 'production' },
             });
+            core.info('deploy-docker.yml workflow dispatched');
 
-            const botComment = comments.find(c =>
-              c.user.type === 'Bot' && c.body.includes('## 🚀 Preview Deployment')
-            );
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body,
-              });
-            }
-
-  cleanup:
-    name: Cleanup Preview
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.2.22
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Destroy preview environment
-        run: |
-          STAGE=pr-${{ github.event.number }}
-          echo "Destroying stage: $STAGE"
-          bun run destroy -- --stage $STAGE
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          ALCHEMY_PASSWORD: ${{ secrets.ALCHEMY_PASSWORD }}
-          ALCHEMY_STATE_TOKEN: ${{ secrets.ALCHEMY_STATE_TOKEN }}

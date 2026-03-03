@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { rpcRequest, signInAsSeedAdmin } from "./utils/auth";
+import { expect, test } from "./fixtures";
+import { rpcRequest } from "./utils/auth";
 
 interface RpcEnvelope<T> {
 	json: T;
@@ -27,8 +27,7 @@ interface NotificationListResult {
 }
 
 test.describe("Payments & Notifications", () => {
-	test("mock payment creates an in-app notification", async ({ page }) => {
-		await signInAsSeedAdmin(page);
+	test("mock payment creates an in-app notification", async ({ adminPage: page }) => {
 
 		const providersResult = await rpcRequest(page, {
 			path: "payments/providers",

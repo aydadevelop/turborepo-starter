@@ -1,58 +1,41 @@
 #!/usr/bin/env node
 
-import {
-	existsSync,
-	readdirSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import pg from "pg";
 
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(scriptDir, "../../..");
+const { Client } = pg;
 
-// Remove local Miniflare D1 sqlite files
-const localD1Dir = path.resolve(repoRoot, ".alchemy/miniflare/v3/d1");
+const DEFAULT_DATABASE_URL =
+	"postgresql://postgres:postgres@localhost:5432/myapp";
 
-if (existsSync(localD1Dir)) {
-	rmSync(localD1Dir, { recursive: true, force: true });
-	console.log(`Removed local D1 state: ${localD1Dir}`);
-} else {
-	console.log(`Local D1 state not found: ${localD1Dir}`);
-}
+const connectionString = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
 
-// Clear recorded migration history for every local stage (dev/e2e/etc) so the
-// next `alchemy dev` re-applies migrations to the fresh Miniflare database.
-const alchemyAppStateRoot = path.resolve(
-	repoRoot,
-	"packages/infra/.alchemy/my-app"
-);
+const main = async () => {
+	const client = new Client({ connectionString });
+	await client.connect();
 
-if (existsSync(alchemyAppStateRoot)) {
-	const stageDirs = readdirSync(alchemyAppStateRoot, { withFileTypes: true })
-		.filter((entry) => entry.isDirectory())
-		.map((entry) => entry.name);
-
-	for (const stageDir of stageDirs) {
-		const alchemyDbStatePath = path.resolve(
-			alchemyAppStateRoot,
-			stageDir,
-			"database.json"
+	try {
+		// Drop all tables in the public schema (cascade handles FK dependencies)
+		const { rows } = await client.query(
+			`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`
 		);
-		if (!existsSync(alchemyDbStatePath)) {
-			continue;
+
+		if (rows.length === 0) {
+			console.log("No tables to drop.");
+			return;
 		}
 
-		const state = JSON.parse(readFileSync(alchemyDbStatePath, "utf8"));
-		if (
-			Array.isArray(state.props?.migrationsFiles) &&
-			state.props.migrationsFiles.length > 0
-		) {
-			state.props.migrationsFiles = [];
-			writeFileSync(alchemyDbStatePath, `${JSON.stringify(state, null, 2)}\n`);
-			console.log(`Cleared migration state: ${alchemyDbStatePath}`);
-		}
+		const tableNames = rows.map((r) => `"${r.tablename}"`).join(", ");
+		await client.query(`DROP TABLE IF EXISTS ${tableNames} CASCADE`);
+		console.log(`Dropped ${rows.length} tables from public schema.`);
+		console.log(
+			"Run `bun run db:push` or `bun run db:migrate` to recreate the schema."
+		);
+	} finally {
+		await client.end();
 	}
-}
+};
+
+main().catch((error) => {
+	console.error(error);
+	process.exitCode = 1;
+});

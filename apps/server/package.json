@@ -4,6 +4,7 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsdown",
+    "dev": "bun --watch src/index.ts",
     "check-types": "tsc -b",
     "lint": "cd ../.. && biome check --config-path biome.json apps/server",
     "lint:fix": "cd ../.. && biome check --config-path biome.json apps/server --write",
@@ -12,10 +13,12 @@
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server"
   },
   "dependencies": {
+    "@hono/node-server": "^1.14.4",
     "@my-app/api": "*",
     "@my-app/auth": "*",
     "@my-app/db": "*",
     "@my-app/env": "*",
+    "@my-app/queue": "*",
     "@orpc/openapi": "^1.12.2",
     "@orpc/server": "^1.12.2",
     "@orpc/zod": "^1.12.2",
@@ -26,15 +29,12 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
-    "@cloudflare/workers-types": "^4.20260228.0",
     "@my-app/config": "*",
     "@my-app/vitest-config": "*",
     "@types/node": "^22.19.11",
-    "alchemy": "^0.85.1",
     "tsdown": "^0.16.5",
     "typescript": "^5",
     "ultracite": "^7.2.3",
-    "vitest": "^3.2.4",
-    "wrangler": "^4.54.0"
+    "vitest": "^3.2.4"
   }
 }

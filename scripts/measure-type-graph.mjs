@@ -12,7 +12,6 @@ const IGNORE_DIRS = new Set([
 	"dist",
 	"build",
 	"coverage",
-	".alchemy",
 	".svelte-kit",
 ]);
 

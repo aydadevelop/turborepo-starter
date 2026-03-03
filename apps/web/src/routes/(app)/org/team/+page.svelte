@@ -7,16 +7,10 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { authClient } from "$lib/auth-client";
 	import { queryClient } from "$lib/orpc";
+	import { queryKeys } from "$lib/query-keys";
+	import { fullOrganizationQueryOptions } from "$lib/query-options";
 
-	const fullOrgQuery = createQuery({
-		queryKey: ["organization", "full"],
-		queryFn: async () => {
-			const { data, error } =
-				await authClient.organization.getFullOrganization();
-			if (error) throw error;
-			return data;
-		},
-	});
+	const fullOrgQuery = createQuery(fullOrganizationQueryOptions());
 
 	let removingMemberId = $state<string | null>(null);
 	let confirmRemoveOpen = $state(false);
@@ -90,7 +84,7 @@
 		}
 		confirmRemoveOpen = false;
 		removingMemberId = null;
-		queryClient.invalidateQueries({ queryKey: ["organization"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
 	};
 
 	const openChangeRoleDialog = (
@@ -120,12 +114,12 @@
 		}
 		changeRoleOpen = false;
 		changingRoleMemberId = null;
-		queryClient.invalidateQueries({ queryKey: ["organization"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
 	};
 
 	const handleCancelInvitation = async (invitationId: string) => {
 		await authClient.organization.cancelInvitation({ invitationId });
-		queryClient.invalidateQueries({ queryKey: ["organization"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
 	};
 </script>
 

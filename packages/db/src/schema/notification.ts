@@ -1,10 +1,12 @@
 import {
+	boolean,
 	index,
 	integer,
-	sqliteTable,
+	pgTable,
 	text,
+	timestamp,
 	uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+} from "drizzle-orm/pg-core";
 
 import { organization, user } from "./auth";
 import { timestamps } from "./columns";
@@ -55,7 +57,7 @@ export type NotificationDeliveryStatus =
 	(typeof notificationDeliveryStatusValues)[number];
 export type NotificationSeverity = (typeof notificationSeverityValues)[number];
 
-export const notificationEvent = sqliteTable(
+export const notificationEvent = pgTable(
 	"notification_event",
 	{
 		id: text("id").primaryKey(),
@@ -73,10 +75,14 @@ export const notificationEvent = sqliteTable(
 		status: text("status", { enum: notificationEventStatusValues })
 			.notNull()
 			.default("queued"),
-		processingStartedAt: integer("processing_started_at", {
-			mode: "timestamp_ms",
+		processingStartedAt: timestamp("processing_started_at", {
+			withTimezone: true,
+			mode: "date",
 		}),
-		processedAt: integer("processed_at", { mode: "timestamp_ms" }),
+		processedAt: timestamp("processed_at", {
+			withTimezone: true,
+			mode: "date",
+		}),
 		failureReason: text("failure_reason"),
 		...timestamps,
 	},
@@ -92,7 +98,7 @@ export const notificationEvent = sqliteTable(
 	]
 );
 
-export const notificationIntent = sqliteTable(
+export const notificationIntent = pgTable(
 	"notification_intent",
 	{
 		id: text("id").primaryKey(),
@@ -113,7 +119,10 @@ export const notificationIntent = sqliteTable(
 		status: text("status", { enum: notificationIntentStatusValues })
 			.notNull()
 			.default("pending"),
-		processedAt: integer("processed_at", { mode: "timestamp_ms" }),
+		processedAt: timestamp("processed_at", {
+			withTimezone: true,
+			mode: "date",
+		}),
 		...timestamps,
 	},
 	(table) => [
@@ -125,7 +134,7 @@ export const notificationIntent = sqliteTable(
 	]
 );
 
-export const notificationDelivery = sqliteTable(
+export const notificationDelivery = pgTable(
 	"notification_delivery",
 	{
 		id: text("id").primaryKey(),
@@ -144,7 +153,7 @@ export const notificationDelivery = sqliteTable(
 		providerMessageId: text("provider_message_id"),
 		failureReason: text("failure_reason"),
 		responsePayload: text("response_payload"),
-		sentAt: integer("sent_at", { mode: "timestamp_ms" }),
+		sentAt: timestamp("sent_at", { withTimezone: true, mode: "date" }),
 		...timestamps,
 	},
 	(table) => [
@@ -159,7 +168,7 @@ export const notificationDelivery = sqliteTable(
 	]
 );
 
-export const notificationPreference = sqliteTable(
+export const notificationPreference = pgTable(
 	"notification_preference",
 	{
 		id: text("id").primaryKey(),
@@ -174,7 +183,7 @@ export const notificationPreference = sqliteTable(
 			.default("global"),
 		eventType: text("event_type").notNull(),
 		channel: text("channel", { enum: notificationChannelValues }).notNull(),
-		enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+		enabled: boolean("enabled").notNull().default(true),
 		quietHoursStart: integer("quiet_hours_start"),
 		quietHoursEnd: integer("quiet_hours_end"),
 		timezone: text("timezone"),
@@ -198,7 +207,7 @@ export const notificationPreference = sqliteTable(
 	]
 );
 
-export const notificationInApp = sqliteTable(
+export const notificationInApp = pgTable(
 	"notification_in_app",
 	{
 		id: text("id").primaryKey(),
@@ -221,8 +230,11 @@ export const notificationInApp = sqliteTable(
 			.notNull()
 			.default("info"),
 		metadata: text("metadata"),
-		deliveredAt: integer("delivered_at", { mode: "timestamp_ms" }).notNull(),
-		viewedAt: integer("viewed_at", { mode: "timestamp_ms" }),
+		deliveredAt: timestamp("delivered_at", {
+			withTimezone: true,
+			mode: "date",
+		}).notNull(),
+		viewedAt: timestamp("viewed_at", { withTimezone: true, mode: "date" }),
 		...timestamps,
 	},
 	(table) => [

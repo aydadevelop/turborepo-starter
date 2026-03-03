@@ -81,10 +81,7 @@ describe("scheduleRecurringTask", () => {
 				runNumber: 1,
 				remainingRuns: 3,
 			}),
-			expect.objectContaining({
-				delaySeconds: 30,
-				contentType: "json",
-			})
+			expect.objectContaining({ delaySeconds: 30 })
 		);
 	});
 });
@@ -116,10 +113,7 @@ describe("processRecurringTaskTick", () => {
 				runNumber: 2,
 				remainingRuns: 1,
 			}),
-			expect.objectContaining({
-				delaySeconds: 120,
-				contentType: "json",
-			})
+			expect.objectContaining({ delaySeconds: 120 })
 		);
 	});
 

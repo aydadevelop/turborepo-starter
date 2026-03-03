@@ -7,6 +7,7 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { authClient } from "$lib/auth-client";
 	import { orpc, queryClient } from "$lib/orpc";
+	import { queryKeys } from "$lib/query-keys";
 
 	const canManageQuery = createQuery({
 		...orpc.canManageOrganization.queryOptions(),
@@ -78,7 +79,7 @@
 
 		successMessage = `Invitation sent to ${trimmedEmail} as ${selectedRole}.`;
 		email = "";
-		queryClient.invalidateQueries({ queryKey: ["organization"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
 	};
 </script>
 

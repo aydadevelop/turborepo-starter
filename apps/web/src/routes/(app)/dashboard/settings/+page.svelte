@@ -13,6 +13,8 @@
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { queryClient } from "$lib/orpc";
+	import { queryKeys } from "$lib/query-keys";
+	import { userInvitationsQueryOptions } from "$lib/query-options";
 	import PhoneInput from "../../../../components/PhoneInput.svelte";
 
 	const sessionQuery = authClient.useSession();
@@ -28,10 +30,12 @@
 
 	// ---------- Linked accounts ----------
 	const accountsQueryOptions = derived(sessionQuery, ($session) => ({
-		queryKey: ["linked-accounts"],
+		queryKey: queryKeys.linkedAccounts.all,
 		queryFn: async () => {
 			const { data, error } = await authClient.listAccounts();
-			if (error) throw error;
+			if (error) {
+				throw error;
+			}
 			return data ?? [];
 		},
 		retry: false,
@@ -85,7 +89,7 @@
 					return;
 				}
 				telegramSuccess = "Telegram account linked successfully.";
-				queryClient.invalidateQueries({ queryKey: ["linked-accounts"] });
+				queryClient.invalidateQueries({ queryKey: queryKeys.linkedAccounts.all });
 			}
 		);
 	};
@@ -110,7 +114,7 @@
 		}
 		telegramSuccess = "Telegram account unlinked.";
 		showTelegramWidget = false;
-		queryClient.invalidateQueries({ queryKey: ["linked-accounts"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.linkedAccounts.all });
 	};
 
 	// ---------- Phone ----------
@@ -165,7 +169,7 @@
 		phoneInput = "";
 		phoneUnmasked = "";
 		phoneCode = "";
-		queryClient.invalidateQueries({ queryKey: ["linked-accounts"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.linkedAccounts.all });
 	};
 
 	const cancelPhoneFlow = () => {
@@ -229,18 +233,13 @@
 	);
 
 	// ---------- Invitations ----------
-	const fetchUserInvitations = async () => {
-		const { data, error } = await authClient.organization.listUserInvitations();
-		if (error) throw error;
-		return data ?? [];
-	};
-	const invitationsQueryOptions = derived(sessionQuery, ($session) => ({
-		queryKey: ["user-invitations"],
-		queryFn: fetchUserInvitations,
-		retry: false,
-		enabled: hasAuthenticatedSession($session.data),
-	}));
-	const invitationsQuery = createQuery(invitationsQueryOptions);
+	const invitationsQuery = createQuery(
+		derived(sessionQuery, ($session) =>
+			userInvitationsQueryOptions({
+				enabled: hasAuthenticatedSession($session.data),
+			})
+		)
+	);
 
 	const pendingInvitations = $derived(
 		($invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
@@ -266,8 +265,8 @@
 				"Failed to accept invitation.";
 			return;
 		}
-		queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
-		queryClient.invalidateQueries({ queryKey: ["organization"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all });
+		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
 	};
 
 	const handleReject = async (invitationId: string) => {
@@ -283,7 +282,7 @@
 				"Failed to reject invitation.";
 			return;
 		}
-		queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all });
 	};
 
 	const formatDate = (date: Date | string) =>

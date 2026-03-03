@@ -7,13 +7,7 @@ import { notificationsPusher } from "@my-app/notifications/pusher";
 import type { NotificationQueueProducer } from "../context";
 
 export interface RecurringTaskQueueProducer {
-	send(
-		message: unknown,
-		options?: {
-			contentType?: "text" | "bytes" | "json" | "v8";
-			delaySeconds?: number;
-		}
-	): Promise<void>;
+	send(message: unknown, options?: { delaySeconds?: number }): Promise<void>;
 }
 
 export interface ScheduleRecurringTaskInput {
@@ -49,10 +43,7 @@ export const scheduleRecurringTask = async (
 			remainingRuns: input.runCount,
 			runNumber: 1,
 		}),
-		{
-			contentType: "json",
-			delaySeconds: input.initialDelaySeconds,
-		}
+		{ delaySeconds: input.initialDelaySeconds }
 	);
 
 	return { queued: true };
@@ -106,9 +97,6 @@ export const processRecurringTaskTick = async (
 			remainingRuns: message.remainingRuns - 1,
 			runNumber: message.runNumber + 1,
 		}),
-		{
-			contentType: "json",
-			delaySeconds: message.intervalSeconds,
-		}
+		{ delaySeconds: message.intervalSeconds }
 	);
 };

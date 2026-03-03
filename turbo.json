@@ -3,25 +3,14 @@
   "ui": "tui",
   "globalEnv": ["CI"],
   "globalPassThroughEnv": [
-    "ALCHEMY_TUNNEL",
-    "ALCHEMY_PASSWORD",
-    "ALCHEMY_STATE_TOKEN",
-    "ALCHEMY_E2E",
     "BASE_PATH",
     "STAGE",
-    "CLOUDFLARE_API_TOKEN",
-    "CLOUDFLARE_API_KEY",
-    "CLOUDFLARE_ACCOUNT_ID",
-    "CF_ACCOUNT_ID",
-    "CLOUDFLARE_EMAIL",
-    "CLOUDFLARE_PROFILE",
-    "CLOUDFLARE_WORKERS_SUBDOMAIN",
-    "CLOUDFLARE_BASE_URL",
     "BETTER_AUTH_SECRET",
     "BETTER_AUTH_URL",
     "SERVER_URL",
     "ASSISTANT_URL",
     "CORS_ORIGIN",
+    "DATABASE_URL",
     "OPEN_ROUTER_API_KEY",
     "AI_MODEL",
     "POLAR_ACCESS_TOKEN",
@@ -30,10 +19,7 @@
     "CLOUDPAYMENTS_API_SECRET",
     "TELEGRAM_BOT_TOKEN",
     "TELEGRAM_BOT_USERNAME",
-    "TELEGRAM_BOT_API_BASE_URL",
-    "NGROK_AUTH_TOKEN",
-    "NGROK_AUTHTOKEN",
-    "NGROK_DOMAIN_NAME"
+    "TELEGRAM_BOT_API_BASE_URL"
   ],
   "tasks": {
     "build": {
@@ -105,7 +91,6 @@
     },
     "dev": {
       "env": [
-        "ALCHEMY_SKIP_WEB",
         "STAGE",
         "SERVER_PORT",
         "NOTIFICATIONS_PORT",
@@ -142,13 +127,6 @@
       "cache": false
     },
     "db:seed": {
-      "cache": false
-    },
-    "deploy": {
-      "dependsOn": ["^build"],
-      "cache": false
-    },
-    "destroy": {
       "cache": false
     }
   }

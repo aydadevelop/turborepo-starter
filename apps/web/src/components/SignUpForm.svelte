@@ -18,6 +18,7 @@ import { resolve } from "$app/paths";
 import { page } from "$app/state";
 import { authClient } from "$lib/auth-client";
 import { queryClient } from "$lib/orpc";
+import { queryKeys } from "$lib/query-keys";
 
 let { switchToSignIn } = $props<{ switchToSignIn: () => void }>();
 
@@ -82,17 +83,11 @@ const form = createForm(() => ({
 			{
 				onSuccess: async () => {
 					await Promise.all([
-						queryClient.invalidateQueries({ queryKey: ["organization"] }),
-						queryClient.invalidateQueries({
-							queryKey: ["organization", "full"],
-						}),
-						queryClient.invalidateQueries({
-							queryKey: ["user-organizations"],
-						}),
-						queryClient.invalidateQueries({
-							queryKey: ["canManageOrganization"],
-						}),
-						queryClient.invalidateQueries({ queryKey: ["user-invitations"] }),
+						queryClient.invalidateQueries({ queryKey: queryKeys.org.root }),
+						queryClient.invalidateQueries({ queryKey: queryKeys.org.full }),
+						queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all }),
+						queryClient.invalidateQueries({ queryKey: queryKeys.org.canManage }),
+						queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all }),
 					]);
 					goto(postAuthRedirectPath);
 				},

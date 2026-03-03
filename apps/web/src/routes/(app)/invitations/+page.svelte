@@ -10,20 +10,17 @@
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { queryClient } from "$lib/orpc";
+	import { queryKeys } from "$lib/query-keys";
+	import { userInvitationsQueryOptions } from "$lib/query-options";
 
 	const sessionQuery = authClient.useSession();
 
 	const invitationsQuery = createQuery(
-		derived(sessionQuery, ($session) => ({
-			queryKey: ["user-invitations"],
-			queryFn: async () => {
-				const { data, error } =
-					await authClient.organization.listUserInvitations();
-				if (error) throw error;
-				return data ?? [];
-			},
-			enabled: hasAuthenticatedSession($session.data),
-		}))
+		derived(sessionQuery, ($session) =>
+			userInvitationsQueryOptions({
+				enabled: hasAuthenticatedSession($session.data),
+			})
+		)
 	);
 
 	let pendingId = $state<string | null>(null);
@@ -59,8 +56,8 @@
 				"Failed to accept invitation.";
 			return;
 		}
-		queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
-		queryClient.invalidateQueries({ queryKey: ["organization"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all });
+		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
 	};
 
 	const handleReject = async (invitationId: string) => {
@@ -76,7 +73,7 @@
 				"Failed to reject invitation.";
 			return;
 		}
-		queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all });
 	};
 
 	const formatDate = (date: Date | string) =>

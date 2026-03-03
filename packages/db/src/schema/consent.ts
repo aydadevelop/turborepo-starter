@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { user } from "./auth";
 import { timestamps } from "./columns";
@@ -10,7 +10,7 @@ export const consentTypeValues = [
 ] as const;
 export type ConsentType = (typeof consentTypeValues)[number];
 
-export const userConsent = sqliteTable(
+export const userConsent = pgTable(
 	"user_consent",
 	{
 		id: text("id").primaryKey(),
@@ -19,7 +19,10 @@ export const userConsent = sqliteTable(
 			.references(() => user.id, { onDelete: "cascade" }),
 		consentType: text("consent_type", { enum: consentTypeValues }).notNull(),
 		consentVersion: text("consent_version").notNull(),
-		consentedAt: integer("consented_at", { mode: "timestamp_ms" }).notNull(),
+		consentedAt: timestamp("consented_at", {
+			withTimezone: true,
+			mode: "date",
+		}).notNull(),
 		ipAddress: text("ip_address"),
 		userAgent: text("user_agent"),
 		...timestamps,

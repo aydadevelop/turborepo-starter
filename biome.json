@@ -20,7 +20,6 @@
       "!**/.nuxt",
       "!bts.jsonc",
       "!**/.expo",
-      "!**/.alchemy",
       "!**/legacy",
       "!**/docs",
       "!**/tmp",
@@ -28,7 +27,6 @@
       "!**/.svelte-kit",
       "!**/playwright-report",
       "!**/test-results",
-      "!**/wrangler.jsonc",
       "!**/.source",
       "!**/convex/_generated",
       "!**/.git",
@@ -116,16 +114,6 @@
         "rules": {
           "style": {
             "noNamespace": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["**/alchemy.run.ts"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noNonNullAssertion": "off"
           }
         }
       }

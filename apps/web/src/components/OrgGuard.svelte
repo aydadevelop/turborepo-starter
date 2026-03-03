@@ -6,6 +6,7 @@
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
+	import { userOrganizationsQueryOptions } from "$lib/query-options";
 
 	const { children } = $props();
 
@@ -17,14 +18,11 @@
 	const sessionQuery = authClient.useSession();
 
 	const orgsQuery = createQuery(
-		derived(sessionQuery, ($session) => ({
-			queryKey: ["user-organizations"],
-			queryFn: async () => {
-				const { data } = await authClient.organization.list();
-				return data ?? [];
-			},
-			enabled: hasAuthenticatedSession($session.data),
-		}))
+		derived(sessionQuery, ($session) =>
+			userOrganizationsQueryOptions({
+				enabled: hasAuthenticatedSession($session.data),
+			})
+		)
 	);
 
 	$effect(() => {

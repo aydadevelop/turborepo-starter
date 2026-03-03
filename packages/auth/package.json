@@ -32,8 +32,6 @@
     "@biomejs/biome": "^2.4.4",
     "@my-app/config": "*",
     "@my-app/vitest-config": "*",
-    "@types/better-sqlite3": "^7.6.13",
-    "better-sqlite3": "^11.10.0",
     "typescript": "^5",
     "ultracite": "^7.2.3",
     "vitest": "^3.2.4"

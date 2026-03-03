@@ -1,13 +1,16 @@
-import { recurringTaskTickMessageSchema } from "@my-app/api-contract/contracts/recurring-task-queue";
 import { auth } from "@my-app/auth";
 import { db } from "@my-app/db";
 import { member } from "@my-app/db/schema/auth";
-import { notificationQueueMessageSchema } from "@my-app/notifications/contracts";
+import { NOTIFICATION_QUEUE, RECURRING_TASK_QUEUE } from "@my-app/queue";
+import type { QueueProducer } from "@my-app/queue/producer";
+import { createPgBossProducer } from "@my-app/queue/producer";
+
+export type { QueueProducer as NotificationQueueProducer } from "@my-app/queue/producer";
+
 import { and, asc, eq } from "drizzle-orm";
 import type { Context as HonoContext } from "hono";
 
 import type { EventBus } from "./lib/event-bus";
-import { processRecurringTaskTick } from "./tasks/recurring";
 
 export interface CreateContextOptions {
 	context: HonoContext;
@@ -20,133 +23,11 @@ export interface ActiveOrganizationMembership {
 	role: string;
 }
 
-export interface NotificationQueueProducer {
-	send(
-		message: unknown,
-		options?: {
-			contentType?: "text" | "bytes" | "json" | "v8";
-			delaySeconds?: number;
-		}
-	): Promise<void>;
-}
-
-interface NotificationInlineProcessorResult {
-	reason?: string;
-	status: "processed" | "already_processed" | "failed" | "not_found";
-}
-
-interface NotificationInlineProcessor {
-	processEventById(eventId: string): Promise<NotificationInlineProcessorResult>;
-}
-
-const isNotificationQueueProducer = (
-	value: unknown
-): value is NotificationQueueProducer => {
-	if (typeof value !== "object" || value === null) {
-		return false;
-	}
-
-	return typeof (value as { send?: unknown }).send === "function";
-};
-
-const LOCAL_REQUEST_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
-
-let inlineNotificationProcessorPromise:
-	| Promise<NotificationInlineProcessor | null>
-	| undefined;
-
-const getInlineNotificationProcessor = () => {
-	if (!inlineNotificationProcessorPromise) {
-		inlineNotificationProcessorPromise = (async () => {
-			try {
-				const notificationsProcessorModule = (await import(
-					"@my-app/notifications/processor"
-				)) as {
-					NotificationProcessorService?: new () => NotificationInlineProcessor;
-				};
-				const ProcessorCtor =
-					notificationsProcessorModule.NotificationProcessorService;
-				if (!ProcessorCtor) {
-					return null;
-				}
-
-				return new ProcessorCtor();
-			} catch (error) {
-				console.error("Inline notification processor is unavailable", error);
-				return null;
-			}
-		})();
-	}
-
-	return inlineNotificationProcessorPromise;
-};
-
-const inlineNotificationQueueProducer: NotificationQueueProducer = {
-	send: async (message) => {
-		const parsedMessage = notificationQueueMessageSchema.safeParse(message);
-		if (!parsedMessage.success) {
-			throw new Error("Inline notification queue: unsupported message kind");
-		}
-
-		const processor = await getInlineNotificationProcessor();
-		if (!processor) {
-			throw new Error("Inline notification processor is unavailable");
-		}
-
-		const result = await processor.processEventById(parsedMessage.data.eventId);
-		if (
-			result.status === "processed" ||
-			result.status === "already_processed"
-		) {
-			return;
-		}
-
-		if (result.status === "not_found") {
-			throw new Error(
-				`Inline notification event not found: ${parsedMessage.data.eventId}`
-			);
-		}
-
-		const reason =
-			typeof result.reason === "string" && result.reason.trim().length > 0
-				? ` (${result.reason.trim()})`
-				: "";
-		throw new Error(
-			`Inline notification processing failed: ${result.status}${reason}`
-		);
-	},
-};
-
-const inlineRecurringTaskQueueProducer: NotificationQueueProducer = {
-	send: (message, options) => {
-		const recurringMessage = recurringTaskTickMessageSchema.safeParse(message);
-		if (!recurringMessage.success) {
-			return Promise.reject(
-				new Error("Inline recurring task queue: unsupported message kind")
-			);
-		}
-
-		const delayMs = (options?.delaySeconds ?? 0) * 1000;
-		setTimeout(async () => {
-			try {
-				await processRecurringTaskTick({
-					message: recurringMessage.data,
-					notificationQueue: inlineNotificationQueueProducer,
-					recurringTaskQueue: inlineRecurringTaskQueueProducer,
-				});
-			} catch (error) {
-				console.error("Inline recurring task processing failed", error);
-			}
-		}, delayMs);
-		return Promise.resolve();
-	},
-};
-
 export interface Context {
 	activeMembership: ActiveOrganizationMembership | null;
 	eventBus?: EventBus;
-	notificationQueue?: NotificationQueueProducer;
-	recurringTaskQueue?: NotificationQueueProducer;
+	notificationQueue?: QueueProducer;
+	recurringTaskQueue?: QueueProducer;
 	requestCookies?: Readonly<Record<string, string>>;
 	requestHostname: string;
 	requestUrl: string;
@@ -160,8 +41,8 @@ export interface Context {
 export interface OrganizationContext extends Context {
 	activeMembership: ActiveOrganizationMembership;
 	eventBus: EventBus;
-	notificationQueue?: NotificationQueueProducer;
-	recurringTaskQueue?: NotificationQueueProducer;
+	notificationQueue?: QueueProducer;
+	recurringTaskQueue?: QueueProducer;
 }
 
 const parseCookiesFromHeader = (
@@ -254,6 +135,9 @@ const getActiveOrganizationId = (session: AuthSession) => {
 	return authSession.activeOrganizationId ?? null;
 };
 
+const notificationQueue = createPgBossProducer(NOTIFICATION_QUEUE);
+const recurringTaskQueue = createPgBossProducer(RECURRING_TASK_QUEUE);
+
 export async function createContext({
 	context,
 }: CreateContextOptions): Promise<Context> {
@@ -272,36 +156,6 @@ export async function createContext({
 	const requestCookies = parseCookiesFromHeader(
 		context.req.raw.headers.get("cookie")
 	);
-	const envQueues = (
-		context as HonoContext & {
-			env?: {
-				NOTIFICATION_QUEUE?: unknown;
-				RECURRING_TASK_QUEUE?: unknown;
-			};
-		}
-	).env;
-	const notificationQueueCandidate = envQueues?.NOTIFICATION_QUEUE;
-	const recurringTaskQueueCandidate = envQueues?.RECURRING_TASK_QUEUE;
-	const notificationQueue = isNotificationQueueProducer(
-		notificationQueueCandidate
-	)
-		? notificationQueueCandidate
-		: undefined;
-	const recurringTaskQueue = isNotificationQueueProducer(
-		recurringTaskQueueCandidate
-	)
-		? recurringTaskQueueCandidate
-		: undefined;
-	const resolvedNotificationQueue =
-		notificationQueue ??
-		(LOCAL_REQUEST_HOSTNAMES.has(requestHostname)
-			? inlineNotificationQueueProducer
-			: undefined);
-	const resolvedRecurringTaskQueue =
-		recurringTaskQueue ??
-		(LOCAL_REQUEST_HOSTNAMES.has(requestHostname)
-			? inlineRecurringTaskQueueProducer
-			: undefined);
 
 	return {
 		session,
@@ -309,7 +163,7 @@ export async function createContext({
 		requestUrl,
 		requestHostname,
 		requestCookies,
-		notificationQueue: resolvedNotificationQueue,
-		recurringTaskQueue: resolvedRecurringTaskQueue,
+		notificationQueue,
+		recurringTaskQueue,
 	};
 }

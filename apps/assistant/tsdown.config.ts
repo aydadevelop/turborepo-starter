@@ -7,5 +7,4 @@ export default defineConfig({
 	clean: true,
 	minify: true,
 	noExternal: [/@my-app\/.*/],
-	external: ["cloudflare:workers"],
 });

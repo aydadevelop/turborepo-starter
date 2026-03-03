@@ -6,16 +6,16 @@ import {
 	type InferInsertModel,
 	type InferSelectModel,
 } from "drizzle-orm";
-import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 
-type TableWithId = SQLiteTable & { id: SQLiteColumn };
-type TableWithIdAndOrg = TableWithId & { organizationId: SQLiteColumn };
+type TableWithId = PgTable & { id: PgColumn };
+type TableWithIdAndOrg = TableWithId & { organizationId: PgColumn };
 
 /**
- * Insert a row and return it using SQLite's RETURNING clause.
+ * Insert a row and return it using PostgreSQL's RETURNING clause.
  * Throws INTERNAL_SERVER_ERROR if the insert returns empty.
  */
-export const insertAndReturn = async <T extends SQLiteTable>(
+export const insertAndReturn = async <T extends PgTable>(
 	table: T,
 	values: InferInsertModel<T>
 ): Promise<InferSelectModel<T>> => {
@@ -44,7 +44,7 @@ export const requireManaged = async <T extends TableWithIdAndOrg>(
 ): Promise<InferSelectModel<T>> => {
 	const [row] = await db
 		.select()
-		.from(table)
+		.from(table as any)
 		.where(and(eq(table.id, id), eq(table.organizationId, organizationId)))
 		.limit(1);
 
@@ -61,17 +61,17 @@ export const requireManaged = async <T extends TableWithIdAndOrg>(
  * Require a row matching two arbitrary columns. Throws NOT_FOUND if missing.
  * Useful for ownership checks on compound keys.
  */
-export const requireOwned = async <T extends SQLiteTable>(
+export const requireOwned = async <T extends PgTable>(
 	table: T,
-	column1: SQLiteColumn,
+	column1: PgColumn,
 	value1: string,
-	column2: SQLiteColumn,
+	column2: PgColumn,
 	value2: string,
 	errorMessage?: string
 ): Promise<InferSelectModel<T>> => {
 	const [row] = await db
 		.select()
-		.from(table)
+		.from(table as any)
 		.where(and(eq(column1, value1), eq(column2, value2)))
 		.limit(1);
 

@@ -1,7 +1,6 @@
-import type { AssistantRouter } from "@my-app/assistant/router";
+import type { AssistantContractClient } from "@my-app/assistant/contract";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
-import type { RouterClient } from "@orpc/server";
 
 import { env } from "$env/dynamic/public";
 
@@ -33,5 +32,4 @@ const link = new RPCLink({
 	},
 });
 
-export const assistantClient: RouterClient<AssistantRouter> =
-	createORPCClient(link);
+export const assistantClient: AssistantContractClient = createORPCClient(link);

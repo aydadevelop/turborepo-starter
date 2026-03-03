@@ -22,8 +22,8 @@ describe("Test Database Setup", () => {
 	let db: TestDatabase;
 	let close: () => void;
 
-	beforeEach(() => {
-		const testDb = createTestDatabase();
+	beforeEach(async () => {
+		const testDb = await createTestDatabase();
 		db = testDb.db;
 		close = testDb.close;
 	});

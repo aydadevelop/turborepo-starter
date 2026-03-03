@@ -40,15 +40,13 @@ export const rpcMiddleware: MiddlewareHandler = async (c, next) => {
 		headers: c.req.raw.headers,
 	});
 
-	const serverWorker = env.SERVER_WORKER as { fetch: typeof fetch } | undefined;
 	const cookie = c.req.raw.headers.get("cookie") ?? "";
-	const fetchFn = serverWorker ? serverWorker.fetch.bind(serverWorker) : fetch;
 
 	const context: AssistantContext = {
 		session,
 		openRouterApiKey: env.OPEN_ROUTER_API_KEY,
 		aiModel: env.AI_MODEL,
-		serverClient: createServerClient(cookie, fetchFn),
+		serverClient: createServerClient(cookie, fetch),
 	};
 
 	const result = await rpcHandler.handle(c.req.raw, {

@@ -5,7 +5,7 @@ export default mergeConfig(
 	sharedConfig,
 	defineConfig({
 		test: {
-			// Pool threads don't work well with better-sqlite3
+			// Pool threads can cause issues with native pg modules
 			pool: "forks",
 		},
 	})

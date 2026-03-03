@@ -3,20 +3,12 @@
  * e2e-kill-ports.mjs — Gracefully terminate processes bound to e2e ports.
  *
  * 1. SIGTERM every PID on the listed ports.
- * 2. Wait up to GRACE_MS for them to exit (flush Alchemy state, etc.).
+ * 2. Wait up to GRACE_MS for them to exit.
  * 3. SIGKILL any survivors.
  *
  * Usage:
  *   node scripts/e2e-kill-ports.mjs              # kills all e2e ports
  *   node scripts/e2e-kill-ports.mjs 43100 43101  # only the listed ports
- *
- * The root cause of Alchemy state corruption was the old approach:
- *   `lsof -ti tcp:$p | xargs kill` → immediately start new processes
- *
- * This sends SIGTERM but doesn't wait for the process to flush its JSON
- * state file writes. Alchemy truncates the file on open, so a kill between
- * truncate and write produces a 0-byte or partial JSON file that crashes
- * the next `alchemy dev` with "JSON Parse error: Unrecognized token".
  */
 
 import { execSync } from "node:child_process";

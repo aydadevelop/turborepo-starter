@@ -12,10 +12,7 @@ import {
 export interface NotificationQueueProducer {
 	send(
 		message: NotificationQueueMessage,
-		options?: {
-			contentType?: "text" | "bytes" | "json" | "v8";
-			delaySeconds?: number;
-		}
+		options?: { delaySeconds?: number }
 	): Promise<void>;
 }
 
@@ -127,9 +124,7 @@ export const notificationsPusher = async (params: {
 	let queuePublished = false;
 	if (params.queue) {
 		try {
-			await params.queue.send(createNotificationQueueMessage(createdEvent.id), {
-				contentType: "json",
-			});
+			await params.queue.send(createNotificationQueueMessage(createdEvent.id));
 			queuePublished = true;
 		} catch (error) {
 			const failureReason =

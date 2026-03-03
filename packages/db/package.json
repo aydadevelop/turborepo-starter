@@ -27,20 +27,18 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
-    "@my-app/env": "*",
-    "@libsql/client": "0.15.15",
     "dotenv": "^17.2.2",
     "drizzle-orm": "1.0.0-beta.15-859cf75",
-    "libsql": "0.5.22",
+    "pg": "^8.16.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
     "@my-app/config": "*",
     "@my-app/vitest-config": "*",
-    "@types/better-sqlite3": "^7.6.13",
-    "better-sqlite3": "^11.10.0",
+    "@types/pg": "^8.11.14",
     "drizzle-kit": "1.0.0-beta.15-859cf75",
+    "pg-mem": "^3.0.6",
     "typescript": "^5",
     "ultracite": "^7.2.3",
     "vitest": "^3.2.4"

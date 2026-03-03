@@ -1,12 +1,12 @@
 import { sql } from "drizzle-orm";
-import { integer } from "drizzle-orm/sqlite-core";
+import { timestamp } from "drizzle-orm/pg-core";
 
 export const timestamps = {
-	createdAt: integer("created_at", { mode: "timestamp_ms" })
-		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+	createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+		.default(sql`now()`)
 		.notNull(),
-	updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+		.default(sql`now()`)
 		.$onUpdate(() => new Date())
 		.notNull(),
 };

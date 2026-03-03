@@ -14,6 +14,7 @@ import { resolve } from "$app/paths";
 import { page } from "$app/state";
 import { assistantClient } from "$lib/assistant";
 import { authClient } from "$lib/auth-client";
+import { queryKeys } from "$lib/query-keys";
 
 const { children } = $props();
 
@@ -87,7 +88,7 @@ $effect(() => {
 
 const chatsQuery = createQuery(
 	derived(sessionQuery, ($session) => ({
-		queryKey: ["assistant", "chats"],
+		queryKey: queryKeys.assistant.chats,
 		queryFn: () => assistantClient.listChats({}),
 		enabled: hasSessionUser($session.data),
 	}))
@@ -102,7 +103,7 @@ const createChatMutation = createMutation({
 		return assistantClient.createChat({ title });
 	},
 	onSuccess(data) {
-		queryClient.invalidateQueries({ queryKey: ["assistant", "chats"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.assistant.chats });
 		goto(resolve(`/chat/${data.id}`));
 	},
 });
@@ -110,7 +111,7 @@ const createChatMutation = createMutation({
 const deleteChatMutation = createMutation({
 	mutationFn: (chatId: string) => assistantClient.deleteChat({ chatId }),
 	onSuccess() {
-		queryClient.invalidateQueries({ queryKey: ["assistant", "chats"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.assistant.chats });
 		if (page.params.id) {
 			goto(resolve("/chat"));
 		}

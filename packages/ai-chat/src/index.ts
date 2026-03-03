@@ -1,6 +1,7 @@
 export { Chat } from "@ai-sdk/svelte";
 export {
 	isToolUIPart,
+	lastAssistantMessageIsCompleteWithApprovalResponses,
 	lastAssistantMessageIsCompleteWithToolCalls,
 	type UIMessage,
 } from "ai";

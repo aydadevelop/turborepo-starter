@@ -5,8 +5,8 @@ import { createTestAuth, type TestAuth } from "../test";
 describe("Authentication", () => {
 	let testAuth: TestAuth;
 
-	beforeEach(() => {
-		testAuth = createTestAuth();
+	beforeEach(async () => {
+		testAuth = await createTestAuth();
 	});
 
 	afterEach(() => {

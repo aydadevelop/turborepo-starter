@@ -7,10 +7,8 @@ const todoOutputSchema = z.object({
 	completed: z.boolean(),
 });
 
-const d1ResultOutputSchema = z.object({
-	success: z.boolean().optional(),
-	results: z.array(z.unknown()).optional(),
-	meta: z.record(z.string(), z.unknown()).optional(),
+const successOutputSchema = z.object({
+	success: z.boolean(),
 });
 
 export const todoContract = {
@@ -29,7 +27,7 @@ export const todoContract = {
 			description: "Create a new todo item.",
 		})
 		.input(z.object({ text: z.string().min(1) }))
-		.output(d1ResultOutputSchema),
+		.output(todoOutputSchema),
 
 	toggle: oc
 		.route({
@@ -38,7 +36,7 @@ export const todoContract = {
 			description: "Toggle the completed status of a todo item.",
 		})
 		.input(z.object({ id: z.number(), completed: z.boolean() }))
-		.output(d1ResultOutputSchema),
+		.output(successOutputSchema),
 
 	delete: oc
 		.route({
@@ -47,5 +45,5 @@ export const todoContract = {
 			description: "Delete a todo item by ID.",
 		})
 		.input(z.object({ id: z.number() }))
-		.output(d1ResultOutputSchema),
+		.output(successOutputSchema),
 };

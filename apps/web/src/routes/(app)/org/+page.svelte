@@ -5,28 +5,28 @@
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
+	import {
+		userInvitationsQueryOptions,
+		userOrganizationsQueryOptions,
+	} from "$lib/query-options";
 
 	const sessionQuery = authClient.useSession();
 
-	const orgsQueryOptions = derived(sessionQuery, ($session) => ({
-		queryKey: ["user-organizations"],
-		queryFn: async () => {
-			const { data } = await authClient.organization.list();
-			return data ?? [];
-		},
-		enabled: hasAuthenticatedSession($session.data),
-	}));
-	const orgsQuery = createQuery(orgsQueryOptions);
+	const orgsQuery = createQuery(
+		derived(sessionQuery, ($session) =>
+			userOrganizationsQueryOptions({
+				enabled: hasAuthenticatedSession($session.data),
+			})
+		)
+	);
 
-	const invitationsQueryOptions = derived(sessionQuery, ($session) => ({
-		queryKey: ["user-invitations"],
-		queryFn: async () => {
-			const { data } = await authClient.organization.listUserInvitations();
-			return data ?? [];
-		},
-		enabled: hasAuthenticatedSession($session.data),
-	}));
-	const invitationsQuery = createQuery(invitationsQueryOptions);
+	const invitationsQuery = createQuery(
+		derived(sessionQuery, ($session) =>
+			userInvitationsQueryOptions({
+				enabled: hasAuthenticatedSession($session.data),
+			})
+		)
+	);
 
 	const isLoading = $derived(
 		$sessionQuery.isPending ||

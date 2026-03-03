@@ -5,6 +5,8 @@
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { orpc, queryClient } from "$lib/orpc";
+	import { queryKeys } from "$lib/query-keys";
+	import { userInvitationsQueryOptions } from "$lib/query-options";
 	import NotificationCenter from "./NotificationCenter.svelte";
 	import OrgSwitcher from "./OrgSwitcher.svelte";
 	import UserMenu from "./UserMenu.svelte";
@@ -16,14 +18,6 @@
 		// { to: resolve("/"), label: "Home" },
 		{ to: resolve("/chat"), label: "Chat" },
 	] as const;
-
-	// Stable queryFn — hoisted outside derived() so the function reference
-	// doesn't change on every session store emission.
-	const fetchUserInvitations = async () => {
-		const { data, error } = await authClient.organization.listUserInvitations();
-		if (error) throw error;
-		return data ?? [];
-	};
 
 	const sessionQuery = authClient.useSession();
 
@@ -47,13 +41,13 @@
 	}));
 	const canManageQuery = createQuery(canManageQueryOptions);
 
-	const invitationsQueryOptions = derived(sessionQuery, ($sessionQuery) => ({
-		queryKey: ["user-invitations"],
-		queryFn: fetchUserInvitations, // stable reference — no new closure per tick
-		retry: false,
-		enabled: hasAuthenticatedSession($sessionQuery.data),
-	}));
-	const invitationsQuery = createQuery(invitationsQueryOptions);
+	const invitationsQuery = createQuery(
+		derived(sessionQuery, ($sessionQuery) =>
+			userInvitationsQueryOptions({
+				enabled: hasAuthenticatedSession($sessionQuery.data),
+			})
+		)
+	);
 
 	const isAdmin = $derived(
 		($sessionQuery.data?.user as { role?: string } | undefined)?.role ===

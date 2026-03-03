@@ -1,62 +1,177 @@
-import { assistantRouter } from "@my-app/assistant/router";
-import { call, implement } from "@orpc/server";
 import type { Page } from "@playwright/test";
 import type { UIMessage } from "ai";
+import { buildTextStream } from "./stream-protocol";
+
+// ─── Generic RPC mock ────────────────────────────────────────────────
 
 /**
- * Mocks the initial chat history load using oRPC's implement function
+ * Intercept any `/rpc/<path>` POST and return a static JSON response.
+ *
+ * @example
+ * ```ts
+ * await mockRpcEndpoint(page, "todos/list", { json: { items: [] } });
+ * ```
+ */
+export const mockRpcEndpoint = async (
+	page: Page,
+	rpcPath: string,
+	responseBody: unknown,
+	status = 200
+): Promise<void> => {
+	await page.route(`**/rpc/${rpcPath}`, async (route) => {
+		if (route.request().method() === "POST") {
+			await route.fulfill({
+				status,
+				contentType: "application/json",
+				body: JSON.stringify(responseBody),
+			});
+		} else {
+			await route.continue();
+		}
+	});
+};
+
+// ─── Auth session mock ───────────────────────────────────────────────
+
+interface MockUser {
+	id?: string;
+	name?: string;
+	email?: string;
+	role?: string;
+	isAnonymous?: boolean;
+	image?: string | null;
+}
+
+/**
+ * Intercept the auth session endpoint and return a mock user.
+ * Useful for frontend-only tests that need an "authenticated" state
+ * without hitting a real backend.
+ */
+export const mockAuthSession = async (
+	page: Page,
+	userOverrides: MockUser = {}
+): Promise<void> => {
+	const user = {
+		id: "mock-user-id",
+		name: "Mock User",
+		email: "mock@test.local",
+		role: "user",
+		isAnonymous: false,
+		image: null,
+		...userOverrides,
+	};
+
+	await page.route("**/api/auth/get-session", async (route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: "application/json",
+			body: JSON.stringify({
+				session: {
+					id: "mock-session-id",
+					userId: user.id,
+					expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+				},
+				user,
+			}),
+		});
+	});
+};
+
+// ─── Organization mocks ──────────────────────────────────────────────
+
+interface MockOrganization {
+	id: string;
+	name: string;
+	slug: string;
+	logo?: string | null;
+}
+
+/**
+ * Mock the organization list endpoint for OrgSwitcher / OrgGuard tests.
+ */
+export const mockOrganizations = async (
+	page: Page,
+	organizations: MockOrganization[]
+): Promise<void> => {
+	await mockRpcEndpoint(page, "organizations/list", {
+		json: organizations,
+	});
+};
+
+// ─── Notification mocks ──────────────────────────────────────────────
+
+interface MockNotification {
+	id: string;
+	title: string;
+	body?: string | null;
+	severity?: string;
+	ctaUrl?: string | null;
+	viewedAt?: string | null;
+	deliveredAt?: string;
+}
+
+/**
+ * Mock the in-app notification list endpoint.
+ */
+export const mockNotifications = async (
+	page: Page,
+	items: MockNotification[],
+	unread?: number
+): Promise<void> => {
+	await mockRpcEndpoint(page, "notifications/listMe", {
+		json: {
+			items,
+			unread: unread ?? items.filter((i) => !i.viewedAt).length,
+		},
+	});
+};
+
+// ─── Chat history mock ───────────────────────────────────────────────
+
+/**
+ * Mocks the initial chat history load by intercepting the getChat RPC.
  */
 export const mockChatHistory = async (
 	page: Page,
 	chatId: string,
 	messages: UIMessage[]
-) => {
-	// Create a fake implementation of the getChat procedure
-	const fakeGetChat = implement(assistantRouter.getChat).handler(() => ({
-		id: chatId,
-		title: "Mocked Chat",
-		userId: "mock-user",
-		createdAt: new Date(),
-		updatedAt: new Date(),
-		messages,
-	}));
-
-	await page.route("**/rpc/getChat", async (route) => {
-		const request = route.request();
-		if (request.method() === "POST") {
-			try {
-				// Execute the fake handler via oRPC's call utility (no context needed)
-				const result = await call(fakeGetChat, { chatId });
-
-				await route.fulfill({
-					status: 200,
-					contentType: "application/json",
-					body: JSON.stringify({
-						data: result,
-					}),
-				});
-			} catch (error) {
-				console.error("Mock getChat failed:", error);
-				route.continue();
-			}
-		} else {
-			route.continue();
-		}
+): Promise<void> => {
+	await mockRpcEndpoint(page, "getChat", {
+		json: {
+			id: chatId,
+			title: "Mocked Chat",
+			userId: "mock-user",
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+			messages,
+		},
 	});
 };
 
-/**
- * Mocks a streaming chat response, useful for simulating tool calls
- */
-export const mockChatStream = async (page: Page, streamChunks: string[]) => {
-	await page.route("**/rpc/chat", async (route) => {
-		// oRPC streaming typically uses NDJSON or SSE.
-		// You'll need to match the exact format your version of oRPC expects.
-		const streamBody = streamChunks.join("\n");
+// ─── Chat stream mock ────────────────────────────────────────────────
 
+/**
+ * Mocks a streaming chat response using the AI SDK Data Stream Protocol.
+ *
+ * @param page - Playwright Page instance
+ * @param body - Pre-built stream body (use helpers from `stream-protocol.ts`)
+ *
+ * @example
+ * ```ts
+ * import { buildTextStream } from "./stream-protocol";
+ * await mockChatStream(page, buildTextStream("Hello!"));
+ * ```
+ */
+export const mockChatStream = async (
+	page: Page,
+	body?: string
+): Promise<void> => {
+	const streamBody = body ?? buildTextStream("Mocked assistant response.");
+
+	await page.route("**/rpc/chat", async (route) => {
 		await route.fulfill({
 			status: 200,
-			contentType: "application/x-ndjson", // Adjust based on oRPC spec
+			contentType: "text/plain; charset=utf-8",
 			body: streamBody,
 		});
 	});

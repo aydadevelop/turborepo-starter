@@ -1,4 +1,4 @@
-import { index, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, jsonb, pgTable, text } from "drizzle-orm/pg-core";
 
 import { user } from "./auth";
 import { timestamps } from "./columns";
@@ -6,7 +6,7 @@ import { timestamps } from "./columns";
 export const assistantChatVisibility = ["public", "private"] as const;
 export type AssistantChatVisibility = (typeof assistantChatVisibility)[number];
 
-export const assistantChat = sqliteTable(
+export const assistantChat = pgTable(
 	"assistant_chat",
 	{
 		id: text("id").primaryKey(),
@@ -25,7 +25,7 @@ export const assistantChat = sqliteTable(
 export const assistantMessageRole = ["user", "assistant"] as const;
 export type AssistantMessageRole = (typeof assistantMessageRole)[number];
 
-export const assistantMessage = sqliteTable(
+export const assistantMessage = pgTable(
 	"assistant_message",
 	{
 		id: text("id").primaryKey(),
@@ -33,11 +33,8 @@ export const assistantMessage = sqliteTable(
 			.notNull()
 			.references(() => assistantChat.id, { onDelete: "cascade" }),
 		role: text("role", { enum: assistantMessageRole }).notNull(),
-		parts: text("parts", { mode: "json" }).$type<unknown[]>().notNull(),
-		attachments: text("attachments", { mode: "json" })
-			.$type<unknown[]>()
-			.notNull()
-			.default([]),
+		parts: jsonb("parts").$type<unknown[]>().notNull(),
+		attachments: jsonb("attachments").$type<unknown[]>().notNull().default([]),
 		...timestamps,
 	},
 	(table) => [index("assistant_message_chat_idx").on(table.chatId)]

@@ -9,21 +9,15 @@
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import { orpc, queryClient } from "$lib/orpc";
+	import { queryKeys } from "$lib/query-keys";
+	import { fullOrganizationQueryOptions } from "$lib/query-options";
 
 	const canManageQuery = createQuery({
 		...orpc.canManageOrganization.queryOptions(),
 		retry: false,
 	});
 
-	const fullOrgQuery = createQuery({
-		queryKey: ["organization", "full"],
-		queryFn: async () => {
-			const { data, error } =
-				await authClient.organization.getFullOrganization();
-			if (error) throw error;
-			return data;
-		},
-	});
+	const fullOrgQuery = createQuery(fullOrganizationQueryOptions());
 
 	let orgName = $state("");
 	let orgSlug = $state("");
@@ -84,8 +78,8 @@
 		}
 
 		saveSuccess = true;
-		queryClient.invalidateQueries({ queryKey: ["organization"] });
-		queryClient.invalidateQueries({ queryKey: ["user-organizations"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
+		queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all });
 	};
 
 	const handleDelete = async () => {
@@ -110,9 +104,9 @@
 			return;
 		}
 
-		queryClient.invalidateQueries({ queryKey: ["organization"] });
-		queryClient.invalidateQueries({ queryKey: ["user-organizations"] });
-		queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
+		queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all });
+		queryClient.invalidateQueries({ queryKey: queryKeys.org.canManage });
 		goto(resolve("/org"));
 	};
 

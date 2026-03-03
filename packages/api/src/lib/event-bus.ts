@@ -5,15 +5,7 @@ import {
 } from "@my-app/notifications/contracts";
 import { notificationsPusher } from "@my-app/notifications/pusher";
 
-export interface NotificationQueueProducer {
-	send(
-		message: unknown,
-		options?: {
-			contentType?: "text" | "bytes" | "json" | "v8";
-			delaySeconds?: number;
-		}
-	): Promise<void>;
-}
+import type { QueueProducer } from "@my-app/queue/producer";
 
 const uniqueUserIds = (values: Array<string | null | undefined>): string[] => {
 	const seen = new Set<string>();
@@ -82,7 +74,7 @@ export class EventBus {
 		this.#events.push(event);
 	}
 
-	async flush(queue?: NotificationQueueProducer): Promise<void> {
+	async flush(queue?: QueueProducer): Promise<void> {
 		const events = [...this.#events];
 		this.#events = [];
 

@@ -1,29 +1,26 @@
-import { expect, test } from "@playwright/test";
-import { signInAsSeedAdmin, signInAsSeedOperator } from "./utils/auth";
+import { expect, test } from "./fixtures";
 import { url } from "./utils/url";
 
 test.describe("Seeded Auth & Data", () => {
-	test("seeded admin credentials can access seeded users", async ({ page }) => {
-		await signInAsSeedAdmin(page);
-		await page.goto(url("/admin/users"));
+	test("seeded admin credentials can access seeded users", async ({ adminPage }) => {
+		await adminPage.goto(url("/admin/users"));
 
-		await expect(page.getByTestId("admin-users-heading")).toBeVisible();
+		await expect(adminPage.getByTestId("admin-users-heading")).toBeVisible();
 		await expect(
-			page.getByTestId("admin-user-row-seed_user_operator")
+			adminPage.getByTestId("admin-user-row-seed_user_operator")
 		).toBeVisible();
 		await expect(
-			page.getByTestId("admin-user-row-seed_user_member")
+			adminPage.getByTestId("admin-user-row-seed_user_member")
 		).toBeVisible();
 	});
 
 	test("seeded operator credentials can access dashboard settings", async ({
-		page,
+		operatorPage,
 	}) => {
-		await signInAsSeedOperator(page);
-		await page.goto(url("/dashboard/settings"));
+		await operatorPage.goto(url("/dashboard/settings"));
 
 		await expect(
-			page.getByRole("heading", { name: "Account Settings" })
+			operatorPage.getByRole("heading", { name: "Account Settings" })
 		).toBeVisible();
 	});
 });

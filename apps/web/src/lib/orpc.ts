@@ -20,6 +20,13 @@ function resolveUrl(path: string): string {
 }
 
 export const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			staleTime: 30_000, // 30 s — avoid redundant refetches on mount/focus
+			refetchOnWindowFocus: false, // explicit invalidation after mutations instead
+			retry: 1,
+		},
+	},
 	queryCache: new QueryCache({
 		onError: (error) => {
 			console.error(`Error: ${error.message}`);

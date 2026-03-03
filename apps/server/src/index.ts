@@ -1,29 +1,32 @@
+import { serve } from "@hono/node-server";
+import { RECURRING_TASK_QUEUE, startBoss, stopBoss } from "@my-app/queue";
+import { registerWorker } from "@my-app/queue/worker";
 import { app } from "./app";
-import { processRecurringTaskBatch } from "./queues/recurring-task-consumer";
+import { handleRecurringTaskJob } from "./queues/recurring-task-consumer";
 
-interface QueueProducer {
-	send(
-		message: unknown,
-		options?: {
-			contentType?: "text" | "bytes" | "json" | "v8";
-			delaySeconds?: number;
-		}
-	): Promise<void>;
-}
+const port = Number(process.env.SERVER_PORT ?? process.env.PORT ?? 3000);
 
-interface Env {
-	NOTIFICATION_QUEUE?: QueueProducer;
-	RECURRING_TASK_QUEUE?: QueueProducer;
-}
+serve({ fetch: app.fetch, port }, (info) => {
+	console.log(`Server listening on http://localhost:${info.port}`);
+});
 
-const serverApp: ExportedHandler<Env> = {
-	fetch: app.fetch,
-	queue: async (batch, env) => {
-		await processRecurringTaskBatch(batch, {
-			notificationQueue: env.NOTIFICATION_QUEUE,
-			recurringTaskQueue: env.RECURRING_TASK_QUEUE,
-		});
-	},
+// Start queue worker in background (non-blocking)
+startBoss()
+	.then((boss) =>
+		registerWorker(boss, RECURRING_TASK_QUEUE, handleRecurringTaskJob)
+	)
+	.then(() => console.log("Queue worker started"))
+	.catch((err) =>
+		console.warn(
+			"Queue worker failed to start (DB may be unavailable):",
+			err.message
+		)
+	);
+
+const shutdown = async () => {
+	console.log("Shutting down...");
+	await stopBoss();
+	process.exit(0);
 };
-
-export default serverApp;
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);

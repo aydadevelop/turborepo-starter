@@ -27,12 +27,12 @@ const authSchema = {
 	verification,
 };
 
-export const createTestAuth = () => {
-	const { db, close } = createTestDatabase();
+export const createTestAuth = async () => {
+	const { db, close } = await createTestDatabase();
 
 	const auth = betterAuth({
 		database: drizzleAdapter(db, {
-			provider: "sqlite",
+			provider: "pg",
 			schema: authSchema,
 		}),
 		trustedOrigins: ["http://localhost:3000", "http://localhost:5173"],
@@ -83,4 +83,4 @@ export const createTestAuth = () => {
 	};
 };
 
-export type TestAuth = ReturnType<typeof createTestAuth>;
+export type TestAuth = Awaited<ReturnType<typeof createTestAuth>>;

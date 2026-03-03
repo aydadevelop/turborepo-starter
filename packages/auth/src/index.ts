@@ -87,7 +87,7 @@ const initAuth = () => {
 
 	return betterAuth({
 		database: drizzleAdapter(db, {
-			provider: "sqlite",
+			provider: "pg",
 			schema,
 		}),
 		trustedOrigins: corsOrigins,
@@ -148,8 +148,8 @@ const initAuth = () => {
 	});
 };
 
-// Lazily initialize auth on first access to avoid exceeding Cloudflare Worker
-// startup CPU time limits during script validation.
+// Lazily initialize auth on first access to avoid import-time side effects
+// before environment is fully loaded.
 let _auth: ReturnType<typeof initAuth> | undefined;
 
 export const auth: ReturnType<typeof initAuth> = new Proxy(

@@ -1,20 +1,18 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
 import {
 	existsSync,
-	mkdirSync,
 	readdirSync,
 	readFileSync,
-	statSync,
-	writeFileSync,
 } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { hashPassword } from "better-auth/crypto";
-import Database from "better-sqlite3";
+import pg from "pg";
+
+const { Client } = pg;
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -27,9 +25,7 @@ const ANCHOR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TODO_ID_MIN = 900_000;
 const TODO_ID_MAX = 900_999;
 
-const APP_NAME = "my-app";
-const DB_PREFIX = `${APP_NAME}-database`;
-const DEFAULT_STAGE = "dev";
+const DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/myapp";
 
 const scenarioCatalog = {
 	baseline:
@@ -40,90 +36,23 @@ const scenarioCatalog = {
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "../../..");
 
-const databaseHasTables = (databasePath, tableNames) => {
-	const sqlite = new Database(databasePath, { readonly: true });
-	try {
-		for (const tableName of tableNames) {
-			const exists = sqlite
-				.prepare(
-					"SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
-				)
-				.get(tableName);
-			if (!exists) {
-				return false;
-			}
-		}
-		return true;
-	} finally {
-		sqlite.close();
-	}
-};
-
-const findLocalD1Database = () => {
-	const d1Dir = path.resolve(
-		scriptDir,
-		"../../../.alchemy/miniflare/v3/d1/miniflare-D1DatabaseObject"
-	);
-
-	if (!existsSync(d1Dir)) {
-		throw new Error(
-			`Local D1 directory not found: ${d1Dir}\n` +
-				"Run `bun run dev` first so Miniflare creates the local D1 database."
-		);
-	}
-
-	const sqliteFiles = readdirSync(d1Dir)
-		.filter(
-			(filename) =>
-				filename.endsWith(".sqlite") &&
-				!filename.includes("-wal") &&
-				!filename.includes("-shm")
-		)
-		.map((filename) => {
-			const absolutePath = path.join(d1Dir, filename);
-			return {
-				filename,
-				absolutePath,
-				mtimeMs: statSync(absolutePath).mtimeMs,
-			};
-		})
-		.sort((a, b) => b.mtimeMs - a.mtimeMs);
-
-	const latest = sqliteFiles[0];
-	if (!latest) {
-		throw new Error(
-			`No sqlite file found in ${d1Dir}.\n` +
-				"Run `bun run dev` first so Miniflare creates the local D1 database."
-		);
-	}
-
-	const preferredDatabase = sqliteFiles.find((file) =>
-		databaseHasTables(file.absolutePath, ["organization", "user"])
-	);
-
-	return (preferredDatabase ?? latest).absolutePath;
-};
-
 const printHelp = () => {
 	console.log(
 		[
 			"Usage: bun run db:seed -- [options]",
 			"",
 			"Options:",
-			"  --db <path>                 Seed a specific sqlite file (relative to repository root)",
 			`  --scenario <name>           Scenario to seed (default: ${DEFAULT_SCENARIO})`,
 			`  --anchor-date <YYYY-MM-DD>  Stable UTC anchor date (default: ${DEFAULT_ANCHOR_DATE})`,
 			"  --append                    Do not clear prior seed namespace before writing",
-			"  --remote                    Seed a remote D1 database via wrangler (requires --stage)",
-			`  --stage <name>              Remote D1 stage name (default: ${DEFAULT_STAGE})`,
+			"  --database-url <url>        PostgreSQL connection string (default: DATABASE_URL env or localhost)",
 			"  --list-scenarios            Print available scenario names",
 			"  -h, --help                  Show this help message",
 			"",
 			"Examples:",
 			"  bun run db:seed",
 			"  bun run db:seed -- --scenario baseline",
-			"  bun run db:seed -- --db ./tmp/dev.sqlite --scenario full",
-			"  bun run db:seed -- --remote --stage dev",
+			"  bun run db:seed -- --database-url postgresql://user:pass@host:5432/db",
 		].join("\n")
 	);
 };
@@ -138,19 +67,15 @@ const printScenarios = () => {
 const parseArgs = () => {
 	const args = process.argv.slice(2);
 	const result = {
-		dbPath: null,
+		databaseUrl: null,
 		scenario: DEFAULT_SCENARIO,
 		anchorDate: DEFAULT_ANCHOR_DATE,
 		append: false,
-		remote: false,
-		stage: DEFAULT_STAGE,
 	};
 
 	const flagHandlers = {
-		"--db": (value) => {
-			result.dbPath = path.isAbsolute(value)
-				? value
-				: path.resolve(repoRoot, value);
+		"--database-url": (value) => {
+			result.databaseUrl = value;
 		},
 		"--scenario": (value) => {
 			result.scenario = value;
@@ -160,12 +85,6 @@ const parseArgs = () => {
 		},
 		"--append": () => {
 			result.append = true;
-		},
-		"--remote": () => {
-			result.remote = true;
-		},
-		"--stage": (value) => {
-			result.stage = value;
 		},
 		"--list-scenarios": () => {
 			printScenarios();
@@ -190,7 +109,6 @@ const parseArgs = () => {
 
 		if (
 			arg === "--append" ||
-			arg === "--remote" ||
 			arg === "--list-scenarios" ||
 			arg === "--help" ||
 			arg === "-h"
@@ -213,32 +131,23 @@ const parseArgs = () => {
 		);
 	}
 
-	if (result.remote && result.dbPath) {
-		throw new Error("Cannot combine --remote with --db");
-	}
-
 	return {
 		append: result.append,
 		anchorDate: result.anchorDate,
-		dbPath: result.dbPath,
-		remote: result.remote,
+		databaseUrl: result.databaseUrl,
 		scenario: result.scenario,
-		stage: result.stage,
 	};
 };
 
 const quote = (identifier) => `"${identifier}"`;
 
-const getMissingTables = (sqlite, tableNames) => {
-	return tableNames.filter((tableName) => {
-		const exists = sqlite
-			.prepare(
-				"SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
-			)
-			.get(tableName);
-
-		return !exists;
-	});
+const getMissingTables = async (client, tableNames) => {
+	const result = await client.query(
+		`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ANY($1)`,
+		[tableNames]
+	);
+	const existing = new Set(result.rows.map((r) => r.table_name));
+	return tableNames.filter((name) => !existing.has(name));
 };
 
 const isIgnorableMigrationError = (error) => {
@@ -287,8 +196,8 @@ const collectMigrationSqlFiles = (rootDir) => {
 	);
 };
 
-const applyMigrationsIfNeeded = (sqlite, requiredTables) => {
-	const missingTables = getMissingTables(sqlite, requiredTables);
+const applyMigrationsIfNeeded = async (client, requiredTables) => {
+	const missingTables = await getMissingTables(client, requiredTables);
 	if (missingTables.length === 0) {
 		return;
 	}
@@ -305,7 +214,7 @@ const applyMigrationsIfNeeded = (sqlite, requiredTables) => {
 
 		for (const statement of statements) {
 			try {
-				sqlite.exec(statement);
+				await client.query(statement);
 			} catch (error) {
 				if (!isIgnorableMigrationError(error)) {
 					throw error;
@@ -315,7 +224,7 @@ const applyMigrationsIfNeeded = (sqlite, requiredTables) => {
 	}
 };
 
-const ensureSchemaExists = (sqlite) => {
+const ensureSchemaExists = async (client) => {
 	const requiredTables = [
 		"organization",
 		"user",
@@ -336,9 +245,9 @@ const ensureSchemaExists = (sqlite) => {
 		"assistant_message",
 	];
 
-	applyMigrationsIfNeeded(sqlite, requiredTables);
+	await applyMigrationsIfNeeded(client, requiredTables);
 
-	const missingRequiredTables = getMissingTables(sqlite, requiredTables);
+	const missingRequiredTables = await getMissingTables(client, requiredTables);
 	if (missingRequiredTables.length > 0) {
 		throw new Error(
 			[
@@ -712,7 +621,7 @@ const collectSeedSql = (seed) => {
 	return statements;
 };
 
-const clearSeedNamespace = (sqlite) => {
+const clearSeedNamespace = async (client) => {
 	const prefixedTables = [
 		"assistant_message",
 		"assistant_chat",
@@ -733,142 +642,34 @@ const clearSeedNamespace = (sqlite) => {
 	];
 
 	for (const table of prefixedTables) {
-		sqlite
-			.prepare(`DELETE FROM ${quote(table)} WHERE ${quote("id")} LIKE 'seed_%'`)
-			.run();
-	}
-
-	sqlite
-		.prepare(
-			`DELETE FROM ${quote("todo")} WHERE ${quote("id")} >= ? AND ${quote("id")} <= ?`
-		)
-		.run(TODO_ID_MIN, TODO_ID_MAX);
-};
-
-const writeSeedData = (sqlite, seed) => {
-	const statements = collectSeedSql(seed);
-	for (const statement of statements) {
-		sqlite.exec(statement);
-	}
-};
-
-const collectClearSql = () => {
-	const prefixedTables = [
-		"assistant_message",
-		"assistant_chat",
-		"notification_in_app",
-		"notification_delivery",
-		"notification_intent",
-		"notification_event",
-		"notification_preference",
-		"user_consent",
-		"invitation",
-		"member",
-		"account",
-		"session",
-		"passkey",
-		"verification",
-		"organization",
-		"user",
-	];
-
-	const statements = [];
-	for (const table of prefixedTables) {
-		statements.push(
-			`DELETE FROM ${quote(table)} WHERE ${quote("id")} LIKE 'seed_%';`
+		await client.query(
+			`DELETE FROM ${quote(table)} WHERE ${quote("id")} LIKE 'seed_%'`
 		);
 	}
-	statements.push(
-		`DELETE FROM ${quote("todo")} WHERE ${quote("id")} >= ${TODO_ID_MIN} AND ${quote("id")} <= ${TODO_ID_MAX};`
+
+	await client.query(
+		`DELETE FROM ${quote("todo")} WHERE ${quote("id")} >= $1 AND ${quote("id")} <= $2`,
+		[TODO_ID_MIN, TODO_ID_MAX]
 	);
-	return statements;
 };
 
-const runWrangler = (args) => {
-	const result = spawnSync("bunx", ["wrangler", ...args], {
-		stdio: "inherit",
-		env: process.env,
-		cwd: path.resolve(repoRoot, "apps/server"),
-	});
-
-	if (result.error) {
-		throw result.error;
+const writeSeedData = async (client, seed) => {
+	const statements = collectSeedSql(seed);
+	for (const statement of statements) {
+		await client.query(statement);
 	}
-	if ((result.status ?? 1) !== 0) {
-		throw new Error(`wrangler exited with code ${result.status}`);
-	}
-};
-
-const seedRemote = async (options) => {
-	const dbName = `${DB_PREFIX}-${options.stage}`;
-	const adminPasswordHash = await hashPassword("admin");
-	const operatorPasswordHash = await hashPassword("operator");
-
-	const seed = buildSeedData({
-		anchorDate: options.anchorDate,
-		scenario: options.scenario,
-		adminPasswordHash,
-		operatorPasswordHash,
-	});
-
-	const allStatements = [];
-	if (!options.append) {
-		allStatements.push(...collectClearSql());
-	}
-	allStatements.push(...collectSeedSql(seed));
-
-	const tmpDir = path.resolve(repoRoot, "tmp");
-	mkdirSync(tmpDir, { recursive: true });
-	const sqlPath = path.resolve(tmpDir, `seed-remote-${options.stage}.sql`);
-	writeFileSync(sqlPath, allStatements.join("\n"), "utf8");
-
-	console.log(
-		`[seed] Generated ${allStatements.length} statements -> ${sqlPath}`
-	);
-	console.log(`[seed] Executing against remote D1: ${dbName}`);
-
-	runWrangler([
-		"d1",
-		"execute",
-		dbName,
-		"--remote",
-		"--file",
-		sqlPath,
-		"--yes",
-	]);
-
-	console.log(
-		[
-			`Seeded remote database: ${dbName}`,
-			`Scenario: ${options.scenario}`,
-			`Anchor date: ${options.anchorDate}`,
-			`Organizations: ${seed.organizations.map((org) => org.slug).join(", ")}`,
-			`Users: ${seed.users.length}, notifications: ${seed.notificationEvents.length}, todos: ${seed.todos.length}`,
-			"Admin login: admin@admin.com / admin",
-			"Operator login: operator@example.com / operator",
-		].join("\n")
-	);
 };
 
 const main = async () => {
 	const options = parseArgs();
+	const connectionString =
+		options.databaseUrl ?? process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
 
-	if (options.remote) {
-		await seedRemote(options);
-		return;
-	}
-
-	const resolvedDbPath = options.dbPath ?? findLocalD1Database();
-	const parentDir = path.dirname(resolvedDbPath);
-	if (!existsSync(parentDir)) {
-		mkdirSync(parentDir, { recursive: true });
-	}
-
-	const sqlite = new Database(resolvedDbPath);
+	const client = new Client({ connectionString });
+	await client.connect();
 
 	try {
-		sqlite.pragma("foreign_keys = ON");
-		ensureSchemaExists(sqlite);
+		await ensureSchemaExists(client);
 
 		const adminPasswordHash = await hashPassword("admin");
 		const operatorPasswordHash = await hashPassword("operator");
@@ -880,16 +681,21 @@ const main = async () => {
 			operatorPasswordHash,
 		});
 
-		sqlite.transaction(() => {
+		await client.query("BEGIN");
+		try {
 			if (!options.append) {
-				clearSeedNamespace(sqlite);
+				await clearSeedNamespace(client);
 			}
-			writeSeedData(sqlite, seed);
-		})();
+			await writeSeedData(client, seed);
+			await client.query("COMMIT");
+		} catch (error) {
+			await client.query("ROLLBACK");
+			throw error;
+		}
 
 		console.log(
 			[
-				`Seeded local database: ${resolvedDbPath}`,
+				`Seeded database: ${connectionString.replace(/\/\/.*@/, "//***@")}`,
 				`Scenario: ${options.scenario}`,
 				`Anchor date: ${options.anchorDate}`,
 				`Organizations: ${seed.organizations.map((org) => org.slug).join(", ")}`,
@@ -899,7 +705,7 @@ const main = async () => {
 			].join("\n")
 		);
 	} finally {
-		sqlite.close();
+		await client.end();
 	}
 };
 

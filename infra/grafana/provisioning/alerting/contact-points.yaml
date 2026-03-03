@@ -1,0 +1,40 @@
+apiVersion: 1
+
+# Contact points define WHERE alerts are sent.
+# Sensitive values (bot tokens, chat IDs) are injected from Grafana's environment
+# via ${VAR_NAME} substitution — never hardcoded here.
+#
+# Required env vars in docker-compose (passed to the grafana service):
+#   TELEGRAM_BOT_TOKEN   — bot token from @BotFather
+#   TELEGRAM_CHAT_ID     — target chat/channel ID (negative for groups)
+#   GF_SMTP_ENABLED=true + GF_SMTP_HOST etc. for email (see docker-compose.yml)
+
+contactPoints:
+  - orgId: 1
+    name: ops-telegram
+    receivers:
+      - uid: telegram-primary
+        type: telegram
+        settings:
+          bottoken: ${TELEGRAM_BOT_TOKEN}
+          chatid: ${TELEGRAM_CHAT_ID}
+          message: |
+            🚨 *{{ .CommonLabels.alertname }}*
+            Status: {{ .Status | toUpper }}
+            Severity: {{ .CommonLabels.severity }}
+            {{ range .Alerts }}
+            {{ .Annotations.summary }}
+            {{ end }}
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: ops-email
+    receivers:
+      - uid: email-primary
+        type: email
+        settings:
+          # Comma-separated list — override with GRAFANA_ALERT_EMAIL in .env
+          addresses: ${GRAFANA_ALERT_EMAIL:-ops@localhost}
+          subject: |
+            [{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}
+        disableResolveMessage: false
