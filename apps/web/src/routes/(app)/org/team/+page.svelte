@@ -155,7 +155,10 @@
 								<Table.Cell class="font-medium">
 									{m.user?.name ?? "—"}
 								</Table.Cell>
-								<Table.Cell class="text-muted-foreground" data-testid={`org-member-email-${m.userId}`}>
+								<Table.Cell
+									class="text-muted-foreground"
+									data-testid={`org-member-email-${m.userId}`}
+								>
 									{m.user?.email ?? "—"}
 								</Table.Cell>
 								<Table.Cell>
