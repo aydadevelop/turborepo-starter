@@ -5,7 +5,9 @@ const DASHBOARD_URL_RE = /\/dashboard/;
 const ADMIN_USERS_URL_RE = /\/admin\/users/;
 
 test.describe("Impersonation & Org Switching", () => {
-	test("seeded admin can impersonate seeded operator", async ({ adminPage }) => {
+	test("seeded admin can impersonate seeded operator", async ({
+		adminPage,
+	}) => {
 		await adminPage.goto(url("/admin/users"));
 		await expect(adminPage.getByTestId("admin-users-heading")).toBeVisible();
 
@@ -23,6 +25,8 @@ test.describe("Impersonation & Org Switching", () => {
 		await adminPage.getByTestId("stop-impersonating-button").click();
 
 		await expect(adminPage).toHaveURL(ADMIN_USERS_URL_RE, { timeout: 5000 });
-		await expect(adminPage.getByTestId("impersonation-banner")).not.toBeVisible();
+		await expect(
+			adminPage.getByTestId("impersonation-banner")
+		).not.toBeVisible();
 	});
 });

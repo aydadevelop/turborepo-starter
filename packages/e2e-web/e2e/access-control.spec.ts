@@ -16,7 +16,9 @@ test.describe("Access Control", () => {
 		).toBeVisible();
 	});
 
-	test("non-admin users cannot call admin RPC endpoints", async ({ operatorPage }) => {
+	test("non-admin users cannot call admin RPC endpoints", async ({
+		operatorPage,
+	}) => {
 		const result = await rpcRequest(operatorPage, {
 			path: "admin/organizations/listUsers",
 			input: { limit: 5 },

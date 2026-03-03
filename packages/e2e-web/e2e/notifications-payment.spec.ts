@@ -27,8 +27,9 @@ interface NotificationListResult {
 }
 
 test.describe("Payments & Notifications", () => {
-	test("mock payment creates an in-app notification", async ({ adminPage: page }) => {
-
+	test("mock payment creates an in-app notification", async ({
+		adminPage: page,
+	}) => {
 		const providersResult = await rpcRequest(page, {
 			path: "payments/providers",
 		});

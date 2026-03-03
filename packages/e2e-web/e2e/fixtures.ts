@@ -1,4 +1,8 @@
-import { expect as playwrightExpect, test as base, type Page } from "@playwright/test";
+import {
+	test as base,
+	type Page,
+	expect as playwrightExpect,
+} from "@playwright/test";
 import { getPlaywrightRuntimeEnv } from "../playwright.env";
 import { TestDataFactory } from "./utils/test-data-factory";
 
@@ -14,10 +18,10 @@ export interface TestFixtures {
 	adminPage: Page;
 	/** A Page pre-authenticated as the seed operator user. */
 	operatorPage: Page;
-	/** Unique namespace prefix for this test (e.g. "t_1a2b_1709467200"). */
-	testNamespace: string;
 	/** Factory for creating test-scoped entities — auto-cleans on teardown. */
 	testData: TestDataFactory;
+	/** Unique namespace prefix for this test (e.g. "t_1a2b_1709467200"). */
+	testNamespace: string;
 }
 
 let namespaceCounter = 0;
@@ -50,7 +54,10 @@ export const test = base.extend<TestFixtures>({
 		{ scope: "test" },
 	],
 
-	testData: async ({ testNamespace }: TestFixtures, use: (f: TestDataFactory) => Promise<void>) => {
+	testData: async (
+		{ testNamespace }: TestFixtures,
+		use: (f: TestDataFactory) => Promise<void>
+	) => {
 		const factory = new TestDataFactory(testNamespace, serverURL);
 		await use(factory);
 		await factory.cleanup();

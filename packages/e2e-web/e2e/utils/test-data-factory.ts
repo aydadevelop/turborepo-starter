@@ -4,8 +4,8 @@ import { cleanupNamespace, createDbClient } from "./db-client";
 const LEADING_SLASHES_RE = /^\/+/;
 
 interface CreatedUser {
-	id: string;
 	email: string;
+	id: string;
 	name: string;
 }
 
@@ -16,9 +16,9 @@ interface CreatedOrganization {
 }
 
 interface ApiResult {
+	json: unknown;
 	ok: boolean;
 	status: number;
-	json: unknown;
 }
 
 export class TestDataFactory {
@@ -78,9 +78,7 @@ export class TestDataFactory {
 		});
 
 		if (!response.ok) {
-			throw new Error(
-				`TestDataFactory.signIn failed (${response.status})`
-			);
+			throw new Error(`TestDataFactory.signIn failed (${response.status})`);
 		}
 
 		const setCookie = response.headers.getSetCookie?.() ?? [];

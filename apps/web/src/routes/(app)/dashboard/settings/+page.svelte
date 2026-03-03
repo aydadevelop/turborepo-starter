@@ -89,7 +89,9 @@
 					return;
 				}
 				telegramSuccess = "Telegram account linked successfully.";
-				queryClient.invalidateQueries({ queryKey: queryKeys.linkedAccounts.all });
+				queryClient.invalidateQueries({
+					queryKey: queryKeys.linkedAccounts.all,
+				});
 			}
 		);
 	};

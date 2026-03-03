@@ -34,12 +34,12 @@ export const mockRpcEndpoint = async (
 // ─── Auth session mock ───────────────────────────────────────────────
 
 interface MockUser {
-	id?: string;
-	name?: string;
 	email?: string;
-	role?: string;
-	isAnonymous?: boolean;
+	id?: string;
 	image?: string | null;
+	isAnonymous?: boolean;
+	name?: string;
+	role?: string;
 }
 
 /**
@@ -81,9 +81,9 @@ export const mockAuthSession = async (
 
 interface MockOrganization {
 	id: string;
+	logo?: string | null;
 	name: string;
 	slug: string;
-	logo?: string | null;
 }
 
 /**
@@ -101,13 +101,13 @@ export const mockOrganizations = async (
 // ─── Notification mocks ──────────────────────────────────────────────
 
 interface MockNotification {
-	id: string;
-	title: string;
 	body?: string | null;
-	severity?: string;
 	ctaUrl?: string | null;
-	viewedAt?: string | null;
 	deliveredAt?: string;
+	id: string;
+	severity?: string;
+	title: string;
+	viewedAt?: string | null;
 }
 
 /**

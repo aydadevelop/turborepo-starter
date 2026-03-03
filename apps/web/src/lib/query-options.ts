@@ -28,8 +28,7 @@ export const fetchUserInvitations = async () => {
 };
 
 export const fetchFullOrganization = async () => {
-	const { data, error } =
-		await authClient.organization.getFullOrganization();
+	const { data, error } = await authClient.organization.getFullOrganization();
 	if (error) {
 		throw error;
 	}
@@ -42,7 +41,9 @@ type Opts<T> = Omit<CreateQueryOptions<T>, "queryKey" | "queryFn"> & {
 	enabled?: boolean;
 };
 
-export function userOrganizationsQueryOptions(extra?: Opts<Awaited<ReturnType<typeof fetchUserOrganizations>>>) {
+export function userOrganizationsQueryOptions(
+	extra?: Opts<Awaited<ReturnType<typeof fetchUserOrganizations>>>
+) {
 	return {
 		queryKey: queryKeys.organizations.all,
 		queryFn: fetchUserOrganizations,
@@ -52,7 +53,9 @@ export function userOrganizationsQueryOptions(extra?: Opts<Awaited<ReturnType<ty
 	};
 }
 
-export function userInvitationsQueryOptions(extra?: Opts<Awaited<ReturnType<typeof fetchUserInvitations>>>) {
+export function userInvitationsQueryOptions(
+	extra?: Opts<Awaited<ReturnType<typeof fetchUserInvitations>>>
+) {
 	return {
 		queryKey: queryKeys.invitations.all,
 		queryFn: fetchUserInvitations,
@@ -62,7 +65,9 @@ export function userInvitationsQueryOptions(extra?: Opts<Awaited<ReturnType<type
 	};
 }
 
-export function fullOrganizationQueryOptions(extra?: Opts<Awaited<ReturnType<typeof fetchFullOrganization>>>) {
+export function fullOrganizationQueryOptions(
+	extra?: Opts<Awaited<ReturnType<typeof fetchFullOrganization>>>
+) {
 	return {
 		queryKey: queryKeys.org.full,
 		queryFn: fetchFullOrganization,

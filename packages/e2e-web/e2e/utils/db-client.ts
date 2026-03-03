@@ -3,8 +3,7 @@ import pg from "pg";
 const DEFAULT_DATABASE_URL =
 	"postgresql://postgres:postgres@localhost:5432/myapp";
 
-const connectionString =
-	process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
+const connectionString = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
 
 const quote = (identifier: string) => `"${identifier}"`;
 

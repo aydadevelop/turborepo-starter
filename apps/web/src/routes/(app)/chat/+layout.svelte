@@ -1,126 +1,126 @@
 <script lang="ts">
 	import MessageSquarePlus from "@lucide/svelte/icons/message-square-plus";
-import Trash2 from "@lucide/svelte/icons/trash-2";
-import { Button } from "@my-app/ui/components/button";
-import {
-	createMutation,
-	createQuery,
-	useQueryClient,
-} from "@tanstack/svelte-query";
-import { setContext } from "svelte";
-import { derived } from "svelte/store";
-import { goto } from "$app/navigation";
-import { resolve } from "$app/paths";
-import { page } from "$app/state";
-import { assistantClient } from "$lib/assistant";
-import { authClient } from "$lib/auth-client";
-import { queryKeys } from "$lib/query-keys";
+	import Trash2 from "@lucide/svelte/icons/trash-2";
+	import { Button } from "@my-app/ui/components/button";
+	import {
+		createMutation,
+		createQuery,
+		useQueryClient,
+	} from "@tanstack/svelte-query";
+	import { setContext } from "svelte";
+	import { derived } from "svelte/store";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
+	import { assistantClient } from "$lib/assistant";
+	import { authClient } from "$lib/auth-client";
+	import { queryKeys } from "$lib/query-keys";
 
-const { children } = $props();
+	const { children } = $props();
 
-type SessionData = typeof authClient.$Infer.Session;
+	type SessionData = typeof authClient.$Infer.Session;
 
-const hasSessionUser = (
-	data: SessionData | null | undefined
-): data is NonNullable<SessionData> & {
-	session: object;
-	user: { id: string };
-} => Boolean(data?.session && data?.user?.id);
+	const hasSessionUser = (
+		data: SessionData | null | undefined
+	): data is NonNullable<SessionData> & {
+		session: object;
+		user: { id: string };
+	} => Boolean(data?.session && data?.user?.id);
 
-const sessionQuery = authClient.useSession();
-const queryClient = useQueryClient();
+	const sessionQuery = authClient.useSession();
+	const queryClient = useQueryClient();
 
-let isSigningIn = $state(false);
-let attemptedAutoSession = $state(false);
-let retryAutoSessionTimer: ReturnType<typeof setTimeout> | null = null;
+	let isSigningIn = $state(false);
+	let attemptedAutoSession = $state(false);
+	let retryAutoSessionTimer: ReturnType<typeof setTimeout> | null = null;
 
-async function ensureSession(): Promise<boolean> {
-	if (hasSessionUser($sessionQuery.data)) return true;
-	if (isSigningIn) return false;
-	isSigningIn = true;
-	try {
-		await authClient.signIn.anonymous();
-		return true;
-	} catch {
-		return false;
-	} finally {
-		isSigningIn = false;
-	}
-}
-
-$effect(() => {
-	return () => {
-		if (retryAutoSessionTimer) {
-			clearTimeout(retryAutoSessionTimer);
+	async function ensureSession(): Promise<boolean> {
+		if (hasSessionUser($sessionQuery.data)) return true;
+		if (isSigningIn) return false;
+		isSigningIn = true;
+		try {
+			await authClient.signIn.anonymous();
+			return true;
+		} catch {
+			return false;
+		} finally {
+			isSigningIn = false;
 		}
-	};
-});
-
-$effect(() => {
-	if ($sessionQuery.isPending) {
-		return;
 	}
 
-	if (hasSessionUser($sessionQuery.data)) {
-		attemptedAutoSession = false;
-		return;
-	}
-
-	if (attemptedAutoSession || isSigningIn) {
-		return;
-	}
-
-	attemptedAutoSession = true;
-	ensureSession()
-		.then((success) => {
-			if (success) {
-				return;
-			}
+	$effect(() => {
+		return () => {
 			if (retryAutoSessionTimer) {
 				clearTimeout(retryAutoSessionTimer);
 			}
-			retryAutoSessionTimer = setTimeout(() => {
-				attemptedAutoSession = false;
-			}, 3000);
-		})
-		.catch(() => undefined);
-});
+		};
+	});
 
-const chatsQuery = createQuery(
-	derived(sessionQuery, ($session) => ({
-		queryKey: queryKeys.assistant.chats,
-		queryFn: () => assistantClient.listChats({}),
-		enabled: hasSessionUser($session.data),
-	}))
-);
-
-const createChatMutation = createMutation({
-	async mutationFn(title: string) {
-		const hasSession = await ensureSession();
-		if (!hasSession) {
-			throw new Error("Unable to create chat without an active session");
+	$effect(() => {
+		if ($sessionQuery.isPending) {
+			return;
 		}
-		return assistantClient.createChat({ title });
-	},
-	onSuccess(data) {
-		queryClient.invalidateQueries({ queryKey: queryKeys.assistant.chats });
-		goto(resolve(`/chat/${data.id}`));
-	},
-});
 
-const deleteChatMutation = createMutation({
-	mutationFn: (chatId: string) => assistantClient.deleteChat({ chatId }),
-	onSuccess() {
-		queryClient.invalidateQueries({ queryKey: queryKeys.assistant.chats });
-		if (page.params.id) {
-			goto(resolve("/chat"));
+		if (hasSessionUser($sessionQuery.data)) {
+			attemptedAutoSession = false;
+			return;
 		}
-	},
-});
 
-const activeChatId = $derived(page.params.id);
+		if (attemptedAutoSession || isSigningIn) {
+			return;
+		}
 
-setContext("createChatMutation", createChatMutation);
+		attemptedAutoSession = true;
+		ensureSession()
+			.then((success) => {
+				if (success) {
+					return;
+				}
+				if (retryAutoSessionTimer) {
+					clearTimeout(retryAutoSessionTimer);
+				}
+				retryAutoSessionTimer = setTimeout(() => {
+					attemptedAutoSession = false;
+				}, 3000);
+			})
+			.catch(() => undefined);
+	});
+
+	const chatsQuery = createQuery(
+		derived(sessionQuery, ($session) => ({
+			queryKey: queryKeys.assistant.chats,
+			queryFn: () => assistantClient.listChats({}),
+			enabled: hasSessionUser($session.data),
+		}))
+	);
+
+	const createChatMutation = createMutation({
+		async mutationFn(title: string) {
+			const hasSession = await ensureSession();
+			if (!hasSession) {
+				throw new Error("Unable to create chat without an active session");
+			}
+			return assistantClient.createChat({ title });
+		},
+		onSuccess(data) {
+			queryClient.invalidateQueries({ queryKey: queryKeys.assistant.chats });
+			goto(resolve(`/chat/${data.id}`));
+		},
+	});
+
+	const deleteChatMutation = createMutation({
+		mutationFn: (chatId: string) => assistantClient.deleteChat({ chatId }),
+		onSuccess() {
+			queryClient.invalidateQueries({ queryKey: queryKeys.assistant.chats });
+			if (page.params.id) {
+				goto(resolve("/chat"));
+			}
+		},
+	});
+
+	const activeChatId = $derived(page.params.id);
+
+	setContext("createChatMutation", createChatMutation);
 </script>
 
 <div class="flex h-[calc(100svh-6rem)]">

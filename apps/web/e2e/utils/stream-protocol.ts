@@ -43,14 +43,12 @@ export const toolResultChunk = (params: {
 /** Encode a finish-step marker. */
 export const finishStepChunk = (
 	finishReason: "stop" | "tool-calls" | "length" | "error" = "stop"
-): string =>
-	`d:${JSON.stringify({ finishReason })}\n`;
+): string => `d:${JSON.stringify({ finishReason })}\n`;
 
 /** Encode a finish message marker. */
 export const finishMessageChunk = (
 	finishReason: "stop" | "tool-calls" | "length" | "error" = "stop"
-): string =>
-	`e:${JSON.stringify({ finishReason })}\n`;
+): string => `e:${JSON.stringify({ finishReason })}\n`;
 
 /**
  * Build a complete text-only stream response body.

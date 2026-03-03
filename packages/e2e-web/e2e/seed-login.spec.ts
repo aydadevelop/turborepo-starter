@@ -2,7 +2,9 @@ import { expect, test } from "./fixtures";
 import { url } from "./utils/url";
 
 test.describe("Seeded Auth & Data", () => {
-	test("seeded admin credentials can access seeded users", async ({ adminPage }) => {
+	test("seeded admin credentials can access seeded users", async ({
+		adminPage,
+	}) => {
 		await adminPage.goto(url("/admin/users"));
 
 		await expect(adminPage.getByTestId("admin-users-heading")).toBeVisible();
