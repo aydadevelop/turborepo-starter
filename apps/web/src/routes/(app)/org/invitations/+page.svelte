@@ -1,69 +1,72 @@
 <script lang="ts">
 	import { Badge } from "@my-app/ui/components/badge";
-import { Button } from "@my-app/ui/components/button";
-import * as Card from "@my-app/ui/components/card";
-import { createQuery } from "@tanstack/svelte-query";
-import { authClient } from "$lib/auth-client";
-import { queryClient } from "$lib/orpc";
+	import { Button } from "@my-app/ui/components/button";
+	import * as Card from "@my-app/ui/components/card";
+	import { createQuery } from "@tanstack/svelte-query";
+	import { authClient } from "$lib/auth-client";
+	import { queryClient } from "$lib/orpc";
 
-const invitationsQuery = createQuery({
-	queryKey: ["user-invitations"],
-	queryFn: async () => {
-		const { data, error } = await authClient.organization.listUserInvitations();
-		if (error) throw error;
-		return data ?? [];
-	},
-});
-
-let pendingId = $state<string | null>(null);
-let errorMessage = $state<string | null>(null);
-
-const pendingInvitations = $derived(
-	($invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
-);
-
-const pastInvitations = $derived(
-	($invitationsQuery.data ?? []).filter((inv) => inv.status !== "pending")
-);
-
-const handleAccept = async (invitationId: string) => {
-	pendingId = invitationId;
-	errorMessage = null;
-	const { error } = await authClient.organization.acceptInvitation({
-		invitationId,
+	const invitationsQuery = createQuery({
+		queryKey: ["user-invitations"],
+		queryFn: async () => {
+			const { data, error } =
+				await authClient.organization.listUserInvitations();
+			if (error) throw error;
+			return data ?? [];
+		},
 	});
-	pendingId = null;
-	if (error) {
-		errorMessage =
-			(error as { message?: string }).message ?? "Failed to accept invitation.";
-		return;
-	}
-	queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
-	queryClient.invalidateQueries({ queryKey: ["organization"] });
-	queryClient.invalidateQueries({ queryKey: ["user-organizations"] });
-	queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] });
-};
 
-const handleReject = async (invitationId: string) => {
-	pendingId = invitationId;
-	errorMessage = null;
-	const { error } = await authClient.organization.rejectInvitation({
-		invitationId,
-	});
-	pendingId = null;
-	if (error) {
-		errorMessage =
-			(error as { message?: string }).message ?? "Failed to reject invitation.";
-		return;
-	}
-	queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
-};
+	let pendingId = $state<string | null>(null);
+	let errorMessage = $state<string | null>(null);
 
-const formatDate = (date: Date | string) =>
-	new Intl.DateTimeFormat("en-US", {
-		dateStyle: "medium",
-		timeStyle: "short",
-	}).format(date instanceof Date ? date : new Date(date));
+	const pendingInvitations = $derived(
+		($invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
+	);
+
+	const pastInvitations = $derived(
+		($invitationsQuery.data ?? []).filter((inv) => inv.status !== "pending")
+	);
+
+	const handleAccept = async (invitationId: string) => {
+		pendingId = invitationId;
+		errorMessage = null;
+		const { error } = await authClient.organization.acceptInvitation({
+			invitationId,
+		});
+		pendingId = null;
+		if (error) {
+			errorMessage =
+				(error as { message?: string }).message ??
+				"Failed to accept invitation.";
+			return;
+		}
+		queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
+		queryClient.invalidateQueries({ queryKey: ["organization"] });
+		queryClient.invalidateQueries({ queryKey: ["user-organizations"] });
+		queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] });
+	};
+
+	const handleReject = async (invitationId: string) => {
+		pendingId = invitationId;
+		errorMessage = null;
+		const { error } = await authClient.organization.rejectInvitation({
+			invitationId,
+		});
+		pendingId = null;
+		if (error) {
+			errorMessage =
+				(error as { message?: string }).message ??
+				"Failed to reject invitation.";
+			return;
+		}
+		queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
+	};
+
+	const formatDate = (date: Date | string) =>
+		new Intl.DateTimeFormat("en-US", {
+			dateStyle: "medium",
+			timeStyle: "short",
+		}).format(date instanceof Date ? date : new Date(date));
 </script>
 
 {#if errorMessage}

@@ -1,54 +1,54 @@
 {
-	"files": [],
-	"references": [
-		{
-			"path": "./apps/assistant"
-		},
-		{
-			"path": "./apps/notifications"
-		},
-		{
-			"path": "./apps/server"
-		},
-		{
-			"path": "./apps/web"
-		},
-		{
-			"path": "./packages/ai-chat"
-		},
-		{
-			"path": "./packages/api"
-		},
-		{
-			"path": "./packages/api-contract"
-		},
-		{
-			"path": "./packages/assistant"
-		},
-		{
-			"path": "./packages/auth"
-		},
-		{
-			"path": "./packages/db"
-		},
-		{
-			"path": "./packages/env"
-		},
-		{
-			"path": "./packages/infra"
-		},
-		{
-			"path": "./packages/notifications"
-		},
-		{
-			"path": "./packages/proxy"
-		},
-		{
-			"path": "./packages/ui"
-		},
-		{
-			"path": "./packages/vitest-config"
-		}
-	],
-	"exclude": ["legacy", "legacy/**", "docs", "docs/**"]
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/assistant"
+    },
+    {
+      "path": "./apps/notifications"
+    },
+    {
+      "path": "./apps/server"
+    },
+    {
+      "path": "./apps/web"
+    },
+    {
+      "path": "./packages/ai-chat"
+    },
+    {
+      "path": "./packages/api"
+    },
+    {
+      "path": "./packages/api-contract"
+    },
+    {
+      "path": "./packages/assistant"
+    },
+    {
+      "path": "./packages/auth"
+    },
+    {
+      "path": "./packages/db"
+    },
+    {
+      "path": "./packages/env"
+    },
+    {
+      "path": "./packages/infra"
+    },
+    {
+      "path": "./packages/notifications"
+    },
+    {
+      "path": "./packages/proxy"
+    },
+    {
+      "path": "./packages/ui"
+    },
+    {
+      "path": "./packages/vitest-config"
+    }
+  ],
+  "exclude": ["legacy", "legacy/**", "docs", "docs/**"]
 }

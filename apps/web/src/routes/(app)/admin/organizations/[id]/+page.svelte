@@ -1,65 +1,65 @@
 <script lang="ts">
 	import { Badge } from "@my-app/ui/components/badge";
-import * as Card from "@my-app/ui/components/card";
-import * as Table from "@my-app/ui/components/table";
-import * as Tabs from "@my-app/ui/components/tabs";
-import { createQuery } from "@tanstack/svelte-query";
-import { untrack } from "svelte";
-import { writable } from "svelte/store";
-import { resolve } from "$app/paths";
-import { page } from "$app/state";
-import { orpc } from "$lib/orpc";
+	import * as Card from "@my-app/ui/components/card";
+	import * as Table from "@my-app/ui/components/table";
+	import * as Tabs from "@my-app/ui/components/tabs";
+	import { createQuery } from "@tanstack/svelte-query";
+	import { untrack } from "svelte";
+	import { writable } from "svelte/store";
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
+	import { orpc } from "$lib/orpc";
 
-const orgOpts = $derived.by(() => {
-	const id = page.params.id ?? "";
-	return orpc.admin.organizations.getOrg.queryOptions({ input: { id } });
-});
-const orgOptsStore = writable(untrack(() => orgOpts));
-$effect(() => {
-	orgOptsStore.set(orgOpts);
-});
-const orgQuery = createQuery(orgOptsStore);
-
-const membersOpts = $derived.by(() => {
-	const organizationId = page.params.id ?? "";
-	return orpc.admin.organizations.listMembers.queryOptions({
-		input: { organizationId, limit: 50 },
+	const orgOpts = $derived.by(() => {
+		const id = page.params.id ?? "";
+		return orpc.admin.organizations.getOrg.queryOptions({ input: { id } });
 	});
-});
-const membersOptsStore = writable(untrack(() => membersOpts));
-$effect(() => {
-	membersOptsStore.set(membersOpts);
-});
-const membersQuery = createQuery(membersOptsStore);
-
-const invitationsOpts = $derived.by(() => {
-	const organizationId = page.params.id ?? "";
-	return orpc.admin.organizations.listInvitations.queryOptions({
-		input: { organizationId, limit: 50 },
+	const orgOptsStore = writable(untrack(() => orgOpts));
+	$effect(() => {
+		orgOptsStore.set(orgOpts);
 	});
-});
-const invitationsOptsStore = writable(untrack(() => invitationsOpts));
-$effect(() => {
-	invitationsOptsStore.set(invitationsOpts);
-});
-const invitationsQuery = createQuery(invitationsOptsStore);
+	const orgQuery = createQuery(orgOptsStore);
 
-const roleColor = (role: string) => {
-	switch (role) {
-		case "org_owner":
-		case "owner":
-			return "default" as const;
-		case "org_admin":
-		case "admin":
-			return "default" as const;
-		case "manager":
-			return "secondary" as const;
-		case "agent":
-			return "secondary" as const;
-		default:
-			return "outline" as const;
-	}
-};
+	const membersOpts = $derived.by(() => {
+		const organizationId = page.params.id ?? "";
+		return orpc.admin.organizations.listMembers.queryOptions({
+			input: { organizationId, limit: 50 },
+		});
+	});
+	const membersOptsStore = writable(untrack(() => membersOpts));
+	$effect(() => {
+		membersOptsStore.set(membersOpts);
+	});
+	const membersQuery = createQuery(membersOptsStore);
+
+	const invitationsOpts = $derived.by(() => {
+		const organizationId = page.params.id ?? "";
+		return orpc.admin.organizations.listInvitations.queryOptions({
+			input: { organizationId, limit: 50 },
+		});
+	});
+	const invitationsOptsStore = writable(untrack(() => invitationsOpts));
+	$effect(() => {
+		invitationsOptsStore.set(invitationsOpts);
+	});
+	const invitationsQuery = createQuery(invitationsOptsStore);
+
+	const roleColor = (role: string) => {
+		switch (role) {
+			case "org_owner":
+			case "owner":
+				return "default" as const;
+			case "org_admin":
+			case "admin":
+				return "default" as const;
+			case "manager":
+				return "secondary" as const;
+			case "agent":
+				return "secondary" as const;
+			default:
+				return "outline" as const;
+		}
+	};
 </script>
 
 <div class="space-y-4">

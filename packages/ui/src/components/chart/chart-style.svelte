@@ -12,9 +12,9 @@
 	);
 
 	const themeContents = $derived.by(() => {
-		if (!(colorConfig && colorConfig.length)) return;
+		if (!colorConfig?.length) return;
 
-		const themeContents = [];
+		const themeContents: string[] = [];
 		for (let [_theme, prefix] of Object.entries(THEMES)) {
 			let content = `${prefix} [data-chart=${id}] {\n`;
 			const color = colorConfig.map(([key, itemConfig]) => {
@@ -23,7 +23,7 @@
 				return color ? `\t--color-${key}: ${color};` : null;
 			});
 
-			content += color.join("\n") + "\n}";
+			content += `${color.join("\n")}\n}`;
 
 			themeContents.push(content);
 		}

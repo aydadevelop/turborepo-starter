@@ -23,6 +23,8 @@ interface PrivateDataResult {
 	};
 }
 
+const orgCreateUrlPattern = /\/org\/create(\?|$)/;
+
 test.describe("Anonymous Chat Session", () => {
 	test("chat route auto-creates anonymous session for whoami dependencies", async ({
 		page,
@@ -35,7 +37,7 @@ test.describe("Anonymous Chat Session", () => {
 					const sessionResult = await browserRequest(page, {
 						path: "/api/auth/get-session",
 					});
-					if (!sessionResult.ok || !sessionResult.json) {
+					if (!(sessionResult.ok && sessionResult.json)) {
 						return false;
 					}
 
@@ -87,7 +89,7 @@ test.describe("Org Creation Cache Invalidation", () => {
 
 		await page.goto(url("/org/create?reason=new"));
 
-		await expect(page).toHaveURL(/\/org\/create(\?|$)/);
+		await expect(page).toHaveURL(orgCreateUrlPattern);
 
 		await page.getByTestId("org-create-name-input").fill(orgName);
 

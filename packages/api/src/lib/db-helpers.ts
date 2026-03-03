@@ -44,6 +44,7 @@ export const requireManaged = async <T extends TableWithIdAndOrg>(
 ): Promise<InferSelectModel<T>> => {
 	const [row] = await db
 		.select()
+		// biome-ignore lint/suspicious/noExplicitAny: Drizzle requires cast for generic PgTable in .from()
 		.from(table as any)
 		.where(and(eq(table.id, id), eq(table.organizationId, organizationId)))
 		.limit(1);
@@ -71,6 +72,7 @@ export const requireOwned = async <T extends PgTable>(
 ): Promise<InferSelectModel<T>> => {
 	const [row] = await db
 		.select()
+		// biome-ignore lint/suspicious/noExplicitAny: Drizzle requires cast for generic PgTable in .from()
 		.from(table as any)
 		.where(and(eq(column1, value1), eq(column2, value2)))
 		.limit(1);

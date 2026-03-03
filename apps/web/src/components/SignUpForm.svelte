@@ -85,9 +85,15 @@ const form = createForm(() => ({
 					await Promise.all([
 						queryClient.invalidateQueries({ queryKey: queryKeys.org.root }),
 						queryClient.invalidateQueries({ queryKey: queryKeys.org.full }),
-						queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all }),
-						queryClient.invalidateQueries({ queryKey: queryKeys.org.canManage }),
-						queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all }),
+						queryClient.invalidateQueries({
+							queryKey: queryKeys.organizations.all,
+						}),
+						queryClient.invalidateQueries({
+							queryKey: queryKeys.org.canManage,
+						}),
+						queryClient.invalidateQueries({
+							queryKey: queryKeys.invitations.all,
+						}),
 					]);
 					goto(postAuthRedirectPath);
 				},
