@@ -91,7 +91,7 @@ jobs:
         run: bunx turbo run test:e2e --filter=@my-app/e2e-web ${{ github.event_name == 'pull_request' && '--affected' || '' }}
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myapp
-          BETTER_AUTH_SECRET: ci-e2e-secret
+          BETTER_AUTH_SECRET: ci-e2e-secret-1234567890-abcdefghij
           BETTER_AUTH_URL: http://localhost:43100
           SERVER_URL: http://localhost:43100
           CORS_ORIGIN: http://localhost:43173

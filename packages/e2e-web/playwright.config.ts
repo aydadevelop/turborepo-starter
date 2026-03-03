@@ -12,6 +12,7 @@ const {
 } = getPlaywrightRuntimeEnv();
 
 const isCi = Boolean(process.env.CI);
+const webServerTimeout = isCi ? 240_000 : 180_000;
 
 export default defineConfig({
 	testDir: "./e2e",
@@ -53,7 +54,7 @@ export default defineConfig({
 					command: webServerCommand,
 					url: baseURL,
 					reuseExistingServer: reuseExistingServers,
-					timeout: 120_000,
+					timeout: webServerTimeout,
 					stdout: "pipe",
 					stderr: "pipe",
 				},
@@ -61,7 +62,7 @@ export default defineConfig({
 					command: backendServerCommand,
 					url: `${assistantURL}/health`,
 					reuseExistingServer: reuseExistingServers,
-					timeout: 120_000,
+					timeout: webServerTimeout,
 					stdout: "pipe",
 					stderr: "pipe",
 				},
