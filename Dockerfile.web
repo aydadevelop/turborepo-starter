@@ -21,7 +21,7 @@ RUN rm -f bun.lockb bun.lock && bun install
 # ── prod-deps: production-only dependencies for runtime ────────────────────────────
 FROM base AS prod-deps
 COPY --from=prune /app/out/json/ .
-RUN rm -f bun.lockb bun.lock && bun install --production
+RUN rm -f bun.lockb bun.lock && bun install --production   
 
 # ── build ──────────────────────────────────────────────────────────────────
 FROM deps AS build
