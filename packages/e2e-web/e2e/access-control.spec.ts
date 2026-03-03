@@ -12,7 +12,7 @@ test.describe("Access Control", () => {
 
 		await expect(operatorPage).toHaveURL(DASHBOARD_SETTINGS_URL_RE);
 		await expect(
-			operatorPage.getByRole("heading", { name: "Account Settings" })
+			operatorPage.getByTestId("account-settings-heading")
 		).toBeVisible();
 	});
 

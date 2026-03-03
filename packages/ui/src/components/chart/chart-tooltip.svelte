@@ -65,14 +65,15 @@
 		if (hideLabel || !tooltipCtx.payload?.length) return null;
 
 		const [item] = tooltipCtx.payload;
-		const key = labelKey ?? item?.label ?? item?.name ?? "value";
+		if (!item) return null;
+		const key = labelKey ?? item.label ?? item.name ?? "value";
 
 		const itemConfig = getPayloadConfigFromPayload(chart.config, item, key);
 
 		const value =
 			!labelKey && typeof label === "string"
 				? (chart.config[label as keyof typeof chart.config]?.label ?? label)
-				: (itemConfig?.label ?? item.label);
+				: (itemConfig?.label ?? item?.label);
 
 		if (value === undefined) return null;
 		if (!labelFormatter) return value;
@@ -128,7 +129,8 @@
 						})}
 					{:else}
 						{#if itemConfig?.icon}
-							<itemConfig .icon />
+							{@const Icon = itemConfig.icon}
+							<Icon />
 						{:else if !hideIndicator}
 							<div
 								style="--color-bg: {indicatorColor}; --color-border: {indicatorColor};"

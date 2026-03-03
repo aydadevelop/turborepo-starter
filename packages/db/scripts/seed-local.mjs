@@ -286,8 +286,9 @@ const buildSeedData = ({
 	operatorPasswordHash,
 }) => {
 	const anchorDateMs = parseAnchorDate(anchorDate);
-	const now = anchorDateMs + 9 * HOUR_MS;
-	const inTwoDays = now + 2 * DAY_MS;
+	const nowMs = anchorDateMs + 9 * HOUR_MS;
+	const now = new Date(nowMs).toISOString();
+	const inTwoDays = new Date(nowMs + 2 * DAY_MS).toISOString();
 
 	const adminOrgId = "seed_org_admin";
 	const starterOrgId = "seed_org_starter";
@@ -320,7 +321,7 @@ const buildSeedData = ({
 					id: adminUserId,
 					name: "Admin",
 					email: "admin@admin.com",
-					email_verified: 1,
+					email_verified: true,
 					image: null,
 					role: "admin",
 				},
@@ -328,7 +329,7 @@ const buildSeedData = ({
 					id: operatorUserId,
 					name: "Operations User",
 					email: "operator@example.com",
-					email_verified: 1,
+					email_verified: true,
 					image: null,
 					role: "user",
 				},
@@ -336,7 +337,7 @@ const buildSeedData = ({
 					id: memberUserId,
 					name: "Member User",
 					email: "member@example.com",
-					email_verified: 1,
+					email_verified: true,
 					image: null,
 					role: "user",
 				},
@@ -504,7 +505,7 @@ const buildSeedData = ({
 					organization_scope_key: "global",
 					event_type: "*",
 					channel: "in_app",
-					enabled: 1,
+					enabled: true,
 					quiet_hours_start: null,
 					quiet_hours_end: null,
 					timezone: "UTC",
@@ -514,9 +515,9 @@ const buildSeedData = ({
 			now
 		),
 		todos: [
-			{ id: 900_001, text: "Review org memberships", completed: 0 },
-			{ id: 900_002, text: "Verify notification delivery", completed: 0 },
-			{ id: 900_003, text: "Check recurring reminder pipeline", completed: 1 },
+			{ id: 900_001, text: "Review org memberships", completed: false },
+			{ id: 900_002, text: "Verify notification delivery", completed: false },
+			{ id: 900_003, text: "Check recurring reminder pipeline", completed: true },
 		],
 		assistantChats: withCommon(
 			[
@@ -552,7 +553,7 @@ const buildSeedData = ({
 		seed.todos.push({
 			id: 900_004,
 			text: "Full scenario alias is active",
-			completed: 0,
+			completed: false,
 		});
 	}
 
@@ -562,6 +563,9 @@ const buildSeedData = ({
 const escapeSqlValue = (value) => {
 	if (value === null || value === undefined) {
 		return "NULL";
+	}
+	if (typeof value === "boolean") {
+		return value ? "TRUE" : "FALSE";
 	}
 	if (typeof value === "number") {
 		return String(value);

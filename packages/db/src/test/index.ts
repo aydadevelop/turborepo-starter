@@ -1,18 +1,27 @@
+import { createRequire } from "node:module";
+import { PGlite } from "@electric-sql/pglite";
 import { sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
+import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 
 import { relations } from "../relations";
+// biome-ignore lint/performance/noNamespaceImport: pushSchema requires namespace import
+import * as schema from "../schema";
 
-const TEST_DATABASE_URL =
-	process.env.TEST_DATABASE_URL ??
-	"postgresql://postgres:postgres@localhost:5432/myapp_test";
+const require_ = createRequire(import.meta.url);
+const { pushSchema } = require_(
+	"drizzle-kit/api-postgres"
+) as typeof import("drizzle-kit/api-postgres");
 
 const createRawTestDatabase = async () => {
-	const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
-	await client.connect();
+	const client = new PGlite();
 	const db = drizzle({ client, relations });
+
+	// Push schema to in-memory PGlite instance
+	// biome-ignore lint/suspicious/noExplicitAny: pushSchema requires untyped drizzle instance
+	const { apply } = await pushSchema(schema, db as any);
+	await apply();
+
 	return { db, client };
 };
 
@@ -27,14 +36,12 @@ export interface BootstrapTestDatabaseOptions {
 	seedStrategy?: "beforeAll" | "beforeEach";
 }
 
-let testBootstrapCounter = 0;
-
 export const createTestDatabase = async (): Promise<{
 	db: TestDatabase;
 	close: () => Promise<void>;
 }> => {
 	const { db, client } = await createRawTestDatabase();
-	return { db, close: () => client.end() };
+	return { db, close: () => client.close() };
 };
 
 export const clearTestDatabase = async (db: TestDatabase): Promise<void> => {
@@ -81,10 +88,13 @@ export const bootstrapTestDatabase = (
 		closeFn = result.close;
 		state.db = testDb;
 
-		if (seedStrategy === "beforeAll" && options.seed) {
-			await options.seed(testDb);
+		if (seedStrategy === "beforeAll") {
+			await clearTestDatabase(testDb);
+			if (options.seed) {
+				await options.seed(testDb);
+			}
 		}
-	});
+	}, 30_000);
 
 	beforeEach(async () => {
 		if (seedStrategy === "beforeEach") {
@@ -95,8 +105,8 @@ export const bootstrapTestDatabase = (
 			return;
 		}
 
-		// Use a savepoint for beforeAll strategy
-		await testDb.execute(sql.raw(`SAVEPOINT test_sp_${testBootstrapCounter}`));
+		// Wrap each test in a transaction; rolling back after restores seed state.
+		await testDb.execute(sql`BEGIN`);
 	});
 
 	afterEach(async () => {
@@ -104,16 +114,10 @@ export const bootstrapTestDatabase = (
 			return;
 		}
 
-		await testDb.execute(
-			sql.raw(`ROLLBACK TO SAVEPOINT test_sp_${testBootstrapCounter}`)
-		);
-		await testDb.execute(
-			sql.raw(`RELEASE SAVEPOINT test_sp_${testBootstrapCounter}`)
-		);
+		await testDb.execute(sql`ROLLBACK`);
 	});
 
 	afterAll(async () => {
-		testBootstrapCounter++;
 		await closeFn?.();
 	});
 

@@ -46,7 +46,7 @@ export const test = base.extend<TestFixtures>({
 	},
 
 	testNamespace: [
-		async (_deps, use) => {
+		async ({}, use) => {
 			const id = (++namespaceCounter).toString(36);
 			const ts = Math.floor(Date.now() / 1000).toString(36);
 			await use(`t_${id}_${ts}`);

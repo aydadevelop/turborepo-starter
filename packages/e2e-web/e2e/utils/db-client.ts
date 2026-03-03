@@ -37,6 +37,8 @@ export const cleanupNamespace = async (
 		"notification_event",
 		"notification_preference",
 		"user_consent",
+		"passkey",
+		"verification",
 		"invitation",
 		"member",
 		"account",

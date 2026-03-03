@@ -22,7 +22,7 @@ test.describe("Seeded Auth & Data", () => {
 		await operatorPage.goto(url("/dashboard/settings"));
 
 		await expect(
-			operatorPage.getByRole("heading", { name: "Account Settings" })
+			operatorPage.getByTestId("account-settings-heading")
 		).toBeVisible();
 	});
 });

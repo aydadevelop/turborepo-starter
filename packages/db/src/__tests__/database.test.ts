@@ -354,7 +354,7 @@ describe("Test Database Setup", () => {
 			});
 			await db.insert(todo).values({ text: "to clear" });
 
-			clearTestDatabase(db);
+			await clearTestDatabase(db);
 
 			const users = await db.select().from(user);
 			const todos = await db.select().from(todo);

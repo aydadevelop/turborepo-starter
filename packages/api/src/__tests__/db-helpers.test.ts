@@ -19,7 +19,9 @@ const testDbState = bootstrapTestDatabase({
 });
 
 vi.doMock("@my-app/db", () => ({
-	db: testDbState.db,
+	get db() {
+		return testDbState.db;
+	},
 }));
 
 const { insertAndReturn, requireManaged, requireOwned, buildUpdatePayload } =

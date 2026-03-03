@@ -12,25 +12,17 @@ const signInAndSaveState = async (
 ) => {
 	await page.goto(url("/"));
 
-	const result = await page.evaluate(
-		async ({ body, serverUrl }) => {
-			const response = await fetch(`${serverUrl}/api/auth/sign-in/email`, {
-				method: "POST",
-				credentials: "include",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify(body),
-			});
-			return { ok: response.ok, status: response.status };
-		},
+	const response = await page.context().request.post(
+		`${SERVER_URL}/api/auth/sign-in/email`,
 		{
-			body: { email: credentials.email, password: credentials.password },
-			serverUrl: SERVER_URL,
+			data: { email: credentials.email, password: credentials.password },
+			headers: { "content-type": "application/json" },
 		}
 	);
 
-	if (!result.ok) {
+	if (!response.ok()) {
 		throw new Error(
-			`Auth setup: sign-in as ${credentials.email} failed with ${result.status}`
+			`Auth setup: sign-in as ${credentials.email} failed with ${response.status()}`
 		);
 	}
 
