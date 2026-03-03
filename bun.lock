@@ -13,8 +13,8 @@
       "devDependencies": {
         "@biomejs/biome": "2.4.4",
         "@my-app/config": "*",
-        "@types/node": "^22.19.11",
-        "turbo": "^2.8.10",
+        "@types/node": "^22.19.13",
+        "turbo": "^2.8.12",
         "typescript": "^5.9.3",
         "ultracite": "7.2.3",
       },
@@ -381,6 +381,7 @@
       "devDependencies": {
         "@biomejs/biome": "^2.4.4",
         "@my-app/config": "*",
+        "tsdown": "^0.16.5",
         "typescript": "^5",
         "ultracite": "^7.2.3",
       },
