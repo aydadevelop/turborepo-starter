@@ -28,7 +28,7 @@ const processPaymentWebhookInputSchema = z.object({
 	request: z.custom<Request>((val) => val instanceof Request),
 });
 
-export const internalServerRouteProcedures: Record<string, unknown> = {
+export const internalServerRouteProcedures = {
 	payment: {
 		webhookProcess: serverRouteProcedure
 			.input(processPaymentWebhookInputSchema)
