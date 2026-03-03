@@ -19,6 +19,8 @@ test.describe("Access Control", () => {
 	test("non-admin users cannot call admin RPC endpoints", async ({
 		operatorPage,
 	}) => {
+		await operatorPage.goto(url("/"));
+
 		const result = await rpcRequest(operatorPage, {
 			path: "admin/organizations/listUsers",
 			input: { limit: 5 },

@@ -1,5 +1,6 @@
 import { expect, test } from "./fixtures";
 import { rpcRequest } from "./utils/auth";
+import { url } from "./utils/url";
 
 interface RpcEnvelope<T> {
 	json: T;
@@ -30,6 +31,8 @@ test.describe("Payments & Notifications", () => {
 	test("mock payment creates an in-app notification", async ({
 		adminPage: page,
 	}) => {
+		await page.goto(url("/"));
+
 		const providersResult = await rpcRequest(page, {
 			path: "payments/providers",
 		});

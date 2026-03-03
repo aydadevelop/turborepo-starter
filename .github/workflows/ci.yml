@@ -92,13 +92,13 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myapp
           BETTER_AUTH_SECRET: ci-e2e-secret
-          BETTER_AUTH_URL: http://127.0.0.1:43100
-          SERVER_URL: http://127.0.0.1:43100
-          CORS_ORIGIN: http://127.0.0.1:43173
+          BETTER_AUTH_URL: http://localhost:43100
+          SERVER_URL: http://localhost:43100
+          CORS_ORIGIN: http://localhost:43173
           OPEN_ROUTER_API_KEY: ci-e2e-placeholder
           AI_MODEL: openai/gpt-5-nano
-          PUBLIC_SERVER_URL: http://127.0.0.1:43100
-          PUBLIC_ASSISTANT_URL: http://127.0.0.1:43102
+          PUBLIC_SERVER_URL: http://localhost:43100
+          PUBLIC_ASSISTANT_URL: http://localhost:43102
           PLAYWRIGHT_SKIP_SEED: "1"
 
       - name: Upload Playwright report
