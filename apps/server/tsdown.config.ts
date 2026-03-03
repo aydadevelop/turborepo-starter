@@ -7,4 +7,5 @@ export default defineConfig({
 	clean: true,
 	minify: true,
 	noExternal: [/@my-app\/.*/],
+	external: [/^better-auth/, /^@better-auth\//],
 });
