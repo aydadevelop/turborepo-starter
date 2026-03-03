@@ -15,6 +15,7 @@
   "dependencies": {
     "@hono/node-server": "^1.14.4",
     "@my-app/api": "workspace:*",
+    "@my-app/api-contract": "workspace:*",
     "@my-app/auth": "workspace:*",
     "@my-app/db": "workspace:*",
     "@my-app/env": "workspace:*",

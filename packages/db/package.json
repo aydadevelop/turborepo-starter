@@ -27,6 +27,7 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
+    "better-auth": "^1.5.0",
     "dotenv": "^17.2.2",
     "drizzle-orm": "1.0.0-beta.15-859cf75",
     "pg": "^8.16.0",

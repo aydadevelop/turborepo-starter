@@ -5,8 +5,11 @@
     ".": {
       "default": "./src/routers/index.ts"
     },
-    "./contracts/*": {
-      "default": "./src/contracts/*.ts"
+    "./contracts/recurring-task-queue": {
+      "default": "./src/contracts/recurring-task-queue.ts"
+    },
+    "./contracts/shared": {
+      "default": "./src/contracts/shared.ts"
     },
     "./routers": {
       "default": "./src/routers/index.ts"

@@ -5,7 +5,7 @@
   "scripts": {
     "dev:web:e2e": "turbo run dev:vite --filter=web -- --mode e2e --host localhost --port 43173 --strictPort",
     "dev:web:e2e:clean": "node ../../scripts/e2e-kill-ports.mjs 43173 && bun run dev:web:e2e",
-    "dev:infra:e2e": "node ../../scripts/ensure-db.mjs && set -a && . ../../.env && set +a && SERVER_PORT=43100 NOTIFICATIONS_PORT=43101 ASSISTANT_PORT=43102 SERVER_URL=http://localhost:43100 CORS_ORIGIN=http://localhost:43173 turbo run dev --filter=server --filter=assistant --filter=notifications",
+    "dev:infra:e2e": "node ../../scripts/ensure-db.mjs && { [ -f ../../.env ] && set -a && . ../../.env && set +a || true; } && SERVER_PORT=43100 NOTIFICATIONS_PORT=43101 ASSISTANT_PORT=43102 SERVER_URL=http://localhost:43100 CORS_ORIGIN=http://localhost:43173 turbo run dev --filter=server --filter=assistant --filter=notifications",
     "dev:infra:e2e:clean": "node ../../scripts/e2e-kill-ports.mjs 43100 43101 43102 && turbo run db:reset:local --filter=@my-app/db && bun run dev:infra:e2e",
     "test:e2e": "node ../../scripts/e2e-kill-ports.mjs && PLAYWRIGHT_REUSE_SERVERS=0 playwright test -c playwright.config.ts",
     "test:e2e:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 bun run test:e2e",

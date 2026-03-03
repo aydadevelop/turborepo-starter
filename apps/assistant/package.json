@@ -16,6 +16,7 @@
     "@my-app/assistant": "workspace:*",
     "@my-app/auth": "workspace:*",
     "@my-app/env": "workspace:*",
+    "@orpc/client": "^1.12.2",
     "@orpc/server": "^1.12.2",
     "hono": "^4.8.2"
   },
