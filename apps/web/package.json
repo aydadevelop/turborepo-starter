@@ -29,7 +29,7 @@
     "test:frontend:dev:ui": "PLAYWRIGHT_MANAGED_SERVERS=1 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.e2e.config.ts --ui"
   },
   "dependencies": {
-    "@better-auth/passkey": "^1.4.18",
+    "@better-auth/passkey": "^1.5.0",
     "@my-app/ai-chat": "workspace:*",
     "@my-app/assistant": "workspace:*",
     "@my-app/ui": "workspace:*",
@@ -38,7 +38,7 @@
     "@orpc/tanstack-query": "^1.12.2",
     "@tanstack/svelte-form": "^1.19.2",
     "@tanstack/svelte-query": "^5.85.3",
-    "better-auth": "^1.4.18",
+    "better-auth": "^1.5.0",
     "better-auth-telegram": "^0.3.2",
     "zod": "^4.1.13"
   },
