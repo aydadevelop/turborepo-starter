@@ -49,7 +49,9 @@
       "cache": false
     },
     "check-types": {},
-    "test": {},
+    "test": {
+      "dependsOn": ["^build"]
+    },
     "test:bundle-size": {
       "dependsOn": ["build"]
     },

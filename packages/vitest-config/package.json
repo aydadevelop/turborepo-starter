@@ -3,12 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "types": "src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./src/index.ts"
+    }
   },
   "scripts": {
+    "build": "tsdown",
     "check-types": "tsc --noEmit -p tsconfig.json",
     "lint": "cd ../.. && biome check --config-path biome.json packages/vitest-config",
     "lint:fix": "cd ../.. && biome check --config-path biome.json packages/vitest-config --write"
@@ -19,6 +23,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
     "@my-app/config": "*",
+    "tsdown": "^0.16.5",
     "typescript": "^5",
     "ultracite": "^7.2.3"
   }
