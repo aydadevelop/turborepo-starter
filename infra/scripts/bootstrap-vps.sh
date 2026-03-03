@@ -44,6 +44,16 @@ error()   { echo -e "${RED}[bootstrap]${NC} $*" >&2; exit 1; }
 [[ $EUID -eq 0 ]] || error "Run as root (sudo bash bootstrap-vps.sh)"
 [[ "${DEPLOY_USER}" != "root" ]] || error "DEPLOY_USER cannot be 'root' — choose a non-root service user (e.g. deploy)"
 
+# ── 0. Wait for dpkg lock (unattended-upgrades on fresh Ubuntu VMs) ───────────
+info "Stopping unattended-upgrades and waiting for dpkg lock..."
+systemctl stop unattended-upgrades 2>/dev/null || true
+# Kill any lingering apt/dpkg processes
+while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do
+  echo "  dpkg locked — waiting 2s..."
+  sleep 2
+done
+info "dpkg lock free"
+
 # ── 1. Docker ─────────────────────────────────────────────────────────────────
 if ! command -v docker &>/dev/null; then
   info "Installing Docker..."

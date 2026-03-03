@@ -7,16 +7,17 @@
 #   ENV defaults to "staging". Pass "production" for prod.
 #
 # What it does:
-#   1. Copies your local SSH public key → root access
-#   2. Runs bootstrap-vps.sh remotely (installs Docker, firewall, deploy user)
+#   1. Copies your local SSH public key → ubuntu user (passwordless sudo)
+#   2. Runs bootstrap-vps.sh remotely via sudo (installs Docker, firewall, deploy user)
 #   3. Generates a dedicated deploy SSH keypair for GitHub Actions
 #   4. Installs the deploy public key on the VPS
 #   5. Prints all GitHub Actions secrets to set
 #
 # Requires:
-#   - VPS root accessible via password (1gb.ru emails it on VPS creation)
+#   - VPS_PASS env var (1gb.ru panel SSH password, e.g. zEiLuKF4)
+#   - SSH login is 'ubuntu' on 1gb.ru Ubuntu 24.04 VMs (root SSH blocked)
 #   - DOMAIN, ACME_EMAIL, GHCR_USER, GHCR_TOKEN env vars (or prompted)
-#   - sshpass: brew install sshpass (for password-based first login)
+#   - sshpass: brew install sshpass
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -42,6 +43,13 @@ if [[ -z "${GHCR_TOKEN}" ]]; then
   echo
 fi
 
+VPS_USER="${VPS_USER:-ubuntu}"
+VPS_PASS="${VPS_PASS:-}"
+if [[ -z "${VPS_PASS}" ]]; then
+  read -rsp "VPS password (from 1gb.ru panel): " VPS_PASS
+  echo
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOCAL_PUBKEY="${HOME}/.ssh/id_rsa.pub"
 DEPLOY_KEY_PATH="${HOME}/.ssh/deploy_${ENV}"
@@ -52,25 +60,36 @@ echo " Setting up ${ENV} VPS at ${VPS_IP}"
 echo "═══════════════════════════════════════════════"
 echo ""
 
-# ── Step 1: Copy local public key to VPS root ─────────────────────────────────
-echo "Step 1: Installing your local SSH key on the VPS..."
-echo "  (You'll be prompted for the root password from the 1gb.ru welcome email)"
-echo ""
-ssh-copy-id -i "${LOCAL_PUBKEY}" -o StrictHostKeyChecking=no "root@${VPS_IP}"
-echo "✓ Local SSH key installed — passwordless root access enabled"
+# ── Step 1: Copy local public key to VPS ubuntu user ────────────────────────
+echo "Step 1: Installing your local SSH key on the VPS (ubuntu user)..."
+sshpass -p "${VPS_PASS}" ssh-copy-id -i "${LOCAL_PUBKEY}" \
+  -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_IP}"
+echo "✓ Local SSH key installed — passwordless ubuntu access enabled"
 echo ""
 
-# ── Step 2: Run bootstrap remotely ───────────────────────────────────────────
-echo "Step 2: Running bootstrap script on VPS..."
+# ── Step 1b: Enable passwordless sudo for ubuntu ─────────────────────────────
+echo "Step 1b: Enabling passwordless sudo for ubuntu user..."
+ssh -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_IP}" \
+  "echo '${VPS_PASS}' | sudo -S bash -c \
+    \"echo '${VPS_USER} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/${VPS_USER}-nopasswd \
+    && chmod 440 /etc/sudoers.d/${VPS_USER}-nopasswd\""
+echo "✓ Passwordless sudo enabled for ${VPS_USER}"
 echo ""
-ssh -o StrictHostKeyChecking=no "root@${VPS_IP}" \
-  DEPLOY_USER=deploy \
-  DEPLOY_PATH=/srv/app \
-  DOMAIN="${DOMAIN}" \
-  ACME_EMAIL="${ACME_EMAIL}" \
-  GHCR_USER="${GHCR_USER}" \
-  GHCR_TOKEN="${GHCR_TOKEN}" \
-  bash -s < "${SCRIPT_DIR}/bootstrap-vps.sh"
+
+# ── Step 2: Run bootstrap remotely via sudo ──────────────────────────────────
+echo "Step 2: Running bootstrap script on VPS (via sudo)..."
+echo ""
+# Copy script to VPS then run — avoids sudo TTY issues with stdin redirect
+scp -o StrictHostKeyChecking=no "${SCRIPT_DIR}/bootstrap-vps.sh" "${VPS_USER}@${VPS_IP}:/tmp/bootstrap-vps.sh"
+ssh -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_IP}" \
+  "sudo env \
+    DEPLOY_USER=deploy \
+    DEPLOY_PATH=/srv/app \
+    DOMAIN='${DOMAIN}' \
+    ACME_EMAIL='${ACME_EMAIL}' \
+    GHCR_USER='${GHCR_USER}' \
+    GHCR_TOKEN='${GHCR_TOKEN}' \
+    bash /tmp/bootstrap-vps.sh && rm /tmp/bootstrap-vps.sh"
 echo ""
 echo "✓ Bootstrap complete"
 echo ""
@@ -88,7 +107,7 @@ echo ""
 # ── Step 4: Install deploy public key on VPS ─────────────────────────────────
 echo "Step 4: Installing deploy public key on VPS (deploy user)..."
 DEPLOY_PUBKEY=$(cat "${DEPLOY_KEY_PATH}.pub")
-ssh -o StrictHostKeyChecking=no "root@${VPS_IP}" bash -s <<EOF
+ssh -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_IP}" sudo bash -s <<EOF
   mkdir -p /home/deploy/.ssh
   chmod 700 /home/deploy/.ssh
   if ! grep -qF "${DEPLOY_PUBKEY}" /home/deploy/.ssh/authorized_keys 2>/dev/null; then
@@ -106,7 +125,7 @@ echo ""
 # ── Step 5: Print GitHub Actions secrets ─────────────────────────────────────
 echo "═══════════════════════════════════════════════"
 echo " GitHub Actions Secrets — copy these now"
-echo " gh secret set -e ${ENV^} <NAME>"
+echo " gh secret set -e $(echo "${ENV}" | tr '[:lower:]' '[:upper:]') <NAME>"
 echo "═══════════════════════════════════════════════"
 echo ""
 echo "SSH_HOST=${VPS_IP}"
@@ -121,7 +140,7 @@ echo "════════════════════════�
 echo ""
 echo "To set secrets automatically, run:"
 echo ""
-echo "  ENV=${ENV^}"
+echo "  ENV=$(echo "${ENV}" | tr '[:lower:]' '[:upper:]')"
 echo "  VPS_IP=${VPS_IP}"
 echo ""
 cat <<'CMDS'
