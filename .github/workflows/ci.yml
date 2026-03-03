@@ -88,10 +88,10 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myapp
 
       - name: E2E test
-        run: bunx turbo run test:e2e --filter=@my-app/e2e-web ${{ github.event_name == 'pull_request' && '--affected' || '' }}
+        run: bunx turbo run test:e2e --filter=@my-app/e2e-web
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myapp
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET || 'ci-e2e-placeholder-secret-value-32ch' }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           BETTER_AUTH_URL: http://localhost:43100
           SERVER_URL: http://localhost:43100
           CORS_ORIGIN: http://localhost:43173
@@ -134,4 +134,3 @@ jobs:
               inputs: { environment: 'staging' },
             });
             core.info('deploy-docker.yml workflow dispatched');
-
