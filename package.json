@@ -7,7 +7,6 @@
   ],
   "type": "module",
   "scripts": {
-    "postinstall": "node scripts/patch-deps.mjs",
     "dev": "node scripts/ensure-db.mjs && set -a && . ./.env && set +a && turbo run dev --filter=server --filter=assistant --filter=notifications --filter=web",
     "build": "turbo run build",
     "build:rolldown": "turbo run build:rolldown --filter=web",

@@ -17,7 +17,7 @@ FROM base AS deps
 COPY --from=prune /app/out/json/ .
 RUN bun install --frozen-lockfile
 
-# ── prod-deps: production-only dependencies for runtime ────────────────────
+# ── prod-deps: production-only dependencies for runtime ────────────────────────────
 FROM base AS prod-deps
 COPY --from=prune /app/out/json/ .
 RUN bun install --frozen-lockfile --production
