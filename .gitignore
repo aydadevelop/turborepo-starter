@@ -9,7 +9,6 @@ build
 *.tsbuildinfo
 .git 
 .agents
-.github
 .vscode
 /scripts
 !/scripts/
