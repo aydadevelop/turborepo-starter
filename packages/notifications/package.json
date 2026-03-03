@@ -23,15 +23,15 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
-    "@my-app/db": "*",
-    "@my-app/env": "*",
+    "@my-app/db": "workspace:*",
+    "@my-app/env": "workspace:*",
     "drizzle-orm": "1.0.0-beta.15-859cf75",
     "zod": "^4.1.13"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
-    "@my-app/config": "*",
-    "@my-app/vitest-config": "*",
+    "@my-app/config": "workspace:*",
+    "@my-app/vitest-config": "workspace:*",
     "typescript": "^5",
     "ultracite": "^7.2.3",
     "vitest": "^3.2.4"

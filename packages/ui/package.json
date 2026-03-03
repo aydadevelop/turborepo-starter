@@ -35,7 +35,7 @@
     "lint:fix": "cd ../.. && biome check --config-path biome.json packages/ui --write"
   },
   "dependencies": {
-    "@my-app/tailwind-config": "*",
+    "@my-app/tailwind-config": "workspace:*",
     "bits-ui": "^2.15.5",
     "clsx": "^2.1.1",
     "layerchart": "2.0.0-next.46",
@@ -50,7 +50,7 @@
     "@biomejs/biome": "^2.4.4",
     "@internationalized/date": "^3.11.0",
     "@lucide/svelte": "^0.561.0",
-    "@my-app/config": "*",
+    "@my-app/config": "workspace:*",
     "svelte": "^5.38.1",
     "svelte-check": "^4.3.1",
     "typescript": "^5",

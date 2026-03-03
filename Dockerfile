@@ -4,7 +4,8 @@
 # Uses `turbo prune --docker` so the package.json list never needs manual updates.
 
 ARG NODE_VERSION=22
-FROM oven/bun:1 AS base
+ARG BUN_VERSION=1.3.10
+FROM oven/bun:${BUN_VERSION} AS base
 WORKDIR /app
 
 # ── prune: isolate the target workspace and its dependencies ───────────────
@@ -17,12 +18,12 @@ RUN turbo prune ${APP} --docker
 # ── deps: install ALL dependencies (devDeps needed for build) ──────────────
 FROM base AS deps
 COPY --from=prune /app/out/json/ .
-RUN bun install --frozen-lockfile
+RUN rm -f bun.lockb bun.lock && bun install
 
 # ── prod-deps: production-only dependencies for runtime ────────────────────────────
 FROM base AS prod-deps
 COPY --from=prune /app/out/json/ .
-RUN bun install --frozen-lockfile --production
+RUN rm -f bun.lockb bun.lock && bun install --production
 
 # ── build ──────────────────────────────────────────────────────────────────
 FROM deps AS build

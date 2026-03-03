@@ -11,6 +11,14 @@
 # The real native-module crash (pg) is also prevented by a
 # runtime guard in packages/db/src/test/index.ts as a second line of defence.
 
+[install]
+# Disable auto-install of peer dependencies.
+# better-auth@1.5+ bundles @better-auth/prisma-adapter which transitively pulls
+# in prisma@7.4+ → @prisma/studio-core@0.13+ (requires React as a non-optional
+# peer). This project does not use Prisma, so auto-installing those peers produces
+# an invalid lockfile that bun itself cannot parse under --frozen-lockfile.
+peer = false
+
 [test]
 preload = ["./scripts/bun-test-guard.ts"]
 testPathIgnorePatterns = [

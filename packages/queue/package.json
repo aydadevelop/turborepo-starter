@@ -10,7 +10,7 @@
     "pg-boss": "^12.14.0"
   },
   "devDependencies": {
-    "@my-app/config": "*",
+    "@my-app/config": "workspace:*",
     "typescript": "^5"
   }
 }

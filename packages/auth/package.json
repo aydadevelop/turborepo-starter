@@ -21,8 +21,8 @@
   },
   "dependencies": {
     "@better-auth/passkey": "^1.4.18",
-    "@my-app/db": "*",
-    "@my-app/env": "*",
+    "@my-app/db": "workspace:*",
+    "@my-app/env": "workspace:*",
     "better-auth": "^1.4.18",
     "better-auth-telegram": "^0.3.2",
     "dotenv": "^17.2.2",
@@ -30,8 +30,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
-    "@my-app/config": "*",
-    "@my-app/vitest-config": "*",
+    "@my-app/config": "workspace:*",
+    "@my-app/vitest-config": "workspace:*",
     "typescript": "^5",
     "ultracite": "^7.2.3",
     "vitest": "^3.2.4"

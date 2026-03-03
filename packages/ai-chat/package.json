@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@ai-sdk/svelte": "^4.0.86",
-    "@my-app/ui": "*",
+    "@my-app/ui": "workspace:*",
     "@shikijs/themes": "^3.22.0",
     "ai": "^6.0.86",
     "isomorphic-dompurify": "^3.0.0-rc.2",
@@ -37,8 +37,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
-    "@my-app/config": "*",
-    "@my-app/tailwind-config": "*",
+    "@my-app/config": "workspace:*",
+    "@my-app/tailwind-config": "workspace:*",
     "@internationalized/date": "^3.11.0",
     "@lucide/svelte": "^0.562.0",
     "bits-ui": "^2.15.5",

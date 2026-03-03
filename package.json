@@ -47,20 +47,20 @@
     "fix": "ultracite fix"
   },
   "dependencies": {
-    "@my-app/env": "*",
+    "@my-app/env": "workspace:*",
     "dotenv": "^17.3.1",
     "drizzle-orm": "1.0.0-beta.15-859cf75",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.4",
-    "@my-app/config": "*",
-    "@types/node": "^22.19.13",
+    "@biomejs/biome": "2.4.5",
+    "@my-app/config": "workspace:*",
+    "@types/node": "^25.3.3",
     "turbo": "^2.8.12",
     "typescript": "^5.9.3",
-    "ultracite": "7.2.3"
+    "ultracite": "7.2.4"
   },
-  "packageManager": "bun@1.2.22",
+  "packageManager": "bun@1.3.10",
   "overrides": {
     "drizzle-orm": "1.0.0-beta.15-859cf75"
   }

@@ -13,17 +13,17 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.14.4",
-    "@my-app/assistant": "*",
-    "@my-app/auth": "*",
-    "@my-app/env": "*",
+    "@my-app/assistant": "workspace:*",
+    "@my-app/auth": "workspace:*",
+    "@my-app/env": "workspace:*",
     "@orpc/server": "^1.12.2",
     "hono": "^4.8.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
-    "@my-app/api-contract": "*",
-    "@my-app/config": "*",
-    "@my-app/vitest-config": "*",
+    "@my-app/api-contract": "workspace:*",
+    "@my-app/config": "workspace:*",
+    "@my-app/vitest-config": "workspace:*",
     "@types/node": "^22.19.11",
     "tsdown": "^0.16.5",
     "typescript": "^5",

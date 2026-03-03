@@ -16,10 +16,10 @@
     "web": "*"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.4",
-    "@playwright/test": "^1.58.1",
-    "@types/pg": "^8.15.4",
-    "pg": "^8.16.3",
-    "ultracite": "^7.2.3"
+    "@biomejs/biome": "^2.4.5",
+    "@playwright/test": "^1.58.2",
+    "@types/pg": "^8.18.0",
+    "pg": "^8.19.0",
+    "ultracite": "^7.2.4"
   }
 }

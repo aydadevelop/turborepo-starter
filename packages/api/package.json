@@ -35,20 +35,20 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
-    "@my-app/api-contract": "*",
-    "@my-app/auth": "*",
-    "@my-app/db": "*",
-    "@my-app/env": "*",
-    "@my-app/notifications": "*",
-    "@my-app/queue": "*",
+    "@my-app/api-contract": "workspace:*",
+    "@my-app/auth": "workspace:*",
+    "@my-app/db": "workspace:*",
+    "@my-app/env": "workspace:*",
+    "@my-app/notifications": "workspace:*",
+    "@my-app/queue": "workspace:*",
     "@orpc/server": "^1.12.2",
     "drizzle-orm": "1.0.0-beta.15-859cf75",
     "zod": "^4.1.13"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
-    "@my-app/config": "*",
-    "@my-app/vitest-config": "*",
+    "@my-app/config": "workspace:*",
+    "@my-app/vitest-config": "workspace:*",
     "hono": "^4.8.2",
     "typescript": "^5",
     "ultracite": "^7.2.3",
