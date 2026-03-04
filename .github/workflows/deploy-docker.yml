@@ -102,10 +102,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Normalize SSH private key input
+        id: ssh-key
+        env:
+          RAW_SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          if [[ -z "${RAW_SSH_PRIVATE_KEY}" ]]; then
+            echo "::error::SSH_PRIVATE_KEY is empty"
+            exit 1
+          fi
+
+          # Support local act secret files where newlines are encoded as '\n'.
+          if [[ "${RAW_SSH_PRIVATE_KEY}" == *"\\n"* && "${RAW_SSH_PRIVATE_KEY}" != *$'\n'* ]]; then
+            NORMALIZED_KEY="$(printf '%b' "${RAW_SSH_PRIVATE_KEY}")"
+          else
+            NORMALIZED_KEY="${RAW_SSH_PRIVATE_KEY}"
+          fi
+
+          {
+            echo "value<<EOF"
+            printf '%s\n' "${NORMALIZED_KEY}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
       - name: Set up SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ steps.ssh-key.outputs.value }}
 
       - name: Add VPS host key
         run: |
