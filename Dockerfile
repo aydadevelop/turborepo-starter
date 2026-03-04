@@ -23,7 +23,12 @@ RUN rm -f bun.lockb bun.lock && bun install
 # ── prod-deps: production-only dependencies for runtime ────────────────────────────
 FROM base AS prod-deps
 COPY --from=prune /app/out/json/ .
-RUN rm -f bun.lockb bun.lock && bun install --production
+# Install, then hoist all nested package-level node_modules into root so that
+# packages bun placed at apps/* or packages/* level are resolvable at runtime.
+RUN rm -f bun.lockb bun.lock && bun install --production && \
+    find . -mindepth 3 -maxdepth 5 -name node_modules -type d \
+           -not -path './node_modules/*' | \
+    xargs -I{} sh -c 'cp -rn {}/* ./node_modules/ 2>/dev/null || true'
 
 # ── build ──────────────────────────────────────────────────────────────────
 FROM deps AS build

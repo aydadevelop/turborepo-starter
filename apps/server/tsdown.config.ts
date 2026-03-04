@@ -7,9 +7,10 @@ export default defineConfig({
 	clean: true,
 	minify: true,
 	platform: "node",
-	// Bundle all deps into the output — the Dockerfile only ships root
+	// Bundle ALL deps into the output — the Dockerfile only ships root
 	// node_modules, not app-level ones (turbo prune / bun workspace hoisting).
 	noExternal: [/.+/],
-	// better-auth must stay external (dynamic requires, plugin loaders)
+	// better-auth cannot be bundled (rolldown parse errors in its source);
+	// it is kept external and merged into root node_modules via Dockerfile.
 	external: [/^better-auth/, /^@better-auth\//],
 });
