@@ -87,6 +87,25 @@ bun run test:e2e:docker  # deployment-like gate (Docker Compose stack + Playwrig
 bun run ci:preflight     # one-shot local mirror of CI gates
 ```
 
+### Local GHA parity (optional)
+
+```bash
+# Validate workflow schema + expression wiring locally
+act -W .github/workflows/ci.yml --validate
+act -W .github/workflows/deploy-docker.yml --validate
+
+# Dry-run deploy workflow graph (no real SSH/deploy)
+act -W .github/workflows/deploy-docker.yml -n workflow_dispatch --input environment=staging
+
+# Run real deploy job locally through the same workflow definition
+# (uses your local secret/var files and real SSH target from those values)
+act -W .github/workflows/deploy-docker.yml workflow_dispatch \
+  -j deploy \
+  --input environment=staging \
+  --secret-file .env.staging.secrets \
+  --var-file .env.staging.vars
+```
+
 ### E2E Suite Roles
 
 - `packages/e2e-web` is the deployment-gate suite used by CI. It runs hardened cross-service user stories against near-production backend startup (`start:test`, no file watch/HMR).

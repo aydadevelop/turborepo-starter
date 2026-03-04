@@ -54,8 +54,12 @@ vps_resolve_key_path() {
   if [[ -z "${key_path}" ]]; then
     if [[ -f "${HOME}/.ssh/deploy_${env_name}" ]]; then
       key_path="${HOME}/.ssh/deploy_${env_name}"
-    else
+    elif [[ -f "${HOME}/.ssh/id_rsa" ]]; then
       key_path="${HOME}/.ssh/id_rsa"
+    else
+      # No explicit key file found. Allow SSH agent-based auth.
+      printf '\n'
+      return 0
     fi
   fi
 
@@ -67,4 +71,3 @@ vps_resolve_key_path() {
 
   printf '%s\n' "${key_path}"
 }
-

@@ -27,7 +27,7 @@ Options:
   --host <ip-or-hostname>           VPS SSH host (default: from .vps/<env>.ip)
   --user <ssh-user>                 SSH user (default: deploy)
   --port <ssh-port>                 SSH port (default: 22)
-  --key <path>                      SSH private key path (default: ~/.ssh/deploy_<env>)
+  --key <path>                      SSH private key path (default: auto-detect, else SSH agent)
   --deploy-path <path>              Remote deploy path (repeatable, default: /srv/app)
   -h, --help                        Show help
 USAGE
@@ -125,7 +125,6 @@ if [[ ! -d "${ROOT_DIR}/infra/grafana" ]]; then
 fi
 
 SSH_OPTS=(
-  -i "${KEY_PATH}"
   -p "${SSH_PORT_VALUE}"
   -o BatchMode=yes
   -o ConnectTimeout=12
@@ -133,16 +132,24 @@ SSH_OPTS=(
 )
 
 SCP_OPTS=(
-  -i "${KEY_PATH}"
   -P "${SSH_PORT_VALUE}"
   -o BatchMode=yes
   -o ConnectTimeout=12
   -o StrictHostKeyChecking=accept-new
 )
 
+if [[ -n "${KEY_PATH}" ]]; then
+  SSH_OPTS=(-i "${KEY_PATH}" "${SSH_OPTS[@]}")
+  SCP_OPTS=(-i "${KEY_PATH}" "${SCP_OPTS[@]}")
+fi
+
 echo "== VPS Config Sync =="
 echo "env=${ENV_NAME} host=${HOST} user=${SSH_USER_NAME} port=${SSH_PORT_VALUE}"
-echo "key=${KEY_PATH}"
+if [[ -n "${KEY_PATH}" ]]; then
+  echo "key=${KEY_PATH}"
+else
+  echo "key=ssh-agent/default-ssh-config"
+fi
 echo "paths=${DEPLOY_PATHS[*]}"
 echo
 

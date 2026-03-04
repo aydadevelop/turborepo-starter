@@ -33,7 +33,7 @@ Options:
   --host <ip-or-hostname>           VPS SSH host (default: from .vps/<env>.ip)
   --user <ssh-user>                 SSH user (default: deploy)
   --port <ssh-port>                 SSH port (default: 22)
-  --key <path>                      SSH private key path (default: ~/.ssh/deploy_<env>)
+  --key <path>                      SSH private key path (default: auto-detect, else SSH agent)
   --deploy-path <path>              Remote deploy path (default: /srv/app)
   --domain <fqdn>                   Public base domain to probe (default: staging.ayda.studio for staging)
   -h, --help                        Show help
@@ -103,12 +103,15 @@ vps_require_cmd ssh
 vps_require_cmd curl
 
 SSH_OPTS=(
-  -i "${KEY_PATH}"
   -p "${SSH_PORT_VALUE}"
   -o BatchMode=yes
   -o ConnectTimeout=12
   -o StrictHostKeyChecking=accept-new
 )
+
+if [[ -n "${KEY_PATH}" ]]; then
+  SSH_OPTS=(-i "${KEY_PATH}" "${SSH_OPTS[@]}")
+fi
 
 FAILURES=0
 WARNINGS=0
@@ -129,7 +132,11 @@ fail() {
 
 echo "== VPS Audit =="
 echo "env=${ENV_NAME} host=${HOST} user=${SSH_USER_NAME} port=${SSH_PORT_VALUE} deploy_path=${DEPLOY_PATH_VALUE}"
-echo "key=${KEY_PATH}"
+if [[ -n "${KEY_PATH}" ]]; then
+  echo "key=${KEY_PATH}"
+else
+  echo "key=ssh-agent/default-ssh-config"
+fi
 echo
 
 REMOTE_STATUS=0

@@ -1,6 +1,13 @@
 name: Deploy (Docker)
 
 on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: false
+        default: "production"
+        type: string
   workflow_dispatch:
     inputs:
       environment:
@@ -13,13 +20,12 @@ on:
           - staging
 
 concurrency:
-  group: deploy-docker-${{ github.ref }}-${{ github.event.inputs.environment || 'production' }}
+  group: deploy-docker-${{ github.ref }}-${{ inputs.environment || github.event.inputs.environment || 'production' }}
   cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ${{ github.repository }}
-  DEFAULT_DEPLOY_PATH: /srv/app
 
 jobs:
   build-push:
@@ -85,38 +91,35 @@ jobs:
       contents: read
       packages: read
     environment:
-      name: ${{ github.event.inputs.environment || 'production' }}
+      name: ${{ inputs.environment || github.event.inputs.environment || 'production' }}
+    env:
+      DEPLOY_ENV: ${{ inputs.environment || github.event.inputs.environment || 'production' }}
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PORT: ${{ secrets.SSH_PORT || 22 }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/srv/app' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare SSH key
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add VPS host key
         run: |
-          install -m 700 -d /tmp/codex-deploy
-          cat > /tmp/codex-deploy/deploy_key <<'EOF'
-          ${{ secrets.SSH_PRIVATE_KEY }}
-          EOF
-          chmod 600 /tmp/codex-deploy/deploy_key
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${SSH_PORT}" -H "${SSH_HOST}" >> ~/.ssh/known_hosts
 
       - name: Sync deploy config to VPS
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT || 22 }}
-          SSH_KEY_PATH: /tmp/codex-deploy/deploy_key
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}
         run: |
           bash infra/scripts/sync-vps-config.sh \
-            --env "${{ github.event.inputs.environment || 'production' }}" \
-            --deploy-path "${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}"
+            --env "${DEPLOY_ENV}" \
+            --deploy-path "${DEPLOY_PATH}"
 
       - name: Write runtime .env to VPS
         env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT || 22 }}
-          SSH_KEY_PATH: /tmp/codex-deploy/deploy_key
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD }}
@@ -138,40 +141,30 @@ jobs:
           LOKI_URL: ${{ vars.LOKI_URL }}
           GRAFANA_PORT: ${{ vars.GRAFANA_PORT }}
           GRAFANA_ALERT_EMAIL: ${{ vars.GRAFANA_ALERT_EMAIL }}
-          NODE_ENV:            ${{ vars.NODE_ENV }}
+          NODE_ENV: ${{ vars.NODE_ENV }}
           IMAGE_PREFIX: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}
           GIT_SHA: ${{ github.sha }}
         run: |
           bash infra/scripts/write-vps-env.sh \
-            --env "${{ github.event.inputs.environment || 'production' }}" \
-            --deploy-path "${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}"
+            --env "${DEPLOY_ENV}" \
+            --deploy-path "${DEPLOY_PATH}"
 
       - name: Deploy on VPS
         env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT || 22 }}
-          SSH_KEY_PATH: /tmp/codex-deploy/deploy_key
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}
           GHCR_USER: ${{ secrets.GHCR_USER || github.repository_owner }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           bash infra/scripts/deploy-vps.sh \
-            --env "${{ github.event.inputs.environment || 'production' }}" \
-            --deploy-path "${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}" \
+            --env "${DEPLOY_ENV}" \
+            --deploy-path "${DEPLOY_PATH}" \
             --ghcr-user "${GHCR_USER}"
 
       - name: Audit deploy target
         if: always()
         env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT || 22 }}
-          SSH_KEY_PATH: /tmp/codex-deploy/deploy_key
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}
           DOMAIN: ${{ vars.DOMAIN }}
         run: |
           bash infra/scripts/audit-vps.sh \
-            --env "${{ github.event.inputs.environment || 'production' }}" \
-            --deploy-path "${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}" \
-            --domain "${{ vars.DOMAIN }}"
+            --env "${DEPLOY_ENV}" \
+            --deploy-path "${DEPLOY_PATH}" \
+            --domain "${DOMAIN}"

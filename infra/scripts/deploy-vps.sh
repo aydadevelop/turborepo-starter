@@ -27,7 +27,7 @@ Options:
   --host <ip-or-hostname>           VPS SSH host (default: from .vps/<env>.ip)
   --user <ssh-user>                 SSH user (default: deploy)
   --port <ssh-port>                 SSH port (default: 22)
-  --key <path>                      SSH private key path (default: ~/.ssh/deploy_<env>)
+  --key <path>                      SSH private key path (default: auto-detect, else SSH agent)
   --deploy-path <path>              Remote deploy path (default: /srv/app)
   --ghcr-user <user>                GHCR username/org for docker login (default: $GHCR_USER)
   --no-ensure-loki                  Skip automatic loki driver install
@@ -97,16 +97,24 @@ KEY_PATH="$(vps_resolve_key_path "${KEY_PATH}" "${ENV_NAME}")"
 vps_require_cmd ssh
 
 SSH_OPTS=(
-  -i "${KEY_PATH}"
   -p "${SSH_PORT_VALUE}"
   -o BatchMode=yes
   -o ConnectTimeout=12
   -o StrictHostKeyChecking=accept-new
 )
 
+if [[ -n "${KEY_PATH}" ]]; then
+  SSH_OPTS=(-i "${KEY_PATH}" "${SSH_OPTS[@]}")
+fi
+
 echo "== VPS Deploy =="
 echo "env=${ENV_NAME} host=${HOST} user=${SSH_USER_NAME} port=${SSH_PORT_VALUE} deploy_path=${DEPLOY_PATH_VALUE}"
 echo "ensure_loki=${ENSURE_LOKI} loki_driver_version=${LOKI_DRIVER_VERSION}"
+if [[ -n "${KEY_PATH}" ]]; then
+  echo "key=${KEY_PATH}"
+else
+  echo "key=ssh-agent/default-ssh-config"
+fi
 if [[ -n "${GHCR_USER_VALUE}" && -n "${GHCR_TOKEN_VALUE}" ]]; then
   echo "ghcr_login=enabled user=${GHCR_USER_VALUE}"
 else
