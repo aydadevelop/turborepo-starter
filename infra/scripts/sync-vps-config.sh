@@ -13,6 +13,11 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=infra/scripts/lib/vps-common.sh
+source "${SCRIPT_DIR}/lib/vps-common.sh"
+ROOT_DIR="$(vps_repo_root_from_script_dir "${SCRIPT_DIR}")"
+
 usage() {
   cat <<'USAGE'
 Usage: bash infra/scripts/sync-vps-config.sh [options]
@@ -27,29 +32,6 @@ Options:
   -h, --help                        Show help
 USAGE
 }
-
-expand_path() {
-  local p="$1"
-  if [[ "${p}" == "~" ]]; then
-    printf '%s\n' "${HOME}"
-    return
-  fi
-  if [[ "${p}" == "~/"* ]]; then
-    printf '%s\n' "${HOME}/${p#~/}"
-    return
-  fi
-  printf '%s\n' "${p}"
-}
-
-require_cmd() {
-  command -v "$1" >/dev/null 2>&1 || {
-    echo "Error: required command '$1' is not installed." >&2
-    exit 1
-  }
-}
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 ENV_NAME="staging"
 HOST="${SSH_HOST:-}"
@@ -100,17 +82,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "${HOST}" ]]; then
-  ip_file="${ROOT_DIR}/.vps/${ENV_NAME}.ip"
-  if [[ -f "${ip_file}" ]]; then
-    HOST="$(tr -d '[:space:]' < "${ip_file}")"
-  fi
-fi
-
-if [[ -z "${HOST}" ]]; then
-  echo "Error: SSH host is not set. Use --host or create .vps/${ENV_NAME}.ip" >&2
-  exit 1
-fi
+HOST="$(vps_resolve_host "${HOST}" "${ROOT_DIR}" "${ENV_NAME}")"
 
 if [[ ${#DEPLOY_PATHS[@]} -eq 0 ]]; then
   DEPLOY_PATHS+=("/srv/app")
@@ -119,7 +91,7 @@ fi
 # Normalize and deduplicate deploy paths while preserving order.
 declare -a UNIQUE_PATHS=()
 for raw_path in "${DEPLOY_PATHS[@]}"; do
-  normalized_path="$(expand_path "${raw_path}")"
+  normalized_path="$(vps_expand_path "${raw_path}")"
   if [[ -z "${normalized_path}" ]]; then
     continue
   fi
@@ -138,23 +110,10 @@ for raw_path in "${DEPLOY_PATHS[@]}"; do
 done
 DEPLOY_PATHS=("${UNIQUE_PATHS[@]}")
 
-if [[ -z "${KEY_PATH}" ]]; then
-  if [[ -f "${HOME}/.ssh/deploy_${ENV_NAME}" ]]; then
-    KEY_PATH="${HOME}/.ssh/deploy_${ENV_NAME}"
-  else
-    KEY_PATH="${HOME}/.ssh/id_rsa"
-  fi
-fi
-
-KEY_PATH="$(expand_path "${KEY_PATH}")"
-if [[ ! -f "${KEY_PATH}" ]]; then
-  echo "Error: SSH key not found at '${KEY_PATH}'" >&2
-  exit 1
-fi
-
-require_cmd ssh
-require_cmd scp
-require_cmd tar
+KEY_PATH="$(vps_resolve_key_path "${KEY_PATH}" "${ENV_NAME}")"
+vps_require_cmd ssh
+vps_require_cmd scp
+vps_require_cmd tar
 
 if [[ ! -f "${ROOT_DIR}/docker-compose.yml" || ! -f "${ROOT_DIR}/docker-compose.prod.yml" ]]; then
   echo "Error: docker compose files not found in repo root." >&2

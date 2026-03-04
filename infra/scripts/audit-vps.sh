@@ -19,6 +19,11 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=infra/scripts/lib/vps-common.sh
+source "${SCRIPT_DIR}/lib/vps-common.sh"
+ROOT_DIR="$(vps_repo_root_from_script_dir "${SCRIPT_DIR}")"
+
 usage() {
   cat <<'USAGE'
 Usage: bash infra/scripts/audit-vps.sh [options]
@@ -34,29 +39,6 @@ Options:
   -h, --help                        Show help
 USAGE
 }
-
-expand_path() {
-  local p="$1"
-  if [[ "${p}" == "~" ]]; then
-    printf '%s\n' "${HOME}"
-    return
-  fi
-  if [[ "${p}" == "~/"* ]]; then
-    printf '%s\n' "${HOME}/${p#~/}"
-    return
-  fi
-  printf '%s\n' "${p}"
-}
-
-require_cmd() {
-  command -v "$1" >/dev/null 2>&1 || {
-    echo "Error: required command '$1' is not installed." >&2
-    exit 1
-  }
-}
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 ENV_NAME="staging"
 HOST="${SSH_HOST:-}"
@@ -108,31 +90,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "${HOST}" ]]; then
-  ip_file="${ROOT_DIR}/.vps/${ENV_NAME}.ip"
-  if [[ -f "${ip_file}" ]]; then
-    HOST="$(tr -d '[:space:]' < "${ip_file}")"
-  fi
-fi
-
-if [[ -z "${HOST}" ]]; then
-  echo "Error: SSH host is not set. Use --host or create .vps/${ENV_NAME}.ip" >&2
-  exit 1
-fi
-
-if [[ -z "${KEY_PATH}" ]]; then
-  if [[ -f "${HOME}/.ssh/deploy_${ENV_NAME}" ]]; then
-    KEY_PATH="${HOME}/.ssh/deploy_${ENV_NAME}"
-  else
-    KEY_PATH="${HOME}/.ssh/id_rsa"
-  fi
-fi
-
-KEY_PATH="$(expand_path "${KEY_PATH}")"
-if [[ ! -f "${KEY_PATH}" ]]; then
-  echo "Error: SSH key not found at '${KEY_PATH}'" >&2
-  exit 1
-fi
+HOST="$(vps_resolve_host "${HOST}" "${ROOT_DIR}" "${ENV_NAME}")"
+KEY_PATH="$(vps_resolve_key_path "${KEY_PATH}" "${ENV_NAME}")"
 
 if [[ -z "${DOMAIN_VALUE}" ]]; then
   if [[ "${ENV_NAME}" == "staging" ]]; then
@@ -140,8 +99,8 @@ if [[ -z "${DOMAIN_VALUE}" ]]; then
   fi
 fi
 
-require_cmd ssh
-require_cmd curl
+vps_require_cmd ssh
+vps_require_cmd curl
 
 SSH_OPTS=(
   -i "${KEY_PATH}"
