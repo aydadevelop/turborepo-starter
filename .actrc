@@ -1,0 +1,15 @@
+# act — local GitHub Actions runner configuration
+# https://github.com/nektos/act
+#
+# Run the deploy job:          act -j deploy -W .github/workflows/deploy-docker.yml
+# Dry-run (no execution):      act -j deploy -n -W .github/workflows/deploy-docker.yml
+# Run full CI on push to main: act push
+
+# Use full Ubuntu runner image (matches GitHub-hosted runner behaviour)
+-P ubuntu-latest=catthehacker/ubuntu:act-24.04
+
+# Secrets file (copy .act-secrets.example → .act-secrets and fill in values)
+--secret-file .act-secrets
+
+# Bind the current directory for local action resolution
+--bind

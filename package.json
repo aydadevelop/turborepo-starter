@@ -46,6 +46,9 @@
     "deploy:docker:local": "docker compose up -d --wait",
     "infra:preview": "cd infra/pulumi && pulumi preview",
     "infra:up": "cd infra/pulumi && pulumi up",
+    "act:secrets": "bash infra/scripts/gen-act-secrets.sh",
+    "act:deploy": "act -j deploy -W .github/workflows/deploy-docker.yml",
+    "act:deploy:dry": "act -j deploy -W .github/workflows/deploy-docker.yml -n",
     "check": "ultracite check",
     "ruler:apply": "bunx @intellectronica/ruler@latest apply --local-only",
     "fix": "ultracite fix"

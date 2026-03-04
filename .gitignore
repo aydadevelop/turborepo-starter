@@ -94,3 +94,5 @@ backups
 # END Ruler Generated Files
 /.playwright-mcp/*
 /legacy/*
+# act local secrets (copy from .act-secrets.example)
+/.act-secrets
