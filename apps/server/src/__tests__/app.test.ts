@@ -76,7 +76,7 @@ describe("app", () => {
 	it("returns JSON internal server error for unexpected exceptions", async () => {
 		const { app } = await import("../app");
 
-		const response = await app.request("/boom");
+		const response = await app.request("/health/boom");
 
 		expect(response.status).toBe(500);
 		expect(await response.json()).toEqual({ error: "Internal Server Error" });
@@ -85,7 +85,7 @@ describe("app", () => {
 	it("returns HTTPException responses unchanged", async () => {
 		const { app } = await import("../app");
 
-		const response = await app.request("/teapot");
+		const response = await app.request("/health/teapot");
 
 		expect(response.status).toBe(418);
 		expect(await response.text()).toContain("teapot");
