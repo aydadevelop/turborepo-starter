@@ -6,6 +6,10 @@ export default defineConfig({
 	outDir: "./dist",
 	clean: true,
 	minify: true,
-	noExternal: [/@my-app\/.*/],
+	platform: "node",
+	// Bundle all deps into the output — the Dockerfile only ships root
+	// node_modules, not app-level ones (turbo prune / bun workspace hoisting).
+	noExternal: [/.+/],
+	// better-auth must stay external (dynamic requires, plugin loaders)
 	external: [/^better-auth/, /^@better-auth\//],
 });
