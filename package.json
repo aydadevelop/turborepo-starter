@@ -43,9 +43,9 @@
     "db:seed": "turbo run db:seed --filter=@my-app/db --",
     "db:studio": "turbo run db:studio --filter=@my-app/db",
     "e2e:clean": "node ./scripts/e2e-clean.mjs",
-    "deploy:docker": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --pull always --wait",
-    "destroy:docker": "docker compose -f docker-compose.yml -f docker-compose.prod.yml down -v",
     "deploy:docker:local": "docker compose up -d --wait",
+    "infra:preview": "cd infra/pulumi && pulumi preview",
+    "infra:up": "cd infra/pulumi && pulumi up",
     "check": "ultracite check",
     "ruler:apply": "bunx @intellectronica/ruler@latest apply --local-only",
     "fix": "ultracite fix"

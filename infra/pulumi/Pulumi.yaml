@@ -1,0 +1,7 @@
+name: my-app-infra
+runtime:
+  name: nodejs
+  options:
+    packagemanager: bun
+main: src/
+description: VPS infrastructure — Dokku setup, DNS, app configuration

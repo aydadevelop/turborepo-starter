@@ -67,6 +67,9 @@ lerna-debug.log*
 # Traefik
 traefik/acme.json
 
+# Pulumi local state (if using --local backend)
+.pulumi/
+
 # Testing
 coverage
 .nyc_output

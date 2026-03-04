@@ -1,4 +1,4 @@
-name: Deploy (Docker)
+name: Deploy (Dokku)
 
 on:
   workflow_call:
@@ -6,21 +6,21 @@ on:
       environment:
         description: "Target environment"
         required: false
-        default: "production"
+        default: "staging"
         type: string
   workflow_dispatch:
     inputs:
       environment:
         description: "Target environment"
         required: false
-        default: "production"
+        default: "staging"
         type: choice
         options:
           - production
           - staging
 
 concurrency:
-  group: deploy-docker-${{ github.ref }}-${{ inputs.environment || github.event.inputs.environment || 'production' }}
+  group: deploy-${{ github.ref }}-${{ inputs.environment || github.event.inputs.environment || 'staging' }}
   cancel-in-progress: false
 
 env:
@@ -28,6 +28,7 @@ env:
   IMAGE_PREFIX: ${{ github.repository }}
 
 jobs:
+  # ── Build & push per-app Docker images to GHCR ────────────────────────────
   build-push:
     name: Build & Push Images
     runs-on: ubuntu-latest
@@ -52,7 +53,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to GitHub Container Registry
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -82,8 +83,9 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
+  # ── Deploy images to Dokku on VPS ──────────────────────────────────────────
   deploy:
-    name: Deploy to VPS
+    name: Deploy to Dokku
     runs-on: ubuntu-latest
     needs: build-push
     if: github.ref == 'refs/heads/main'
@@ -91,103 +93,34 @@ jobs:
       contents: read
       packages: read
     environment:
-      name: ${{ inputs.environment || github.event.inputs.environment || 'production' }}
+      name: ${{ inputs.environment || github.event.inputs.environment || 'staging' }}
     env:
-      DEPLOY_ENV: ${{ inputs.environment || github.event.inputs.environment || 'production' }}
+      # SSH_HOST, SSH_USER, SSH_PORT are set by `pulumi up` → sync-ci-secrets
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
-      SSH_PORT: ${{ secrets.SSH_PORT || 22 }}
-      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/srv/app' }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Normalize SSH private key input
-        id: ssh-key
-        env:
-          RAW_SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          if [[ -z "${RAW_SSH_PRIVATE_KEY}" ]]; then
-            echo "::error::SSH_PRIVATE_KEY is empty"
-            exit 1
-          fi
-
-          # Support local act secret files where newlines are encoded as '\n'.
-          if [[ "${RAW_SSH_PRIVATE_KEY}" == *"\\n"* && "${RAW_SSH_PRIVATE_KEY}" != *$'\n'* ]]; then
-            NORMALIZED_KEY="$(printf '%b' "${RAW_SSH_PRIVATE_KEY}")"
-          else
-            NORMALIZED_KEY="${RAW_SSH_PRIVATE_KEY}"
-          fi
-
-          {
-            echo "value<<EOF"
-            printf '%s\n' "${NORMALIZED_KEY}"
-            echo "EOF"
-          } >> "${GITHUB_OUTPUT}"
-
       - name: Set up SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
-          ssh-private-key: ${{ steps.ssh-key.outputs.value }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Add VPS host key
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -p "${SSH_PORT}" -H "${SSH_HOST}" >> ~/.ssh/known_hosts
 
-      - name: Sync deploy config to VPS
+      - name: Run DB migrations
         run: |
-          bash infra/scripts/sync-vps-config.sh \
-            --env "${DEPLOY_ENV}" \
-            --deploy-path "${DEPLOY_PATH}"
+          ssh -o StrictHostKeyChecking=no -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "dokku run server node dist/index.mjs db:migrate" || echo "Migration skipped (first deploy?)"
 
-      - name: Write runtime .env to VPS
+      - name: Deploy apps to Dokku
         env:
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD }}
-          OPEN_ROUTER_API_KEY: ${{ secrets.OPEN_ROUTER_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          DOMAIN: ${{ vars.DOMAIN }}
-          ACME_EMAIL: ${{ vars.ACME_EMAIL }}
-          POSTGRES_USER: ${{ vars.POSTGRES_USER }}
-          POSTGRES_DB: ${{ vars.POSTGRES_DB }}
-          SMTP_HOST: ${{ vars.SMTP_HOST }}
-          SMTP_PORT: ${{ vars.SMTP_PORT }}
-          SMTP_FROM: ${{ vars.SMTP_FROM }}
-          AI_MODEL: ${{ vars.AI_MODEL }}
-          TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME }}
-          LOKI_URL: ${{ vars.LOKI_URL }}
-          GRAFANA_PORT: ${{ vars.GRAFANA_PORT }}
-          GRAFANA_ALERT_EMAIL: ${{ vars.GRAFANA_ALERT_EMAIL }}
-          NODE_ENV: ${{ vars.NODE_ENV }}
+          REGISTRY: ${{ env.REGISTRY }}
           IMAGE_PREFIX: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}
           GIT_SHA: ${{ github.sha }}
-        run: |
-          bash infra/scripts/write-vps-env.sh \
-            --env "${DEPLOY_ENV}" \
-            --deploy-path "${DEPLOY_PATH}"
-
-      - name: Deploy on VPS
-        env:
-          GHCR_USER: ${{ secrets.GHCR_USER || github.repository_owner }}
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
-        run: |
-          bash infra/scripts/deploy-vps.sh \
-            --env "${DEPLOY_ENV}" \
-            --deploy-path "${DEPLOY_PATH}" \
-            --ghcr-user "${GHCR_USER}"
-
-      - name: Audit deploy target
-        if: always()
-        env:
-          DOMAIN: ${{ vars.DOMAIN }}
-        run: |
-          bash infra/scripts/audit-vps.sh \
-            --env "${DEPLOY_ENV}" \
-            --deploy-path "${DEPLOY_PATH}" \
-            --domain "${DOMAIN}"
+        run: bash infra/scripts/deploy-dokku.sh

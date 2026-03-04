@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "pulumi": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "computedHash": "2594c276957d5173b395762b0aa512ec520438995153901c1d5075cc06b61256"
+    },
+    "pulumi-typescript": {
+      "source": "dirien/claude-skills",
+      "sourceType": "github",
+      "computedHash": "5bcb152d8a3b1fe4bfd5d03ce48fca08260c6907e0a397a750c5933d89294504"
+    }
+  }
+}
