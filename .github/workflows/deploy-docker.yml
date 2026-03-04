@@ -109,6 +109,14 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
+      - name: Validate VPS connectivity
+        run: |
+          echo "Runner IP: $(curl -sf https://ifconfig.me || echo unknown)"
+          echo "Testing TCP to ${SSH_HOST}:${SSH_PORT} ..."
+          timeout 10 bash -c "echo >/dev/tcp/${SSH_HOST}/${SSH_PORT}" \
+            && echo "TCP: OPEN" \
+            || echo "TCP: BLOCKED/TIMEOUT"
+
       - name: Run DB migrations
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
