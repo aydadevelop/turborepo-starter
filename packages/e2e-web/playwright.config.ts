@@ -1,13 +1,18 @@
 import { defineConfig, devices } from "@playwright/test";
 import { getPlaywrightRuntimeEnv } from "./playwright.env";
 
+// Deployment-gate E2E suite with hardened, cross-service user stories.
 const {
 	baseURL,
+	serverURL,
 	assistantURL,
+	notificationsURL,
 	useManagedServers,
 	reuseExistingServers,
 	webServerCommand,
-	backendServerCommand,
+	serverCommand,
+	assistantCommand,
+	notificationsCommand,
 	workers,
 } = getPlaywrightRuntimeEnv();
 
@@ -59,8 +64,24 @@ export default defineConfig({
 					stderr: "pipe",
 				},
 				{
-					command: backendServerCommand,
+					command: serverCommand,
+					url: `${serverURL}/`,
+					reuseExistingServer: reuseExistingServers,
+					timeout: webServerTimeout,
+					stdout: "pipe",
+					stderr: "pipe",
+				},
+				{
+					command: assistantCommand,
 					url: `${assistantURL}/health`,
+					reuseExistingServer: reuseExistingServers,
+					timeout: webServerTimeout,
+					stdout: "pipe",
+					stderr: "pipe",
+				},
+				{
+					command: notificationsCommand,
+					url: `${notificationsURL}/health`,
 					reuseExistingServer: reuseExistingServers,
 					timeout: webServerTimeout,
 					stdout: "pipe",

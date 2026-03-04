@@ -24,9 +24,11 @@
     "test:bundle-size": "bun run build && size-limit && node ./scripts/check-page-size.mjs",
     "test:bundle-size:rolldown": "bun run build:rolldown && size-limit && node ./scripts/check-page-size.mjs",
     "test:deps": "knip --production --dependencies",
-    "test:perf": "PLAYWRIGHT_MANAGED_SERVERS=1 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.e2e.config.ts e2e/performance.spec.ts",
-    "test:frontend:dev": "PLAYWRIGHT_MANAGED_SERVERS=1 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.e2e.config.ts",
-    "test:frontend:dev:ui": "PLAYWRIGHT_MANAGED_SERVERS=1 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.e2e.config.ts --ui"
+    "test:e2e:dev": "PLAYWRIGHT_MANAGED_SERVERS=1 PLAYWRIGHT_REUSE_SERVERS=1 bunx playwright test -c playwright.e2e.config.ts",
+    "test:e2e:dev:ui": "PLAYWRIGHT_MANAGED_SERVERS=1 PLAYWRIGHT_REUSE_SERVERS=1 bunx playwright test -c playwright.e2e.config.ts --ui",
+    "test:perf": "PLAYWRIGHT_MANAGED_SERVERS=1 PLAYWRIGHT_REUSE_SERVERS=1 bunx playwright test -c playwright.e2e.config.ts e2e/performance.spec.ts",
+    "test:frontend:dev": "bun run test:e2e:dev",
+    "test:frontend:dev:ui": "bun run test:e2e:dev:ui"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.5.0",
@@ -46,6 +48,7 @@
     "@biomejs/biome": "^2.4.4",
     "@my-app/api-contract": "workspace:*",
     "@my-app/config": "workspace:*",
+    "@playwright/test": "^1.58.2",
     "@my-app/tailwind-config": "workspace:*",
     "@orpc/server": "^1.13.4",
     "@sveltejs/adapter-node": "^5.2.12",

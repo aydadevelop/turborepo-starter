@@ -9,10 +9,13 @@ const DEFAULTS = {
 	baseURL: "http://localhost:43173",
 	serverURL: "http://localhost:43100",
 	assistantURL: "http://localhost:43102",
+	notificationsURL: "http://localhost:43101",
 	workersCi: 1,
 	workersLocal: 1,
 	webServerCommand: "bun run dev:web:e2e",
-	backendServerCommand: "bun run dev:infra:e2e",
+	serverCommand: "bun run start:server:e2e",
+	assistantCommand: "bun run start:assistant:e2e",
+	notificationsCommand: "bun run start:notifications:e2e",
 } as const;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -53,12 +56,15 @@ const isLocalUrl = (value: string): boolean => {
 };
 
 export interface PlaywrightRuntimeEnv {
+	assistantCommand: string;
 	assistantURL: string;
-	backendServerCommand: string;
 	baseURL: string;
 	isRemote: boolean;
+	notificationsCommand: string;
+	notificationsURL: string;
 	reuseExistingServers: boolean;
 	serverURL: string;
+	serverCommand: string;
 	useManagedServers: boolean;
 	webServerCommand: string;
 	workers: number;
@@ -126,20 +132,27 @@ export const getPlaywrightRuntimeEnv = (): PlaywrightRuntimeEnv => {
 		"PLAYWRIGHT_ASSISTANT_URL",
 		DEFAULTS.assistantURL
 	);
+	const notificationsURL = readStringEnv(
+		"PLAYWRIGHT_NOTIFICATIONS_URL",
+		DEFAULTS.notificationsURL
+	);
 	const isCi = Boolean(process.env.CI);
 	const workers = readPositiveIntEnv(
 		"PLAYWRIGHT_WORKERS",
 		isCi ? DEFAULTS.workersCi : DEFAULTS.workersLocal
 	);
+	const legacyBackendCommand = process.env.PLAYWRIGHT_BACKEND_SERVER_COMMAND;
 
 	process.env.PLAYWRIGHT_BASE_URL = baseURL;
 	process.env.PLAYWRIGHT_SERVER_URL = serverURL;
 	process.env.PLAYWRIGHT_ASSISTANT_URL = assistantURL;
+	process.env.PLAYWRIGHT_NOTIFICATIONS_URL = notificationsURL;
 
 	cached = {
 		baseURL,
 		serverURL,
 		assistantURL,
+		notificationsURL,
 		isRemote: !isLocalUrl(baseURL),
 		useManagedServers: process.env.PLAYWRIGHT_MANAGED_SERVERS !== "0",
 		reuseExistingServers: !isCi && process.env.PLAYWRIGHT_REUSE_SERVERS !== "0",
@@ -147,9 +160,17 @@ export const getPlaywrightRuntimeEnv = (): PlaywrightRuntimeEnv => {
 			"PLAYWRIGHT_WEB_SERVER_COMMAND",
 			DEFAULTS.webServerCommand
 		),
-		backendServerCommand: readStringEnv(
-			"PLAYWRIGHT_BACKEND_SERVER_COMMAND",
-			DEFAULTS.backendServerCommand
+		serverCommand: readStringEnv(
+			"PLAYWRIGHT_SERVER_COMMAND",
+			legacyBackendCommand ?? DEFAULTS.serverCommand
+		),
+		assistantCommand: readStringEnv(
+			"PLAYWRIGHT_ASSISTANT_COMMAND",
+			DEFAULTS.assistantCommand
+		),
+		notificationsCommand: readStringEnv(
+			"PLAYWRIGHT_NOTIFICATIONS_COMMAND",
+			DEFAULTS.notificationsCommand
 		),
 		workers,
 	};

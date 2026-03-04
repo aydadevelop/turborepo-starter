@@ -116,6 +116,7 @@
         "@my-app/config": "workspace:*",
         "@my-app/tailwind-config": "workspace:*",
         "@orpc/server": "^1.13.4",
+        "@playwright/test": "^1.58.2",
         "@size-limit/file": "^12.0.0",
         "@sveltejs/adapter-node": "^5.2.12",
         "@sveltejs/kit": "^2.31.1",
@@ -278,6 +279,9 @@
     "packages/e2e-web": {
       "name": "@my-app/e2e-web",
       "dependencies": {
+        "assistant": "*",
+        "notifications": "*",
+        "server": "*",
         "web": "*",
       },
       "devDependencies": {

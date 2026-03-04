@@ -82,6 +82,18 @@ bun run lint
 bun run check-types
 bun run test
 bun run build
+bun run test:e2e   # deployment-gate stories (packages/e2e-web)
+```
+
+### E2E Suite Roles
+
+- `packages/e2e-web` is the deployment-gate suite used by CI. It runs hardened cross-service user stories against near-production backend startup (`start:test`, no file watch/HMR).
+- `apps/web` Playwright is dev-only for local progress checks and fast UI flow validation while building features.
+
+```bash
+# Dev-only checks while iterating on frontend flows
+cd apps/web
+bun run test:e2e:dev
 ```
 
 ## Database

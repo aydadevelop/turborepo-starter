@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 import { getE2ERuntimeEnv } from "./playwright.e2e.env";
 
+// Dev-only browser checks for local progress validation.
+// Deployment gate stories live in packages/e2e-web.
 const {
 	baseURL,
 	useManagedServers,

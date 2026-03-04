@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "bun --watch src/index.ts",
+    "start:test": "bun src/index.ts",
     "check-types": "tsc -b",
     "lint": "cd ../.. && biome check --config-path biome.json apps/notifications",
     "lint:fix": "cd ../.. && biome check --config-path biome.json apps/notifications --write",
