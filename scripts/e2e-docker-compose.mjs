@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -21,6 +21,24 @@ const defaults = {
 
 const log = (message) => {
 	console.log(`[e2e:docker] ${message}`);
+};
+
+const maskConnectionString = (value) =>
+	value.replace(/\/\/.*@/, "//***@");
+
+const extractPublishedPort = (portOutput) => {
+	for (const line of portOutput.split(/\r?\n/)) {
+		const trimmed = line.trim();
+		if (!trimmed) {
+			continue;
+		}
+		const match = trimmed.match(/:(\d+)$/);
+		if (match?.[1]) {
+			return match[1];
+		}
+	}
+
+	return null;
 };
 
 const runCommand = ({ command, args, env, allowFailure = false }) =>
@@ -63,6 +81,8 @@ const main = async () => {
 	const webPort = process.env.PLAYWRIGHT_WEB_PORT ?? defaults.webPort;
 	const dbHost = process.env.E2E_DB_HOST ?? "127.0.0.1";
 	const testScript = process.env.E2E_DOCKER_TEST_SCRIPT ?? defaults.testScript;
+	const explicitDatabaseUrl =
+		process.env.PLAYWRIGHT_DATABASE_URL ?? process.env.DATABASE_URL ?? null;
 	const upAttempts = Math.max(
 		1,
 		Number.parseInt(
@@ -94,12 +114,6 @@ const main = async () => {
 		PLAYWRIGHT_NOTIFICATIONS_URL:
 			process.env.PLAYWRIGHT_NOTIFICATIONS_URL ??
 			`http://localhost:${notificationsPort}`,
-		PLAYWRIGHT_DATABASE_URL:
-			process.env.PLAYWRIGHT_DATABASE_URL ??
-			`postgresql://postgres:postgres@${dbHost}:${dbPort}/myapp`,
-		DATABASE_URL:
-			process.env.DATABASE_URL ??
-			`postgresql://postgres:postgres@${dbHost}:${dbPort}/myapp`,
 	};
 
 	const composeBaseArgs = [
@@ -119,6 +133,63 @@ const main = async () => {
 			env: composeEnv,
 			allowFailure,
 		});
+
+	const runComposeCapture = (args, allowFailure = false) => {
+		try {
+			return execFileSync("docker", [...composeBaseArgs, ...args], {
+				cwd: repoRoot,
+				env: composeEnv,
+				encoding: "utf8",
+			}).trim();
+		} catch (error) {
+			if (allowFailure) {
+				return "";
+			}
+			throw error;
+		}
+	};
+
+	const resolveDatabaseConnectionString = () => {
+		if (explicitDatabaseUrl) {
+			return explicitDatabaseUrl;
+		}
+
+		const publishedPort = extractPublishedPort(
+			runComposeCapture(["port", "db", "5432"], true)
+		);
+		if (publishedPort) {
+			return `postgresql://postgres:postgres@${dbHost}:${publishedPort}/myapp`;
+		}
+
+		const dbContainerId = runComposeCapture(["ps", "-q", "db"], true)
+			.split(/\s+/)
+			.find(Boolean);
+		if (dbContainerId) {
+			try {
+				const dbContainerIp = execFileSync(
+					"docker",
+					[
+						"inspect",
+						"-f",
+						"{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
+						dbContainerId,
+					],
+					{
+						cwd: repoRoot,
+						env: composeEnv,
+						encoding: "utf8",
+					}
+				).trim();
+				if (dbContainerIp) {
+					return `postgresql://postgres:postgres@${dbContainerIp}:5432/myapp`;
+				}
+			} catch {
+				// Fallback to the configured host/port below.
+			}
+		}
+
+		return `postgresql://postgres:postgres@${dbHost}:${dbPort}/myapp`;
+	};
 
 	const down = async () => {
 		await runCompose(["down", "--volumes", "--remove-orphans"], true);
@@ -155,6 +226,16 @@ const main = async () => {
 				await down();
 			}
 		}
+
+		const resolvedDatabaseUrl = resolveDatabaseConnectionString();
+		testEnv.PLAYWRIGHT_DATABASE_URL =
+			process.env.PLAYWRIGHT_DATABASE_URL ?? resolvedDatabaseUrl;
+		testEnv.DATABASE_URL = process.env.DATABASE_URL ?? resolvedDatabaseUrl;
+		log(
+			`Using PostgreSQL endpoint ${maskConnectionString(
+				testEnv.PLAYWRIGHT_DATABASE_URL
+			)}`
+		);
 
 		log(`Running Playwright against Docker stack via script "${testScript}"`);
 		await runCommand({
