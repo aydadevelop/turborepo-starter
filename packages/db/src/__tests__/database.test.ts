@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { assistantChat, assistantMessage } from "../schema/assistant";
 import { invitation, member, organization, user } from "../schema/auth";
@@ -13,23 +13,17 @@ import {
 } from "../schema/notification";
 import { todo } from "../schema/todo";
 import {
+	bootstrapTestDatabase,
 	clearTestDatabase,
-	createTestDatabase,
 	type TestDatabase,
 } from "../test";
 
 describe("Test Database Setup", () => {
+	const testDatabase = bootstrapTestDatabase({ seedStrategy: "beforeEach" });
 	let db: TestDatabase;
-	let close: () => void;
 
-	beforeEach(async () => {
-		const testDb = await createTestDatabase();
-		db = testDb.db;
-		close = testDb.close;
-	});
-
-	afterEach(() => {
-		close();
+	beforeEach(() => {
+		db = testDatabase.db;
 	});
 
 	describe("User table", () => {
