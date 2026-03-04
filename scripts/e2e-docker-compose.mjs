@@ -61,6 +61,7 @@ const main = async () => {
 	const notificationsPort =
 		process.env.PLAYWRIGHT_NOTIFICATIONS_PORT ?? defaults.notificationsPort;
 	const webPort = process.env.PLAYWRIGHT_WEB_PORT ?? defaults.webPort;
+	const dbHost = process.env.E2E_DB_HOST ?? "127.0.0.1";
 	const testScript = process.env.E2E_DOCKER_TEST_SCRIPT ?? defaults.testScript;
 	const upAttempts = Math.max(
 		1,
@@ -93,9 +94,12 @@ const main = async () => {
 		PLAYWRIGHT_NOTIFICATIONS_URL:
 			process.env.PLAYWRIGHT_NOTIFICATIONS_URL ??
 			`http://localhost:${notificationsPort}`,
+		PLAYWRIGHT_DATABASE_URL:
+			process.env.PLAYWRIGHT_DATABASE_URL ??
+			`postgresql://postgres:postgres@${dbHost}:${dbPort}/myapp`,
 		DATABASE_URL:
 			process.env.DATABASE_URL ??
-			`postgresql://postgres:postgres@localhost:${dbPort}/myapp`,
+			`postgresql://postgres:postgres@${dbHost}:${dbPort}/myapp`,
 	};
 
 	const composeBaseArgs = [

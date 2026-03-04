@@ -14,7 +14,7 @@ const repoRoot = path.resolve(__dirname, "../../..");
 const seedScriptPath = path.resolve(__dirname, "./seed-local.mjs");
 
 const DEFAULT_DATABASE_URL =
-	"postgresql://postgres:postgres@localhost:5432/myapp";
+	"postgresql://postgres:postgres@127.0.0.1:5432/myapp";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -30,7 +30,10 @@ const getArgValue = (flagName) => {
 export const waitForDatabase = async ({
 	timeoutMs = 60_000,
 	pollIntervalMs = 500,
-	connectionString = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
+	connectionString =
+		process.env.PLAYWRIGHT_DATABASE_URL ??
+		process.env.DATABASE_URL ??
+		DEFAULT_DATABASE_URL,
 } = {}) => {
 	const startedAt = Date.now();
 
