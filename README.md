@@ -82,13 +82,16 @@ bun run lint
 bun run check-types
 bun run test
 bun run build
-bun run test:e2e   # deployment-gate stories (packages/e2e-web)
+bun run test:e2e   # deployment-gate stories (packages/e2e-web, host-managed services)
+bun run test:e2e:docker  # deployment-like gate (Docker Compose stack + Playwright)
+bun run ci:preflight     # one-shot local mirror of CI gates
 ```
 
 ### E2E Suite Roles
 
 - `packages/e2e-web` is the deployment-gate suite used by CI. It runs hardened cross-service user stories against near-production backend startup (`start:test`, no file watch/HMR).
 - `apps/web` Playwright is dev-only for local progress checks and fast UI flow validation while building features.
+- `bun run test:e2e:docker` starts `db/server/assistant/notifications/web` via Docker Compose (same Dockerfiles as deploy), runs the same `packages/e2e-web` stories, and tears everything down.
 
 ```bash
 # Dev-only checks while iterating on frontend flows
@@ -118,6 +121,27 @@ DOMAIN=example.com ACME_EMAIL=you@example.com GHCR_TOKEN=ghp_xxx GHCR_USER=your-
 
 The script installs Docker, Loki log driver, fail2ban, UFW firewall, and creates the app directory with an `.env` template.
 
+### Audit and recover VPS config
+
+Use these script-first checks when CI says deploy was dispatched but the server did not update:
+
+```bash
+# 1) Audit remote host + container health + public endpoints
+bash infra/scripts/audit-vps.sh --env staging --deploy-path /srv/app-staging --domain staging.ayda.studio
+
+# 2) If compose files are missing at DEPLOY_PATH, sync required config
+bash infra/scripts/sync-vps-config.sh --env staging --deploy-path /srv/app-staging
+
+# 3) Re-run audit to confirm everything is healthy
+bash infra/scripts/audit-vps.sh --env staging --deploy-path /srv/app-staging --domain staging.ayda.studio
+```
+
+If your staging `DEPLOY_PATH` is uncertain, sync both common paths:
+
+```bash
+bash infra/scripts/sync-vps-config.sh --env staging --deploy-path /srv/app --deploy-path /srv/app-staging
+```
+
 ### Ongoing deploys
 
 Push to `main` — GitHub Actions builds images, pushes to GHCR, and SSH-deploys to the VPS automatically.
@@ -140,7 +164,7 @@ bun run destroy:docker
 | `SSH_USER` | Deploy user (e.g. `deploy`) |
 | `SSH_PRIVATE_KEY` | Private key for SSH auth |
 | `SSH_PORT` | SSH port (optional, default 22) |
-| `DEPLOY_PATH` | App directory on VPS (optional, default `~/app`) |
+| `DEPLOY_PATH` | App directory on VPS (optional, default `/srv/app`) |
 
 ## Observability
 

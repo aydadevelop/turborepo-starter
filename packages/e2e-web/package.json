@@ -13,8 +13,10 @@
     "dev:infra:e2e:clean": "node ../../scripts/e2e-kill-ports.mjs 43100 43101 43102 && turbo run db:reset:local --filter=@my-app/db && bun run start:infra:e2e",
     "test:e2e": "node ../../scripts/e2e-kill-ports.mjs && PLAYWRIGHT_REUSE_SERVERS=0 playwright test -c playwright.config.ts",
     "test:e2e:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 bun run test:e2e",
+    "test:e2e:external": "PLAYWRIGHT_MANAGED_SERVERS=0 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.config.ts",
     "test:e2e:ui": "node ../../scripts/e2e-kill-ports.mjs && PLAYWRIGHT_REUSE_SERVERS=0 playwright test -c playwright.config.ts --ui",
-    "test:e2e:ui:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 bun run test:e2e:ui"
+    "test:e2e:ui:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 bun run test:e2e:ui",
+    "test:e2e:ui:external": "PLAYWRIGHT_MANAGED_SERVERS=0 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.config.ts --ui"
   },
   "dependencies": {
     "assistant": "*",

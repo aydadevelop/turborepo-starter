@@ -79,7 +79,30 @@
         "PLAYWRIGHT_SEED_ANCHOR_DATE"
       ]
     },
+    "test:e2e:external": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "passThroughEnv": [
+        "PLAYWRIGHT_*",
+        "BASE_PATH",
+        "PLAYWRIGHT_SKIP_SEED",
+        "PLAYWRIGHT_SEED_SCENARIO",
+        "PLAYWRIGHT_SEED_ANCHOR_DATE"
+      ]
+    },
     "test:e2e:ui": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": [
+        "PLAYWRIGHT_*",
+        "BASE_PATH",
+        "PLAYWRIGHT_SKIP_SEED",
+        "PLAYWRIGHT_SEED_SCENARIO",
+        "PLAYWRIGHT_SEED_ANCHOR_DATE"
+      ]
+    },
+    "test:e2e:ui:external": {
       "dependsOn": ["^build"],
       "cache": false,
       "persistent": true,

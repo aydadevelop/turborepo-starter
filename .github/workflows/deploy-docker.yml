@@ -19,6 +19,7 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ${{ github.repository }}
+  DEFAULT_DEPLOY_PATH: /srv/app
 
 jobs:
   build-push:
@@ -126,7 +127,12 @@ jobs:
           envs: BETTER_AUTH_SECRET,POSTGRES_PASSWORD,GRAFANA_PASSWORD,OPEN_ROUTER_API_KEY,OPENAI_API_KEY,TELEGRAM_BOT_TOKEN,TELEGRAM_CHAT_ID,SMTP_USER,SMTP_PASS,DOMAIN,ACME_EMAIL,POSTGRES_USER,POSTGRES_DB,SMTP_HOST,SMTP_PORT,SMTP_FROM,AI_MODEL,TELEGRAM_BOT_USERNAME,LOKI_URL,GRAFANA_PORT,GRAFANA_ALERT_EMAIL,NODE_ENV,IMAGE_PREFIX,GIT_SHA
           script: |
             set -euo pipefail
-            DEPLOY_PATH="${{ secrets.DEPLOY_PATH || '/srv/app' }}"
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}"
+            if [[ "${DEPLOY_PATH}" == "~" ]]; then
+              DEPLOY_PATH="${HOME}"
+            elif [[ "${DEPLOY_PATH}" == "~/"* ]]; then
+              DEPLOY_PATH="${HOME}/${DEPLOY_PATH#~/}"
+            fi
             mkdir -p "${DEPLOY_PATH}"
             # Derive all URLs from DOMAIN — single source of truth.
             BETTER_AUTH_URL="https://${DOMAIN}"
@@ -204,7 +210,20 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             set -euo pipefail
-            cd ${{ secrets.DEPLOY_PATH || '~/app' }}
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}"
+            if [[ "${DEPLOY_PATH}" == "~" ]]; then
+              DEPLOY_PATH="${HOME}"
+            elif [[ "${DEPLOY_PATH}" == "~/"* ]]; then
+              DEPLOY_PATH="${HOME}/${DEPLOY_PATH#~/}"
+            fi
+            cd "${DEPLOY_PATH}"
+
+            if [[ ! -f docker-compose.yml || ! -f docker-compose.prod.yml ]]; then
+              echo "::error::Missing docker-compose.yml or docker-compose.prod.yml in ${DEPLOY_PATH}."
+              echo "::error::Run infra/scripts/bootstrap-vps.sh once or copy compose files into ${DEPLOY_PATH}."
+              ls -la "${DEPLOY_PATH}" || true
+              exit 1
+            fi
 
             # Record the images currently running so we can roll back.
             docker compose ps --format json 2>/dev/null | tee /tmp/pre-deploy-state.json || true
