@@ -168,6 +168,8 @@ bun run destroy:docker
 | `SSH_PRIVATE_KEY` | Private key for SSH auth |
 | `SSH_PORT` | SSH port (optional, default 22) |
 | `DEPLOY_PATH` | App directory on VPS (optional, default `/srv/app`) |
+| `GHCR_USER` | Optional override for GHCR login user |
+| `GHCR_TOKEN` | Optional PAT (`read:packages`) if `GITHUB_TOKEN` cannot pull |
 
 ## Observability
 
