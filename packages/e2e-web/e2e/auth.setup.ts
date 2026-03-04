@@ -10,7 +10,9 @@ const signInAndSaveState = async (
 	credentials: { email: string; password: string },
 	storagePath: string
 ) => {
-	await page.goto(url("/"));
+	// Setup only needs a navigable document before API sign-in; waiting for full
+	// `load` can flake under dev-server warmup.
+	await page.goto(url("/"), { waitUntil: "domcontentloaded" });
 
 	const response = await page.context().request.post(
 		`${SERVER_URL}/api/auth/sign-in/email`,

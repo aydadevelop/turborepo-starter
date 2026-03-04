@@ -16,12 +16,7 @@ RUN turbo prune web --docker
 # ── deps: install ALL dependencies (devDeps needed for build) ──────────────
 FROM base AS deps
 COPY --from=prune /app/out/json/ .
-RUN rm -f bun.lockb bun.lock && bun install
-
-# ── prod-deps: production-only dependencies for runtime ────────────────────────────
-FROM base AS prod-deps
-COPY --from=prune /app/out/json/ .
-RUN rm -f bun.lockb bun.lock && bun install --production   
+RUN bun install
 
 # ── build ──────────────────────────────────────────────────────────────────
 FROM deps AS build
@@ -30,15 +25,15 @@ WORKDIR /app/apps/web
 RUN bun run build
 
 # ── runtime ────────────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-slim AS runtime
-RUN addgroup --system --gid 1001 app && \
-    adduser --system --uid 1001 --ingroup app app
+# Reuse the bun image (already pulled in base stage — no extra network pull).
+FROM oven/bun:${BUN_VERSION} AS runtime
+# oven/bun ships with a non-root 'bun' user (uid 1000) — use it directly.
 WORKDIR /app
 
-COPY --from=build --chown=app:app /app/apps/web/build ./build
-COPY --from=prod-deps --chown=app:app /app/node_modules ./node_modules
+COPY --from=build --chown=bun:bun /app/apps/web/build ./build
+COPY --from=deps --chown=bun:bun /app/node_modules ./node_modules
 
-USER app
+USER bun
 ENV NODE_ENV=production
 EXPOSE 3000
-CMD ["node", "build/index.js"]
+CMD ["bun", "run", "build/index.js"]

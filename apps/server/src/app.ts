@@ -23,8 +23,8 @@ app.use("/*", corsMiddleware);
 
 app.route("/", authRoutes);
 app.route("/", paymentWebhookRoutes);
+app.route("/health", healthRoutes);
 app.use("/*", rpcMiddleware);
-app.route("/", healthRoutes);
 
 app.notFound((c) => {
 	return c.json({ error: "Not Found" }, 404);

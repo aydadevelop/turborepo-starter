@@ -11,7 +11,7 @@ export const app = new Hono();
 app.use(logger());
 app.use("/*", corsMiddleware);
 
-app.route("/", healthRoutes);
+app.route("/health", healthRoutes);
 app.use("/*", rpcMiddleware);
 
 app.notFound((c) => {

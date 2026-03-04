@@ -18,17 +18,7 @@ RUN turbo prune ${APP} --docker
 # ── deps: install ALL dependencies (devDeps needed for build) ──────────────
 FROM base AS deps
 COPY --from=prune /app/out/json/ .
-RUN rm -f bun.lockb bun.lock && bun install
-
-# ── prod-deps: production-only dependencies for runtime ────────────────────────────
-FROM base AS prod-deps
-COPY --from=prune /app/out/json/ .
-# Install, then hoist all nested package-level node_modules into root so that
-# packages bun placed at apps/* or packages/* level are resolvable at runtime.
-RUN rm -f bun.lockb bun.lock && bun install --production && \
-    find . -mindepth 3 -maxdepth 5 -name node_modules -type d \
-           -not -path './node_modules/*' | \
-    xargs -I{} sh -c 'cp -rn {}/* ./node_modules/ 2>/dev/null || true'
+RUN bun install
 
 # ── build ──────────────────────────────────────────────────────────────────
 FROM deps AS build
@@ -38,16 +28,25 @@ WORKDIR /app/apps/${APP}
 RUN bun run build
 
 # ── runtime ────────────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-slim AS runtime
-RUN addgroup --system --gid 1001 app && \
-    adduser --system --uid 1001 --ingroup app app
+# Reuse the bun image (already pulled in base stage — no extra network pull).
+FROM oven/bun:${BUN_VERSION} AS runtime
 WORKDIR /app
 
-ARG APP=server
-COPY --from=build --chown=app:app /app/apps/${APP}/dist ./dist
-COPY --from=prod-deps --chown=app:app /app/node_modules ./node_modules
+# Install packages that tsdown cannot bundle (rolldown parse errors in better-auth source).
+# Everything else is inlined in dist/ via noExternal:[/.+/].
+# Place before COPY so this layer is cached independently of source changes.
+RUN echo '{"type":"module"}' > package.json && \
+    bun add \
+      'better-auth@^1.5.0' \
+      '@better-auth/drizzle-adapter@^1.5.0' \
+      '@better-auth/passkey@^1.5.0' \
+      'better-auth-telegram@^0.3.2'
 
-USER app
+ARG APP=server
+# oven/bun ships with a non-root 'bun' user (uid 1000) — use it directly.
+COPY --from=build --chown=bun:bun /app/apps/${APP}/dist ./dist
+
+USER bun
 ENV NODE_ENV=production
 EXPOSE 3000
-CMD ["node", "dist/index.mjs"]
+CMD ["bun", "run", "dist/index.mjs"]

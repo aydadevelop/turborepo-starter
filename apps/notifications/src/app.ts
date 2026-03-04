@@ -9,7 +9,7 @@ export const app = new Hono();
 
 app.use(logger());
 app.use("/*", corsMiddleware);
-app.route("/", healthRoutes);
+app.route("/health", healthRoutes);
 
 app.notFound((c) => {
 	return c.json({ error: "Not Found" }, 404);

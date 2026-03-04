@@ -65,7 +65,7 @@ export default defineConfig({
 				},
 				{
 					command: serverCommand,
-					url: `${serverURL}/`,
+					url: `${serverURL}/health`,
 					reuseExistingServer: reuseExistingServers,
 					timeout: webServerTimeout,
 					stdout: "pipe",

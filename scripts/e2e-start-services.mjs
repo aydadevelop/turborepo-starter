@@ -77,23 +77,44 @@ const parseArgs = (argv) => {
 };
 
 const normalizeRuntimeEnv = () => {
+	const webPort = process.env.PLAYWRIGHT_WEB_PORT ?? "43173";
+	const serverPort = process.env.PLAYWRIGHT_SERVER_PORT ?? "43100";
+	const notificationsPort = process.env.PLAYWRIGHT_NOTIFICATIONS_PORT ?? "43101";
+	const assistantPort = process.env.PLAYWRIGHT_ASSISTANT_PORT ?? "43102";
+	const webOrigin = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${webPort}`;
+	const serverUrl =
+		process.env.PLAYWRIGHT_SERVER_URL ?? `http://localhost:${serverPort}`;
+	const assistantUrl =
+		process.env.PLAYWRIGHT_ASSISTANT_URL ??
+		`http://localhost:${assistantPort}`;
+
 	const currentSecret = process.env.BETTER_AUTH_SECRET ?? "";
 	if (currentSecret.length < 32) {
 		process.env.BETTER_AUTH_SECRET = "e2e-local-secret-0123456789-abcdef";
 	}
 
-	process.env.BETTER_AUTH_URL =
-		process.env.BETTER_AUTH_URL ?? "http://localhost:43100";
 	process.env.OPEN_ROUTER_API_KEY =
 		process.env.OPEN_ROUTER_API_KEY ?? "e2e-openrouter-placeholder";
 	process.env.AI_MODEL = process.env.AI_MODEL ?? "openai/gpt-5-nano:nitro";
 
-	process.env.SERVER_PORT = process.env.SERVER_PORT ?? "43100";
-	process.env.NOTIFICATIONS_PORT = process.env.NOTIFICATIONS_PORT ?? "43101";
-	process.env.ASSISTANT_PORT = process.env.ASSISTANT_PORT ?? "43102";
+	process.env.SERVER_PORT = serverPort;
+	process.env.NOTIFICATIONS_PORT = notificationsPort;
+	process.env.ASSISTANT_PORT = assistantPort;
 
-	process.env.SERVER_URL = process.env.SERVER_URL ?? "http://localhost:43100";
-	process.env.CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:43173";
+	process.env.SERVER_URL = serverUrl;
+	process.env.BETTER_AUTH_URL = serverUrl;
+	process.env.PUBLIC_SERVER_URL = serverUrl;
+	process.env.ASSISTANT_URL = assistantUrl;
+	process.env.PUBLIC_ASSISTANT_URL = assistantUrl;
+
+	const corsOrigins = new Set(
+		(process.env.CORS_ORIGIN ?? "")
+			.split(",")
+			.map((origin) => origin.trim())
+			.filter(Boolean)
+	);
+	corsOrigins.add(webOrigin);
+	process.env.CORS_ORIGIN = [...corsOrigins].join(",");
 };
 
 const runCommand = (command, args) =>
