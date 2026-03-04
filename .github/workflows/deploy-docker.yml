@@ -81,11 +81,34 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-push
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: read
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Prepare SSH key for script-based deploy
+        run: |
+          install -m 700 -d /tmp/codex-deploy
+          cat > /tmp/codex-deploy/deploy_key <<'EOF'
+          ${{ secrets.SSH_PRIVATE_KEY }}
+          EOF
+          chmod 600 /tmp/codex-deploy/deploy_key
+
+      - name: Sync deploy config to VPS
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT || 22 }}
+          SSH_KEY_PATH: /tmp/codex-deploy/deploy_key
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}
+        run: |
+          bash infra/scripts/sync-vps-config.sh \
+            --env "${{ github.event.inputs.environment || 'production' }}" \
+            --deploy-path "${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}"
 
       - name: Write .env to VPS
         # Builds /srv/app/.env from GitHub Secrets + Variables so you never
@@ -203,11 +226,15 @@ jobs:
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
+          envs: GHCR_USER,GHCR_TOKEN
           script: |
             set -euo pipefail
             DEPLOY_PATH="${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}"
@@ -227,6 +254,9 @@ jobs:
 
             # Record the images currently running so we can roll back.
             docker compose ps --format json 2>/dev/null | tee /tmp/pre-deploy-state.json || true
+
+            # Authenticate to GHCR before pulling private images.
+            echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin >/dev/null
 
             # Pull all new images before taking any service down.
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull

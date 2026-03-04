@@ -132,7 +132,10 @@ bash infra/scripts/audit-vps.sh --env staging --deploy-path /srv/app-staging --d
 # 2) If compose files are missing at DEPLOY_PATH, sync required config
 bash infra/scripts/sync-vps-config.sh --env staging --deploy-path /srv/app-staging
 
-# 3) Re-run audit to confirm everything is healthy
+# 3) Run deploy flow remotely (pull, migrate, up --wait)
+bash infra/scripts/deploy-vps.sh --env staging --deploy-path /srv/app-staging
+
+# 4) Re-run audit to confirm everything is healthy
 bash infra/scripts/audit-vps.sh --env staging --deploy-path /srv/app-staging --domain staging.ayda.studio
 ```
 

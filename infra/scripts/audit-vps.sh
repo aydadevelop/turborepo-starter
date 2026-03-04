@@ -195,8 +195,10 @@ docker compose version
 
 echo
 echo "== Docker Loki plugin =="
-if docker plugin ls --format '{{.Name}}' | grep -qx 'loki'; then
-  echo "loki plugin: installed"
+if docker plugin ls --format '{{.Name}} {{.Enabled}}' | grep -Eq '^loki(:latest)?[[:space:]]+true$'; then
+  echo "loki plugin: installed and enabled"
+elif docker plugin ls --format '{{.Name}}' | grep -Eq '^loki(:latest)?$'; then
+  echo "WARN: loki plugin is installed but disabled"
 else
   echo "WARN: loki plugin is missing"
 fi
