@@ -26,6 +26,14 @@ const log = (message) => {
 const maskConnectionString = (value) =>
 	value.replace(/\/\/.*@/, "//***@");
 
+const parsePort = (value) => {
+	const parsed = Number.parseInt(String(value ?? ""), 10);
+	if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65_535) {
+		return null;
+	}
+	return parsed;
+};
+
 const extractPublishedPort = (portOutput) => {
 	for (const line of portOutput.split(/\r?\n/)) {
 		const trimmed = line.trim();
@@ -33,12 +41,32 @@ const extractPublishedPort = (portOutput) => {
 			continue;
 		}
 		const match = trimmed.match(/:(\d+)$/);
-		if (match?.[1]) {
-			return match[1];
+		const parsedPort = parsePort(match?.[1]);
+		if (parsedPort) {
+			return String(parsedPort);
 		}
 	}
 
 	return null;
+};
+
+const normalizeExplicitDatabaseUrl = (value) => {
+	if (!value) {
+		return null;
+	}
+
+	try {
+		const parsed = new URL(value);
+		const isPostgresProtocol =
+			parsed.protocol === "postgres:" || parsed.protocol === "postgresql:";
+		if (isPostgresProtocol && parsed.port === "0") {
+			return null;
+		}
+	} catch {
+		// Keep non-URL values untouched; downstream code will surface invalid URLs.
+	}
+
+	return value;
 };
 
 const runCommand = ({ command, args, env, allowFailure = false }) =>
@@ -81,8 +109,16 @@ const main = async () => {
 	const webPort = process.env.PLAYWRIGHT_WEB_PORT ?? defaults.webPort;
 	const dbHost = process.env.E2E_DB_HOST ?? "127.0.0.1";
 	const testScript = process.env.E2E_DOCKER_TEST_SCRIPT ?? defaults.testScript;
-	const explicitDatabaseUrl =
+	const rawExplicitDatabaseUrl =
 		process.env.PLAYWRIGHT_DATABASE_URL ?? process.env.DATABASE_URL ?? null;
+	const explicitDatabaseUrl = normalizeExplicitDatabaseUrl(
+		rawExplicitDatabaseUrl
+	);
+	if (rawExplicitDatabaseUrl && !explicitDatabaseUrl) {
+		log(
+			"Ignoring explicit database URL because it uses invalid port 0; resolving from Docker stack instead"
+		);
+	}
 	const upAttempts = Math.max(
 		1,
 		Number.parseInt(
@@ -154,6 +190,8 @@ const main = async () => {
 			return explicitDatabaseUrl;
 		}
 
+		const fallbackHostPort = parsePort(dbPort) ?? parsePort(defaults.dbPort) ?? 5432;
+
 		const publishedPort = extractPublishedPort(
 			runComposeCapture(["port", "db", "5432"], true)
 		);
@@ -188,7 +226,7 @@ const main = async () => {
 			}
 		}
 
-		return `postgresql://postgres:postgres@${dbHost}:${dbPort}/myapp`;
+		return `postgresql://postgres:postgres@${dbHost}:${fallbackHostPort}/myapp`;
 	};
 
 	const down = async () => {

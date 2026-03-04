@@ -47,8 +47,8 @@
     "infra:preview": "cd infra/pulumi && pulumi preview",
     "infra:up": "cd infra/pulumi && pulumi up",
     "act:secrets": "bash infra/scripts/gen-act-secrets.sh",
-    "act:deploy": "act -j deploy -W .github/workflows/deploy-docker.yml",
-    "act:deploy:dry": "act -j deploy -W .github/workflows/deploy-docker.yml -n",
+    "act:deploy": "act -j deploy -W .github/workflows/deploy-docker.yml --container-architecture linux/amd64 --env DOCKER_API_VERSION=1.41",
+    "act:deploy:dry": "act -j deploy -W .github/workflows/deploy-docker.yml --container-architecture linux/amd64 --env DOCKER_API_VERSION=1.41 -n",
     "check": "ultracite check",
     "ruler:apply": "bunx @intellectronica/ruler@latest apply --local-only",
     "fix": "ultracite fix"
