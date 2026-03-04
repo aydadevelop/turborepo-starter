@@ -12,7 +12,7 @@
 services:
   db:
     restart: "no"
-    ports:
+    ports: !reset
       - "${E2E_DB_PORT:-55432}:5432"
 
   smtp-server:
