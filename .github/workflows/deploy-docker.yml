@@ -13,7 +13,7 @@ on:
           - staging
 
 concurrency:
-  group: deploy-docker-${{ github.ref }}
+  group: deploy-docker-${{ github.ref }}-${{ github.event.inputs.environment || 'production' }}
   cancel-in-progress: false
 
 env:
@@ -90,7 +90,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare SSH key for script-based deploy
+      - name: Prepare SSH key
         run: |
           install -m 700 -d /tmp/codex-deploy
           cat > /tmp/codex-deploy/deploy_key <<'EOF'
@@ -110,172 +110,68 @@ jobs:
             --env "${{ github.event.inputs.environment || 'production' }}" \
             --deploy-path "${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}"
 
-      - name: Write .env to VPS
-        # Builds /srv/app/.env from GitHub Secrets + Variables so you never
-        # have to manually SSH in to manage environment config.
-        uses: appleboy/ssh-action@v1
+      - name: Write runtime .env to VPS
         env:
-          # ── Secrets (encrypted in GitHub) ─────────────────────────────────
-          BETTER_AUTH_SECRET:  ${{ secrets.BETTER_AUTH_SECRET }}
-          POSTGRES_PASSWORD:   ${{ secrets.POSTGRES_PASSWORD }}
-          GRAFANA_PASSWORD:    ${{ secrets.GRAFANA_PASSWORD }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT || 22 }}
+          SSH_KEY_PATH: /tmp/codex-deploy/deploy_key
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD }}
           OPEN_ROUTER_API_KEY: ${{ secrets.OPEN_ROUTER_API_KEY }}
-          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
-          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID:    ${{ secrets.TELEGRAM_CHAT_ID }}
-          SMTP_USER:           ${{ secrets.SMTP_USER }}
-          SMTP_PASS:           ${{ secrets.SMTP_PASS }}
-          # ── Variables (non-sensitive, visible in GitHub UI) ─────────────
-          DOMAIN:              ${{ vars.DOMAIN }}
-          ACME_EMAIL:          ${{ vars.ACME_EMAIL }}
-          POSTGRES_USER:       ${{ vars.POSTGRES_USER }}
-          POSTGRES_DB:         ${{ vars.POSTGRES_DB }}
-          SMTP_HOST:           ${{ vars.SMTP_HOST }}
-          SMTP_PORT:           ${{ vars.SMTP_PORT }}
-          SMTP_FROM:           ${{ vars.SMTP_FROM }}
-          AI_MODEL:            ${{ vars.AI_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          ACME_EMAIL: ${{ vars.ACME_EMAIL }}
+          POSTGRES_USER: ${{ vars.POSTGRES_USER }}
+          POSTGRES_DB: ${{ vars.POSTGRES_DB }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT }}
+          SMTP_FROM: ${{ vars.SMTP_FROM }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
           TELEGRAM_BOT_USERNAME: ${{ vars.TELEGRAM_BOT_USERNAME }}
-          LOKI_URL:            ${{ vars.LOKI_URL }}
-          GRAFANA_PORT:        ${{ vars.GRAFANA_PORT }}
+          LOKI_URL: ${{ vars.LOKI_URL }}
+          GRAFANA_PORT: ${{ vars.GRAFANA_PORT }}
           GRAFANA_ALERT_EMAIL: ${{ vars.GRAFANA_ALERT_EMAIL }}
           NODE_ENV:            ${{ vars.NODE_ENV }}
-          # ── Registry images (set by build-push job) ────────────────────
-          IMAGE_PREFIX:        ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}
-          GIT_SHA:             ${{ github.sha }}
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          envs: BETTER_AUTH_SECRET,POSTGRES_PASSWORD,GRAFANA_PASSWORD,OPEN_ROUTER_API_KEY,OPENAI_API_KEY,TELEGRAM_BOT_TOKEN,TELEGRAM_CHAT_ID,SMTP_USER,SMTP_PASS,DOMAIN,ACME_EMAIL,POSTGRES_USER,POSTGRES_DB,SMTP_HOST,SMTP_PORT,SMTP_FROM,AI_MODEL,TELEGRAM_BOT_USERNAME,LOKI_URL,GRAFANA_PORT,GRAFANA_ALERT_EMAIL,NODE_ENV,IMAGE_PREFIX,GIT_SHA
-          script: |
-            set -euo pipefail
-            DEPLOY_PATH="${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}"
-            if [[ "${DEPLOY_PATH}" == "~" ]]; then
-              DEPLOY_PATH="${HOME}"
-            elif [[ "${DEPLOY_PATH}" == "~/"* ]]; then
-              DEPLOY_PATH="${HOME}/${DEPLOY_PATH#~/}"
-            fi
-            mkdir -p "${DEPLOY_PATH}"
-            # Derive all URLs from DOMAIN — single source of truth.
-            BETTER_AUTH_URL="https://${DOMAIN}"
-            SERVER_URL="https://api.${DOMAIN}"
-            CORS_ORIGIN="https://${DOMAIN}"
-            PUBLIC_SERVER_URL="https://api.${DOMAIN}"
-            PUBLIC_ASSISTANT_URL="https://assistant.${DOMAIN}"
-            # Write .env atomically (temp file → rename) so running containers
-            # are never exposed to a partially-written file.
-            cat > "${DEPLOY_PATH}/.env.tmp" <<EOF
-            # Auto-generated by deploy-docker.yml — do not edit manually.
-            # Re-generated on every deploy from GitHub Secrets + Variables.
+          IMAGE_PREFIX: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          bash infra/scripts/write-vps-env.sh \
+            --env "${{ github.event.inputs.environment || 'production' }}" \
+            --deploy-path "${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}"
 
-            # Registry images
-            SERVER_IMAGE=${IMAGE_PREFIX}/server:sha-${GIT_SHA}
-            ASSISTANT_IMAGE=${IMAGE_PREFIX}/assistant:sha-${GIT_SHA}
-            NOTIFICATIONS_IMAGE=${IMAGE_PREFIX}/notifications:sha-${GIT_SHA}
-            WEB_IMAGE=${IMAGE_PREFIX}/web:sha-${GIT_SHA}
-
-            # App (URLs derived from DOMAIN)
-            BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
-            BETTER_AUTH_URL=${BETTER_AUTH_URL}
-            SERVER_URL=${SERVER_URL}
-            CORS_ORIGIN=${CORS_ORIGIN}
-            PUBLIC_SERVER_URL=${PUBLIC_SERVER_URL}
-            PUBLIC_ASSISTANT_URL=${PUBLIC_ASSISTANT_URL}
-
-            # Database
-            POSTGRES_USER=${POSTGRES_USER}
-            POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-            POSTGRES_DB=${POSTGRES_DB}
-            DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-
-            # AI
-            OPEN_ROUTER_API_KEY=${OPEN_ROUTER_API_KEY}
-            OPENAI_API_KEY=${OPENAI_API_KEY}
-            AI_MODEL=${AI_MODEL}
-
-            # Email
-            SMTP_HOST=${SMTP_HOST}
-            SMTP_PORT=${SMTP_PORT}
-            SMTP_FROM=${SMTP_FROM}
-            SMTP_USER=${SMTP_USER}
-            SMTP_PASS=${SMTP_PASS}
-
-            # Alerting
-            TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-            TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME}
-            TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-            GRAFANA_ALERT_EMAIL=${GRAFANA_ALERT_EMAIL}
-
-            # Observability
-            LOKI_URL=${LOKI_URL}
-            GRAFANA_PORT=${GRAFANA_PORT}
-            GRAFANA_PASSWORD=${GRAFANA_PASSWORD}
-
-            # Traefik
-            DOMAIN=${DOMAIN}
-            ACME_EMAIL=${ACME_EMAIL}
-
-            # Runtime
-            NODE_ENV=${NODE_ENV}
-            TURBO_TELEMETRY_MESSAGE_DISABLED=true
-            EOF
-            chmod 600 "${DEPLOY_PATH}/.env.tmp"
-            mv "${DEPLOY_PATH}/.env.tmp" "${DEPLOY_PATH}/.env"
-            echo ".env written to ${DEPLOY_PATH}/.env"
-
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+      - name: Deploy on VPS
         env:
-          GHCR_USER: ${{ secrets.GHCR_USER || github.actor }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT || 22 }}
+          SSH_KEY_PATH: /tmp/codex-deploy/deploy_key
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}
+          GHCR_USER: ${{ secrets.GHCR_USER || github.repository_owner }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          envs: GHCR_USER,GHCR_TOKEN
-          script: |
-            set -euo pipefail
-            DEPLOY_PATH="${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}"
-            if [[ "${DEPLOY_PATH}" == "~" ]]; then
-              DEPLOY_PATH="${HOME}"
-            elif [[ "${DEPLOY_PATH}" == "~/"* ]]; then
-              DEPLOY_PATH="${HOME}/${DEPLOY_PATH#~/}"
-            fi
-            cd "${DEPLOY_PATH}"
+        run: |
+          bash infra/scripts/deploy-vps.sh \
+            --env "${{ github.event.inputs.environment || 'production' }}" \
+            --deploy-path "${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}" \
+            --ghcr-user "${GHCR_USER}"
 
-            if [[ ! -f docker-compose.yml || ! -f docker-compose.prod.yml ]]; then
-              echo "::error::Missing docker-compose.yml or docker-compose.prod.yml in ${DEPLOY_PATH}."
-              echo "::error::Run infra/scripts/bootstrap-vps.sh once or copy compose files into ${DEPLOY_PATH}."
-              ls -la "${DEPLOY_PATH}" || true
-              exit 1
-            fi
-
-            # Record the images currently running so we can roll back.
-            docker compose ps --format json 2>/dev/null | tee /tmp/pre-deploy-state.json || true
-
-            # Authenticate to GHCR before pulling private images.
-            echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin >/dev/null
-
-            # Pull all new images before taking any service down.
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
-
-            # Run migrations (idempotent) against the live DB before switching traffic.
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm --no-deps server node dist/index.mjs db:migrate || true
-
-            # Bring up updated containers; --wait blocks until every healthcheck passes.
-            # If any container fails its healthcheck, compose exits non-zero → rollback.
-            if ! docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans --wait --wait-timeout 120; then
-              echo "::error::Health checks failed — rolling back to previous images"
-              docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans
-              exit 1
-            fi
-
-            # Prune dangling images only after a confirmed healthy deploy.
-            docker image prune -f
-
-            # Emit deployment summary for the GHA job log.
-            echo "Deployment complete: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo "Running containers:"
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+      - name: Audit deploy target
+        if: always()
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT || 22 }}
+          SSH_KEY_PATH: /tmp/codex-deploy/deploy_key
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}
+          DOMAIN: ${{ vars.DOMAIN }}
+        run: |
+          bash infra/scripts/audit-vps.sh \
+            --env "${{ github.event.inputs.environment || 'production' }}" \
+            --deploy-path "${{ secrets.DEPLOY_PATH || env.DEFAULT_DEPLOY_PATH }}" \
+            --domain "${{ vars.DOMAIN }}"

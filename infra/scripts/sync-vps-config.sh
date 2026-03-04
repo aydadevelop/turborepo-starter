@@ -116,6 +116,28 @@ if [[ ${#DEPLOY_PATHS[@]} -eq 0 ]]; then
   DEPLOY_PATHS+=("/srv/app")
 fi
 
+# Normalize and deduplicate deploy paths while preserving order.
+declare -a UNIQUE_PATHS=()
+for raw_path in "${DEPLOY_PATHS[@]}"; do
+  normalized_path="$(expand_path "${raw_path}")"
+  if [[ -z "${normalized_path}" ]]; then
+    continue
+  fi
+
+  seen="0"
+  for existing_path in "${UNIQUE_PATHS[@]-}"; do
+    if [[ "${existing_path}" == "${normalized_path}" ]]; then
+      seen="1"
+      break
+    fi
+  done
+
+  if [[ "${seen}" == "0" ]]; then
+    UNIQUE_PATHS+=("${normalized_path}")
+  fi
+done
+DEPLOY_PATHS=("${UNIQUE_PATHS[@]}")
+
 if [[ -z "${KEY_PATH}" ]]; then
   if [[ -f "${HOME}/.ssh/deploy_${ENV_NAME}" ]]; then
     KEY_PATH="${HOME}/.ssh/deploy_${ENV_NAME}"
@@ -168,15 +190,25 @@ echo
 for path in "${DEPLOY_PATHS[@]}"; do
   echo "-- syncing ${path} --"
 
-  ssh "${SSH_OPTS[@]}" "${SSH_USER_NAME}@${HOST}" "mkdir -p '${path}' '${path}/infra' '${path}/traefik' && touch '${path}/traefik/acme.json' && chmod 600 '${path}/traefik/acme.json' || true"
+  if ! ssh "${SSH_OPTS[@]}" "${SSH_USER_NAME}@${HOST}" "mkdir -p '${path}' '${path}/infra' '${path}/traefik' && touch '${path}/traefik/acme.json' && chmod 600 '${path}/traefik/acme.json'"; then
+    echo "ERROR: failed to prepare deploy path '${path}' on ${HOST}." >&2
+    echo "Hint: ensure '${SSH_USER_NAME}' has write permission, or set DEPLOY_PATH to an existing writable directory (e.g. /srv/app)." >&2
+    exit 1
+  fi
 
-  scp "${SCP_OPTS[@]}" \
+  if ! scp "${SCP_OPTS[@]}" \
     "${ROOT_DIR}/docker-compose.yml" \
     "${ROOT_DIR}/docker-compose.prod.yml" \
-    "${SSH_USER_NAME}@${HOST}:${path}/"
+    "${SSH_USER_NAME}@${HOST}:${path}/"; then
+    echo "ERROR: failed to upload docker-compose files to '${path}'." >&2
+    exit 1
+  fi
 
-  tar -C "${ROOT_DIR}/infra" -czf - grafana | \
-    ssh "${SSH_OPTS[@]}" "${SSH_USER_NAME}@${HOST}" "rm -rf '${path}/infra/grafana' && mkdir -p '${path}/infra' && tar -xzf - -C '${path}/infra'"
+  if ! tar -C "${ROOT_DIR}/infra" -czf - grafana | \
+    ssh "${SSH_OPTS[@]}" "${SSH_USER_NAME}@${HOST}" "rm -rf '${path}/infra/grafana' && mkdir -p '${path}/infra' && tar -xzf - -C '${path}/infra'"; then
+    echo "ERROR: failed to sync Grafana provisioning files to '${path}/infra/grafana'." >&2
+    exit 1
+  fi
 
   ssh "${SSH_OPTS[@]}" "${SSH_USER_NAME}@${HOST}" "ls -la '${path}' | sed -n '1,20p'; ls -la '${path}/infra/grafana' | sed -n '1,20p'"
 done

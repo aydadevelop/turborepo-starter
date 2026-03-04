@@ -132,10 +132,20 @@ bash infra/scripts/audit-vps.sh --env staging --deploy-path /srv/app-staging --d
 # 2) If compose files are missing at DEPLOY_PATH, sync required config
 bash infra/scripts/sync-vps-config.sh --env staging --deploy-path /srv/app-staging
 
-# 3) Run deploy flow remotely (pull, migrate, up --wait)
+# 3) Write runtime .env to VPS (same payload CI writes)
+IMAGE_PREFIX=ghcr.io/your-org/your-repo GIT_SHA=<commit-sha> \
+DOMAIN=staging.example.com ACME_EMAIL=ops@example.com \
+POSTGRES_USER=postgres POSTGRES_PASSWORD=*** POSTGRES_DB=myapp \
+BETTER_AUTH_SECRET=*** OPEN_ROUTER_API_KEY=*** GRAFANA_PASSWORD=*** \
+SMTP_HOST=smtp.example.com SMTP_PORT=587 SMTP_FROM=ops@example.com \
+AI_MODEL=openai/gpt-5-nano LOKI_URL=http://loki:3100/loki/api/v1/push \
+GRAFANA_PORT=3110 GRAFANA_ALERT_EMAIL=ops@example.com NODE_ENV=production \
+bash infra/scripts/write-vps-env.sh --env staging --deploy-path /srv/app-staging
+
+# 4) Run deploy flow remotely (pull, migrate, up --wait)
 bash infra/scripts/deploy-vps.sh --env staging --deploy-path /srv/app-staging
 
-# 4) Re-run audit to confirm everything is healthy
+# 5) Re-run audit to confirm everything is healthy
 bash infra/scripts/audit-vps.sh --env staging --deploy-path /srv/app-staging --domain staging.ayda.studio
 ```
 
@@ -167,7 +177,7 @@ bun run destroy:docker
 | `SSH_USER` | Deploy user (e.g. `deploy`) |
 | `SSH_PRIVATE_KEY` | Private key for SSH auth |
 | `SSH_PORT` | SSH port (optional, default 22) |
-| `DEPLOY_PATH` | App directory on VPS (optional, default `/srv/app`) |
+| `DEPLOY_PATH` | App directory on VPS (optional, default `/srv/app`, must be writable by deploy user) |
 | `GHCR_USER` | Optional override for GHCR login user |
 | `GHCR_TOKEN` | Optional PAT (`read:packages`) if `GITHUB_TOKEN` cannot pull |
 
