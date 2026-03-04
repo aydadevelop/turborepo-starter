@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { execFileSync } from "node:child_process";
 import {
 	existsSync,
 	readdirSync,
@@ -25,7 +26,7 @@ const ANCHOR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TODO_ID_MIN = 900_000;
 const TODO_ID_MAX = 900_999;
 
-const DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/myapp";
+const DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:5432/myapp";
 
 const scenarioCatalog = {
 	baseline:
@@ -35,6 +36,12 @@ const scenarioCatalog = {
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "../../..");
+const dbPackageRoot = path.resolve(scriptDir, "..");
+
+const isLikelySqliteMigration = (sqlText) =>
+	sqlText.includes("AUTOINCREMENT") ||
+	sqlText.includes("unixepoch(") ||
+	/`[^`]+`/.test(sqlText);
 
 const printHelp = () => {
 	console.log(
@@ -207,6 +214,10 @@ const applyMigrationsIfNeeded = async (client, requiredTables) => {
 
 	for (const migrationPath of migrationFiles) {
 		const rawSql = readFileSync(migrationPath, "utf8");
+		if (isLikelySqliteMigration(rawSql)) {
+			return;
+		}
+
 		const statements = rawSql
 			.split("--> statement-breakpoint")
 			.map((statement) => statement.trim())
@@ -224,7 +235,37 @@ const applyMigrationsIfNeeded = async (client, requiredTables) => {
 	}
 };
 
-const ensureSchemaExists = async (client) => {
+const pushSchemaWithDrizzle = (connectionString) => {
+	try {
+		execFileSync("bunx", ["drizzle-kit", "push", "--config", "drizzle.config.dev.ts"], {
+			cwd: dbPackageRoot,
+			stdio: "inherit",
+			env: {
+				...process.env,
+				DATABASE_URL: connectionString,
+			},
+		});
+	} catch (error) {
+		const fallbackDrizzleKitBin = path.resolve(
+			repoRoot,
+			"node_modules/.bin/drizzle-kit"
+		);
+		if (!existsSync(fallbackDrizzleKitBin)) {
+			throw error;
+		}
+
+		execFileSync(fallbackDrizzleKitBin, ["push", "--config", "drizzle.config.dev.ts"], {
+			cwd: dbPackageRoot,
+			stdio: "inherit",
+			env: {
+				...process.env,
+				DATABASE_URL: connectionString,
+			},
+		});
+	}
+};
+
+const ensureSchemaExists = async (client, connectionString) => {
 	const requiredTables = [
 		"organization",
 		"user",
@@ -247,7 +288,12 @@ const ensureSchemaExists = async (client) => {
 
 	await applyMigrationsIfNeeded(client, requiredTables);
 
-	const missingRequiredTables = await getMissingTables(client, requiredTables);
+	let missingRequiredTables = await getMissingTables(client, requiredTables);
+	if (missingRequiredTables.length > 0) {
+		pushSchemaWithDrizzle(connectionString);
+		missingRequiredTables = await getMissingTables(client, requiredTables);
+	}
+
 	if (missingRequiredTables.length > 0) {
 		throw new Error(
 			[
@@ -673,7 +719,7 @@ const main = async () => {
 	await client.connect();
 
 	try {
-		await ensureSchemaExists(client);
+		await ensureSchemaExists(client, connectionString);
 
 		const adminPasswordHash = await hashPassword("admin");
 		const operatorPasswordHash = await hashPassword("operator");
