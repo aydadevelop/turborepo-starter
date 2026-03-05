@@ -106,6 +106,7 @@ jobs:
           deploy_docker_image: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:sha-${{ github.sha }}
           git_remote_url: ssh://dokku@${{ secrets.SSH_HOST }}:443/${{ matrix.app }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh_host_key: ${{ secrets.SSH_HOST_KEY }}
 
   # ── Run DB migrations after deploy ─────────────────────────────────────────
   migrate:

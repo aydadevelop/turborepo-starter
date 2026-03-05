@@ -94,6 +94,7 @@ new command.local.Command("sync-ci-secrets", {
     gh secret set SSH_PORT            --repo "${ghRepo}" --body "${sshPort}" && \\
     gh secret set SSH_PRIVATE_KEY_B64 --repo "${ghRepo}" --body "${sshKeyB64}" && \\
     gh secret set SSH_PRIVATE_KEY     --repo "${ghRepo}" --body "${deployKey.privateKeyOpenssh}" && \\
+    gh secret set SSH_HOST_KEY        --repo "${ghRepo}" --body "$(ssh-keyscan -p 443 -t ed25519 ${vpsIp} 2>/dev/null)" && \\
     echo "${deployKey.publicKeyOpenssh}" | ssh -i /tmp/vps_key -o StrictHostKeyChecking=no root@${vpsIp} 'dokku ssh-keys:add github-actions 2>/dev/null || true'
   `,
   triggers: [vpsIp, sshUser, String(sshPort), sshKeyB64],
