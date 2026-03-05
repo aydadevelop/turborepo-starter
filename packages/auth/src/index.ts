@@ -11,7 +11,7 @@ import { anonymous } from "better-auth/plugins/anonymous";
 import { organization } from "better-auth/plugins/organization";
 import { phoneNumber } from "better-auth/plugins/phone-number";
 import { telegram } from "better-auth-telegram";
-import { asc, eq, type SQLWrapper } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import {
 	organizationAccessControl,
@@ -134,7 +134,8 @@ const initAuth = () => {
 		databaseHooks: {
 			session: {
 				create: {
-					before: async (session: { userId: string | SQLWrapper<unknown> }) => {
+					// biome-ignore lint/suspicious/noExplicitAny: better-auth hook type is not exported
+					before: async (session: any) => {
 						const [firstMembership] = await db
 							.select({ organizationId: schema.member.organizationId })
 							.from(schema.member)
