@@ -64,7 +64,9 @@ const apps = new DokkuApps("apps", {
   postgresPassword: appConfig.requireSecret("postgresPassword"),
   env: {
     BETTER_AUTH_SECRET: appConfig.requireSecret("betterAuthSecret"),
-    BETTER_AUTH_URL: `https://${domain}`,
+    // BETTER_AUTH_URL must point to the API server (where better-auth is hosted),
+    // not the web frontend. Used as better-auth baseURL across all services.
+    BETTER_AUTH_URL: `https://api.${domain}`,
     SERVER_URL: `https://api.${domain}`,
     CORS_ORIGIN: `https://${domain},https://api.${domain},https://assistant.${domain},https://notifications.${domain}`,
     OPEN_ROUTER_API_KEY: optionalSecret("openRouterApiKey"),

@@ -121,7 +121,11 @@ const initAuth = () => {
 			},
 		},
 		secret: env.BETTER_AUTH_SECRET,
-		baseURL: env.SERVER_URL,
+		// BETTER_AUTH_URL is the public URL of the auth server (api.domain/api/auth).
+		// This must be the same on all services (web, server, assistant, etc.) so they
+		// agree on cookie domain, cross-subdomain config, and OAuth redirect URLs.
+		// Do NOT use SERVER_URL here — that's the internal calling URL for assistant/notifications.
+		baseURL: env.BETTER_AUTH_URL,
 		advanced: {
 			// On localhost (HTTP), SameSite=None+Secure cookies are rejected by Playwright/Chromium.
 			// Use Lax for local dev and None+Secure only for deployed environments.
