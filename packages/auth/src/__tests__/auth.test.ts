@@ -1,16 +1,20 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createTestAuth, type TestAuth } from "../test";
 
 describe("Authentication", () => {
 	let testAuth: TestAuth;
 
-	beforeEach(async () => {
+	beforeAll(async () => {
 		testAuth = await createTestAuth();
+	}, 30_000);
+
+	afterAll(async () => {
+		await testAuth.close();
 	});
 
-	afterEach(() => {
-		testAuth.close();
+	beforeEach(async () => {
+		await testAuth.clearDb();
 	});
 
 	describe("Sign Up", () => {

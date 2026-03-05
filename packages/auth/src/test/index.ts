@@ -7,7 +7,7 @@ import {
 	user,
 	verification,
 } from "@my-app/db/schema/auth";
-import { createTestDatabase } from "@my-app/db/test";
+import { clearTestDatabase, createTestDatabase } from "@my-app/db/test";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization as organizationPlugin } from "better-auth/plugins/organization";
@@ -79,6 +79,7 @@ export const createTestAuth = async () => {
 
 	return {
 		auth,
+		clearDb: () => clearTestDatabase(db),
 		close,
 	};
 };
