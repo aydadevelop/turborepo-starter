@@ -21,6 +21,7 @@ interface VpsBootstrapArgs {
  */
 export class VpsBootstrap extends pulumi.ComponentResource {
   public readonly ready: pulumi.Output<string>;
+  public readonly sslhReady: pulumi.Output<string>;
 
   constructor(name: string, args: VpsBootstrapArgs, opts?: pulumi.ComponentResourceOptions) {
     super("myapp:infra:VpsBootstrap", name, {}, opts);
@@ -170,63 +171,46 @@ rm -f /tmp/setup-root-key.sh
 
     // ── sslh: multiplex SSH + HTTPS on port 443 ───────────────────────────
     // GitHub Actions runners come from Azure IPs that some VPS providers
-    // block on port 22. Port 443 is always open (required for HTTPS).
-    // sslh sits on 0.0.0.0:443, inspects the handshake, and routes:
-    //   - SSH traffic  → 127.0.0.1:22   (sshd)
-    //   - TLS traffic  → 127.0.0.1:8443 (nginx, moved off 0.0.0.0:443)
+    // block on port 22. Port 443 is guaranteed open (HTTPS). sslh routes:
+    //   SSH traffic  → 127.0.0.1:22   (sshd)
+    //   TLS traffic  → 127.0.0.1:8443 (nginx, moved off 0.0.0.0:443)
     //
-    // Dokku nginx is told to bind on 127.0.0.1 only via global config.
-    // nginx then listens on 127.0.0.1:443 and 127.0.0.1:80 (loopback only).
-    new command.remote.Command(`${name}-sslh`, {
+    // Ubuntu's apt sslh package (1.x) uses /etc/default/sslh for DAEMON_OPTS,
+    // NOT a .cfg file. nginx app vhost configs are patched to 127.0.0.1:8443.
+    const sslhSetup = new command.remote.Command(`${name}-sslh`, {
       connection: conn,
       create: `
-        set -e
+        set -euo pipefail
 
-        # Install sslh in non-interactive mode
         DEBIAN_FRONTEND=noninteractive apt-get install -y -q sslh
 
-        # Configure sslh to run as daemon, listen on 443, route SSH/HTTPS
-        cat > /etc/sslh/sslh.cfg << 'SSLHEOF'
-verbose: false;
-daemon: true;
-user: "sslh";
-pidfile: "/run/sslh/sslh.pid";
-listen:
-(
-  { host: "0.0.0.0"; port: "443"; }
-);
-protocols:
-(
-  { name: "ssh";   host: "127.0.0.1"; port: "22";   probe: "builtin"; },
-  { name: "tls";   host: "127.0.0.1"; port: "8443"; probe: "builtin"; }
-);
-SSSLHEOF
+        # /etc/default/sslh is the correct config location for Ubuntu sslh 1.x
+        printf 'DAEMON=/usr/sbin/sslh\nDAEMON_OPTS=--user sslh -p 0.0.0.0:443 --ssh 127.0.0.1:22 --tls 127.0.0.1:8443\n' \
+          > /etc/default/sslh
 
-        # Tell Dokku nginx to listen on 127.0.0.1:8443 for HTTPS
-        # and 127.0.0.1:80 for HTTP (sslh doesn't proxy HTTP but nginx
-        # needs to work for Let's Encrypt HTTP challenges via port 80).
-        dokku nginx:set --global bind-address-ipv4 127.0.0.1 2>/dev/null || true
-        # Regenerate nginx configs with new bind address
-        dokku ps:report 2>/dev/null | awk '/App Name:/{print $3}' | while read app; do
-          dokku proxy:build-config "$app" 2>/dev/null || true
+        # Move nginx HTTPS listeners from 0.0.0.0:443 → 127.0.0.1:8443
+        for f in /home/dokku/*/nginx.conf; do
+          [ -f "$f" ] || continue
+          sed -i 's/listen[[:space:]]\\+443 ssl/listen 127.0.0.1:8443 ssl/g' "$f"
+          sed -i 's/listen[[:space:]]\\+\\[::]:443 ssl/listen [::1]:8443 ssl/g' "$f"
         done
+        nginx -t && systemctl restart nginx
 
-        # Override nginx HTTPS port to 8443 in global template
-        if ! grep -q 'listen 127.0.0.1:8443' /etc/nginx/conf.d/dokku.conf 2>/dev/null; then
-          sed -i 's/listen 0\.0\.0\.0:443/listen 127.0.0.1:8443/g' /home/dokku/.nginx/conf.d/*.conf 2>/dev/null || true
-          sed -i 's/listen \[::\]:443/listen 127.0.0.1:8443/g' /home/dokku/.nginx/conf.d/*.conf 2>/dev/null || true
-        fi
-
-        # Enable and start sslh
         systemctl enable sslh
         systemctl restart sslh
         sleep 2
-        systemctl is-active sslh && echo "sslh-ok" || (journalctl -u sslh -n 20 && exit 1)
+        systemctl is-active sslh && echo "sslh-ok" || (journalctl -u sslh -n 20 >&2 && exit 1)
       `,
-      triggers: ["v1"],
+      update: `
+        printf 'DAEMON=/usr/sbin/sslh\nDAEMON_OPTS=--user sslh -p 0.0.0.0:443 --ssh 127.0.0.1:22 --tls 127.0.0.1:8443\n' \
+          > /etc/default/sslh
+        systemctl restart sslh
+        systemctl is-active sslh && echo "sslh-ok"
+      `,
     }, { parent: this, dependsOn: [plugins] });
 
+    this.sslhReady = sslhSetup.stdout;
     this.ready = plugins.stdout;
-    this.registerOutputs({ ready: this.ready });
+    this.registerOutputs({ ready: this.ready, sslhReady: this.sslhReady });
   }
 }
