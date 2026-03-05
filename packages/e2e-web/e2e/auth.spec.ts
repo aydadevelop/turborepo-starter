@@ -2,14 +2,14 @@ import { expect, test } from "@playwright/test";
 import { signInAsSeedAdmin } from "./utils/auth";
 import { url } from "./utils/url";
 
-const LOGIN_URL_PATTERN = /\/login/;
+const LOGIN_URL_PATTERN = /\/login(\?|$)/;
 const NAV_OPTIONS = { waitUntil: "domcontentloaded" } as const;
 
 test.describe("Authentication Flow", () => {
 	test("can navigate to login page", async ({ page }) => {
 		await page.goto(url("/"), NAV_OPTIONS);
 		await page.getByTestId("header-sign-in-button").click();
-		await expect(page).toHaveURL(LOGIN_URL_PATTERN);
+		await expect(page).toHaveURL(LOGIN_URL_PATTERN); 
 	});
 
 	test("login page has sign in and sign up forms", async ({ page }) => {

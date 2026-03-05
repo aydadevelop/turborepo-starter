@@ -1,0 +1,31 @@
+# Applied in CI via E2E_EXTRA_COMPOSE_FILES=docker-compose.ci-cache.yml
+# Enables Docker BuildKit GHA layer cache for E2E builds, using the same
+# cache scopes as deploy-docker.yml so layers are shared between jobs.
+services:
+  server:
+    build:
+      cache_from:
+        - type=gha,scope=server
+      cache_to:
+        - type=gha,scope=server,mode=max
+
+  assistant:
+    build:
+      cache_from:
+        - type=gha,scope=assistant
+      cache_to:
+        - type=gha,scope=assistant,mode=max
+
+  notifications:
+    build:
+      cache_from:
+        - type=gha,scope=notifications
+      cache_to:
+        - type=gha,scope=notifications,mode=max
+
+  web:
+    build:
+      cache_from:
+        - type=gha,scope=web
+      cache_to:
+        - type=gha,scope=web,mode=max

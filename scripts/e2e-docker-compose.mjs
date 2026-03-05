@@ -162,6 +162,16 @@ const main = async () => {
 		"docker-compose.e2e.yml",
 	];
 
+	// Allow CI (or local dev) to inject extra compose override files.
+	// Example: E2E_EXTRA_COMPOSE_FILES=docker-compose.ci-cache.yml
+	const extraComposeFiles = (process.env.E2E_EXTRA_COMPOSE_FILES ?? "")
+		.split(",")
+		.map((f) => f.trim())
+		.filter(Boolean);
+	for (const file of extraComposeFiles) {
+		composeBaseArgs.push("-f", file);
+	}
+
 	const runCompose = (args, allowFailure = false) =>
 		runCommand({
 			command: "docker",

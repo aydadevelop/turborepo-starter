@@ -92,7 +92,7 @@ jobs:
     environment:
       name: ${{ inputs.environment || github.event.inputs.environment || 'staging' }}
     strategy:
-      max-parallel: 1
+      max-parallel: 2
       matrix:
         app: [server, assistant, notifications, web]
     steps:
