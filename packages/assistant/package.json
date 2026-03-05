@@ -36,7 +36,7 @@
     "@orpc/server": "^1.12.2",
     "ai": "^6.0.86",
     "better-auth": "^1.5.0",
-    "drizzle-orm": "1.0.0-beta.15-859cf75",
+    "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
     "zod": "^4.1.13"
   },
   "devDependencies": {
@@ -46,6 +46,6 @@
     "@my-app/vitest-config": "workspace:*",
     "typescript": "^5",
     "ultracite": "^7.2.3",
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.18"
   }
 }

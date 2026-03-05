@@ -24,7 +24,7 @@
     "@my-app/db": "workspace:*",
     "@my-app/env": "workspace:*",
     "better-auth": "^1.5.0",
-    "better-auth-telegram": "^0.3.2",
+    "better-auth-telegram": "^1.4.0",
     "dotenv": "^17.2.2",
     "zod": "^4.1.13"
   },
@@ -34,6 +34,6 @@
     "@my-app/vitest-config": "workspace:*",
     "typescript": "^5",
     "ultracite": "^7.2.3",
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.18"
   }
 }

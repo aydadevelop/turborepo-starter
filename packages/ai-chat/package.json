@@ -24,7 +24,7 @@
   "dependencies": {
     "@ai-sdk/svelte": "^4.0.86",
     "@my-app/ui": "workspace:*",
-    "@shikijs/themes": "^3.22.0",
+    "@shikijs/themes": "^4.0.1",
     "ai": "^6.0.86",
     "isomorphic-dompurify": "^3.0.0-rc.2",
     "marked": "^17.0.2",
@@ -40,7 +40,7 @@
     "@my-app/config": "workspace:*",
     "@my-app/tailwind-config": "workspace:*",
     "@internationalized/date": "^3.11.0",
-    "@lucide/svelte": "^0.562.0",
+    "@lucide/svelte": "^0.577.0",
     "bits-ui": "^2.15.5",
     "svelte": "^5.38.1",
     "svelte-check": "^4.3.1",

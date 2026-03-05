@@ -36,13 +36,13 @@
     "@my-app/assistant": "workspace:*",
     "@my-app/env": "workspace:*",
     "@my-app/ui": "workspace:*",
-    "@lucide/svelte": "^0.561.0",
+    "@lucide/svelte": "^0.577.0",
     "@orpc/client": "^1.13.4",
     "@orpc/tanstack-query": "^1.12.2",
     "@tanstack/svelte-form": "^1.19.2",
-    "@tanstack/svelte-query": "^5.85.3",
+    "@tanstack/svelte-query": "^6.1.0",
     "better-auth": "^1.5.0",
-    "better-auth-telegram": "^0.3.2",
+    "better-auth-telegram": "^1.4.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {
@@ -68,7 +68,7 @@
     "ultracite": "^7.2.3",
     "vite": "^7.1.2",
     "vite-bundle-analyzer": "^1.3.6",
-    "vitest": "^3.2.4",
+    "vitest": "^4.0.18",
     "rolldown-vite": "7.3.1"
   }
 }
