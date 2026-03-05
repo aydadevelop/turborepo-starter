@@ -125,16 +125,21 @@ const initAuth = () => {
 				serverUrl.hostname === "localhost"
 					? { sameSite: "lax" as const, httpOnly: true }
 					: { sameSite: "none" as const, secure: true, httpOnly: true },
-			...(workersDevMatch || customCookieDomain
+			...(workersDevMatch
 				? {
 						crossSubDomainCookies: {
 							enabled: true,
-							domain: workersDevMatch
-								? workersDevMatch[1]
-								: customCookieDomain!,
+							domain: workersDevMatch[1],
 						},
 					}
-				: {}),
+				: customCookieDomain
+					? {
+							crossSubDomainCookies: {
+								enabled: true,
+								domain: customCookieDomain,
+							},
+						}
+					: {}),
 		},
 		databaseHooks: {
 			session: {
