@@ -86,12 +86,9 @@ jobs:
   # ── Deploy images to Dokku on VPS ──────────────────────────────────────────
   deploy:
     name: Deploy to Dokku
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, vps]
     needs: build-push
     if: github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      packages: read
     environment:
       name: ${{ inputs.environment || github.event.inputs.environment || 'staging' }}
     strategy:
@@ -100,35 +97,15 @@ jobs:
         app: [server, assistant, notifications, web]
     steps:
       - name: Deploy ${{ matrix.app }} to Dokku
-        uses: dokku/github-action@master
-        with:
-          command: deploy
-          deploy_docker_image: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:sha-${{ github.sha }}
-          git_remote_url: ssh://dokku@${{ secrets.SSH_HOST }}:443/${{ matrix.app }}
-          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          ssh_host_key: ${{ secrets.SSH_HOST_KEY }}
+        run: |
+          sudo dokku git:from-image ${{ matrix.app }} ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:sha-${{ github.sha }}
 
   # ── Run DB migrations after deploy ─────────────────────────────────────────
   migrate:
     name: Run DB migrations
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, vps]
     needs: deploy
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Setup SSH
-        env:
-          SSH_PRIVATE_KEY_B64: ${{ secrets.SSH_PRIVATE_KEY_B64 }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
       - name: Run migrations
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-        run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            -p 443 \
-            "${SSH_USER:-root}@${SSH_HOST}" \
-            "dokku run server node dist/migrate.mjs"
+        run: sudo dokku run server node dist/migrate.mjs
