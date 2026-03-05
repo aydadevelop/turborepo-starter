@@ -24,6 +24,11 @@ COPY --from=prune /app/out/full/ .
 WORKDIR /app/apps/web
 RUN bun run build
 
+# ── prod-deps: production-only node_modules ────────────────────────────────
+FROM base AS prod-deps
+COPY --from=prune /app/out/json/ .
+RUN bun install --production
+
 # ── runtime ────────────────────────────────────────────────────────────────
 # Reuse the bun image (already pulled in base stage — no extra network pull).
 FROM oven/bun:${BUN_VERSION} AS runtime
@@ -31,7 +36,7 @@ FROM oven/bun:${BUN_VERSION} AS runtime
 WORKDIR /app
 
 COPY --from=build --chown=bun:bun /app/apps/web/build ./build
-COPY --from=deps --chown=bun:bun /app/node_modules ./node_modules
+COPY --from=prod-deps --chown=bun:bun /app/node_modules ./node_modules
 
 USER bun
 ENV NODE_ENV=production

@@ -167,27 +167,6 @@ services:
       retries: 3
       start_period: 30s
 
-  # ── Reverse proxy ────────────────────────────────────────────────────────
-  # In local dev Traefik is available but SSL is disabled (no ACME).
-  # In production, use docker-compose.prod.yml which enables Let's Encrypt.
-  traefik:
-    image: traefik:v3.3
-    restart: unless-stopped
-    command:
-      - "--api.dashboard=true"
-      - "--api.insecure=true"          # dashboard on :8080 (local only)
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-    ports:
-      - "80:80"
-      - "443:443"
-      - "127.0.0.1:8080:8080"          # dashboard — localhost only
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./traefik/acme.json:/acme.json"
-
   # ── Observability ─────────────────────────────────────────────────────────
   loki:
     image: grafana/loki:3.4.2

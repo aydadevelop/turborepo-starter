@@ -65,9 +65,6 @@ lerna-debug.log*
 # Better-T-Stack
 .alchemy
 
-# Traefik
-traefik/acme.json
-
 # Pulumi local state (if using --local backend)
 .pulumi/
 

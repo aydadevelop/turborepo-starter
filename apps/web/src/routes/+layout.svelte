@@ -11,10 +11,9 @@
 		PUBLIC_HEADER_PATHS.has(page.url.pathname)
 	);
 
-	let PublicAppHeader =
-		$state<null | typeof import("../components/PublicAppHeader.svelte").default>(
-			null
-		);
+	let PublicAppHeader = $state<
+		null | typeof import("../components/PublicAppHeader.svelte").default
+	>(null);
 
 	$effect(() => {
 		if (isPublicHeaderPath) {

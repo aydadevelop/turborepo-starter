@@ -1,6 +1,6 @@
 # my-app
 
-Full-stack monorepo starter — Hono APIs, SvelteKit frontend, PostgreSQL, deployed to a VPS via Docker Compose.
+Full-stack monorepo starter — Hono APIs, SvelteKit frontend, PostgreSQL, deployed to a VPS via Dokku.
 
 ## Stack
 
@@ -12,8 +12,8 @@ Full-stack monorepo starter — Hono APIs, SvelteKit frontend, PostgreSQL, deplo
 - **Database**: Drizzle + PostgreSQL (pgvector)
 - **Build system**: Turborepo + Bun
 - **Tests**: Vitest (unit) + Playwright (e2e)
-- **Infra**: Docker Compose + Traefik (SSL) + Loki + Grafana
-- **CI/CD**: GitHub Actions → GHCR → SSH deploy to VPS
+- **Infra**: Dokku (PaaS on VPS) + Loki + Grafana
+- **CI/CD**: GitHub Actions → GHCR → Dokku deploy to VPS
 
 ## Monorepo Layout
 
@@ -72,7 +72,6 @@ bun run deploy:docker:local
 
 # Grafana: http://localhost:3110
 # smtp4dev (captured emails): http://localhost:5025
-# Traefik dashboard: http://localhost:8080
 ```
 
 ## Quality Gates
@@ -130,78 +129,43 @@ bun run db:studio     # open Drizzle Studio
 
 ## Deploy
 
-### First-time VPS setup
+### Infrastructure provisioning (Pulumi)
+
+VPS bootstrap, Dokku app creation, DNS, and secrets are managed as TypeScript IaC in `infra/pulumi/`:
 
 ```bash
-# Run once on a fresh Ubuntu 22.04/24.04 VPS:
-DOMAIN=example.com ACME_EMAIL=you@example.com GHCR_TOKEN=ghp_xxx GHCR_USER=your-org \
-  sudo bash infra/scripts/bootstrap-vps.sh
+bun run infra:preview   # dry-run — see what would change
+bun run infra:up        # apply changes to VPS
 ```
 
-The script installs Docker, Loki log driver, fail2ban, UFW firewall, and creates the app directory with an `.env` template.
-
-### Audit and recover VPS config
-
-Use these script-first checks when CI says deploy was dispatched but the server did not update:
-
-```bash
-# 1) Audit remote host + container health + public endpoints
-bash infra/scripts/audit-vps.sh --env staging --deploy-path /srv/app-staging --domain staging.ayda.studio
-
-# 2) If compose files are missing at DEPLOY_PATH, sync required config
-bash infra/scripts/sync-vps-config.sh --env staging --deploy-path /srv/app-staging
-
-# 3) Write runtime .env to VPS (same payload CI writes)
-IMAGE_PREFIX=ghcr.io/your-org/your-repo GIT_SHA=<commit-sha> \
-DOMAIN=staging.example.com ACME_EMAIL=ops@example.com \
-POSTGRES_USER=postgres POSTGRES_PASSWORD=*** POSTGRES_DB=myapp \
-BETTER_AUTH_SECRET=*** OPEN_ROUTER_API_KEY=*** GRAFANA_PASSWORD=*** \
-SMTP_HOST=smtp.example.com SMTP_PORT=587 SMTP_FROM=ops@example.com \
-AI_MODEL=openai/gpt-5-nano LOKI_URL=http://loki:3100/loki/api/v1/push \
-GRAFANA_PORT=3110 GRAFANA_ALERT_EMAIL=ops@example.com NODE_ENV=production \
-bash infra/scripts/write-vps-env.sh --env staging --deploy-path /srv/app-staging
-
-# 4) Run deploy flow remotely (pull, migrate, up --wait)
-bash infra/scripts/deploy-vps.sh --env staging --deploy-path /srv/app-staging
-
-# 5) Re-run audit to confirm everything is healthy
-bash infra/scripts/audit-vps.sh --env staging --deploy-path /srv/app-staging --domain staging.ayda.studio
-```
-
-If your staging `DEPLOY_PATH` is uncertain, sync both common paths:
-
-```bash
-bash infra/scripts/sync-vps-config.sh --env staging --deploy-path /srv/app --deploy-path /srv/app-staging
-```
+Pulumi handles: VPS creation (1gb.ru), Docker + Dokku install, UFW firewall, fail2ban, SSH hardening,
+sslh (SSH+HTTPS on port 443), Postgres, Let's Encrypt SSL, Cloudflare DNS, and GitHub Actions secrets sync.
 
 ### Ongoing deploys
 
-Push to `main` — GitHub Actions builds images, pushes to GHCR, and SSH-deploys to the VPS automatically.
+Push to `main` — GitHub Actions builds Docker images, pushes to GHCR, and deploys to Dokku automatically.
 
-Or deploy manually from the VPS:
+Manual deploy from VPS (if needed):
 
 ```bash
-# Production (SSL via Traefik + Let's Encrypt)
-bun run deploy:docker
-
-# Tear down (removes volumes)
-bun run destroy:docker
+sudo dokku git:from-image <app> ghcr.io/<org>/<repo>/<app>:<tag>
 ```
 
 ### Required GitHub secrets
 
+Managed automatically by `pulumi up` (synced via `gh secret set`).
+
 | Secret | Description |
 |---|---|
-| `SSH_HOST` | VPS IP or hostname |
-| `SSH_USER` | Deploy user (e.g. `deploy`) |
-| `SSH_PRIVATE_KEY` | Private key for SSH auth |
-| `SSH_PORT` | SSH port (optional, default 22) |
-| `DEPLOY_PATH` | App directory on VPS (optional, default `/srv/app`, must be writable by deploy user) |
-| `GHCR_USER` | Optional override for GHCR login user |
-| `GHCR_TOKEN` | Optional PAT (`read:packages`) if `GITHUB_TOKEN` cannot pull |
+| `SSH_HOST` | VPS IP address |
+| `SSH_USER` | SSH user (usually `root`) |
+| `SSH_PORT` | SSH port (443 via sslh) |
+| `SSH_PRIVATE_KEY` | ED25519 private key for SSH auth |
+| `SSH_PRIVATE_KEY_B64` | Base64-encoded private key |
+| `SSH_HOST_KEY` | VPS host key for known_hosts |
 
 ## Observability
 
-- **Logs**: All container stdout/stderr ships to Loki via the Docker log driver. View in Grafana (`grafana.${DOMAIN}` in prod, `localhost:3110` locally).
-- **Traefik dashboard**: `localhost:8080` in dev; in prod access via SSH tunnel: `ssh -L 8080:localhost:8080 user@vps`
-- **Email (dev)**: smtp4dev captures all outgoing mail at `http://localhost:5025`. In prod, set `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS` to a real relay (SES, Postmark, etc.).
+- **Logs**: All Dokku app stdout/stderr ships to Loki via the Docker log driver. View in Grafana (`grafana.${DOMAIN}`).
+- **Grafana**: Access via SSH tunnel in production: `ssh -L 3110:localhost:3110 root@vps`
+- **Email (dev)**: smtp4dev captures all outgoing mail at `http://localhost:5025`. In prod, set `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS` via `dokku config:set`.

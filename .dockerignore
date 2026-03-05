@@ -19,10 +19,12 @@
 **/coverage
 **/.nyc_output
 
-# CI/CD, docs, dev scripts
+# CI/CD, docs, dev scripts, infra
 .github
 docs
 scripts
+infra
+traefik
 
 # Dev-only config not needed inside containers
 # NOTE: turbo.json and bunfig.toml are required by turbo prune — do NOT exclude them
