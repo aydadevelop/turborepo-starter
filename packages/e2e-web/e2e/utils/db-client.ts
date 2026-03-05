@@ -1,6 +1,6 @@
 import pg from "pg";
 
-import { CLEANUP_TABLES } from "../../../../db/scripts/cleanup-tables.mjs";
+import { CLEANUP_TABLES } from "../../../../packages/db/scripts/cleanup-tables.mjs";
 
 const DEFAULT_DATABASE_URL =
 	"postgresql://postgres:postgres@localhost:5432/myapp";
