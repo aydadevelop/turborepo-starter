@@ -94,10 +94,26 @@ jobs:
       packages: read
     environment:
       name: ${{ inputs.environment || github.event.inputs.environment || 'staging' }}
+    strategy:
+      max-parallel: 1
+      matrix:
+        app: [server, assistant, notifications, web]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Deploy ${{ matrix.app }} to Dokku
+        uses: dokku/github-action@master
+        with:
+          command: deploy
+          deploy_docker_image: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:sha-${{ github.sha }}
+          git_remote_url: ssh://dokku@${{ secrets.SSH_HOST }}:443/${{ matrix.app }}
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+  # ── Run DB migrations after deploy ─────────────────────────────────────────
+  migrate:
+    name: Run DB migrations
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/main'
+    steps:
       - name: Setup SSH
         env:
           SSH_PRIVATE_KEY_B64: ${{ secrets.SSH_PRIVATE_KEY_B64 }}
@@ -105,25 +121,13 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          echo "StrictHostKeyChecking no" >> ~/.ssh/config
 
-      - name: Deploy apps to Dokku
+      - name: Run migrations
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          REGISTRY: ${{ env.REGISTRY }}
-          IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
-          GIT_SHA: ${{ github.sha }}
-        run: SSH_KEY_FILE=~/.ssh/deploy_key bash infra/scripts/deploy-dokku.sh
-
-      - name: Run DB migrations
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            -p "${SSH_PORT:-22}" \
+            -p 443 \
             "${SSH_USER:-root}@${SSH_HOST}" \
             "dokku run server node dist/migrate.mjs"

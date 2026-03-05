@@ -168,6 +168,64 @@ rm -f /tmp/setup-root-key.sh
       ].join(" && "),
     }, { parent: this, dependsOn: [installKey] });
 
+    // ── sslh: multiplex SSH + HTTPS on port 443 ───────────────────────────
+    // GitHub Actions runners come from Azure IPs that some VPS providers
+    // block on port 22. Port 443 is always open (required for HTTPS).
+    // sslh sits on 0.0.0.0:443, inspects the handshake, and routes:
+    //   - SSH traffic  → 127.0.0.1:22   (sshd)
+    //   - TLS traffic  → 127.0.0.1:8443 (nginx, moved off 0.0.0.0:443)
+    //
+    // Dokku nginx is told to bind on 127.0.0.1 only via global config.
+    // nginx then listens on 127.0.0.1:443 and 127.0.0.1:80 (loopback only).
+    new command.remote.Command(`${name}-sslh`, {
+      connection: conn,
+      create: `
+        set -e
+
+        # Install sslh in non-interactive mode
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -q sslh
+
+        # Configure sslh to run as daemon, listen on 443, route SSH/HTTPS
+        cat > /etc/sslh/sslh.cfg << 'SSLHEOF'
+verbose: false;
+daemon: true;
+user: "sslh";
+pidfile: "/run/sslh/sslh.pid";
+listen:
+(
+  { host: "0.0.0.0"; port: "443"; }
+);
+protocols:
+(
+  { name: "ssh";   host: "127.0.0.1"; port: "22";   probe: "builtin"; },
+  { name: "tls";   host: "127.0.0.1"; port: "8443"; probe: "builtin"; }
+);
+SSSLHEOF
+
+        # Tell Dokku nginx to listen on 127.0.0.1:8443 for HTTPS
+        # and 127.0.0.1:80 for HTTP (sslh doesn't proxy HTTP but nginx
+        # needs to work for Let's Encrypt HTTP challenges via port 80).
+        dokku nginx:set --global bind-address-ipv4 127.0.0.1 2>/dev/null || true
+        # Regenerate nginx configs with new bind address
+        dokku ps:report 2>/dev/null | awk '/App Name:/{print $3}' | while read app; do
+          dokku proxy:build-config "$app" 2>/dev/null || true
+        done
+
+        # Override nginx HTTPS port to 8443 in global template
+        if ! grep -q 'listen 127.0.0.1:8443' /etc/nginx/conf.d/dokku.conf 2>/dev/null; then
+          sed -i 's/listen 0\.0\.0\.0:443/listen 127.0.0.1:8443/g' /home/dokku/.nginx/conf.d/*.conf 2>/dev/null || true
+          sed -i 's/listen \[::\]:443/listen 127.0.0.1:8443/g' /home/dokku/.nginx/conf.d/*.conf 2>/dev/null || true
+        fi
+
+        # Enable and start sslh
+        systemctl enable sslh
+        systemctl restart sslh
+        sleep 2
+        systemctl is-active sslh && echo "sslh-ok" || (journalctl -u sslh -n 20 && exit 1)
+      `,
+      triggers: ["v1"],
+    }, { parent: this, dependsOn: [plugins] });
+
     this.ready = plugins.stdout;
     this.registerOutputs({ ready: this.ready });
   }
