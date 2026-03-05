@@ -96,6 +96,7 @@ new command.local.Command("sync-ci-secrets", {
   triggers: [vpsIp, sshUser, String(sshPort)],
 }, { dependsOn: [bootstrap, apps, dns] });
 
+
 // ── Exports ─────────────────────────────────────────────────────────────────
 export const ssh = {
   host: vpsIp,

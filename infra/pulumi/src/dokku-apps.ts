@@ -6,7 +6,6 @@ interface AppDef {
   name: string;
   domain: string;
   port: number;
-  dockerfile: string;
   buildArg?: string;
   extraEnv?: Record<string, pulumi.Input<string>>;
 }
@@ -32,10 +31,14 @@ export class DokkuApps extends pulumi.ComponentResource {
     const conn = args.connection;
     const domain = args.domain;
 
-    // ── GHCR login ────────────────────────────────────────────────────────
+    // ── GHCR login via Dokku registry config ─────────────────────────────
+    // Must use `dokku registry:login` — Dokku runs pulls as the `dokku` user
+    // and cannot see root's /root/.docker/config.json (docker login).
     const ghcrLogin = new command.remote.Command(`${name}-ghcr-login`, {
       connection: conn,
-      create: pulumi.interpolate`echo "${args.ghcrToken}" | docker login ghcr.io -u "${args.ghcrUser}" --password-stdin`,
+      create: pulumi.interpolate`dokku registry:login ghcr.io "${args.ghcrUser}" "${args.ghcrToken}"`,
+      // Re-run on every `pulumi up` so the token stays fresh
+      triggers: [args.ghcrToken],
     }, { parent: this });
 
     // ── Postgres database ─────────────────────────────────────────────────
@@ -68,25 +71,25 @@ export class DokkuApps extends pulumi.ComponentResource {
         name: "web",
         domain: domain,
         port: 3000,
-        dockerfile: "Dockerfile.web",
         extraEnv: {
           ORIGIN: `https://${domain}`,
           INTERNAL_SERVER_URL: "http://server.web1:3000",
           INTERNAL_ASSISTANT_URL: "http://assistant.web1:3001",
+          // Public env vars — exposed to the browser via SvelteKit
+          PUBLIC_SERVER_URL: `https://api.${domain}`,
+          PUBLIC_ASSISTANT_URL: `https://assistant.${domain}`,
         },
       },
       {
         name: "server",
         domain: `api.${domain}`,
         port: 3000,
-        dockerfile: "Dockerfile",
         buildArg: "server",
       },
       {
         name: "assistant",
         domain: `assistant.${domain}`,
         port: 3001,
-        dockerfile: "Dockerfile",
         buildArg: "assistant",
         extraEnv: {
           SERVER_URL: "http://server.web1:3000",
@@ -96,7 +99,6 @@ export class DokkuApps extends pulumi.ComponentResource {
         name: "notifications",
         domain: `notifications.${domain}`,
         port: 3002,
-        dockerfile: "Dockerfile",
         buildArg: "notifications",
         extraEnv: {
           SERVER_URL: "http://server.web1:3000",
@@ -128,13 +130,12 @@ export class DokkuApps extends pulumi.ComponentResource {
         create: `dokku ports:set ${app.name} http:80:${app.port} https:443:${app.port}`,
       }, { parent: this, dependsOn: [create] });
 
-      // Set Dockerfile path and build args
+      // Set build args (--file is not needed: git:from-image generates its own Dockerfile)
       const dockerOpts = new command.remote.Command(`${name}-docker-${app.name}`, {
         connection: conn,
-        create: [
-          `dokku docker-options:add ${app.name} build "--file ${app.dockerfile}"`,
-          app.buildArg ? `dokku docker-options:add ${app.name} build "--build-arg APP=${app.buildArg}"` : "true",
-        ].join(" && "),
+        create: app.buildArg
+          ? `dokku docker-options:add ${app.name} build "--build-arg APP=${app.buildArg}"`
+          : "true",
       }, { parent: this, dependsOn: [create] });
 
       // Link Postgres

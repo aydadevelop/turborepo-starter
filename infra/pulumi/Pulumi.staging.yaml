@@ -4,26 +4,21 @@ config:
   vps:sshPort: "22"
   vps:oneGbToken:
     secure: v1:6qqt56eJNh3PsNpL:AnL5Amaj2GA9jLUKCLaMB2GPtXrbRwIaU7OPDvb9Rsa2jdfUBo8iTtcD4eMTuqCz
-
   # ── Domain ─────────────────────────────────────────────────────────────
   my-app-infra:domain: staging.ayda.studio
-
   # ── Cloudflare DNS ─────────────────────────────────────────────────────
   cloudflare:apiToken:
     secure: v1:6SJ+e+xyfPFEQaVa:mGEENgmVUgaKqhbrJHumbMAktuGk7mvKfHq7XqIqkCkbE2mYywUV/YACr+6DDEr/haCfMIPYL4Y=
   dns:zoneId: "0306ccea81e4019d0d04df29097570a6"
-
   # ── GHCR registry ──────────────────────────────────────────────────────
-  ghcr:user: "aydadevelop"
+  ghcr:user: "mavaurel"
   ghcr:token:
-    secure: v1:AkjzMMJ3yszCwFWw:g17cxSfPEMOViIZwdBLE5W/7Q13DWu1bwIlxkUjkOh+wmogWobj9mG/ToGkcBJX4lr5NHHvr9F4=
-
+    secure: v1:HNZjttXvly3Zm07q:2vs3r4V9bb/CRszwdazL2ABQCefAJ8ow/LdGZ6T6ha8wdvIVHoZpBCgQXmpVSwXh9g80V+CGG2g=
   # ── App config ─────────────────────────────────────────────────────────
   app:aiModel: "openai/gpt-4o-mini"
   app:smtpFrom: "noreply@staging.ayda.studio"
   app:grafanaAlertEmail: "ops@staging.ayda.studio"
   app:telegramBotUsername: ""
-
   # ── App secrets (encrypted) ────────────────────────────────────────────
   app:betterAuthSecret:
     secure: v1:8YadcEUl6Gtn7xls:Pw45TpxU7ngm23pAWrc6nE++t98DjLgHwLSWSiaAbHprBccRSPRkaKKXaGr9ynfJvMNyjEND9Sb2vLP1hsLAJroDt10=
@@ -31,12 +26,13 @@ config:
     secure: v1:25N8Kphpo+nxm5eG:K4a0ifOt1ak75pH1/TSzJWBWyISg/XKQMnAn2I7yQmnaF8Oh9q7c+Bv7n0dlV7SOl1Y/pBO0AVNQWps=
   app:grafanaPassword:
     secure: v1:N9FtUmKibGnMlsgO:yFsnH1gPglWrSrqukRN6drPa4R3o+pzOA/F7her3/tpO1PitGo+1rjNGPZkCKXuO
-
-  # ── Optional secrets — set via: pulumi config set --secret <key> <val>
-  # app:openRouterApiKey
-  # app:openaiApiKey
-  # app:smtpUser
-  # app:smtpPass
-  # app:telegramBotToken
-  # app:telegramChatId
+    # ── Optional secrets — set via: pulumi config set --secret <key> <val>
+    # app:openRouterApiKey
+    # app:openaiApiKey
+    # app:smtpUser
+    # app:smtpPass
+    # app:telegramBotToken
+    # app:telegramChatId
+  app:openRouterApiKey:
+    secure: v1:PhQ/C9Xw7eym71CK:L3ZNgO/t0Z5Fq/uzrOYfbRiMQ05xrhB52bLGhKV4IDfN6fitPtGzMnrq7XaeveGUAcgCTT4RVM7bzq6BaVVSaKLqKkSKn2VaWzXiW8vXkIfE56AyMHUh1SM=
 encryptionsalt: v1:sZkwHedKYyw=:v1:YK3Y242igjnaPvG+:+sUwEoTQ09jXV16Me7P5ee1ktXdAZQ==

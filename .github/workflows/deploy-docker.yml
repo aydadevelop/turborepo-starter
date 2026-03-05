@@ -86,7 +86,7 @@ jobs:
   # ── Deploy images to Dokku on VPS ──────────────────────────────────────────
   deploy:
     name: Deploy to Dokku
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, vps]
     needs: build-push
     if: github.ref == 'refs/heads/main'
     permissions:
@@ -94,38 +94,17 @@ jobs:
       packages: read
     environment:
       name: ${{ inputs.environment || github.event.inputs.environment || 'staging' }}
-    env:
-      # SSH_HOST, SSH_USER, SSH_PORT, SSH_PRIVATE_KEY_B64 set by `pulumi up` → sync-ci-secrets
-      SSH_HOST: ${{ secrets.SSH_HOST }}
-      SSH_USER: ${{ secrets.SSH_USER }}
-      SSH_PORT: ${{ secrets.SSH_PORT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-      - name: Validate VPS connectivity
-        run: |
-          echo "Runner IP: $(curl -sf https://ifconfig.me || echo unknown)"
-          echo "Testing TCP to ${SSH_HOST}:${SSH_PORT} ..."
-          timeout 10 bash -c "echo >/dev/tcp/${SSH_HOST}/${SSH_PORT}" \
-            && echo "TCP: OPEN" \
-            || echo "TCP: BLOCKED/TIMEOUT"
-
       - name: Run DB migrations
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
-            "dokku run server node dist/index.mjs db:migrate" || echo "Migration skipped (first deploy?)"
+          dokku run server node dist/index.mjs db:migrate || echo "Migration skipped (first deploy?)"
 
       - name: Deploy apps to Dokku
         env:
           REGISTRY: ${{ env.REGISTRY }}
           IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
           GIT_SHA: ${{ github.sha }}
-          SSH_KEY_FILE: ~/.ssh/deploy_key
         run: bash infra/scripts/deploy-dokku.sh
