@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from "$app/environment";
 	import { page } from "$app/state";
+	import PublicAppHeader from "../components/PublicAppHeader.svelte";
 	import "../app.css";
 
 	const { children } = $props();
@@ -10,31 +11,9 @@
 	const isPublicHeaderPath = $derived(
 		PUBLIC_HEADER_PATHS.has(page.url.pathname)
 	);
-
-	let PublicAppHeader = $state<
-		null | typeof import("../components/PublicAppHeader.svelte").default
-	>(null);
-
-	$effect(() => {
-		if (!(browser && isPublicHeaderPath)) {
-			return;
-		}
-
-		if (PublicAppHeader) {
-			return;
-		}
-
-		import("../components/PublicAppHeader.svelte")
-			.then((mod) => {
-				PublicAppHeader = mod.default;
-			})
-			.catch(() => {
-				PublicAppHeader = null;
-			});
-	});
 </script>
 
-{#if isPublicHeaderPath && PublicAppHeader}
+{#if browser && isPublicHeaderPath}
 	<PublicAppHeader />
 {/if}
 
