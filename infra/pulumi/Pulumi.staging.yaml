@@ -35,4 +35,5 @@ config:
     # app:telegramChatId
   app:openRouterApiKey:
     secure: v1:PhQ/C9Xw7eym71CK:L3ZNgO/t0Z5Fq/uzrOYfbRiMQ05xrhB52bLGhKV4IDfN6fitPtGzMnrq7XaeveGUAcgCTT4RVM7bzq6BaVVSaKLqKkSKn2VaWzXiW8vXkIfE56AyMHUh1SM=
+  my-app-infra:ghRepo: aydadevelop/turborepo-starter
 encryptionsalt: v1:sZkwHedKYyw=:v1:YK3Y242igjnaPvG+:+sUwEoTQ09jXV16Me7P5ee1ktXdAZQ==

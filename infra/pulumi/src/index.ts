@@ -86,14 +86,15 @@ const dns = new DnsRecords("dns", { domain, vpsIp });
 
 // ── Step 4: Sync deployment config to GitHub Actions secrets ────────────────
 const sshKeyB64 = deployKey.privateKeyOpenssh.apply(k => Buffer.from(k).toString("base64"));
+const ghRepo = config.get("ghRepo") ?? "aydadevelop/turborepo-starter";
 new command.local.Command("sync-ci-secrets", {
   create: pulumi.interpolate`
-    gh secret set SSH_HOST --body "${vpsIp}" && \
-    gh secret set SSH_USER --body "${sshUser}" && \
-    gh secret set SSH_PORT --body "${sshPort}" && \
-    gh secret set SSH_PRIVATE_KEY_B64 --body "${sshKeyB64}"
+    gh secret set SSH_HOST           --repo "${ghRepo}" --body "${vpsIp}" && \
+    gh secret set SSH_USER           --repo "${ghRepo}" --body "${sshUser}" && \
+    gh secret set SSH_PORT           --repo "${ghRepo}" --body "${sshPort}" && \
+    gh secret set SSH_PRIVATE_KEY_B64 --repo "${ghRepo}" --body "${sshKeyB64}"
   `,
-  triggers: [vpsIp, sshUser, String(sshPort)],
+  triggers: [vpsIp, sshUser, String(sshPort), sshKeyB64],
 }, { dependsOn: [bootstrap, apps, dns] });
 
 
