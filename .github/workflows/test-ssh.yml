@@ -1,0 +1,58 @@
+name: Test SSH Connection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-ssh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show runner IP
+        run: curl -s https://api.ipify.org && echo
+
+      - name: Check secret presence
+        env:
+          SSH_PRIVATE_KEY_B64: ${{ secrets.SSH_PRIVATE_KEY_B64 }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          echo "SSH_HOST set: $([[ -n "$SSH_HOST" ]] && echo YES || echo NO)"
+          echo "SSH_USER set: $([[ -n "$SSH_USER" ]] && echo YES || echo NO)"
+          echo "SSH_PORT set: $([[ -n "$SSH_PORT" ]] && echo YES || echo NO)"
+          echo "SSH_PRIVATE_KEY_B64 length: ${#SSH_PRIVATE_KEY_B64}"
+
+      - name: Write & validate SSH key
+        env:
+          SSH_PRIVATE_KEY_B64: ${{ secrets.SSH_PRIVATE_KEY_B64 }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -l -f ~/.ssh/deploy_key && echo "Key is valid"
+          head -1 ~/.ssh/deploy_key
+
+      - name: TCP reachability test (port 22)
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          PORT="${SSH_PORT:-22}"
+          echo "Testing TCP $SSH_HOST:$PORT ..."
+          timeout 10 bash -c "echo > /dev/tcp/$SSH_HOST/$PORT" && echo "TCP OK" || echo "TCP FAILED (firewall/network block)"
+
+      - name: SSH connect (verbose, no command)
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          PORT="${SSH_PORT:-22}"
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            -o BatchMode=yes \
+            -v \
+            -p "$PORT" \
+            "${SSH_USER:-root}@${SSH_HOST}" \
+            "echo SSH_OK && whoami" 2>&1 | tail -30
