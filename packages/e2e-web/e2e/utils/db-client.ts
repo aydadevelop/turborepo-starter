@@ -1,5 +1,7 @@
 import pg from "pg";
 
+import { CLEANUP_TABLES } from "../../../../db/scripts/cleanup-tables.mjs";
+
 const DEFAULT_DATABASE_URL =
 	"postgresql://postgres:postgres@localhost:5432/myapp";
 
@@ -27,26 +29,7 @@ export const cleanupNamespace = async (
 ): Promise<void> => {
 	const likePattern = `${namespace}%`;
 
-	// Order matters — delete children before parents to respect FK constraints.
-	const textIdTables = [
-		"assistant_message",
-		"assistant_chat",
-		"notification_in_app",
-		"notification_delivery",
-		"notification_intent",
-		"notification_event",
-		"notification_preference",
-		"user_consent",
-		"passkey",
-		"verification",
-		"invitation",
-		"member",
-		"account",
-		"session",
-		"organization",
-	];
-
-	for (const table of textIdTables) {
+	for (const table of CLEANUP_TABLES) {
 		await client.query(
 			`DELETE FROM ${quote(table)} WHERE ${quote("id")} LIKE $1`,
 			[likePattern]

@@ -81,9 +81,6 @@ export const signInWithEmail = async (
 	}
 };
 
-export const signInAsSeedOwner = async (page: Page) =>
-	await signInWithEmail(page, SEED_CREDENTIALS.admin);
-
 export const signInAsSeedAdmin = async (page: Page) =>
 	await signInWithEmail(page, SEED_CREDENTIALS.admin);
 

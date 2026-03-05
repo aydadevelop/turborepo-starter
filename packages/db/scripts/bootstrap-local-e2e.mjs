@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -11,6 +12,7 @@ const { Client } = pg;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../../..");
+const dbPackageRoot = path.resolve(__dirname, "..");
 const seedScriptPath = path.resolve(__dirname, "./seed-local.mjs");
 
 const DEFAULT_DATABASE_URL =
@@ -55,29 +57,44 @@ export const waitForDatabase = async ({
 	);
 };
 
-export const bootstrapLocalE2EDatabase = async ({
-	scenario,
-	anchorDate,
-} = {}) => {
-	const resolvedScenario =
-		scenario ?? process.env.PLAYWRIGHT_SEED_SCENARIO ?? "baseline";
+const pushSchema = (connectionString) => {
+	try {
+		execFileSync("bunx", ["drizzle-kit", "push", "--config", "drizzle.config.dev.ts"], {
+			cwd: dbPackageRoot,
+			stdio: "inherit",
+			env: { ...process.env, DATABASE_URL: connectionString },
+		});
+	} catch (error) {
+		const fallback = path.resolve(repoRoot, "node_modules/.bin/drizzle-kit");
+		if (!existsSync(fallback)) {
+			throw error;
+		}
+		execFileSync(fallback, ["push", "--config", "drizzle.config.dev.ts"], {
+			cwd: dbPackageRoot,
+			stdio: "inherit",
+			env: { ...process.env, DATABASE_URL: connectionString },
+		});
+	}
+};
+
+export const bootstrapLocalE2EDatabase = async ({ anchorDate } = {}) => {
 	const resolvedAnchorDate =
 		anchorDate ?? process.env.PLAYWRIGHT_SEED_ANCHOR_DATE ?? "2026-03-15";
+	const connectionString =
+		process.env.PLAYWRIGHT_DATABASE_URL ??
+		process.env.DATABASE_URL ??
+		DEFAULT_DATABASE_URL;
 
-	await waitForDatabase();
+	await waitForDatabase({ connectionString });
+	pushSchema(connectionString);
 
 	execFileSync(
 		"node",
-		[
-			seedScriptPath,
-			"--scenario",
-			resolvedScenario,
-			"--anchor-date",
-			resolvedAnchorDate,
-		],
+		[seedScriptPath, "--anchor-date", resolvedAnchorDate],
 		{
 			cwd: repoRoot,
 			stdio: "inherit",
+			env: { ...process.env, DATABASE_URL: connectionString },
 		}
 	);
 };
@@ -91,7 +108,6 @@ const runFromCli = async () => {
 	}
 
 	await bootstrapLocalE2EDatabase({
-		scenario: getArgValue("--scenario"),
 		anchorDate: getArgValue("--anchor-date"),
 	});
 };

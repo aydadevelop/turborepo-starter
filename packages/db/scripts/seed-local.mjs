@@ -1,308 +1,56 @@
 #!/usr/bin/env node
 
-import { execFileSync } from "node:child_process";
-import {
-	existsSync,
-	readdirSync,
-	readFileSync,
-} from "node:fs";
-import path from "node:path";
+import { parseArgs } from "node:util";
 import process from "node:process";
-import { fileURLToPath } from "node:url";
 
 import { hashPassword } from "better-auth/crypto";
 import pg from "pg";
+
+import { CLEANUP_TABLES } from "./cleanup-tables.mjs";
 
 const { Client } = pg;
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const DEFAULT_ANCHOR_DATE = "2026-03-15";
-const DEFAULT_SCENARIO = "baseline";
-
-const MIGRATION_FILENAME_RE = /^\d+_.+\.sql$/;
 const ANCHOR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
 const TODO_ID_MIN = 900_000;
 const TODO_ID_MAX = 900_999;
-
 const DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:5432/myapp";
-
-const scenarioCatalog = {
-	baseline:
-		"Core starter data for auth/org, notifications, assistant chat, and todo.",
-	full: "Alias of baseline starter data.",
-};
-
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(scriptDir, "../../..");
-const dbPackageRoot = path.resolve(scriptDir, "..");
-
-const isLikelySqliteMigration = (sqlText) =>
-	sqlText.includes("AUTOINCREMENT") ||
-	sqlText.includes("unixepoch(") ||
-	/`[^`]+`/.test(sqlText);
-
-const printHelp = () => {
-	console.log(
-		[
-			"Usage: bun run db:seed -- [options]",
-			"",
-			"Options:",
-			`  --scenario <name>           Scenario to seed (default: ${DEFAULT_SCENARIO})`,
-			`  --anchor-date <YYYY-MM-DD>  Stable UTC anchor date (default: ${DEFAULT_ANCHOR_DATE})`,
-			"  --append                    Do not clear prior seed namespace before writing",
-			"  --database-url <url>        PostgreSQL connection string (default: DATABASE_URL env or localhost)",
-			"  --list-scenarios            Print available scenario names",
-			"  -h, --help                  Show this help message",
-			"",
-			"Examples:",
-			"  bun run db:seed",
-			"  bun run db:seed -- --scenario baseline",
-			"  bun run db:seed -- --database-url postgresql://user:pass@host:5432/db",
-		].join("\n")
-	);
-};
-
-const printScenarios = () => {
-	console.log("Available scenarios:");
-	for (const [name, description] of Object.entries(scenarioCatalog)) {
-		console.log(`- ${name}: ${description}`);
-	}
-};
-
-const parseArgs = () => {
-	const args = process.argv.slice(2);
-	const result = {
-		databaseUrl: null,
-		scenario: DEFAULT_SCENARIO,
-		anchorDate: DEFAULT_ANCHOR_DATE,
-		append: false,
-	};
-
-	const flagHandlers = {
-		"--database-url": (value) => {
-			result.databaseUrl = value;
-		},
-		"--scenario": (value) => {
-			result.scenario = value;
-		},
-		"--anchor-date": (value) => {
-			result.anchorDate = value;
-		},
-		"--append": () => {
-			result.append = true;
-		},
-		"--list-scenarios": () => {
-			printScenarios();
-			process.exit(0);
-		},
-		"--help": () => {
-			printHelp();
-			process.exit(0);
-		},
-		"-h": () => {
-			printHelp();
-			process.exit(0);
-		},
-	};
-
-	for (let i = 0; i < args.length; i += 1) {
-		const arg = args[i];
-		const handler = flagHandlers[arg];
-		if (!handler) {
-			throw new Error(`Unknown argument: ${arg}`);
-		}
-
-		if (
-			arg === "--append" ||
-			arg === "--list-scenarios" ||
-			arg === "--help" ||
-			arg === "-h"
-		) {
-			handler();
-			continue;
-		}
-
-		const value = args[i + 1];
-		if (!value) {
-			throw new Error(`Missing value for ${arg}`);
-		}
-		handler(value);
-		i += 1;
-	}
-
-	if (!(result.scenario in scenarioCatalog)) {
-		throw new Error(
-			`Unknown scenario: ${result.scenario}. Use --list-scenarios to see valid values.`
-		);
-	}
-
-	return {
-		append: result.append,
-		anchorDate: result.anchorDate,
-		databaseUrl: result.databaseUrl,
-		scenario: result.scenario,
-	};
-};
 
 const quote = (identifier) => `"${identifier}"`;
 
-const getMissingTables = async (client, tableNames) => {
-	const result = await client.query(
-		`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ANY($1)`,
-		[tableNames]
-	);
-	const existing = new Set(result.rows.map((r) => r.table_name));
-	return tableNames.filter((name) => !existing.has(name));
-};
+const parseCliArgs = () => {
+	const { values } = parseArgs({
+		options: {
+			"anchor-date": { type: "string", default: DEFAULT_ANCHOR_DATE },
+			append: { type: "boolean", default: false },
+			"database-url": { type: "string" },
+			help: { type: "boolean", short: "h" },
+		},
+		strict: true,
+	});
 
-const isIgnorableMigrationError = (error) => {
-	const message = String(error?.message ?? "");
-	return (
-		message.includes("already exists") ||
-		message.includes("duplicate column name") ||
-		message.includes("no such index") ||
-		message.includes("no such table")
-	);
-};
-
-const collectMigrationSqlFiles = (rootDir) => {
-	const sqlFiles = [];
-	const stack = [rootDir];
-
-	while (stack.length > 0) {
-		const currentDir = stack.pop();
-		if (!currentDir) {
-			continue;
-		}
-
-		for (const entry of readdirSync(currentDir, { withFileTypes: true })) {
-			const absolutePath = path.join(currentDir, entry.name);
-			if (entry.isDirectory()) {
-				stack.push(absolutePath);
-				continue;
-			}
-
-			if (!entry.isFile()) {
-				continue;
-			}
-
-			const isLegacySql = MIGRATION_FILENAME_RE.test(entry.name);
-			const isFolderStyleSql = entry.name === "migration.sql";
-			if (!(isLegacySql || isFolderStyleSql)) {
-				continue;
-			}
-
-			sqlFiles.push(absolutePath);
-		}
-	}
-
-	return sqlFiles.sort((left, right) =>
-		left.localeCompare(right, undefined, { numeric: true })
-	);
-};
-
-const applyMigrationsIfNeeded = async (client, requiredTables) => {
-	const missingTables = await getMissingTables(client, requiredTables);
-	if (missingTables.length === 0) {
-		return;
-	}
-
-	const migrationsDir = path.resolve(scriptDir, "../src/migrations");
-	const migrationFiles = collectMigrationSqlFiles(migrationsDir);
-
-	for (const migrationPath of migrationFiles) {
-		const rawSql = readFileSync(migrationPath, "utf8");
-		if (isLikelySqliteMigration(rawSql)) {
-			return;
-		}
-
-		const statements = rawSql
-			.split("--> statement-breakpoint")
-			.map((statement) => statement.trim())
-			.filter(Boolean);
-
-		for (const statement of statements) {
-			try {
-				await client.query(statement);
-			} catch (error) {
-				if (!isIgnorableMigrationError(error)) {
-					throw error;
-				}
-			}
-		}
-	}
-};
-
-const pushSchemaWithDrizzle = (connectionString) => {
-	try {
-		execFileSync("bunx", ["drizzle-kit", "push", "--config", "drizzle.config.dev.ts"], {
-			cwd: dbPackageRoot,
-			stdio: "inherit",
-			env: {
-				...process.env,
-				DATABASE_URL: connectionString,
-			},
-		});
-	} catch (error) {
-		const fallbackDrizzleKitBin = path.resolve(
-			repoRoot,
-			"node_modules/.bin/drizzle-kit"
-		);
-		if (!existsSync(fallbackDrizzleKitBin)) {
-			throw error;
-		}
-
-		execFileSync(fallbackDrizzleKitBin, ["push", "--config", "drizzle.config.dev.ts"], {
-			cwd: dbPackageRoot,
-			stdio: "inherit",
-			env: {
-				...process.env,
-				DATABASE_URL: connectionString,
-			},
-		});
-	}
-};
-
-const ensureSchemaExists = async (client, connectionString) => {
-	const requiredTables = [
-		"organization",
-		"user",
-		"account",
-		"session",
-		"verification",
-		"passkey",
-		"member",
-		"invitation",
-		"user_consent",
-		"notification_event",
-		"notification_intent",
-		"notification_delivery",
-		"notification_preference",
-		"notification_in_app",
-		"todo",
-		"assistant_chat",
-		"assistant_message",
-	];
-
-	await applyMigrationsIfNeeded(client, requiredTables);
-
-	let missingRequiredTables = await getMissingTables(client, requiredTables);
-	if (missingRequiredTables.length > 0) {
-		pushSchemaWithDrizzle(connectionString);
-		missingRequiredTables = await getMissingTables(client, requiredTables);
-	}
-
-	if (missingRequiredTables.length > 0) {
-		throw new Error(
+	if (values.help) {
+		console.log(
 			[
-				`Missing required tables: ${missingRequiredTables.join(", ")}`,
-				"Apply schema first with:",
-				"  bun run db:push",
+				"Usage: bun run db:seed -- [options]",
+				"",
+				"Options:",
+				`  --anchor-date <YYYY-MM-DD>  Stable UTC anchor date (default: ${DEFAULT_ANCHOR_DATE})`,
+				"  --append                    Do not clear prior seed namespace before writing",
+				"  --database-url <url>        PostgreSQL connection string (default: DATABASE_URL env or localhost)",
+				"  -h, --help                  Show this help message",
 			].join("\n")
 		);
+		process.exit(0);
 	}
+
+	return {
+		anchorDate: values["anchor-date"],
+		append: values.append ?? false,
+		databaseUrl: values["database-url"] ?? null,
+	};
 };
 
 const parseAnchorDate = (value) => {
@@ -325,12 +73,7 @@ const withCommon = (rows, now) =>
 		...row,
 	}));
 
-const buildSeedData = ({
-	anchorDate,
-	scenario,
-	adminPasswordHash,
-	operatorPasswordHash,
-}) => {
+const buildSeedData = ({ anchorDate, adminPasswordHash, operatorPasswordHash }) => {
 	const anchorDateMs = parseAnchorDate(anchorDate);
 	const nowMs = anchorDateMs + 9 * HOUR_MS;
 	const now = new Date(nowMs).toISOString();
@@ -342,7 +85,7 @@ const buildSeedData = ({
 	const operatorUserId = "seed_user_operator";
 	const memberUserId = "seed_user_member";
 
-	const seed = {
+	return {
 		organizations: [
 			{
 				id: adminOrgId,
@@ -594,64 +337,51 @@ const buildSeedData = ({
 			now
 		),
 	};
-
-	if (scenario === "full") {
-		seed.todos.push({
-			id: 900_004,
-			text: "Full scenario alias is active",
-			completed: false,
-		});
-	}
-
-	return seed;
 };
 
-const escapeSqlValue = (value) => {
-	if (value === null || value === undefined) {
-		return "NULL";
-	}
-	if (typeof value === "boolean") {
-		return value ? "TRUE" : "FALSE";
-	}
-	if (typeof value === "number") {
-		return String(value);
-	}
-	return `'${String(value).replace(/'/g, "''")}'`;
-};
-
-const upsertSql = (table, conflictColumns, row) => {
+const upsert = async (client, table, conflictColumns, row) => {
 	const columns = Object.keys(row);
-	const values = columns.map((column) => escapeSqlValue(row[column]));
-	const updateColumns = columns.filter(
-		(column) => !conflictColumns.includes(column)
+	const values = Object.values(row);
+	const placeholders = columns.map((_, i) => `$${i + 1}`);
+	const updateColumns = columns.filter((c) => !conflictColumns.includes(c));
+
+	const sql = [
+		`INSERT INTO ${quote(table)} (${columns.map(quote).join(", ")})`,
+		`VALUES (${placeholders.join(", ")})`,
+		`ON CONFLICT (${conflictColumns.map(quote).join(", ")})`,
+		`DO UPDATE SET ${updateColumns.map((c) => `${quote(c)} = EXCLUDED.${quote(c)}`).join(", ")}`,
+	].join(" ");
+
+	await client.query(sql, values);
+};
+
+const clearSeedNamespace = async (client) => {
+	for (const table of CLEANUP_TABLES) {
+		await client.query(
+			`DELETE FROM ${quote(table)} WHERE ${quote("id")} LIKE $1`,
+			["seed_%"]
+		);
+	}
+
+	await client.query(
+		`DELETE FROM ${quote("user")} WHERE ${quote("id")} LIKE $1`,
+		["seed_%"]
 	);
 
-	return `INSERT INTO ${quote(table)} (${columns.map(quote).join(", ")}) VALUES (${values.join(", ")}) ON CONFLICT (${conflictColumns.map(quote).join(", ")}) DO UPDATE SET ${updateColumns.map((column) => `${quote(column)} = excluded.${quote(column)}`).join(", ")};`;
+	await client.query(
+		`DELETE FROM ${quote("todo")} WHERE ${quote("id")} >= $1 AND ${quote("id")} <= $2`,
+		[TODO_ID_MIN, TODO_ID_MAX]
+	);
 };
 
-const collectSeedSql = (seed) => {
-	const statements = [];
-
-	for (const row of seed.organizations) {
-		statements.push(upsertSql("organization", ["id"], row));
-	}
-	for (const row of seed.users) {
-		statements.push(upsertSql("user", ["id"], row));
-	}
-	for (const row of seed.accounts) {
-		statements.push(upsertSql("account", ["id"], row));
-	}
-	for (const row of seed.members) {
-		statements.push(upsertSql("member", ["id"], row));
-	}
-	for (const row of seed.invitations) {
-		statements.push(upsertSql("invitation", ["id"], row));
-	}
-	for (const row of seed.consents) {
-		statements.push(upsertSql("user_consent", ["id"], row));
-	}
-
-	const rowGroups = [
+const writeSeedData = async (client, seed) => {
+	const tableRows = [
+		["organization", seed.organizations],
+		["user", seed.users],
+		["account", seed.accounts],
+		["member", seed.members],
+		["invitation", seed.invitations],
+		["user_consent", seed.consents],
 		["notification_event", seed.notificationEvents],
 		["notification_intent", seed.notificationIntents],
 		["notification_delivery", seed.notificationDeliveries],
@@ -662,56 +392,15 @@ const collectSeedSql = (seed) => {
 		["assistant_message", seed.assistantMessages],
 	];
 
-	for (const [table, rows] of rowGroups) {
+	for (const [table, rows] of tableRows) {
 		for (const row of rows) {
-			statements.push(upsertSql(table, ["id"], row));
+			await upsert(client, table, ["id"], row);
 		}
-	}
-
-	return statements;
-};
-
-const clearSeedNamespace = async (client) => {
-	const prefixedTables = [
-		"assistant_message",
-		"assistant_chat",
-		"notification_in_app",
-		"notification_delivery",
-		"notification_intent",
-		"notification_event",
-		"notification_preference",
-		"user_consent",
-		"invitation",
-		"member",
-		"account",
-		"session",
-		"passkey",
-		"verification",
-		"organization",
-		"user",
-	];
-
-	for (const table of prefixedTables) {
-		await client.query(
-			`DELETE FROM ${quote(table)} WHERE ${quote("id")} LIKE 'seed_%'`
-		);
-	}
-
-	await client.query(
-		`DELETE FROM ${quote("todo")} WHERE ${quote("id")} >= $1 AND ${quote("id")} <= $2`,
-		[TODO_ID_MIN, TODO_ID_MAX]
-	);
-};
-
-const writeSeedData = async (client, seed) => {
-	const statements = collectSeedSql(seed);
-	for (const statement of statements) {
-		await client.query(statement);
 	}
 };
 
 const main = async () => {
-	const options = parseArgs();
+	const options = parseCliArgs();
 	const connectionString =
 		options.databaseUrl ?? process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
 
@@ -719,14 +408,11 @@ const main = async () => {
 	await client.connect();
 
 	try {
-		await ensureSchemaExists(client, connectionString);
-
 		const adminPasswordHash = await hashPassword("admin");
 		const operatorPasswordHash = await hashPassword("operator");
 
 		const seed = buildSeedData({
 			anchorDate: options.anchorDate,
-			scenario: options.scenario,
 			adminPasswordHash,
 			operatorPasswordHash,
 		});
@@ -746,7 +432,6 @@ const main = async () => {
 		console.log(
 			[
 				`Seeded database: ${connectionString.replace(/\/\/.*@/, "//***@")}`,
-				`Scenario: ${options.scenario}`,
 				`Anchor date: ${options.anchorDate}`,
 				`Organizations: ${seed.organizations.map((org) => org.slug).join(", ")}`,
 				`Users: ${seed.users.length}, notifications: ${seed.notificationEvents.length}, todos: ${seed.todos.length}`,

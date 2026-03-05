@@ -27,8 +27,7 @@ export default async function globalSetup(): Promise<void> {
 		return;
 	}
 
-	const scenario = process.env.PLAYWRIGHT_SEED_SCENARIO ?? "baseline";
 	const anchorDate = process.env.PLAYWRIGHT_SEED_ANCHOR_DATE ?? "2026-03-15";
 
-	await bootstrapLocalE2EDatabase({ scenario, anchorDate });
+	await bootstrapLocalE2EDatabase({ anchorDate });
 }
