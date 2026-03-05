@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived } from "svelte/store";
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
@@ -34,19 +33,16 @@
 		window.location.href = resolve("/admin/users");
 	};
 
-	const canManageQueryOptions = derived(sessionQuery, ($sessionQuery) => ({
+	const canManageQuery = createQuery(() => ({
 		...orpc.canManageOrganization.queryOptions(),
 		retry: false,
 		enabled: hasAuthenticatedSession($sessionQuery.data),
 	}));
-	const canManageQuery = createQuery(canManageQueryOptions);
 
-	const invitationsQuery = createQuery(
-		derived(sessionQuery, ($sessionQuery) =>
-			userInvitationsQueryOptions({
-				enabled: hasAuthenticatedSession($sessionQuery.data),
-			})
-		)
+	const invitationsQuery = createQuery(() =>
+		userInvitationsQueryOptions({
+			enabled: hasAuthenticatedSession($sessionQuery.data),
+		})
 	);
 
 	const isAdmin = $derived(
@@ -54,10 +50,10 @@
 			"admin"
 	);
 	const hasOrgAccess = $derived(
-		Boolean($canManageQuery.data?.canManageOrganization)
+		Boolean(canManageQuery.data?.canManageOrganization)
 	);
 	const pendingInvitationCount = $derived(
-		($invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
+		(invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
 			.length
 	);
 </script>

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Badge } from "@my-app/ui/components/badge";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived } from "svelte/store";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -13,23 +12,22 @@
 
 	const sessionQuery = authClient.useSession();
 
-	const orgsQueryOptions = derived(sessionQuery, ($session) => ({
+	const orgsQuery = createQuery(() => ({
 		queryKey: ["user-organizations"],
 		queryFn: async () => {
 			const { data, error } = await authClient.organization.list();
 			if (error) throw error;
 			return data ?? [];
 		},
-		enabled: hasAuthenticatedSession($session.data),
+		enabled: hasAuthenticatedSession($sessionQuery.data),
 	}));
-	const orgsQuery = createQuery(orgsQueryOptions);
 
-	const canManageQuery = createQuery({
+	const canManageQuery = createQuery(() => ({
 		...orpc.canManageOrganization.queryOptions(),
 		retry: false,
-	});
+	}));
 
-	const invitationsQueryOptions = derived(sessionQuery, ($session) => ({
+	const invitationsQuery = createQuery(() => ({
 		queryKey: ["user-invitations"],
 		queryFn: async () => {
 			const { data, error } =
@@ -37,9 +35,8 @@
 			if (error) throw error;
 			return data ?? [];
 		},
-		enabled: hasAuthenticatedSession($session.data),
+		enabled: hasAuthenticatedSession($sessionQuery.data),
 	}));
-	const invitationsQuery = createQuery(invitationsQueryOptions);
 
 	$effect(() => {
 		if ($sessionQuery.isPending) return;
@@ -50,12 +47,12 @@
 		}
 	});
 
-	const hasOrg = $derived(($orgsQuery.data?.length ?? 0) > 0);
+	const hasOrg = $derived((orgsQuery.data?.length ?? 0) > 0);
 	const canManage = $derived(
-		$canManageQuery.data?.canManageOrganization ?? false
+		canManageQuery.data?.canManageOrganization ?? false
 	);
 	const pendingInviteCount = $derived(
-		($invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
+		(invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
 			.length
 	);
 

@@ -4,10 +4,10 @@
 	import { resolve } from "$app/paths";
 	import { orpc } from "$lib/orpc";
 
-	const orgsQuery = createQuery(
+	const orgsQuery = createQuery(() =>
 		orpc.admin.organizations.listOrgs.queryOptions({ input: { limit: 5 } })
 	);
-	const usersQuery = createQuery(
+	const usersQuery = createQuery(() =>
 		orpc.admin.organizations.listUsers.queryOptions({ input: { limit: 5 } })
 	);
 </script>
@@ -16,7 +16,7 @@
 	<Card.Root>
 		<Card.Header class="pb-2">
 			<Card.Description>Organizations</Card.Description>
-			<Card.Title class="text-3xl">{$orgsQuery.data?.total ?? "—"}</Card.Title>
+			<Card.Title class="text-3xl">{orgsQuery.data?.total ?? "—"}</Card.Title>
 		</Card.Header>
 		<Card.Footer>
 			<a
@@ -31,7 +31,7 @@
 	<Card.Root>
 		<Card.Header class="pb-2">
 			<Card.Description>Users</Card.Description>
-			<Card.Title class="text-3xl">{$usersQuery.data?.total ?? "—"}</Card.Title>
+			<Card.Title class="text-3xl">{usersQuery.data?.total ?? "—"}</Card.Title>
 		</Card.Header>
 		<Card.Footer>
 			<a

@@ -6,7 +6,7 @@
 	import { authClient } from "$lib/auth-client";
 	import { queryClient } from "$lib/orpc";
 
-	const invitationsQuery = createQuery({
+	const invitationsQuery = createQuery(() => ({
 		queryKey: ["user-invitations"],
 		queryFn: async () => {
 			const { data, error } =
@@ -14,17 +14,17 @@
 			if (error) throw error;
 			return data ?? [];
 		},
-	});
+	}));
 
 	let pendingId = $state<string | null>(null);
 	let errorMessage = $state<string | null>(null);
 
 	const pendingInvitations = $derived(
-		($invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
+		(invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
 	);
 
 	const pastInvitations = $derived(
-		($invitationsQuery.data ?? []).filter((inv) => inv.status !== "pending")
+		(invitationsQuery.data ?? []).filter((inv) => inv.status !== "pending")
 	);
 
 	const handleAccept = async (invitationId: string) => {
@@ -73,9 +73,9 @@
 	<p class="mb-4 text-sm text-destructive">{errorMessage}</p>
 {/if}
 
-{#if $invitationsQuery.isPending}
+{#if invitationsQuery.isPending}
 	<p class="text-muted-foreground">Loading...</p>
-{:else if $invitationsQuery.isError}
+{:else if invitationsQuery.isError}
 	<p class="text-destructive">Failed to load invitations.</p>
 {:else}
 	<div class="max-w-xl space-y-4">

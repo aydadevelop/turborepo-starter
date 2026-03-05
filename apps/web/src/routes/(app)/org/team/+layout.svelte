@@ -6,14 +6,14 @@
 
 	const { children } = $props();
 
-	const canManageQuery = createQuery({
+	const canManageQuery = createQuery(() => ({
 		...orpc.canManageOrganization.queryOptions(),
 		retry: false,
-	});
+	}));
 
 	$effect(() => {
-		if ($canManageQuery.isPending) return;
-		if (!$canManageQuery.data?.canManageOrganization) {
+		if (canManageQuery.isPending) return;
+		if (!canManageQuery.data?.canManageOrganization) {
 			goto(resolve("/dashboard/settings"));
 		}
 	});

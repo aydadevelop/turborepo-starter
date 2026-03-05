@@ -5,26 +5,23 @@
 	import { Input } from "@my-app/ui/components/input";
 	import * as Table from "@my-app/ui/components/table";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived, writable } from "svelte/store";
 	import { resolve } from "$app/paths";
 	import { orpc } from "$lib/orpc";
 
-	const search = writable("");
-	const currentOffset = writable(0);
+	let search = $state("");
+	let currentOffset = $state(0);
 	const limit = 20;
 
-	const orgsQuery = createQuery(
-		derived([search, currentOffset], ([$search, $currentOffset]) =>
-			orpc.admin.organizations.listOrgs.queryOptions({
-				input: { limit, offset: $currentOffset, search: $search || undefined },
-			})
-		)
+	const orgsQuery = createQuery(() =>
+		orpc.admin.organizations.listOrgs.queryOptions({
+			input: { limit, offset: currentOffset, search: search || undefined },
+		})
 	);
 
 	const totalPages = $derived(
-		Math.max(1, Math.ceil(($orgsQuery.data?.total ?? 0) / limit))
+		Math.max(1, Math.ceil((orgsQuery.data?.total ?? 0) / limit))
 	);
-	const currentPage = $derived(Math.floor($currentOffset / limit) + 1);
+	const currentPage = $derived(Math.floor(currentOffset / limit) + 1);
 </script>
 
 <div class="space-y-4">
@@ -35,10 +32,10 @@
 	<div class="flex gap-2">
 		<Input
 			placeholder="Search by name or slug..."
-			value={$search}
+			value={search}
 			oninput={(e) => {
-				search.set((e.target as HTMLInputElement).value);
-				currentOffset.set(0);
+				search = (e.target as HTMLInputElement).value;
+				currentOffset = 0;
 			}}
 			class="max-w-sm"
 		/>
@@ -46,9 +43,9 @@
 
 	<Card.Root>
 		<Card.Content class="p-0">
-			{#if $orgsQuery.isPending}
+			{#if orgsQuery.isPending}
 				<p class="p-4 text-sm text-muted-foreground">Loading...</p>
-			{:else if $orgsQuery.isError}
+			{:else if orgsQuery.isError}
 				<p class="p-4 text-sm text-destructive">
 					Failed to load organizations.
 				</p>
@@ -63,7 +60,7 @@
 						</Table.Row>
 					</Table.Header>
 					<Table.Body>
-						{#each $orgsQuery.data?.items ?? [] as org (org.id)}
+							{#each orgsQuery.data?.items ?? [] as org (org.id)}
 							<Table.Row>
 								<Table.Cell class="font-medium">{org.name}</Table.Cell>
 								<Table.Cell>
@@ -100,15 +97,15 @@
 	{#if totalPages > 1}
 		<div class="flex items-center justify-between">
 			<p class="text-sm text-muted-foreground">
-				Page {currentPage} of {totalPages} ({$orgsQuery.data?.total ?? 0}
+				Page {currentPage} of {totalPages} ({orgsQuery.data?.total ?? 0}
 				total)
 			</p>
 			<div class="flex gap-2">
 				<Button
 					variant="outline"
 					size="sm"
-					disabled={$currentOffset === 0}
-					onclick={() => currentOffset.set(Math.max(0, $currentOffset - limit))}
+					disabled={currentOffset === 0}
+					onclick={() => { currentOffset = Math.max(0, currentOffset - limit); }}
 				>
 					Previous
 				</Button>
@@ -116,7 +113,7 @@
 					variant="outline"
 					size="sm"
 					disabled={currentPage >= totalPages}
-					onclick={() => currentOffset.set($currentOffset + limit)}
+					onclick={() => { currentOffset = currentOffset + limit; }}
 				>
 					Next
 				</Button>

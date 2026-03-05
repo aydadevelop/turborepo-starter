@@ -9,10 +9,10 @@
 	import { orpc, queryClient } from "$lib/orpc";
 	import { queryKeys } from "$lib/query-keys";
 
-	const canManageQuery = createQuery({
+	const canManageQuery = createQuery(() => ({
 		...orpc.canManageOrganization.queryOptions(),
 		retry: false,
-	});
+	}));
 
 	let email = $state("");
 	let selectedRole = $state("agent");
@@ -53,7 +53,7 @@
 			return;
 		}
 
-		const organizationId = $canManageQuery.data?.organizationId;
+		const organizationId = canManageQuery.data?.organizationId;
 		if (!organizationId) {
 			errorMessage = "Organization not found. Please try again.";
 			return;

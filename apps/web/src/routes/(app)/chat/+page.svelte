@@ -17,8 +17,8 @@
 	</p>
 	<Button
 		data-testid="new-chat-button-empty-state"
-		onclick={() => $createChatMutation.mutate("New Chat")}
-		disabled={$createChatMutation.isPending}
+		onclick={() => createChatMutation.mutate("New Chat")}
+		disabled={createChatMutation.isPending}
 	>
 		<MessageSquarePlus class="mr-2 h-4 w-4" />
 		New Chat

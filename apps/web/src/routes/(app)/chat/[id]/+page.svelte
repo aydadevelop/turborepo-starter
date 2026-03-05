@@ -22,29 +22,25 @@
 	import { createORPCChatTransport } from "@my-app/assistant/transport";
 	import { Button } from "@my-app/ui/components/button";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived, toStore } from "svelte/store";
 	import { page } from "$app/state";
 	import { assistantClient } from "$lib/assistant";
 	import { queryKeys } from "$lib/query-keys";
 
 	const chatId = $derived(page.params.id ?? "");
-	const chatIdStore = toStore(() => page.params.id ?? "");
 
-	const chatQuery = createQuery(
-		derived(chatIdStore, ($chatId) => ({
-			queryKey: queryKeys.assistant.chat($chatId),
-			queryFn: () => assistantClient.getChat({ chatId: $chatId }),
-			enabled: Boolean($chatId),
-		}))
-	);
+	const chatQuery = createQuery(() => ({
+		queryKey: queryKeys.assistant.chat(chatId),
+		queryFn: () => assistantClient.getChat({ chatId }),
+		enabled: Boolean(chatId),
+	}));
 
 	let chat = $state<Chat | null>(null);
 
 	// Initialize or switch chat when chatId/data changes
 	$effect(() => {
 		const currentId = chatId;
-		const loading = $chatQuery.isLoading;
-		const data = $chatQuery.data;
+		const loading = chatQuery.isLoading;
+		const data = chatQuery.data;
 
 		if (loading || !data) {
 			// Reset while loading a different chat
@@ -76,7 +72,7 @@
 	}
 </script>
 
-{#if !chat || $chatQuery.isLoading}
+{#if !chat || chatQuery.isLoading}
 	<div class="flex h-full items-center justify-center">
 		<Loader variant="dots" size="md" />
 	</div>

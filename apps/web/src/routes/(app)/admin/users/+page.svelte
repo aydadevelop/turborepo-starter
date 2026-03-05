@@ -5,7 +5,6 @@
 	import { Input } from "@my-app/ui/components/input";
 	import * as Table from "@my-app/ui/components/table";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived, writable } from "svelte/store";
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import { orpc } from "$lib/orpc";
@@ -20,32 +19,28 @@
 		window.location.href = resolve("/dashboard/settings");
 	};
 
-	const search = writable("");
-	const roleFilter = writable("");
-	const bannedFilter = writable<boolean | undefined>(undefined);
-	const currentOffset = writable(0);
+	let search = $state("");
+	let roleFilter = $state("");
+	let bannedFilter = $state<boolean | undefined>(undefined);
+	let currentOffset = $state(0);
 	const limit = 20;
 
-	const usersQuery = createQuery(
-		derived(
-			[search, roleFilter, bannedFilter, currentOffset],
-			([$search, $roleFilter, $bannedFilter, $currentOffset]) =>
-				orpc.admin.organizations.listUsers.queryOptions({
-					input: {
-						limit,
-						offset: $currentOffset,
-						search: $search || undefined,
-						role: $roleFilter || undefined,
-						banned: $bannedFilter,
-					},
-				})
-		)
+	const usersQuery = createQuery(() =>
+		orpc.admin.organizations.listUsers.queryOptions({
+			input: {
+				limit,
+				offset: currentOffset,
+				search: search || undefined,
+				role: roleFilter || undefined,
+				banned: bannedFilter,
+			},
+		})
 	);
 
 	const totalPages = $derived(
-		Math.max(1, Math.ceil(($usersQuery.data?.total ?? 0) / limit))
+		Math.max(1, Math.ceil((usersQuery.data?.total ?? 0) / limit))
 	);
-	const currentPage = $derived(Math.floor($currentOffset / limit) + 1);
+	const currentPage = $derived(Math.floor(currentOffset / limit) + 1);
 </script>
 
 <div class="space-y-4">
@@ -54,29 +49,29 @@
 	<div class="flex flex-wrap gap-2">
 		<Input
 			placeholder="Search by name or email..."
-			value={$search}
+			value={search}
 			oninput={(e) => {
-				search.set((e.target as HTMLInputElement).value);
-				currentOffset.set(0);
+				search = (e.target as HTMLInputElement).value;
+				currentOffset = 0;
 			}}
 			class="max-w-sm"
 		/>
 		<Button
-			variant={$bannedFilter === true ? "destructive" : "outline"}
+			variant={bannedFilter === true ? "destructive" : "outline"}
 			size="sm"
 			onclick={() => {
-				bannedFilter.set($bannedFilter === true ? undefined : true);
-				currentOffset.set(0);
+				bannedFilter = bannedFilter === true ? undefined : true;
+				currentOffset = 0;
 			}}
 		>
 			Banned
 		</Button>
 		<Button
-			variant={$roleFilter === "admin" ? "default" : "outline"}
+			variant={roleFilter === "admin" ? "default" : "outline"}
 			size="sm"
 			onclick={() => {
-				roleFilter.set($roleFilter === "admin" ? "" : "admin");
-				currentOffset.set(0);
+				roleFilter = roleFilter === "admin" ? "" : "admin";
+				currentOffset = 0;
 			}}
 		>
 			Admins
@@ -85,9 +80,9 @@
 
 	<Card.Root>
 		<Card.Content class="p-0">
-			{#if $usersQuery.isPending}
+			{#if usersQuery.isPending}
 				<p class="p-4 text-sm text-muted-foreground">Loading...</p>
-			{:else if $usersQuery.isError}
+			{:else if usersQuery.isError}
 				<p class="p-4 text-sm text-destructive">Failed to load users.</p>
 			{:else}
 				<Table.Root>
@@ -102,7 +97,7 @@
 						</Table.Row>
 					</Table.Header>
 					<Table.Body>
-						{#each $usersQuery.data?.items ?? [] as u (u.id)}
+						{#each usersQuery.data?.items ?? [] as u (u.id)}
 							<Table.Row data-testid={`admin-user-row-${u.id}`}>
 								<Table.Cell class="font-medium">{u.name}</Table.Cell>
 								<Table.Cell class="text-muted-foreground">{u.email}</Table.Cell>
@@ -152,15 +147,15 @@
 	{#if totalPages > 1}
 		<div class="flex items-center justify-between">
 			<p class="text-sm text-muted-foreground">
-				Page {currentPage} of {totalPages} ({$usersQuery.data?.total ?? 0}
+				Page {currentPage} of {totalPages} ({usersQuery.data?.total ?? 0}
 				total)
 			</p>
 			<div class="flex gap-2">
 				<Button
 					variant="outline"
 					size="sm"
-					disabled={$currentOffset === 0}
-					onclick={() => currentOffset.set(Math.max(0, $currentOffset - limit))}
+					disabled={currentOffset === 0}
+					onclick={() => { currentOffset = Math.max(0, currentOffset - limit); }}
 				>
 					Previous
 				</Button>
@@ -168,7 +163,7 @@
 					variant="outline"
 					size="sm"
 					disabled={currentPage >= totalPages}
-					onclick={() => currentOffset.set($currentOffset + limit)}
+					onclick={() => { currentOffset = currentOffset + limit; }}
 				>
 					Next
 				</Button>

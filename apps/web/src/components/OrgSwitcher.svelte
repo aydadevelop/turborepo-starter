@@ -6,7 +6,6 @@
 		Trigger as SelectTrigger,
 	} from "@my-app/ui/components/select";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived } from "svelte/store";
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
@@ -16,12 +15,10 @@
 
 	const sessionQuery = authClient.useSession();
 
-	const orgsQuery = createQuery(
-		derived(sessionQuery, ($session) =>
-			userOrganizationsQueryOptions({
-				enabled: hasAuthenticatedSession($session.data),
-			})
-		)
+	const orgsQuery = createQuery(() =>
+		userOrganizationsQueryOptions({
+			enabled: hasAuthenticatedSession($sessionQuery.data),
+		})
 	);
 
 	const activeOrgId = $derived(
@@ -47,7 +44,7 @@
 	};
 </script>
 
-{#if ($orgsQuery.data?.length ?? 0) > 1}
+{#if (orgsQuery.data?.length ?? 0) > 1}
 	<SelectRoot
 		type="single"
 		value={activeOrgId}
@@ -62,18 +59,18 @@
 			{#if switching}
 				<span class="text-muted-foreground">Switching...</span>
 			{:else}
-				{$orgsQuery.data?.find((o) => o.id === activeOrgId)?.name ??
+				{orgsQuery.data?.find((o) => o.id === activeOrgId)?.name ??
 					"Select org"}
 			{/if}
 		</SelectTrigger>
 		<SelectContent>
-			{#each $orgsQuery.data ?? [] as org (org.id)}
+			{#each orgsQuery.data ?? [] as org (org.id)}
 				<SelectItem value={org.id} label={org.name} />
 			{/each}
 		</SelectContent>
 	</SelectRoot>
-{:else if ($orgsQuery.data?.length ?? 0) === 1}
+{:else if (orgsQuery.data?.length ?? 0) === 1}
 	<span class="text-xs text-muted-foreground hidden sm:inline">
-		{$orgsQuery.data?.[0]?.name}
+		{orgsQuery.data?.[0]?.name}
 	</span>
 {/if}

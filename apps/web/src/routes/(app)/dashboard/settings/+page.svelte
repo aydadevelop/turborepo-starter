@@ -6,7 +6,6 @@
 	import { Separator } from "@my-app/ui/components/separator";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { onMount } from "svelte";
-	import { derived } from "svelte/store";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -28,8 +27,7 @@
 		}
 	});
 
-	// ---------- Linked accounts ----------
-	const accountsQueryOptions = derived(sessionQuery, ($session) => ({
+	const accountsQuery = createQuery(() => ({
 		queryKey: queryKeys.linkedAccounts.all,
 		queryFn: async () => {
 			const { data, error } = await authClient.listAccounts();
@@ -39,18 +37,17 @@
 			return data ?? [];
 		},
 		retry: false,
-		enabled: hasAuthenticatedSession($session.data),
+		enabled: hasAuthenticatedSession($sessionQuery.data),
 	}));
-	const accountsQuery = createQuery(accountsQueryOptions);
 
 	const hasTelegram = $derived(
-		($accountsQuery.data ?? []).some(
+		(accountsQuery.data ?? []).some(
 			(a: { providerId?: string; provider?: string }) =>
 				a.providerId === "telegram" || a.provider === "telegram"
 		)
 	);
 	const hasCredential = $derived(
-		($accountsQuery.data ?? []).some(
+		(accountsQuery.data ?? []).some(
 			(a: { providerId?: string; provider?: string }) =>
 				a.providerId === "credential" || a.provider === "credential"
 		)
@@ -235,19 +232,17 @@
 	);
 
 	// ---------- Invitations ----------
-	const invitationsQuery = createQuery(
-		derived(sessionQuery, ($session) =>
-			userInvitationsQueryOptions({
-				enabled: hasAuthenticatedSession($session.data),
-			})
-		)
+	const invitationsQuery = createQuery(() =>
+		userInvitationsQueryOptions({
+			enabled: hasAuthenticatedSession($sessionQuery.data),
+		})
 	);
 
 	const pendingInvitations = $derived(
-		($invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
+		(invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
 	);
 	const pastInvitations = $derived(
-		($invitationsQuery.data ?? []).filter((inv) => inv.status !== "pending")
+		(invitationsQuery.data ?? []).filter((inv) => inv.status !== "pending")
 	);
 	const pendingInvitationCount = $derived(pendingInvitations.length);
 
@@ -340,7 +335,7 @@
 				</Card.Description>
 			</Card.Header>
 			<Card.Content class="space-y-4">
-				{#if $accountsQuery.isPending}
+				{#if accountsQuery.isPending}
 					<p class="text-sm text-muted-foreground">Loading...</p>
 				{:else}
 					<!-- Email / Password -->
@@ -548,7 +543,7 @@
 				{#if invitationError}
 					<p class="text-sm text-destructive" role="alert">{invitationError}</p>
 				{/if}
-				{#if $invitationsQuery.isPending}
+				{#if invitationsQuery.isPending}
 					<p class="text-sm text-muted-foreground">Loading...</p>
 				{:else if pendingInvitations.length > 0}
 					<div class="space-y-2">

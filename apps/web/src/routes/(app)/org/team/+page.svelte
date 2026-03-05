@@ -10,7 +10,7 @@
 	import { queryKeys } from "$lib/query-keys";
 	import { fullOrganizationQueryOptions } from "$lib/query-options";
 
-	const fullOrgQuery = createQuery(fullOrganizationQueryOptions());
+	const fullOrgQuery = createQuery(() => fullOrganizationQueryOptions());
 
 	let removingMemberId = $state<string | null>(null);
 	let confirmRemoveOpen = $state(false);
@@ -124,12 +124,12 @@
 </script>
 
 <div class="space-y-4">
-	{#if $fullOrgQuery.isPending}
+	{#if fullOrgQuery.isPending}
 		<p class="text-muted-foreground">Loading...</p>
-	{:else if $fullOrgQuery.isError}
+	{:else if fullOrgQuery.isError}
 		<p class="text-destructive">Failed to load organization.</p>
-	{:else if $fullOrgQuery.data}
-		{@const org = $fullOrgQuery.data}
+	{:else if fullOrgQuery.data}
+		{@const org = fullOrgQuery.data}
 
 		<!-- Members -->
 		<Card.Root>

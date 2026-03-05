@@ -13,7 +13,7 @@
 	let newTodoText = $state("");
 	const sessionQuery = authClient.useSession();
 
-	const todosQuery = createQuery(orpc.todo.getAll.queryOptions());
+	const todosQuery = createQuery(() => orpc.todo.getAll.queryOptions());
 
 	$effect(() => {
 		if ($sessionQuery.isPending) return;
@@ -24,10 +24,10 @@
 		}
 	});
 
-	const addMutation = createMutation(
+	const addMutation = createMutation(() =>
 		orpc.todo.create.mutationOptions({
 			onSuccess: () => {
-				$todosQuery.refetch();
+				todosQuery.refetch();
 				newTodoText = "";
 			},
 			onError: (error) => {
@@ -36,10 +36,10 @@
 		})
 	);
 
-	const toggleMutation = createMutation(
+	const toggleMutation = createMutation(() =>
 		orpc.todo.toggle.mutationOptions({
 			onSuccess: () => {
-				$todosQuery.refetch();
+				todosQuery.refetch();
 			},
 			onError: (error) => {
 				console.error("Failed to toggle todo:", error?.message ?? error);
@@ -47,10 +47,10 @@
 		})
 	);
 
-	const deleteMutation = createMutation(
+	const deleteMutation = createMutation(() =>
 		orpc.todo.delete.mutationOptions({
 			onSuccess: () => {
-				$todosQuery.refetch();
+				todosQuery.refetch();
 			},
 			onError: (error) => {
 				console.error("Failed to delete todo:", error?.message ?? error);
@@ -62,22 +62,22 @@
 		event.preventDefault();
 		const text = newTodoText.trim();
 		if (text) {
-			$addMutation.mutate({ text });
+			addMutation.mutate({ text });
 		}
 	}
 
 	function handleToggleTodo(id: number, completed: boolean) {
-		$toggleMutation.mutate({ id, completed: !completed });
+		toggleMutation.mutate({ id, completed: !completed });
 	}
 
 	function handleDeleteTodo(id: number) {
-		$deleteMutation.mutate({ id });
+		deleteMutation.mutate({ id });
 	}
 
-	const isAdding = $derived($addMutation.isPending);
+	const isAdding = $derived(addMutation.isPending);
 	const canAdd = $derived(!isAdding && newTodoText.trim().length > 0);
-	const isLoadingTodos = $derived($todosQuery.isLoading);
-	const todos = $derived($todosQuery.data ?? []);
+	const isLoadingTodos = $derived(todosQuery.isLoading);
+	const todos = $derived(todosQuery.data ?? []);
 	const hasTodos = $derived(todos.length > 0);
 </script>
 
@@ -126,8 +126,8 @@
 				{:else}
 					<ul class="space-y-2">
 						{#each todos as todo (todo.id)}
-							{@const isToggling = $toggleMutation.isPending && $toggleMutation.variables?.id === todo.id}
-							{@const isDeleting = $deleteMutation.isPending && $deleteMutation.variables?.id === todo.id}
+			{@const isToggling = toggleMutation.isPending && toggleMutation.variables?.id === todo.id}
+			{@const isDeleting = deleteMutation.isPending && deleteMutation.variables?.id === todo.id}
 							{@const isDisabled = isToggling || isDeleting}
 							<li
 								class="flex items-center justify-between p-3 rounded-md border"
@@ -166,29 +166,29 @@
 			</Card.Content>
 		</Card.Root>
 
-		{#if $todosQuery.isError || $addMutation.isError || $toggleMutation.isError || $deleteMutation.isError}
+		{#if todosQuery.isError || addMutation.isError || toggleMutation.isError || deleteMutation.isError}
 			<Card.Root class="border-destructive">
 				<Card.Content class="pt-6">
-					{#if $todosQuery.isError}
+					{#if todosQuery.isError}
 						<p class="text-destructive">
-							Error loading: {$todosQuery.error?.message ?? 'Unknown error'}
+							Error loading: {todosQuery.error?.message ?? 'Unknown error'}
 						</p>
 					{/if}
-					{#if $addMutation.isError}
+					{#if addMutation.isError}
 						<p class="text-destructive">
-							Error adding: {$addMutation.error?.message ?? 'Unknown error'}
+							Error adding: {addMutation.error?.message ?? 'Unknown error'}
 						</p>
 					{/if}
-					{#if $toggleMutation.isError}
+					{#if toggleMutation.isError}
 						<p class="text-destructive">
 							Error updating:
-							{$toggleMutation.error?.message ?? 'Unknown error'}
+							{toggleMutation.error?.message ?? 'Unknown error'}
 						</p>
 					{/if}
-					{#if $deleteMutation.isError}
+					{#if deleteMutation.isError}
 						<p class="text-destructive">
 							Error deleting:
-							{$deleteMutation.error?.message ?? 'Unknown error'}
+							{deleteMutation.error?.message ?? 'Unknown error'}
 						</p>
 					{/if}
 				</Card.Content>

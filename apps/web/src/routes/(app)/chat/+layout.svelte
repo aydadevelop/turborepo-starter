@@ -8,7 +8,6 @@
 		useQueryClient,
 	} from "@tanstack/svelte-query";
 	import { setContext } from "svelte";
-	import { derived } from "svelte/store";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -86,15 +85,13 @@
 			.catch(() => undefined);
 	});
 
-	const chatsQuery = createQuery(
-		derived(sessionQuery, ($session) => ({
-			queryKey: queryKeys.assistant.chats,
-			queryFn: () => assistantClient.listChats({}),
-			enabled: hasSessionUser($session.data),
-		}))
-	);
+	const chatsQuery = createQuery(() => ({
+		queryKey: queryKeys.assistant.chats,
+		queryFn: () => assistantClient.listChats({}),
+		enabled: hasSessionUser($sessionQuery.data),
+	}));
 
-	const createChatMutation = createMutation({
+	const createChatMutation = createMutation(() => ({
 		async mutationFn(title: string) {
 			const hasSession = await ensureSession();
 			if (!hasSession) {
@@ -106,9 +103,9 @@
 			queryClient.invalidateQueries({ queryKey: queryKeys.assistant.chats });
 			goto(resolve(`/chat/${data.id}`));
 		},
-	});
+	}));
 
-	const deleteChatMutation = createMutation({
+	const deleteChatMutation = createMutation(() => ({
 		mutationFn: (chatId: string) => assistantClient.deleteChat({ chatId }),
 		onSuccess() {
 			queryClient.invalidateQueries({ queryKey: queryKeys.assistant.chats });
@@ -116,7 +113,7 @@
 				goto(resolve("/chat"));
 			}
 		},
-	});
+	}));
 
 	const activeChatId = $derived(page.params.id);
 
@@ -132,16 +129,16 @@
 				variant="ghost"
 				size="icon"
 				class="h-7 w-7"
-				onclick={() => $createChatMutation.mutate("New Chat")}
-				disabled={$createChatMutation.isPending}
+			onclick={() => createChatMutation.mutate("New Chat")}
+			disabled={createChatMutation.isPending}
 			>
 				<MessageSquarePlus class="h-4 w-4" />
 			</Button>
 		</div>
 
 		<nav class="flex-1 overflow-y-auto p-2">
-			{#if $chatsQuery.data}
-				{#each $chatsQuery.data as chat (chat.id)}
+		{#if chatsQuery.data}
+			{#each chatsQuery.data as chat (chat.id)}
 					<a
 						href={resolve(`/chat/${chat.id}`)}
 						class="group flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition {activeChatId ===
@@ -157,7 +154,7 @@
 							onclick={(e) => {
 								e.preventDefault();
 								e.stopPropagation();
-								$deleteChatMutation.mutate(chat.id);
+								deleteChatMutation.mutate(chat.id);
 							}}
 						>
 							<Trash2 class="h-3.5 w-3.5" />
@@ -166,13 +163,13 @@
 				{/each}
 			{/if}
 
-			{#if $chatsQuery.isLoading}
+			{#if chatsQuery.isLoading}
 				<p class="px-2 py-4 text-center text-xs text-muted-foreground">
 					Loading...
 				</p>
 			{/if}
 
-			{#if !($chatsQuery.isLoading || $chatsQuery.data?.length)}
+			{#if !(chatsQuery.isLoading || chatsQuery.data?.length)}
 				<p
 					class="px-2 py-4 text-center text-xs text-muted-foreground"
 					data-testid="chat-empty-state"

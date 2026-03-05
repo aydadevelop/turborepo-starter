@@ -12,12 +12,12 @@
 	import { queryKeys } from "$lib/query-keys";
 	import { fullOrganizationQueryOptions } from "$lib/query-options";
 
-	const canManageQuery = createQuery({
+	const canManageQuery = createQuery(() => ({
 		...orpc.canManageOrganization.queryOptions(),
 		retry: false,
-	});
+	}));
 
-	const fullOrgQuery = createQuery(fullOrganizationQueryOptions());
+	const fullOrgQuery = createQuery(() => fullOrganizationQueryOptions());
 
 	let orgName = $state("");
 	let orgSlug = $state("");
@@ -32,7 +32,7 @@
 
 	// Seed form from loaded org data
 	$effect(() => {
-		const org = $fullOrgQuery.data;
+		const org = fullOrgQuery.data;
 		if (org && !orgName) {
 			orgName = org.name;
 			orgSlug = org.slug ?? "";
@@ -41,8 +41,8 @@
 
 	// Guard: only org managers can access this page
 	$effect(() => {
-		if ($canManageQuery.isPending) return;
-		if (!$canManageQuery.data?.canManageOrganization) {
+		if (canManageQuery.isPending) return;
+		if (!canManageQuery.data?.canManageOrganization) {
 			goto(resolve("/dashboard/settings"));
 		}
 	});
@@ -92,7 +92,7 @@
 			}) => Promise<{ error: unknown }>;
 		};
 		const { error } = await orgDel.delete({
-			organizationId: $fullOrgQuery.data?.id,
+			organizationId: fullOrgQuery.data?.id,
 		});
 
 		deletePending = false;
@@ -110,12 +110,12 @@
 		goto(resolve("/org"));
 	};
 
-	const currentOrgName = $derived($fullOrgQuery.data?.name ?? "");
+	const currentOrgName = $derived(fullOrgQuery.data?.name ?? "");
 </script>
 
-{#if $fullOrgQuery.isPending || $canManageQuery.isPending}
+{#if fullOrgQuery.isPending || canManageQuery.isPending}
 	<p class="text-muted-foreground">Loading...</p>
-{:else if !$canManageQuery.data?.canManageOrganization}
+{:else if !canManageQuery.data?.canManageOrganization}
 	<p class="text-muted-foreground">Access denied</p>
 {:else}
 	<div class="max-w-xl space-y-4">

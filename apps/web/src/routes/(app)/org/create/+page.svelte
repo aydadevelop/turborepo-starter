@@ -5,7 +5,6 @@
 	import { Input } from "@my-app/ui/components/input";
 	import { Label } from "@my-app/ui/components/label";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived } from "svelte/store";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -91,18 +90,16 @@
 		}
 	});
 
-	const orgsQuery = createQuery(
-		derived(sessionQuery, ($session) => ({
-			queryKey: ["user-organizations"],
-			queryFn: async () => {
-				const { data } = await authClient.organization.list();
-				return data ?? [];
-			},
-			enabled: hasAuthenticatedSession($session.data),
-		}))
-	);
+	const orgsQuery = createQuery(() => ({
+		queryKey: ["user-organizations"],
+		queryFn: async () => {
+			const { data } = await authClient.organization.list();
+			return data ?? [];
+		},
+		enabled: hasAuthenticatedSession($sessionQuery.data),
+	}));
 
-	const hasExistingOrg = $derived(($orgsQuery.data?.length ?? 0) > 0);
+	const hasExistingOrg = $derived((orgsQuery.data?.length ?? 0) > 0);
 
 	$effect(() => {
 		if ($sessionQuery.isPending) return;

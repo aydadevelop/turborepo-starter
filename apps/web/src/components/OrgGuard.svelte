@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived } from "svelte/store";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -17,12 +16,10 @@
 
 	const sessionQuery = authClient.useSession();
 
-	const orgsQuery = createQuery(
-		derived(sessionQuery, ($session) =>
-			userOrganizationsQueryOptions({
-				enabled: hasAuthenticatedSession($session.data),
-			})
-		)
+	const orgsQuery = createQuery(() =>
+		userOrganizationsQueryOptions({
+			enabled: hasAuthenticatedSession($sessionQuery.data),
+		})
 	);
 
 	$effect(() => {
@@ -32,14 +29,14 @@
 		if (!hasAuthenticatedSession($sessionQuery.data)) return;
 		// Orgs haven't loaded yet or errored — don't redirect on error to avoid
 		// trapping the user in a redirect loop when the API is down.
-		if ($orgsQuery.isPending || $orgsQuery.isError) return;
+		if (orgsQuery.isPending || orgsQuery.isError) return;
 
 		const onProtectedPath = ORG_REQUIRED_PREFIXES.some((prefix) =>
 			page.url.pathname.startsWith(prefix)
 		);
 		if (!onProtectedPath) return;
 
-		if (($orgsQuery.data?.length ?? 0) === 0) {
+		if ((orgsQuery.data?.length ?? 0) === 0) {
 			const nextPath = `${page.url.pathname}${page.url.search}`;
 			goto(
 				`${resolve("/org/create")}?reason=required&next=${encodeURIComponent(nextPath)}`,

@@ -4,45 +4,27 @@
 	import * as Table from "@my-app/ui/components/table";
 	import * as Tabs from "@my-app/ui/components/tabs";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { untrack } from "svelte";
-	import { writable } from "svelte/store";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { orpc } from "$lib/orpc";
 
-	const orgOpts = $derived.by(() => {
-		const id = page.params.id ?? "";
-		return orpc.admin.organizations.getOrg.queryOptions({ input: { id } });
-	});
-	const orgOptsStore = writable(untrack(() => orgOpts));
-	$effect(() => {
-		orgOptsStore.set(orgOpts);
-	});
-	const orgQuery = createQuery(orgOptsStore);
+	const orgQuery = createQuery(() =>
+		orpc.admin.organizations.getOrg.queryOptions({
+			input: { id: page.params.id ?? "" },
+		})
+	);
 
-	const membersOpts = $derived.by(() => {
-		const organizationId = page.params.id ?? "";
-		return orpc.admin.organizations.listMembers.queryOptions({
-			input: { organizationId, limit: 50 },
-		});
-	});
-	const membersOptsStore = writable(untrack(() => membersOpts));
-	$effect(() => {
-		membersOptsStore.set(membersOpts);
-	});
-	const membersQuery = createQuery(membersOptsStore);
+	const membersQuery = createQuery(() =>
+		orpc.admin.organizations.listMembers.queryOptions({
+			input: { organizationId: page.params.id ?? "", limit: 50 },
+		})
+	);
 
-	const invitationsOpts = $derived.by(() => {
-		const organizationId = page.params.id ?? "";
-		return orpc.admin.organizations.listInvitations.queryOptions({
-			input: { organizationId, limit: 50 },
-		});
-	});
-	const invitationsOptsStore = writable(untrack(() => invitationsOpts));
-	$effect(() => {
-		invitationsOptsStore.set(invitationsOpts);
-	});
-	const invitationsQuery = createQuery(invitationsOptsStore);
+	const invitationsQuery = createQuery(() =>
+		orpc.admin.organizations.listInvitations.queryOptions({
+			input: { organizationId: page.params.id ?? "", limit: 50 },
+		})
+	);
 
 	const roleColor = (role: string) => {
 		switch (role) {
@@ -63,12 +45,12 @@
 </script>
 
 <div class="space-y-4">
-	{#if $orgQuery.isPending}
+	{#if orgQuery.isPending}
 		<p class="text-muted-foreground">Loading...</p>
-	{:else if $orgQuery.isError}
+	{:else if orgQuery.isError}
 		<p class="text-destructive">Organization not found.</p>
-	{:else if $orgQuery.data}
-		{@const org = $orgQuery.data}
+	{:else if orgQuery.data}
+		{@const org = orgQuery.data}
 		<div>
 			<a
 				href={resolve("/admin/organizations")}
@@ -86,10 +68,10 @@
 		<Tabs.Root value="members">
 			<Tabs.List>
 				<Tabs.Trigger value="members">
-					Members ({$membersQuery.data?.total ?? "..."})
+					Members ({membersQuery.data?.total ?? "..."})
 				</Tabs.Trigger>
 				<Tabs.Trigger value="invitations">
-					Invitations ({$invitationsQuery.data?.total ?? "..."})
+					Invitations ({invitationsQuery.data?.total ?? "..."})
 				</Tabs.Trigger>
 			</Tabs.List>
 
@@ -106,7 +88,7 @@
 								</Table.Row>
 							</Table.Header>
 							<Table.Body>
-								{#each $membersQuery.data?.items ?? [] as m (m.id)}
+									{#each membersQuery.data?.items ?? [] as m (m.id)}
 									<Table.Row>
 										<Table.Cell class="font-medium">
 											{m.userName ?? "—"}
@@ -150,7 +132,7 @@
 								</Table.Row>
 							</Table.Header>
 							<Table.Body>
-								{#each $invitationsQuery.data?.items ?? [] as inv (inv.id)}
+									{#each invitationsQuery.data?.items ?? [] as inv (inv.id)}
 									<Table.Row>
 										<Table.Cell class="font-medium">{inv.email}</Table.Cell>
 										<Table.Cell>

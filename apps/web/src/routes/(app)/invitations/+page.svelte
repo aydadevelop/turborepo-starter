@@ -3,7 +3,6 @@
 	import { Button } from "@my-app/ui/components/button";
 	import * as Card from "@my-app/ui/components/card";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { derived } from "svelte/store";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -15,12 +14,10 @@
 
 	const sessionQuery = authClient.useSession();
 
-	const invitationsQuery = createQuery(
-		derived(sessionQuery, ($session) =>
-			userInvitationsQueryOptions({
-				enabled: hasAuthenticatedSession($session.data),
-			})
-		)
+	const invitationsQuery = createQuery(() =>
+		userInvitationsQueryOptions({
+			enabled: hasAuthenticatedSession($sessionQuery.data),
+		})
 	);
 
 	let pendingId = $state<string | null>(null);
@@ -36,11 +33,11 @@
 	});
 
 	const pendingInvitations = $derived(
-		($invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
+		(invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
 	);
 
 	const pastInvitations = $derived(
-		($invitationsQuery.data ?? []).filter((inv) => inv.status !== "pending")
+		(invitationsQuery.data ?? []).filter((inv) => inv.status !== "pending")
 	);
 
 	const handleAccept = async (invitationId: string) => {
@@ -95,9 +92,9 @@
 		<p class="text-sm text-destructive">{errorMessage}</p>
 	{/if}
 
-	{#if $invitationsQuery.isPending}
+	{#if invitationsQuery.isPending}
 		<p class="text-muted-foreground">Loading...</p>
-	{:else if $invitationsQuery.isError}
+	{:else if invitationsQuery.isError}
 		<p class="text-destructive">Failed to load invitations.</p>
 	{:else}
 		<!-- Pending invitations -->

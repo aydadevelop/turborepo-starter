@@ -2,8 +2,7 @@
 	import { Button } from "@my-app/ui/components/button";
 	import { consumeEventIterator } from "@orpc/client";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
-	import { onMount, untrack } from "svelte";
-	import { writable } from "svelte/store";
+	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import type { authClient } from "$lib/auth-client";
 	import { getAuthenticatedUserId } from "$lib/auth-session";
@@ -29,36 +28,26 @@
 	}: { sessionQuery: ReturnType<typeof authClient.useSession> } = $props();
 
 	const MAX_ITEMS = 20;
-	// Use $derived.by() + writable store so that $sessionQuery is tracked
-	// via Svelte 5 auto-subscription rather than Svelte 3/4 derived() stores,
-	// keeping the pattern consistent with the rest of the codebase.
-	const notificationsQueryOpts = $derived.by(() =>
+	const notificationsQuery = createQuery(() =>
 		orpc.notifications.listMe.queryOptions({
 			input: { limit: MAX_ITEMS },
 			enabled: Boolean(getAuthenticatedUserId($sessionQuery.data)),
 		})
 	);
-	const notificationsQueryOptsStore = writable(
-		untrack(() => notificationsQueryOpts)
-	);
-	$effect(() => {
-		notificationsQueryOptsStore.set(notificationsQueryOpts);
-	});
-	const notificationsQuery = createQuery(notificationsQueryOptsStore);
-	const markViewedMutation = createMutation(
+	const markViewedMutation = createMutation(() =>
 		orpc.notifications.markViewed.mutationOptions({
 			onSuccess: () => {
-				$notificationsQuery.refetch();
+				notificationsQuery.refetch();
 			},
 			onError: (error) => {
 				setLoadError(error, "Failed to update notification");
 			},
 		})
 	);
-	const markAllViewedMutation = createMutation(
+	const markAllViewedMutation = createMutation(() =>
 		orpc.notifications.markAllViewed.mutationOptions({
 			onSuccess: () => {
-				$notificationsQuery.refetch();
+				notificationsQuery.refetch();
 			},
 			onError: (error) => {
 				setLoadError(error, "Failed to mark notifications as viewed");
@@ -76,7 +65,7 @@
 	let cursorMs = $state(0);
 	let stopStream: (() => Promise<void>) | null = null;
 	const isLoading = $derived(
-		$notificationsQuery.isPending && notifications.length === 0
+		notificationsQuery.isPending && notifications.length === 0
 	);
 
 	function setLoadError(error: unknown, fallback: string) {
@@ -156,7 +145,7 @@
 		}
 
 		markLocallyViewed(unreadIds);
-		$markAllViewedMutation.mutate({});
+		markAllViewedMutation.mutate({});
 	}
 
 	function markOneAsViewed(notificationId: string) {
@@ -166,7 +155,7 @@
 		}
 
 		markLocallyViewed([notificationId]);
-		$markViewedMutation.mutate({
+		markViewedMutation.mutate({
 			notificationIds: [notificationId],
 		});
 	}
@@ -179,7 +168,7 @@
 		isOpen = true;
 		loadError = null;
 		try {
-			await $notificationsQuery.refetch();
+			await notificationsQuery.refetch();
 		} catch (error) {
 			setLoadError(error, "Failed to load notifications");
 		}
@@ -246,7 +235,7 @@
 	});
 
 	$effect(() => {
-		const response = $notificationsQuery.data;
+		const response = notificationsQuery.data;
 		if (!response) {
 			return;
 		}
@@ -263,8 +252,8 @@
 	});
 
 	$effect(() => {
-		if ($notificationsQuery.isError) {
-			setLoadError($notificationsQuery.error, "Failed to load notifications");
+		if (notificationsQuery.isError) {
+			setLoadError(notificationsQuery.error, "Failed to load notifications");
 		}
 	});
 
