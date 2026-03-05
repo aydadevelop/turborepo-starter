@@ -11,7 +11,7 @@ import { anonymous } from "better-auth/plugins/anonymous";
 import { organization } from "better-auth/plugins/organization";
 import { phoneNumber } from "better-auth/plugins/phone-number";
 import { telegram } from "better-auth-telegram";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, type SQLWrapper } from "drizzle-orm";
 
 import {
 	organizationAccessControl,
@@ -41,10 +41,14 @@ const initAuth = () => {
 	// strip the first segment to derive the shared parent domain for cross-subdomain cookies.
 	// Better Auth expects no leading dot (e.g. "staging.ayda.studio", not ".staging.ayda.studio").
 	const hostParts = serverUrl.hostname.split(".");
-	const customCookieDomain =
-		!workersDevMatch && hostParts.length >= 3
+	const cookieDomain: string | null =
+		workersDevMatch?.[1] ??
+		(!workersDevMatch && hostParts.length >= 3
 			? hostParts.slice(1).join(".")
-			: null;
+			: null);
+	const crossSubDomainCookiesConfig = cookieDomain
+		? { crossSubDomainCookies: { enabled: true, domain: cookieDomain } }
+		: {};
 
 	const passkeyRpId =
 		serverUrl.hostname === "localhost"
@@ -125,26 +129,12 @@ const initAuth = () => {
 				serverUrl.hostname === "localhost"
 					? { sameSite: "lax" as const, httpOnly: true }
 					: { sameSite: "none" as const, secure: true, httpOnly: true },
-			...(workersDevMatch
-				? {
-						crossSubDomainCookies: {
-							enabled: true,
-							domain: workersDevMatch[1],
-						},
-					}
-				: customCookieDomain
-					? {
-							crossSubDomainCookies: {
-								enabled: true,
-								domain: customCookieDomain,
-							},
-						}
-					: {}),
+			...crossSubDomainCookiesConfig,
 		},
 		databaseHooks: {
 			session: {
 				create: {
-					before: async (session) => {
+					before: async (session: { userId: string | SQLWrapper<unknown> }) => {
 						const [firstMembership] = await db
 							.select({ organizationId: schema.member.organizationId })
 							.from(schema.member)
