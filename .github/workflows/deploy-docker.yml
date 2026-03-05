@@ -98,7 +98,7 @@ jobs:
     steps:
       - name: Deploy ${{ matrix.app }} to Dokku
         run: |
-          sudo dokku git:from-image ${{ matrix.app }} ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:sha-${{ github.sha }}
+          sudo dokku git:from-image --force ${{ matrix.app }} ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:sha-${{ github.sha }}
 
   # ── Run DB migrations after deploy ─────────────────────────────────────────
   migrate:
