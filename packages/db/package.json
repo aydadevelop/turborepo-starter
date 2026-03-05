@@ -34,12 +34,12 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.4",
+    "@biomejs/biome": "^2.4.6",
     "@electric-sql/pglite": "^0.3.15",
     "@my-app/config": "workspace:*",
     "@my-app/vitest-config": "workspace:*",
     "@types/pg": "^8.11.14",
-    "drizzle-kit": "1.0.0-beta.15-859cf75",
+    "drizzle-kit": "1.0.0-beta.16-2ffd1a5",
     "pg-mem": "^3.0.6",
     "typescript": "^5",
     "ultracite": "^7.2.3",
