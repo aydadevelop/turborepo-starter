@@ -126,8 +126,8 @@
 				{:else}
 					<ul class="space-y-2">
 						{#each todos as todo (todo.id)}
-			{@const isToggling = toggleMutation.isPending && toggleMutation.variables?.id === todo.id}
-			{@const isDeleting = deleteMutation.isPending && deleteMutation.variables?.id === todo.id}
+							{@const isToggling = toggleMutation.isPending && toggleMutation.variables?.id === todo.id}
+							{@const isDeleting = deleteMutation.isPending && deleteMutation.variables?.id === todo.id}
 							{@const isDisabled = isToggling || isDeleting}
 							<li
 								class="flex items-center justify-between p-3 rounded-md border"

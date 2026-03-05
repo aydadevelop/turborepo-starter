@@ -88,7 +88,7 @@
 								</Table.Row>
 							</Table.Header>
 							<Table.Body>
-									{#each membersQuery.data?.items ?? [] as m (m.id)}
+								{#each membersQuery.data?.items ?? [] as m (m.id)}
 									<Table.Row>
 										<Table.Cell class="font-medium">
 											{m.userName ?? "—"}
@@ -132,7 +132,7 @@
 								</Table.Row>
 							</Table.Header>
 							<Table.Body>
-									{#each invitationsQuery.data?.items ?? [] as inv (inv.id)}
+								{#each invitationsQuery.data?.items ?? [] as inv (inv.id)}
 									<Table.Row>
 										<Table.Cell class="font-medium">{inv.email}</Table.Cell>
 										<Table.Cell>

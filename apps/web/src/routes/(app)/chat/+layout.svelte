@@ -129,16 +129,16 @@
 				variant="ghost"
 				size="icon"
 				class="h-7 w-7"
-			onclick={() => createChatMutation.mutate("New Chat")}
-			disabled={createChatMutation.isPending}
+				onclick={() => createChatMutation.mutate("New Chat")}
+				disabled={createChatMutation.isPending}
 			>
 				<MessageSquarePlus class="h-4 w-4" />
 			</Button>
 		</div>
 
 		<nav class="flex-1 overflow-y-auto p-2">
-		{#if chatsQuery.data}
-			{#each chatsQuery.data as chat (chat.id)}
+			{#if chatsQuery.data}
+				{#each chatsQuery.data as chat (chat.id)}
 					<a
 						href={resolve(`/chat/${chat.id}`)}
 						class="group flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition {activeChatId ===

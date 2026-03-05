@@ -60,7 +60,7 @@
 						</Table.Row>
 					</Table.Header>
 					<Table.Body>
-							{#each orgsQuery.data?.items ?? [] as org (org.id)}
+						{#each orgsQuery.data?.items ?? [] as org (org.id)}
 							<Table.Row>
 								<Table.Cell class="font-medium">{org.name}</Table.Cell>
 								<Table.Cell>
