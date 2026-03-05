@@ -56,7 +56,7 @@
   "dependencies": {
     "@my-app/env": "workspace:*",
     "dotenv": "^17.3.1",
-    "drizzle-orm": "1.0.0-beta.15-859cf75",
+    "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
     "zod": "^4.3.6"
   },
   "devDependencies": {

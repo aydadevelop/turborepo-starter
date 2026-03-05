@@ -18,7 +18,7 @@
     "lint:fix": "cd ../.. && biome check --config-path biome.json packages/vitest-config --write"
   },
   "dependencies": {
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.18"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
