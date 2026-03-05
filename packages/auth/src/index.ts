@@ -36,6 +36,16 @@ const initAuth = () => {
 	// For *.workers.dev deployments, use the workers subdomain (e.g. "smartcache.workers.dev")
 	// so passkey and cookies work across server/web/assistant subdomains.
 	const workersDevMatch = serverUrl.hostname.match(WORKERS_DEV_RE);
+
+	// For custom multi-subdomain deployments (e.g. api.staging.ayda.studio → staging.ayda.studio),
+	// strip the first segment to derive the shared parent domain for cross-subdomain cookies.
+	// Better Auth expects no leading dot (e.g. "staging.ayda.studio", not ".staging.ayda.studio").
+	const hostParts = serverUrl.hostname.split(".");
+	const customCookieDomain =
+		!workersDevMatch && hostParts.length >= 3
+			? hostParts.slice(1).join(".")
+			: null;
+
 	const passkeyRpId =
 		serverUrl.hostname === "localhost"
 			? "localhost"
@@ -115,11 +125,13 @@ const initAuth = () => {
 				serverUrl.hostname === "localhost"
 					? { sameSite: "lax" as const, httpOnly: true }
 					: { sameSite: "none" as const, secure: true, httpOnly: true },
-			...(workersDevMatch
+			...(workersDevMatch || customCookieDomain
 				? {
 						crossSubDomainCookies: {
 							enabled: true,
-							domain: `.${workersDevMatch[1]}`,
+							domain: workersDevMatch
+								? workersDevMatch[1]
+								: customCookieDomain!,
 						},
 					}
 				: {}),

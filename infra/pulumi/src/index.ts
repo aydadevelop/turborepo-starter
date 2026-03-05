@@ -66,7 +66,7 @@ const apps = new DokkuApps("apps", {
     BETTER_AUTH_SECRET: appConfig.requireSecret("betterAuthSecret"),
     BETTER_AUTH_URL: `https://${domain}`,
     SERVER_URL: `https://api.${domain}`,
-    CORS_ORIGIN: `https://${domain}`,
+    CORS_ORIGIN: `https://${domain},https://api.${domain},https://assistant.${domain},https://notifications.${domain}`,
     OPEN_ROUTER_API_KEY: optionalSecret("openRouterApiKey"),
     OPENAI_API_KEY: optionalSecret("openaiApiKey"),
     AI_MODEL: appConfig.get("aiModel") ?? "openai/gpt-4o-mini",
