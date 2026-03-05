@@ -30,17 +30,22 @@ const SESSION_COOKIE_CACHE_MAX_AGE_SECONDS = 5 * 60;
 
 const initAuth = () => {
 	const corsOrigins = parseCorsOrigins(env.CORS_ORIGIN);
-	const serverBaseUrl = env.SERVER_URL.replace(TRAILING_SLASH_RE, "");
-	const serverUrl = new URL(serverBaseUrl);
+
+	// BETTER_AUTH_URL is always the public-facing API server URL (e.g. https://api.staging.ayda.studio).
+	// Use it (not SERVER_URL, which may be an internal Docker URL like http://server.web1:3000)
+	// to derive cookie attributes. Using an HTTP internal URL would drop the __Secure- prefix,
+	// causing session cookies set by the server (HTTPS) to be unreadable by other services.
+	const authBaseUrl = env.BETTER_AUTH_URL.replace(TRAILING_SLASH_RE, "");
+	const authUrl = new URL(authBaseUrl);
 
 	// For *.workers.dev deployments, use the workers subdomain (e.g. "smartcache.workers.dev")
 	// so passkey and cookies work across server/web/assistant subdomains.
-	const workersDevMatch = serverUrl.hostname.match(WORKERS_DEV_RE);
+	const workersDevMatch = authUrl.hostname.match(WORKERS_DEV_RE);
 
 	// For custom multi-subdomain deployments (e.g. api.staging.ayda.studio → staging.ayda.studio),
 	// strip the first segment to derive the shared parent domain for cross-subdomain cookies.
 	// Better Auth expects no leading dot (e.g. "staging.ayda.studio", not ".staging.ayda.studio").
-	const hostParts = serverUrl.hostname.split(".");
+	const hostParts = authUrl.hostname.split(".");
 	const cookieDomain: string | null =
 		workersDevMatch?.[1] ??
 		(!workersDevMatch && hostParts.length >= 3
@@ -51,9 +56,9 @@ const initAuth = () => {
 		: {};
 
 	const passkeyRpId =
-		serverUrl.hostname === "localhost"
+		authUrl.hostname === "localhost"
 			? "localhost"
-			: (workersDevMatch?.[1] ?? serverUrl.hostname);
+			: (workersDevMatch?.[1] ?? authUrl.hostname);
 
 	const plugins: BetterAuthPlugin[] = [
 		admin(),
@@ -130,7 +135,7 @@ const initAuth = () => {
 			// On localhost (HTTP), SameSite=None+Secure cookies are rejected by Playwright/Chromium.
 			// Use Lax for local dev and None+Secure only for deployed environments.
 			defaultCookieAttributes:
-				serverUrl.hostname === "localhost"
+				authUrl.hostname === "localhost"
 					? { sameSite: "lax" as const, httpOnly: true }
 					: { sameSite: "none" as const, secure: true, httpOnly: true },
 			...crossSubDomainCookiesConfig,
