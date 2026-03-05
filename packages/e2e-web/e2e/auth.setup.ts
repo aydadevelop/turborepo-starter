@@ -14,13 +14,12 @@ const signInAndSaveState = async (
 	// `load` can flake under dev-server warmup.
 	await page.goto(url("/"), { waitUntil: "domcontentloaded" });
 
-	const response = await page.context().request.post(
-		`${SERVER_URL}/api/auth/sign-in/email`,
-		{
+	const response = await page
+		.context()
+		.request.post(`${SERVER_URL}/api/auth/sign-in/email`, {
 			data: { email: credentials.email, password: credentials.password },
 			headers: { "content-type": "application/json" },
-		}
-	);
+		});
 
 	if (!response.ok()) {
 		throw new Error(

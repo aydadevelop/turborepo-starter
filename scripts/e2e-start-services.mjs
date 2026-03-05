@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from "node:fs";
+import { config as dotenvConfig } from "dotenv";
 import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
@@ -8,38 +8,9 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
-const envFilePath = path.resolve(repoRoot, ".env");
 
 const VALID_SERVICES = new Set(["server", "assistant", "notifications"]);
 const DEFAULT_SERVICES = ["server", "assistant", "notifications"];
-const ENV_LINE_RE = /\r?\n/;
-
-const loadDotEnvFile = (file) => {
-	for (const line of readFileSync(file, "utf-8").split(ENV_LINE_RE)) {
-		const trimmed = line.trim();
-		if (!trimmed || trimmed.startsWith("#")) {
-			continue;
-		}
-
-		const eqIndex = trimmed.indexOf("=");
-		if (eqIndex === -1) {
-			continue;
-		}
-
-		const key = trimmed.slice(0, eqIndex).trim();
-		let value = trimmed.slice(eqIndex + 1).trim();
-		if (
-			(value.startsWith('"') && value.endsWith('"')) ||
-			(value.startsWith("'") && value.endsWith("'"))
-		) {
-			value = value.slice(1, -1);
-		}
-
-		if (key && process.env[key] === undefined) {
-			process.env[key] = value;
-		}
-	}
-};
 
 const parseArgs = (argv) => {
 	const services = [];
@@ -155,15 +126,7 @@ const runCommand = (command, args) =>
 const main = async () => {
 	const { ensureDb, services } = parseArgs(process.argv.slice(2));
 
-	if (existsSync(envFilePath)) {
-		if (
-			typeof (process).loadEnvFile === "function"
-		) {
-			(process).loadEnvFile(envFilePath);
-		} else {
-			loadDotEnvFile(envFilePath);
-		}
-	}
+	dotenvConfig({ path: path.resolve(repoRoot, ".env"), override: false });
 
 	normalizeRuntimeEnv();
 

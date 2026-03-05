@@ -109,6 +109,8 @@ test.describe("Org Creation Cache Invalidation", () => {
 		await expect(page.getByTestId("org-team-members-title")).toContainText(
 			"Members (1)"
 		);
-		await expect(page.locator('[data-testid^="org-member-email-"]')).toBeVisible();
+		await expect(
+			page.locator('[data-testid^="org-member-email-"]')
+		).toBeVisible();
 	});
 });

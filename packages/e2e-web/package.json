@@ -19,6 +19,7 @@
     "test:e2e:ui:external": "PLAYWRIGHT_MANAGED_SERVERS=0 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.config.ts --ui"
   },
   "dependencies": {
+    "@my-app/env": "workspace:*",
     "assistant": "*",
     "notifications": "*",
     "server": "*",

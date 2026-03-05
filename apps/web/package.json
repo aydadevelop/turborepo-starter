@@ -34,6 +34,7 @@
     "@better-auth/passkey": "^1.5.0",
     "@my-app/ai-chat": "workspace:*",
     "@my-app/assistant": "workspace:*",
+    "@my-app/env": "workspace:*",
     "@my-app/ui": "workspace:*",
     "@lucide/svelte": "^0.561.0",
     "@orpc/client": "^1.13.4",

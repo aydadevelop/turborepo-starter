@@ -46,6 +46,7 @@ export const test = base.extend<TestFixtures>({
 	},
 
 	testNamespace: [
+		// biome-ignore lint/correctness/noEmptyPattern: Playwright fixture API requires destructuring
 		async ({}, use) => {
 			const id = (++namespaceCounter).toString(36);
 			const ts = Math.floor(Date.now() / 1000).toString(36);

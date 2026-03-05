@@ -54,7 +54,7 @@ test.describe("Dashboard Access", () => {
 		for (let attempt = 0; attempt < 3; attempt += 1) {
 			await chatLink.click();
 			try {
-				await expect(page).toHaveURL(url("/chat"), { timeout: 5_000 });
+				await expect(page).toHaveURL(url("/chat"), { timeout: 5000 });
 				return;
 			} catch (error) {
 				if (attempt === 2) {

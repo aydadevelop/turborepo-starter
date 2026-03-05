@@ -101,6 +101,7 @@
         "@lucide/svelte": "^0.561.0",
         "@my-app/ai-chat": "workspace:*",
         "@my-app/assistant": "workspace:*",
+        "@my-app/env": "workspace:*",
         "@my-app/ui": "workspace:*",
         "@orpc/client": "^1.13.4",
         "@orpc/tanstack-query": "^1.12.2",
@@ -281,6 +282,7 @@
     "packages/e2e-web": {
       "name": "@my-app/e2e-web",
       "dependencies": {
+        "@my-app/env": "workspace:*",
         "assistant": "*",
         "notifications": "*",
         "server": "*",

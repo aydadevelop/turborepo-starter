@@ -42,7 +42,7 @@
     "db:reset:local": "turbo run db:reset:local --filter=@my-app/db",
     "db:seed": "turbo run db:seed --filter=@my-app/db --",
     "db:studio": "turbo run db:studio --filter=@my-app/db",
-    "e2e:clean": "node ./scripts/e2e-clean.mjs",
+    "e2e:clean": "node ./scripts/e2e-kill-ports.mjs",
     "deploy:docker:local": "docker compose up -d --wait",
     "infra:preview": "cd infra/pulumi && pulumi preview",
     "infra:up": "cd infra/pulumi && pulumi up",
