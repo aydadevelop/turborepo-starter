@@ -18,6 +18,14 @@ if (corsOrigins.length === 0) {
 export const corsMiddleware = cors({
 	origin: corsOrigins,
 	allowMethods: ["GET", "POST", "OPTIONS"],
-	allowHeaders: ["Content-Type", "Authorization"],
+	allowHeaders: [
+		"Content-Type",
+		"Authorization",
+		"Accept",
+		"X-Requested-With",
+		"X-ORPC-Source",
+		"X-ORPC-Method",
+		"X-ORPC-Last-Event-Id",
+	],
 	credentials: true,
 });
