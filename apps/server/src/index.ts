@@ -7,7 +7,7 @@ import { handleRecurringTaskJob } from "./queues/recurring-task-consumer";
 const port = Number(process.env.SERVER_PORT ?? process.env.PORT ?? 3000);
 
 serve({ fetch: app.fetch, port }, (info) => {
-	console.log(`Server listening on http://localhost:${info.port}`);
+	console.log(`Server listening on http://${info.address}:${info.port}`);
 });
 
 // Start queue worker in background (non-blocking)

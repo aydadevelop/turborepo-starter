@@ -175,8 +175,11 @@ rm -f /tmp/setup-root-key.sh
     //   SSH traffic  → 127.0.0.1:22   (sshd)
     //   TLS traffic  → 127.0.0.1:8443 (nginx, moved off 0.0.0.0:443)
     //
-    // Ubuntu's apt sslh package (1.x) uses /etc/default/sslh for DAEMON_OPTS,
-    // NOT a .cfg file. nginx app vhost configs are patched to 127.0.0.1:8443.
+    // Dokku regenerates nginx.conf from its sigil template on every deploy.
+    // The proper fix (per dokku/dokku#3444) is to patch the default sigil so
+    // HTTPS server blocks listen on 127.0.0.1:8443 instead of 0.0.0.0:443.
+    // Per-app sigil files at /home/dokku/<app>/nginx.conf.sigil survive upgrades
+    // and are written by DokkuApps after each app is created.
     const sslhSetup = new command.remote.Command(`${name}-sslh`, {
       connection: conn,
       create: `
@@ -188,13 +191,44 @@ rm -f /tmp/setup-root-key.sh
         printf 'DAEMON=/usr/sbin/sslh\nDAEMON_OPTS=--user sslh -p 0.0.0.0:443 --ssh 127.0.0.1:22 --tls 127.0.0.1:8443\n' \
           > /etc/default/sslh
 
-        # Move nginx HTTPS listeners from 0.0.0.0:443 → 127.0.0.1:8443
-        for f in /home/dokku/*/nginx.conf; do
-          [ -f "$f" ] || continue
-          sed -i 's/listen[[:space:]]\\+443 ssl/listen 127.0.0.1:8443 ssl/g' "$f"
-          sed -i 's/listen[[:space:]]\\+\\[::]:443 ssl/listen [::1]:8443 ssl/g' "$f"
+        # Patch the Dokku default nginx sigil template so every proxy:build-config
+        # generates configs that bind HTTPS to 127.0.0.1:8443 (sslh target port)
+        # instead of 0.0.0.0:443 (which conflicts with sslh's own listener).
+        SIGIL=/var/lib/dokku/core-plugins/available/nginx-vhosts/templates/nginx.conf.sigil
+        cp -n "$SIGIL" "$\{SIGIL\}.orig" 2>/dev/null || true
+        python3 << 'PYEOF'
+import sys
+sigil = '/var/lib/dokku/core-plugins/available/nginx-vhosts/templates/nginx.conf.sigil'
+with open(sigil) as f:
+    content = f.read()
+# Replace HTTPS IPv6 listen: [{{ $.NGINX_BIND_ADDRESS_IP6 }}]:{{ $listen_port }} ssl
+content = content.replace(
+    '[{{ $.NGINX_BIND_ADDRESS_IP6 }}]:{{ $listen_port }} ssl',
+    '[::1]:8443 ssl'
+)
+# Replace HTTPS IPv4 listen: {{ if $.NGINX_BIND_ADDRESS_IP4 }}...{{end}}{{ $listen_port }} ssl
+content = content.replace(
+    '{{ if $.NGINX_BIND_ADDRESS_IP4 }}{{ $.NGINX_BIND_ADDRESS_IP4 }}:{{end}}{{ $listen_port }} ssl',
+    '127.0.0.1:8443 ssl'
+)
+with open(sigil, 'w') as f:
+    f.write(content)
+print('sigil patched')
+PYEOF
+
+        # Rebuild nginx configs for any already-created apps so they pick up the
+        # patched sigil immediately (idempotent, safe to run on existing installs)
+        for app in web server assistant notifications; do
+          if dokku apps:exists "$app" 2>/dev/null; then
+            cp "$SIGIL" "/home/dokku/$app/nginx.conf.sigil"
+            chown dokku:dokku "/home/dokku/$app/nginx.conf.sigil"
+            chmod 644 "/home/dokku/$app/nginx.conf.sigil"
+            dokku proxy:build-config "$app" 2>/dev/null || true
+          fi
         done
-        nginx -t && systemctl restart nginx
+
+        # Graceful reload — not restart, since sslh already holds port 443
+        nginx -t && nginx -s reload 2>/dev/null || true
 
         systemctl enable sslh
         systemctl restart sslh
@@ -204,6 +238,25 @@ rm -f /tmp/setup-root-key.sh
       update: `
         printf 'DAEMON=/usr/sbin/sslh\nDAEMON_OPTS=--user sslh -p 0.0.0.0:443 --ssh 127.0.0.1:22 --tls 127.0.0.1:8443\n' \
           > /etc/default/sslh
+        # Re-apply sigil patch (idempotent — no-op if already patched, re-patches after Dokku upgrade)
+        SIGIL=/var/lib/dokku/core-plugins/available/nginx-vhosts/templates/nginx.conf.sigil
+        python3 << 'PYEOF'
+import sys
+sigil = '/var/lib/dokku/core-plugins/available/nginx-vhosts/templates/nginx.conf.sigil'
+with open(sigil) as f:
+    content = f.read()
+content = content.replace(
+    '[{{ $.NGINX_BIND_ADDRESS_IP6 }}]:{{ $listen_port }} ssl',
+    '[::1]:8443 ssl'
+)
+content = content.replace(
+    '{{ if $.NGINX_BIND_ADDRESS_IP4 }}{{ $.NGINX_BIND_ADDRESS_IP4 }}:{{end}}{{ $listen_port }} ssl',
+    '127.0.0.1:8443 ssl'
+)
+with open(sigil, 'w') as f:
+    f.write(content)
+print('sigil re-patched')
+PYEOF
         systemctl restart sslh
         systemctl is-active sslh && echo "sslh-ok"
       `,

@@ -138,6 +138,31 @@ export class DokkuApps extends pulumi.ComponentResource {
           : "true",
       }, { parent: this, dependsOn: [create] });
 
+      // Install per-app nginx sigil so HTTPS listens on 127.0.0.1:8443 (sslh target)
+      // instead of 0.0.0.0:443 (which conflicts with sslh). This survives Dokku upgrades
+      // because per-app sigil files take precedence over the core plugin template.
+      // See: https://github.com/dokku/dokku/issues/3444
+      const installSigil = new command.remote.Command(`${name}-sigil-${app.name}`, {
+        connection: conn,
+        create: `
+          SIGIL=/var/lib/dokku/core-plugins/available/nginx-vhosts/templates/nginx.conf.sigil
+          cp "$SIGIL" /home/dokku/${app.name}/nginx.conf.sigil
+          chown dokku:dokku /home/dokku/${app.name}/nginx.conf.sigil
+          chmod 644 /home/dokku/${app.name}/nginx.conf.sigil
+          echo "sigil-${app.name}-installed"
+        `,
+        // On update: re-copy in case Dokku was upgraded (which would reset the core sigil
+        // to its default; the per-app copy is unaffected but stays current with the patched version)
+        update: `
+          SIGIL=/var/lib/dokku/core-plugins/available/nginx-vhosts/templates/nginx.conf.sigil
+          cp "$SIGIL" /home/dokku/${app.name}/nginx.conf.sigil
+          chown dokku:dokku /home/dokku/${app.name}/nginx.conf.sigil
+          chmod 644 /home/dokku/${app.name}/nginx.conf.sigil
+          dokku proxy:build-config ${app.name} 2>/dev/null || true
+          echo "sigil-${app.name}-updated"
+        `,
+      }, { parent: this, dependsOn: [create, setPort] });
+
       // Link Postgres
       const linkDb = new command.remote.Command(`${name}-db-link-${app.name}`, {
         connection: conn,
@@ -162,11 +187,12 @@ export class DokkuApps extends pulumi.ComponentResource {
         create: pulumi.interpolate`dokku config:set --no-restart ${app.name} ${envString}`,
       }, { parent: this, dependsOn: [create] });
 
-      // SSL via Let's Encrypt
+      // SSL via Let's Encrypt — depends on installSigil so the cert-issuance nginx
+      // config rebuild uses the sslh-compatible template (listen 127.0.0.1:8443)
       const ssl = new command.remote.Command(`${name}-ssl-${app.name}`, {
         connection: conn,
         create: `dokku letsencrypt:enable ${app.name} 2>/dev/null || true`,
-      }, { parent: this, dependsOn: [setDomain, letsencrypt] });
+      }, { parent: this, dependsOn: [setDomain, letsencrypt, installSigil] });
 
       appResources.push(ssl);
     }
