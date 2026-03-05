@@ -20,7 +20,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.4",
+    "@biomejs/biome": "^2.4.6",
     "@my-app/config": "workspace:*",
     "@types/node": "^22.19.11",
     "typescript": "^5",
