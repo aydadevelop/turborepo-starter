@@ -18,7 +18,7 @@ RUN turbo prune ${APP} --docker
 # ── deps: install ALL dependencies (devDeps needed for build) ──────────────
 FROM base AS deps
 COPY --from=prune /app/out/json/ .
-RUN bun install
+RUN env -u CI bun install
 
 # ── build ──────────────────────────────────────────────────────────────────
 FROM deps AS build
