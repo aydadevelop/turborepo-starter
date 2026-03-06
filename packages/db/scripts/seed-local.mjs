@@ -149,6 +149,18 @@ const buildSeedData = ({ anchorDate, adminPasswordHash, operatorPasswordHash }) 
 					user_id: operatorUserId,
 					password: operatorPasswordHash,
 				},
+				{
+					id: "seed_account_admin_google",
+					account_id: "google-seed-admin-sub",
+					provider_id: "google",
+					user_id: adminUserId,
+					access_token: "seed-google-access-token",
+					refresh_token: "seed-google-refresh-token",
+					scope: [
+						"https://www.googleapis.com/auth/calendar.events",
+						"https://www.googleapis.com/auth/calendar.readonly",
+					].join(","),
+				},
 			],
 			now
 		),
@@ -336,6 +348,145 @@ const buildSeedData = ({ anchorDate, adminPasswordHash, operatorPasswordHash }) 
 			],
 			now
 		),
+		contaktlyWorkspaceConfigs: withCommon(
+			[
+				{
+					id: "seed_contaktly_workspace_config_1",
+					organization_id: adminOrgId,
+					public_config_id: "ctly-demo-founder",
+					booking_url: "https://calendly.com/demo-team/intro",
+					allowed_domains: toJson(["localhost", "127.0.0.1", "app.contaktly.com"]),
+					bot_name: "Ava",
+					opening_message:
+						"Hi, I am Ava. Tell me what you are building and I will guide you to the fastest next step.",
+					starter_cards: toJson([
+						"I need a website redesign",
+						"I want help with messaging",
+						"I need lead generation support",
+					]),
+					theme: toJson({
+						accentColor: "#14532d",
+						backgroundColor: "#f8fafc",
+					}),
+				},
+			],
+			now
+		),
+		contaktlyConversations: withCommon(
+			[
+				{
+					id: "seed-contaktly-conversation-1",
+					config_id: "ctly-demo-founder",
+					organization_id: adminOrgId,
+					visitor_id: "seed-visitor-1",
+					last_widget_instance_id: "seed-widget-instance-1",
+					active_prompt_key: "timeline",
+					last_intent: "website-redesign",
+					stage: "ready_to_book",
+					state_version: 3,
+					next_message_order: 7,
+					slots: toJson({
+						goal: "We need a website redesign",
+						pain_point: "Homepage does not convert",
+						timeline: "Launch in 2 weeks",
+					}),
+					messages: toJson([
+						{
+							id: "seed-contaktly-msg-1",
+							role: "assistant",
+							text: "Hi, I am Ava. Tell me what you are building and I will guide you to the fastest next step.",
+							createdAt: now,
+							intent: "general",
+							promptKey: "goal",
+						},
+						{
+							id: "seed-contaktly-msg-2",
+							role: "user",
+							text: "We need a website redesign",
+							createdAt: now,
+						},
+						{
+							id: "seed-contaktly-msg-3",
+							role: "assistant",
+							text: "What is the biggest conversion blocker on the current site right now?",
+							createdAt: now,
+							intent: "website-redesign",
+							promptKey: "pain_point",
+						},
+						{
+							id: "seed-contaktly-msg-4",
+							role: "user",
+							text: "Homepage does not convert",
+							createdAt: now,
+						},
+						{
+							id: "seed-contaktly-msg-5",
+							role: "assistant",
+							text: "What timeline are you targeting for launch?",
+							createdAt: now,
+							intent: "website-redesign",
+							promptKey: "timeline",
+						},
+						{
+							id: "seed-contaktly-msg-6",
+							role: "user",
+							text: "Launch in 2 weeks",
+							createdAt: now,
+						},
+						{
+							id: "seed-contaktly-msg-7",
+							role: "assistant",
+							text: "Book the strategy call now.",
+							createdAt: now,
+							intent: "website-redesign",
+							promptKey: "timeline",
+						},
+					]),
+				},
+				{
+					id: "seed-contaktly-conversation-2",
+					config_id: "ctly-demo-founder",
+					organization_id: adminOrgId,
+					visitor_id: "aaa-seed-visitor-2",
+					last_widget_instance_id: "seed-widget-instance-2",
+					active_prompt_key: "audience",
+					last_intent: "lead-generation",
+					stage: "qualification",
+					state_version: 1,
+					next_message_order: 4,
+					slots: toJson({
+						goal: "We need more pipeline",
+						audience: "B2B SaaS founders",
+					}),
+					updated_at: new Date(nowMs - 60 * 60 * 1000).toISOString(),
+					messages: toJson([
+						{
+							id: "seed-contaktly-msg-8",
+							role: "assistant",
+							text: "Hi, I am Ava. Tell me what you are building and I will guide you to the fastest next step.",
+							createdAt: new Date(nowMs - 60 * 60 * 1000).toISOString(),
+							intent: "general",
+							promptKey: "goal",
+						},
+						{
+							id: "seed-contaktly-msg-9",
+							role: "user",
+							text: "We need more pipeline",
+							createdAt: new Date(nowMs - 60 * 60 * 1000).toISOString(),
+						},
+						{
+							id: "seed-contaktly-msg-10",
+							role: "assistant",
+							text: "Which audience is the highest priority right now?",
+							createdAt: new Date(nowMs - 60 * 60 * 1000).toISOString(),
+							intent: "lead-generation",
+							promptKey: "audience",
+						},
+					]),
+				},
+			],
+			now
+		),
 	};
 };
 
@@ -356,6 +507,17 @@ const upsert = async (client, table, conflictColumns, row) => {
 };
 
 const clearSeedNamespace = async (client) => {
+	for (const table of [
+		"contaktly_calendar_connection",
+		"contaktly_prefill_draft",
+		"contaktly_message",
+		"contaktly_turn",
+		"contaktly_conversation",
+		"contaktly_workspace_config",
+	]) {
+		await client.query(`DELETE FROM ${quote(table)}`);
+	}
+
 	for (const table of CLEANUP_TABLES) {
 		await client.query(
 			`DELETE FROM ${quote(table)} WHERE ${quote("id")} LIKE $1`,
@@ -390,6 +552,8 @@ const writeSeedData = async (client, seed) => {
 		["todo", seed.todos],
 		["assistant_chat", seed.assistantChats],
 		["assistant_message", seed.assistantMessages],
+		["contaktly_workspace_config", seed.contaktlyWorkspaceConfigs],
+		["contaktly_conversation", seed.contaktlyConversations],
 	];
 
 	for (const [table, rows] of tableRows) {

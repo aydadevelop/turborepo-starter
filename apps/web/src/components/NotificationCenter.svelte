@@ -64,12 +64,30 @@
 	let currentUserId = $state<string | null>(null);
 	let cursorMs = $state(0);
 	let stopStream: (() => Promise<void>) | null = null;
+	let isClosingStream = false;
 	const isLoading = $derived(
 		notificationsQuery.isPending && notifications.length === 0
 	);
 
 	function setLoadError(error: unknown, fallback: string) {
 		loadError = error instanceof Error ? error.message : fallback;
+	}
+
+	function isExpectedStreamCancellation(error: unknown) {
+		if (error instanceof Error) {
+			if (error.name === "AbortError") {
+				return true;
+			}
+
+			const message = error.message.toLowerCase();
+			return (
+				message.includes("stream was cancelled") ||
+				message.includes("stream was canceled") ||
+				message.includes("aborted")
+			);
+		}
+
+		return false;
 	}
 
 	function syncDerivedStateFromNotifications() {
@@ -79,8 +97,11 @@
 
 	function closeStream() {
 		if (stopStream) {
+			isClosingStream = true;
 			stopStream().catch((error) => {
-				console.error("Failed to stop notifications stream", error);
+				if (!isExpectedStreamCancellation(error)) {
+					console.error("Failed to stop notifications stream", error);
+				}
 			});
 			stopStream = null;
 		}
@@ -92,6 +113,7 @@
 			return;
 		}
 
+		isClosingStream = false;
 		streamState = "connecting";
 		stopStream = consumeEventIterator(
 			client.notifications.streamMe({
@@ -118,10 +140,15 @@
 					}
 				},
 				onError: (error) => {
-					console.error("Notifications stream failed", error);
+					if (isClosingStream || isExpectedStreamCancellation(error)) {
+						streamState = "idle";
+						return;
+					}
+
 					streamState = "error";
 				},
 				onFinish: () => {
+					isClosingStream = false;
 					stopStream = null;
 				},
 			}

@@ -20,5 +20,10 @@ export default defineConfig(async () => {
 
 	return {
 		plugins,
+		server: {
+			host: "localhost",
+			port: 5173,
+			strictPort: true,
+		},
 	};
 });

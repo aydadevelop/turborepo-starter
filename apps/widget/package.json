@@ -1,0 +1,44 @@
+{
+  "name": "widget",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "preview": "vite preview",
+    "prepare": "svelte-kit sync || echo ''",
+    "check-types": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "lint": "cd ../.. && biome check --config-path biome.json apps/widget",
+    "lint:fix": "cd ../.. && biome check --config-path biome.json apps/widget --write",
+    "dev": "vite dev",
+    "dev:vite": "vite dev",
+    "dev:e2e": "vite dev --host localhost --port 4174 --strictPort",
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "PLAYWRIGHT_REUSE_SERVERS=0 playwright test -c playwright.config.ts",
+    "test:watch": "vitest --watch"
+  },
+  "dependencies": {
+    "@my-app/api-contract": "workspace:*",
+    "@my-app/ai-chat": "workspace:*",
+    "@my-app/contaktly-widget": "workspace:*",
+    "@orpc/client": "^1.13.4",
+    "ai": "^6.0.86"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.6",
+    "@my-app/config": "workspace:*",
+    "@my-app/tailwind-config": "workspace:*",
+    "@my-app/vitest-config": "workspace:*",
+    "@playwright/test": "^1.58.2",
+    "@sveltejs/adapter-node": "^5.2.12",
+    "@sveltejs/kit": "^2.31.1",
+    "@sveltejs/vite-plugin-svelte": "^6.1.2",
+    "@tailwindcss/vite": "^4.1.12",
+    "svelte": "^5.38.1",
+    "svelte-check": "^4.3.1",
+    "tailwindcss": "^4.1.12",
+    "typescript": "^5",
+    "ultracite": "^7.2.3",
+    "vite": "^7.1.2",
+    "vitest": "^4.0.18"
+  }
+}

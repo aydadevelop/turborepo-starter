@@ -1,5 +1,4 @@
 import { ORPCError } from "@orpc/server";
-
 import {
 	organizationPermissionProcedure,
 	publicProcedure,
@@ -7,6 +6,7 @@ import {
 } from "../index";
 import { adminRouter } from "./admin/router";
 import { consentRouter } from "./consent";
+import { contaktlyRouter } from "./contaktly";
 import { notificationsRouter } from "./notifications";
 import { paymentsRouter } from "./payments";
 import { tasksRouter } from "./tasks";
@@ -41,6 +41,7 @@ export const appRouter = publicProcedure.router({
 		};
 	}),
 	admin: adminRouter,
+	contaktly: contaktlyRouter,
 	consent: consentRouter,
 	notifications: notificationsRouter,
 	payments: paymentsRouter,

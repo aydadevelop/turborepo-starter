@@ -2,8 +2,22 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { assistantChat, assistantMessage } from "../schema/assistant";
-import { invitation, member, organization, user } from "../schema/auth";
+import {
+	account,
+	invitation,
+	member,
+	organization,
+	user,
+} from "../schema/auth";
 import { userConsent } from "../schema/consent";
+import {
+	contaktlyCalendarConnection,
+	contaktlyConversation,
+	contaktlyMessage,
+	contaktlyPrefillDraft,
+	contaktlyTurn,
+	contaktlyWorkspaceConfig,
+} from "../schema/contaktly";
 import {
 	notificationDelivery,
 	notificationEvent,
@@ -174,6 +188,300 @@ describe("Test Database Setup", () => {
 			const messages = await db.select().from(assistantMessage);
 			expect(messages).toHaveLength(1);
 			expect(messages[0]?.chatId).toBe("chat-1");
+		});
+	});
+
+	describe("Contaktly conversation table", () => {
+		it("stores widget config overrides per public config id", async () => {
+			await db.insert(organization).values({
+				id: "ctly-org-1",
+				name: "Contaktly Org",
+				slug: "contaktly-org-1",
+			});
+			await db.insert(contaktlyWorkspaceConfig).values({
+				id: "ctly-config-1",
+				organizationId: "ctly-org-1",
+				publicConfigId: "ctly-demo-founder",
+				bookingUrl: "https://calendly.com/demo-team/intro",
+				allowedDomains: ["localhost", "app.contaktly.com"],
+			});
+
+			const rows = await db.select().from(contaktlyWorkspaceConfig);
+			expect(rows).toHaveLength(1);
+			expect(rows[0]?.publicConfigId).toBe("ctly-demo-founder");
+			expect(rows[0]?.bookingUrl).toBe("https://calendly.com/demo-team/intro");
+		});
+
+		it("enforces one widget config row per public config id", async () => {
+			await db.insert(organization).values({
+				id: "ctly-org-unique-1",
+				name: "Contaktly Org Unique",
+				slug: "contaktly-org-unique-1",
+			});
+			await db.insert(contaktlyWorkspaceConfig).values({
+				id: "ctly-config-unique-1",
+				organizationId: "ctly-org-unique-1",
+				publicConfigId: "ctly-demo-founder",
+				bookingUrl: "https://calendly.com/demo-team/intro",
+			});
+
+			await expect(
+				db
+					.insert(organization)
+					.values({
+						id: "ctly-org-unique-2",
+						name: "Contaktly Org Unique 2",
+						slug: "contaktly-org-unique-2",
+					})
+					.then(() =>
+						db.insert(contaktlyWorkspaceConfig).values({
+							id: "ctly-config-unique-2",
+							organizationId: "ctly-org-unique-2",
+							publicConfigId: "ctly-demo-founder",
+							bookingUrl: "https://calendly.com/demo-team/follow-up",
+						})
+					)
+			).rejects.toThrow();
+		});
+
+		it("stores generated prefill drafts per public config id", async () => {
+			await db.insert(contaktlyPrefillDraft).values({
+				id: "ctly-prefill-1",
+				publicConfigId: "ctly-demo-founder",
+				sourceUrl: "http://localhost:43275/",
+				siteTitle: "Mary Gold Studio",
+				businessSummary: "Mary Gold helps founders sharpen messaging.",
+				openingMessage: "Hi, I'm Ava for Mary Gold Studio.",
+				starterCards: ["I need a website redesign"],
+				customInstructions: "Stay clarity-first.",
+				qualifiedLeadDefinition:
+					"Founder-led B2B teams with messy qualification.",
+			});
+
+			const rows = await db.select().from(contaktlyPrefillDraft);
+			expect(rows).toHaveLength(1);
+			expect(rows[0]?.publicConfigId).toBe("ctly-demo-founder");
+			expect(rows[0]?.starterCards).toContain("I need a website redesign");
+		});
+
+		it("enforces one prefill draft row per public config id", async () => {
+			await db.insert(contaktlyPrefillDraft).values({
+				id: "ctly-prefill-unique-1",
+				publicConfigId: "ctly-demo-founder",
+				sourceUrl: "http://localhost:43275/",
+				siteTitle: "Mary Gold Studio",
+				businessSummary: "summary",
+				openingMessage: "opening",
+				starterCards: ["starter"],
+				customInstructions: "instructions",
+				qualifiedLeadDefinition: "definition",
+			});
+
+			await expect(
+				db.insert(contaktlyPrefillDraft).values({
+					id: "ctly-prefill-unique-2",
+					publicConfigId: "ctly-demo-founder",
+					sourceUrl: "http://localhost:43275/",
+					siteTitle: "Mary Gold Studio",
+					businessSummary: "summary",
+					openingMessage: "opening",
+					starterCards: ["starter"],
+					customInstructions: "instructions",
+					qualifiedLeadDefinition: "definition",
+				})
+			).rejects.toThrow();
+		});
+
+		it("stores one Google calendar connection per public config id", async () => {
+			await db.insert(user).values({
+				id: "ctly-user-1",
+				name: "Calendar Admin",
+				email: "calendar-admin@example.com",
+				emailVerified: true,
+			});
+			await db.insert(account).values({
+				id: "ctly-account-google-1",
+				accountId: "google-calendar-admin",
+				providerId: "google",
+				userId: "ctly-user-1",
+				scope: "https://www.googleapis.com/auth/calendar.events",
+			});
+
+			await db.insert(contaktlyCalendarConnection).values({
+				id: "ctly-calendar-1",
+				publicConfigId: "ctly-demo-founder",
+				provider: "google",
+				providerAccountId: "google-calendar-admin",
+				connectedUserId: "ctly-user-1",
+				accountEmail: "calendar-admin@example.com",
+				calendarId: "primary",
+				scopes: ["https://www.googleapis.com/auth/calendar.events"],
+			});
+
+			const rows = await db.select().from(contaktlyCalendarConnection);
+			expect(rows).toHaveLength(1);
+			expect(rows[0]?.publicConfigId).toBe("ctly-demo-founder");
+			expect(rows[0]?.provider).toBe("google");
+			expect(rows[0]?.calendarId).toBe("primary");
+		});
+
+		it("enforces one calendar connection row per public config id", async () => {
+			await db.insert(user).values({
+				id: "ctly-user-1",
+				name: "Calendar Admin",
+				email: "calendar-admin@example.com",
+				emailVerified: true,
+			});
+			await db.insert(account).values({
+				id: "ctly-account-google-1",
+				accountId: "google-calendar-admin",
+				providerId: "google",
+				userId: "ctly-user-1",
+				scope: "https://www.googleapis.com/auth/calendar.events",
+			});
+			await db.insert(contaktlyCalendarConnection).values({
+				id: "ctly-calendar-unique-1",
+				publicConfigId: "ctly-demo-founder",
+				provider: "google",
+				providerAccountId: "google-calendar-admin",
+				connectedUserId: "ctly-user-1",
+				accountEmail: "calendar-admin@example.com",
+				calendarId: "primary",
+				scopes: ["https://www.googleapis.com/auth/calendar.events"],
+			});
+
+			await expect(
+				db.insert(contaktlyCalendarConnection).values({
+					id: "ctly-calendar-unique-2",
+					publicConfigId: "ctly-demo-founder",
+					provider: "google",
+					providerAccountId: "google-calendar-admin-2",
+					connectedUserId: "ctly-user-1",
+					accountEmail: "calendar-admin@example.com",
+					calendarId: "primary",
+					scopes: ["https://www.googleapis.com/auth/calendar.events"],
+				})
+			).rejects.toThrow();
+		});
+
+		it("persists conversation transcript and active prompt state", async () => {
+			await db.insert(contaktlyConversation).values({
+				id: "ctly-conv-1",
+				configId: "ctly-demo-founder",
+				visitorId: "visitor-1",
+				lastWidgetInstanceId: "instance-1",
+				activePromptKey: "goal",
+				lastIntent: "general",
+				stage: "qualification",
+				stateVersion: 0,
+				messages: [
+					{
+						id: "msg-1",
+						role: "assistant",
+						text: "What outcome do you need first?",
+						createdAt: "2026-03-06T00:00:00.000Z",
+						intent: "general",
+						promptKey: "goal",
+					},
+				],
+			});
+
+			const rows = await db.select().from(contaktlyConversation);
+			expect(rows).toHaveLength(1);
+			expect(rows[0]?.messages).toHaveLength(1);
+			expect(rows[0]?.activePromptKey).toBe("goal");
+		});
+
+		it("enforces one active conversation row per config and visitor", async () => {
+			await db.insert(contaktlyConversation).values({
+				id: "ctly-conv-2",
+				configId: "ctly-demo-founder",
+				visitorId: "visitor-unique",
+				lastWidgetInstanceId: "instance-1",
+			});
+
+			await expect(
+				db.insert(contaktlyConversation).values({
+					id: "ctly-conv-3",
+					configId: "ctly-demo-founder",
+					visitorId: "visitor-unique",
+					lastWidgetInstanceId: "instance-2",
+				})
+			).rejects.toThrow();
+		});
+
+		it("supports normalized turn and message rows", async () => {
+			await db.insert(contaktlyConversation).values({
+				id: "ctly-conv-4",
+				configId: "ctly-demo-founder",
+				visitorId: "visitor-turns",
+				lastWidgetInstanceId: "instance-1",
+				nextMessageOrder: 3,
+			});
+
+			await db.insert(contaktlyTurn).values({
+				id: "ctly-turn-1",
+				conversationId: "ctly-conv-4",
+				clientTurnId: "client-turn-1",
+				stateVersionBefore: 0,
+				stateVersionAfter: 1,
+				userInput: "Need better positioning",
+			});
+
+			await db.insert(contaktlyMessage).values([
+				{
+					id: "ctly-msg-1",
+					conversationId: "ctly-conv-4",
+					turnId: "ctly-turn-1",
+					messageOrder: 1,
+					role: "user",
+					text: "Need better positioning",
+				},
+				{
+					id: "ctly-msg-2",
+					conversationId: "ctly-conv-4",
+					turnId: "ctly-turn-1",
+					messageOrder: 2,
+					role: "assistant",
+					text: "Who is the audience you want to convert first?",
+					intent: "messaging",
+					promptKey: "audience",
+				},
+			]);
+
+			const turns = await db.select().from(contaktlyTurn);
+			const messages = await db.select().from(contaktlyMessage);
+			expect(turns).toHaveLength(1);
+			expect(messages).toHaveLength(2);
+		});
+
+		it("enforces client turn id uniqueness per conversation", async () => {
+			await db.insert(contaktlyConversation).values({
+				id: "ctly-conv-5",
+				configId: "ctly-demo-founder",
+				visitorId: "visitor-turn-dedupe",
+				lastWidgetInstanceId: "instance-1",
+			});
+
+			await db.insert(contaktlyTurn).values({
+				id: "ctly-turn-2",
+				conversationId: "ctly-conv-5",
+				clientTurnId: "client-turn-duplicate",
+				stateVersionBefore: 0,
+				stateVersionAfter: 1,
+				userInput: "Need more inbound leads",
+			});
+
+			await expect(
+				db.insert(contaktlyTurn).values({
+					id: "ctly-turn-3",
+					conversationId: "ctly-conv-5",
+					clientTurnId: "client-turn-duplicate",
+					stateVersionBefore: 1,
+					stateVersionAfter: 2,
+					userInput: "Retry same turn",
+				})
+			).rejects.toThrow();
 		});
 	});
 

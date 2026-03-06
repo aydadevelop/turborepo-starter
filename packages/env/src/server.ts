@@ -20,6 +20,10 @@ export const env = createEnv({
 		TELEGRAM_BOT_API_BASE_URL: z.string().default(""),
 		CLOUDPAYMENTS_PUBLIC_ID: z.string().default(""),
 		CLOUDPAYMENTS_API_SECRET: z.string().default(""),
+		GOOGLE_OAUTH_CLIENT_ID: z.string().default(""),
+		GOOGLE_OAUTH_CLIENT_SECRET: z.string().default(""),
+		OPEN_ROUTER_API_KEY: z.string().default(""),
+		AI_MODEL: z.string().default("openai/gpt-5-nano:nitro"),
 	},
 	runtimeEnv: process.env,
 	emptyStringAsUndefined: false, // Keep empty strings for optional vars

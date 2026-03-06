@@ -65,8 +65,11 @@ const normalizeRuntimeEnv = () => {
 	}
 
 	process.env.OPEN_ROUTER_API_KEY =
-		process.env.OPEN_ROUTER_API_KEY ?? "e2e-openrouter-placeholder";
-	process.env.AI_MODEL = process.env.AI_MODEL ?? "openai/gpt-5-nano:nitro";
+		process.env.PLAYWRIGHT_OPEN_ROUTER_API_KEY ?? "e2e-openrouter-placeholder";
+	process.env.AI_MODEL =
+		process.env.PLAYWRIGHT_AI_MODEL ??
+		process.env.AI_MODEL ??
+		"openai/gpt-5-nano:nitro";
 
 	process.env.SERVER_PORT = serverPort;
 	process.env.NOTIFICATIONS_PORT = notificationsPort;

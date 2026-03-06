@@ -1,112 +1,165 @@
-<!-- biome-ignore-all format: TanStack Form component member syntax not supported -->
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@my-app/ui/components/card";
-import { Input } from "@my-app/ui/components/input";
-import { Label } from "@my-app/ui/components/label";
-import { createForm } from "@tanstack/svelte-form";
-import { z } from "zod";
-import { goto } from "$app/navigation";
-import { resolve } from "$app/paths";
-import { page } from "$app/state";
-import { authClient } from "$lib/auth-client";
-import { queryClient } from "$lib/orpc";
-import { queryKeys } from "$lib/query-keys";
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardFooter,
+		CardHeader,
+		CardTitle,
+	} from "@my-app/ui/components/card";
+	import { Input } from "@my-app/ui/components/input";
+	import { Label } from "@my-app/ui/components/label";
+	import { z } from "zod";
+	import { goto } from "$app/navigation";
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
+	import { authClient } from "$lib/auth-client";
+	import { queryClient } from "$lib/orpc";
+	import { queryKeys } from "$lib/query-keys";
 
-let { switchToSignIn } = $props<{ switchToSignIn: () => void }>();
+	let { switchToSignIn } = $props<{ switchToSignIn: () => void }>();
 
-const resolvePostAuthRedirect = (candidatePath: string | null): string => {
-	if (!candidatePath) {
-		return `${resolve("/org/create")}?reason=new`;
-	}
-	if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
-		return `${resolve("/org/create")}?reason=new`;
-	}
-	return candidatePath;
-};
+	type SignUpField = "email" | "name" | "password";
 
-const postAuthRedirectPath = $derived(
-	resolvePostAuthRedirect(page.url.searchParams.get("next"))
-);
-let submitError = $state<string | null>(null);
+	const validationSchema = z.object({
+		name: z.string().min(2, "Name must be at least 2 characters"),
+		email: z.email("Invalid email address"),
+		password: z.string().min(8, "Password must be at least 8 characters"),
+	});
 
-const formatFormError = (error: unknown): string => {
-	if (typeof error === "string" && error.trim().length > 0) {
-		return error;
-	}
+	let name = $state("");
+	let email = $state("");
+	let password = $state("");
+	let isSubmitting = $state(false);
+	let submitError = $state<string | null>(null);
+	let touchedFields = $state<Record<SignUpField, boolean>>({
+		email: false,
+		name: false,
+		password: false,
+	});
+	let fieldErrors = $state<Record<SignUpField, string | null>>({
+		email: null,
+		name: null,
+		password: null,
+	});
 
-	if (typeof error === "object" && error !== null) {
-		const maybeError = error as {
-			message?: unknown;
-			error?: { message?: unknown };
-		};
-		if (
-			typeof maybeError.error?.message === "string" &&
-			maybeError.error.message.trim().length > 0
-		) {
-			return maybeError.error.message;
+	const resolvePostAuthRedirect = (candidatePath: string | null): string => {
+		if (!candidatePath) {
+			return `${resolve("/org/create")}?reason=new`;
 		}
-		if (
-			typeof maybeError.message === "string" &&
-			maybeError.message.trim().length > 0
-		) {
-			return maybeError.message;
+		if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
+			return `${resolve("/org/create")}?reason=new`;
 		}
-	}
+		return candidatePath;
+	};
 
-	return "Please check the form and try again.";
-};
+	const postAuthRedirectPath = $derived(
+		resolvePostAuthRedirect(page.url.searchParams.get("next"))
+	);
 
-const validationSchema = z.object({
-	name: z.string().min(2, "Name must be at least 2 characters"),
-	email: z.email("Invalid email address"),
-	password: z.string().min(8, "Password must be at least 8 characters"),
-});
+	const formatFormError = (error: unknown): string => {
+		if (typeof error === "string" && error.trim().length > 0) {
+			return error;
+		}
 
-const form = createForm(() => ({
-	defaultValues: { name: "", email: "", password: "" },
-	onSubmit: async ({ value }) => {
-		submitError = null;
-		await authClient.signUp.email(
-			{
-				email: value.email,
-				password: value.password,
-				name: value.name,
-			},
-			{
-				onSuccess: async () => {
-					await Promise.all([
-						queryClient.invalidateQueries({ queryKey: queryKeys.org.root }),
-						queryClient.invalidateQueries({ queryKey: queryKeys.org.full }),
-						queryClient.invalidateQueries({
-							queryKey: queryKeys.organizations.all,
-						}),
-						queryClient.invalidateQueries({
-							queryKey: queryKeys.org.canManage,
-						}),
-						queryClient.invalidateQueries({
-							queryKey: queryKeys.invitations.all,
-						}),
-					]);
-					goto(postAuthRedirectPath);
-				},
-				onError: (error) => {
-					submitError = formatFormError(error);
-				},
+		if (typeof error === "object" && error !== null) {
+			const maybeError = error as {
+				message?: unknown;
+				error?: { message?: unknown };
+			};
+			if (
+				typeof maybeError.error?.message === "string" &&
+				maybeError.error.message.trim().length > 0
+			) {
+				return maybeError.error.message;
 			}
-		);
-	},
-	validators: {
-		onSubmit: validationSchema,
-	},
-}));
+			if (
+				typeof maybeError.message === "string" &&
+				maybeError.message.trim().length > 0
+			) {
+				return maybeError.message;
+			}
+		}
+
+		return "Please check the form and try again.";
+	};
+
+	const validateField = (field: SignUpField) => {
+		const result = validationSchema.safeParse({ email, name, password });
+		fieldErrors = {
+			...fieldErrors,
+			[field]: result.success
+				? null
+				: (result.error.flatten().fieldErrors[field]?.[0] ?? null),
+		};
+	};
+
+	const validateForm = () => {
+		const result = validationSchema.safeParse({ email, name, password });
+		if (result.success) {
+			fieldErrors = {
+				email: null,
+				name: null,
+				password: null,
+			};
+			return true;
+		}
+
+		const errors = result.error.flatten().fieldErrors;
+		fieldErrors = {
+			email: errors.email?.[0] ?? null,
+			name: errors.name?.[0] ?? null,
+			password: errors.password?.[0] ?? null,
+		};
+		touchedFields = {
+			email: true,
+			name: true,
+			password: true,
+		};
+		return false;
+	};
+
+	const handleSignUp = async () => {
+		submitError = null;
+		if (!validateForm()) {
+			return;
+		}
+
+		isSubmitting = true;
+		try {
+			await authClient.signUp.email(
+				{
+					email: email.trim(),
+					password,
+					name: name.trim(),
+				},
+				{
+					onSuccess: async () => {
+						await Promise.all([
+							queryClient.invalidateQueries({ queryKey: queryKeys.org.root }),
+							queryClient.invalidateQueries({ queryKey: queryKeys.org.full }),
+							queryClient.invalidateQueries({
+								queryKey: queryKeys.organizations.all,
+							}),
+							queryClient.invalidateQueries({
+								queryKey: queryKeys.org.canManage,
+							}),
+							queryClient.invalidateQueries({
+								queryKey: queryKeys.invitations.all,
+							}),
+						]);
+						goto(postAuthRedirectPath);
+					},
+					onError: (error) => {
+						submitError = formatFormError(error);
+					},
+				}
+			);
+		} finally {
+			isSubmitting = false;
+		}
+	};
 </script>
 
 <div class="mx-auto mt-10 w-full max-w-md p-6">
@@ -117,110 +170,96 @@ const form = createForm(() => ({
 		</CardHeader>
 		<CardContent>
 			<form
-				id="form"
 				class="space-y-4"
-				onsubmit={(e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					form.handleSubmit();
+				onsubmit={(event) => {
+					event.preventDefault();
+					void handleSignUp();
 				}}
 			>
-				<form.Field name="name">
-					{#snippet children(field)}
-						<div class="space-y-2">
-							<Label for={field.name}>Name</Label>
-							<Input
-								id={field.name}
-								name={field.name}
-								placeholder="John Doe"
-								onblur={field.handleBlur}
-								value={field.state.value}
-								oninput={(e: Event) => {
-									const target = e.target as HTMLInputElement;
-									field.handleChange(target.value);
-								}}
-							/>
-							{#if field.state.meta.isTouched}
-								{#each field.state.meta.errors as err}
-									<p class="text-sm text-destructive" role="alert">
-										{formatFormError(err)}
-									</p>
-								{/each}
-							{/if}
-						</div>
-					{/snippet}
-				</form.Field>
+				<div class="space-y-2">
+					<Label for="sign-up-name">Name</Label>
+					<Input
+						id="sign-up-name"
+						name="name"
+						placeholder="John Doe"
+						value={name}
+						onblur={() => {
+							touchedFields.name = true;
+							validateField("name");
+						}}
+						oninput={(event: Event) => {
+							name = (event.target as HTMLInputElement).value;
+							if (touchedFields.name) {
+								validateField("name");
+							}
+						}}
+					/>
+					{#if touchedFields.name && fieldErrors.name}
+						<p class="text-sm text-destructive" role="alert">
+							{fieldErrors.name}
+						</p>
+					{/if}
+				</div>
 
-				<form.Field name="email">
-					{#snippet children(field)}
-						<div class="space-y-2">
-							<Label for={field.name}>Email</Label>
-							<Input
-								id={field.name}
-								name={field.name}
-								type="email"
-								placeholder="you@example.com"
-								onblur={field.handleBlur}
-								value={field.state.value}
-								oninput={(e: Event) => {
-									const target = e.target as HTMLInputElement;
-									field.handleChange(target.value);
-								}}
-							/>
-							{#if field.state.meta.isTouched}
-								{#each field.state.meta.errors as err}
-									<p class="text-sm text-destructive" role="alert">
-										{formatFormError(err)}
-									</p>
-								{/each}
-							{/if}
-						</div>
-					{/snippet}
-				</form.Field>
+				<div class="space-y-2">
+					<Label for="sign-up-email">Email</Label>
+					<Input
+						id="sign-up-email"
+						name="email"
+						type="email"
+						placeholder="you@example.com"
+						value={email}
+						onblur={() => {
+							touchedFields.email = true;
+							validateField("email");
+						}}
+						oninput={(event: Event) => {
+							email = (event.target as HTMLInputElement).value;
+							if (touchedFields.email) {
+								validateField("email");
+							}
+						}}
+					/>
+					{#if touchedFields.email && fieldErrors.email}
+						<p class="text-sm text-destructive" role="alert">
+							{fieldErrors.email}
+						</p>
+					{/if}
+				</div>
 
-				<form.Field name="password">
-					{#snippet children(field)}
-						<div class="space-y-2">
-							<Label for={field.name}>Password</Label>
-							<Input
-								id={field.name}
-								name={field.name}
-								type="password"
-								placeholder="••••••••"
-								onblur={field.handleBlur}
-								value={field.state.value}
-								oninput={(e: Event) => {
-									const target = e.target as HTMLInputElement;
-									field.handleChange(target.value);
-								}}
-							/>
-							{#if field.state.meta.isTouched}
-								{#each field.state.meta.errors as err}
-									<p class="text-sm text-destructive" role="alert">
-										{formatFormError(err)}
-									</p>
-								{/each}
-							{/if}
-						</div>
-					{/snippet}
-				</form.Field>
+				<div class="space-y-2">
+					<Label for="sign-up-password">Password</Label>
+					<Input
+						id="sign-up-password"
+						name="password"
+						type="password"
+						placeholder="••••••••"
+						value={password}
+						onblur={() => {
+							touchedFields.password = true;
+							validateField("password");
+						}}
+						oninput={(event: Event) => {
+							password = (event.target as HTMLInputElement).value;
+							if (touchedFields.password) {
+								validateField("password");
+							}
+						}}
+					/>
+					{#if touchedFields.password && fieldErrors.password}
+						<p class="text-sm text-destructive" role="alert">
+							{fieldErrors.password}
+						</p>
+					{/if}
+				</div>
+
 				{#if submitError}
 					<p class="text-sm text-destructive" role="alert">{submitError}</p>
 				{/if}
 
-				<form.Subscribe
-					selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
-				>
-					{#snippet children(state)}
-						<Button
-							type="submit"
-							class="w-full"
-							disabled={!state.canSubmit || state.isSubmitting}
-						>
-							{state.isSubmitting ? "Creating account..." : "Sign Up"}
-						</Button>
-					{/snippet}
-				</form.Subscribe>
+				<Button type="submit" class="w-full" disabled={isSubmitting}>
+					{isSubmitting ? "Creating account..." : "Sign Up"}
+				</Button>
 			</form>
 		</CardContent>
 		<CardFooter class="justify-center">

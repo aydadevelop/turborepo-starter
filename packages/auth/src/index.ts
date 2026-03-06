@@ -27,9 +27,16 @@ const parseCorsOrigins = (value: string | undefined) =>
 const TRAILING_SLASH_RE = /\/+$/;
 const WORKERS_DEV_RE = /\.([^.]+\.workers\.dev)$/;
 const SESSION_COOKIE_CACHE_MAX_AGE_SECONDS = 5 * 60;
+const GOOGLE_CALENDAR_OAUTH_SCOPES = [
+	"https://www.googleapis.com/auth/calendar.events",
+	"https://www.googleapis.com/auth/calendar.readonly",
+];
 
 const initAuth = () => {
 	const corsOrigins = parseCorsOrigins(env.CORS_ORIGIN);
+	const isGoogleOAuthConfigured = Boolean(
+		env.GOOGLE_OAUTH_CLIENT_ID.trim() && env.GOOGLE_OAUTH_CLIENT_SECRET.trim()
+	);
 
 	// BETTER_AUTH_URL is always the public-facing API server URL (e.g. https://api.staging.ayda.studio).
 	// Use it (not SERVER_URL, which may be an internal Docker URL like http://server.web1:3000)
@@ -116,9 +123,21 @@ const initAuth = () => {
 		account: {
 			accountLinking: {
 				enabled: true,
+				allowDifferentEmails: true,
 				trustedProviders: ["email-password"],
 			},
 		},
+		socialProviders: isGoogleOAuthConfigured
+			? {
+					google: {
+						clientId: env.GOOGLE_OAUTH_CLIENT_ID,
+						clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
+						accessType: "offline",
+						prompt: "consent",
+						scope: GOOGLE_CALENDAR_OAUTH_SCOPES,
+					},
+				}
+			: undefined,
 		session: {
 			cookieCache: {
 				enabled: true,

@@ -1,0 +1,25 @@
+{
+  "name": "site-astro",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "dev:e2e": "astro dev --host localhost --port 43275",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check-types": "astro check",
+    "lint": "cd ../.. && biome check --config-path biome.json apps/site-astro",
+    "lint:fix": "cd ../.. && biome check --config-path biome.json apps/site-astro --write"
+  },
+  "dependencies": {
+    "@my-app/contaktly-widget": "workspace:*",
+    "astro": "^5.15.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@biomejs/biome": "^2.4.6",
+    "@my-app/config": "workspace:*",
+    "typescript": "^5",
+    "ultracite": "^7.2.3"
+  }
+}

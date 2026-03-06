@@ -11,6 +11,7 @@ const DEFAULTS = {
 	serverURL: "http://localhost:43100",
 	assistantURL: "http://localhost:43102",
 	notificationsURL: "http://localhost:43101",
+	siteURL: "http://localhost:43275",
 	workersCi: 2,
 	workersLocal: 2,
 	webServerCommand: "bun run dev:web:e2e",
@@ -43,6 +44,7 @@ export interface PlaywrightRuntimeEnv {
 	reuseExistingServers: boolean;
 	serverCommand: string;
 	serverURL: string;
+	siteURL: string;
 	useManagedServers: boolean;
 	webServerCommand: string;
 	workers: number;
@@ -71,6 +73,7 @@ export const getPlaywrightRuntimeEnv = (): PlaywrightRuntimeEnv => {
 		"PLAYWRIGHT_NOTIFICATIONS_URL",
 		DEFAULTS.notificationsURL
 	);
+	const siteURL = readStringEnv("PLAYWRIGHT_SITE_URL", DEFAULTS.siteURL);
 	const isCi = Boolean(process.env.CI);
 	const workers = readPositiveIntEnv(
 		"PLAYWRIGHT_WORKERS",
@@ -82,12 +85,14 @@ export const getPlaywrightRuntimeEnv = (): PlaywrightRuntimeEnv => {
 	process.env.PLAYWRIGHT_SERVER_URL = serverURL;
 	process.env.PLAYWRIGHT_ASSISTANT_URL = assistantURL;
 	process.env.PLAYWRIGHT_NOTIFICATIONS_URL = notificationsURL;
+	process.env.PLAYWRIGHT_SITE_URL = siteURL;
 
 	cached = {
 		baseURL,
 		serverURL,
 		assistantURL,
 		notificationsURL,
+		siteURL,
 		isRemote: !isLocalUrl(baseURL),
 		useManagedServers: process.env.PLAYWRIGHT_MANAGED_SERVERS !== "0",
 		reuseExistingServers: !isCi && process.env.PLAYWRIGHT_REUSE_SERVERS !== "0",

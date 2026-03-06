@@ -7,6 +7,7 @@ const {
 	serverURL,
 	assistantURL,
 	notificationsURL,
+	siteURL,
 	useManagedServers,
 	reuseExistingServers,
 	webServerCommand,
@@ -82,6 +83,14 @@ export default defineConfig({
 				{
 					command: notificationsCommand,
 					url: `${notificationsURL}/health`,
+					reuseExistingServer: reuseExistingServers,
+					timeout: webServerTimeout,
+					stdout: "pipe",
+					stderr: "pipe",
+				},
+				{
+					command: "bun run --cwd ../../apps/site-astro dev:e2e",
+					url: siteURL,
 					reuseExistingServer: reuseExistingServers,
 					timeout: webServerTimeout,
 					stdout: "pipe",

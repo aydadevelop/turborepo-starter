@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { signInAsSeedAdmin } from "./utils/auth";
+import { SEED_CREDENTIALS } from "./utils/seed";
 import { url } from "./utils/url";
 
 const LOGIN_URL_PATTERN = /\/login(\?|$)/;
@@ -9,7 +10,7 @@ test.describe("Authentication Flow", () => {
 	test("can navigate to login page", async ({ page }) => {
 		await page.goto(url("/"), NAV_OPTIONS);
 		await page.getByTestId("header-sign-in-button").click();
-		await expect(page).toHaveURL(LOGIN_URL_PATTERN); 
+		await expect(page).toHaveURL(LOGIN_URL_PATTERN);
 	});
 
 	test("login page has sign in and sign up forms", async ({ page }) => {
@@ -32,6 +33,19 @@ test.describe("Authentication Flow", () => {
 	test("shows sign-up toggle control", async ({ page }) => {
 		await page.goto(url("/login"), NAV_OPTIONS);
 		await expect(page.getByTestId("switch-to-sign-up-button")).toBeVisible();
+	});
+
+	test("seeded admin can sign in through the login form", async ({ page }) => {
+		await page.goto(url("/login"), NAV_OPTIONS);
+		await page
+			.getByTestId("login-email-input")
+			.fill(SEED_CREDENTIALS.admin.email);
+		await page
+			.getByTestId("login-password-input")
+			.fill(SEED_CREDENTIALS.admin.password);
+		await page.getByTestId("sign-in-submit-button").click();
+
+		await expect(page).toHaveURL(url("/dashboard/settings"));
 	});
 });
 

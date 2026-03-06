@@ -13,7 +13,7 @@
 
 import { execSync } from "node:child_process";
 
-const ALL_E2E_PORTS = [43_173, 43_100, 43_101, 43_102];
+const ALL_E2E_PORTS = [43_173, 43_100, 43_101, 43_102, 43_275];
 const GRACE_MS = 3000;
 const POLL_MS = 200;
 

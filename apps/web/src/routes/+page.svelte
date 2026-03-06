@@ -103,6 +103,26 @@
 					</Button>
 				</CardFooter>
 			</Card>
+
+			<Card class="transition-shadow hover:shadow-md">
+				<CardHeader>
+					<CardTitle>Contaktly</CardTitle>
+					<CardDescription
+						>Widget delivery and founder-site fixture</CardDescription
+					>
+				</CardHeader>
+				<CardContent>
+					<p class="text-sm text-muted-foreground">
+						Open the new Contaktly admin area to inspect the widget config id,
+						embed snippet, widget host app, and Astro fixture integration.
+					</p>
+				</CardContent>
+				<CardFooter>
+					<Button href={resolve("/dashboard/contaktly")} variant="outline">
+						Open Contaktly
+					</Button>
+				</CardFooter>
+			</Card>
 		</div>
 	</div>
 </div>

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./loader": "./src/loader.ts",
+    "./cors": "./src/cors.ts",
     "./server": "./src/server.ts",
     "./assistant": "./src/assistant.ts",
     "./web": "./src/web.ts"

@@ -13,6 +13,8 @@ declare global {
 			CLOUDPAYMENTS_PUBLIC_ID?: string;
 			CORS_ORIGIN?: string;
 			DATABASE_URL?: string;
+			GOOGLE_OAUTH_CLIENT_ID?: string;
+			GOOGLE_OAUTH_CLIENT_SECRET?: string;
 			OPEN_ROUTER_API_KEY?: string;
 			POLAR_ACCESS_TOKEN?: string;
 			POLAR_PRODUCT_ID?: string;

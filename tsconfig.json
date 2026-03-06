@@ -14,6 +14,12 @@
       "path": "./apps/web"
     },
     {
+      "path": "./apps/widget"
+    },
+    {
+      "path": "./apps/site-astro"
+    },
+    {
       "path": "./packages/ai-chat"
     },
     {
@@ -27,6 +33,9 @@
     },
     {
       "path": "./packages/auth"
+    },
+    {
+      "path": "./packages/contaktly-widget"
     },
     {
       "path": "./packages/db"

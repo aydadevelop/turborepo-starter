@@ -74,6 +74,11 @@ coverage
 packages/e2e-web/test-results
 packages/e2e-web/playwright-report
 packages/e2e-web/e2e/.auth
+apps/widget/test-results
+
+# Generated app metadata
+apps/site-astro/.astro
+apps/widget/.svelte-kit
 
 # Misc
 *.tgz
