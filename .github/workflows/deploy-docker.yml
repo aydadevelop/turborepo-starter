@@ -98,11 +98,16 @@ jobs:
     steps:
       - name: Deploy ${{ matrix.app }} to Dokku
         run: |
-          out=$(sudo dokku git:from-image ${{ matrix.app }} ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:sha-${{ github.sha }} 2>&1)
-          code=$?
-          echo "$out"
-          if [ $code -ne 0 ]; then
-            echo "$out" | grep -q "No changes detected" && echo "Already up to date, skipping." || exit $code
+          if out=$(sudo dokku git:from-image ${{ matrix.app }} ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:sha-${{ github.sha }} 2>&1); then
+            echo "$out"
+          else
+            code=$?
+            echo "$out"
+            if echo "$out" | grep -q "No changes detected"; then
+              echo "Already up to date, skipping."
+            else
+              exit $code
+            fi
           fi
 
   # ── Run DB migrations after deploy ─────────────────────────────────────────

@@ -1,10 +1,10 @@
-import * as pulumi from "@pulumi/pulumi";
 import * as command from "@pulumi/command";
+import * as pulumi from "@pulumi/pulumi";
 import * as tls from "@pulumi/tls";
+import { DnsRecords } from "./dns";
+import { DokkuApps } from "./dokku-apps";
 import { OneGbVps } from "./onegb-vps";
 import { VpsBootstrap } from "./vps-bootstrap";
-import { DokkuApps } from "./dokku-apps";
-import { DnsRecords } from "./dns";
 
 const config = new pulumi.Config();
 const vpsConfig = new pulumi.Config("vps");
@@ -17,14 +17,14 @@ const sshPort = Number(vpsConfig.get("sshPort") ?? "22");
 
 // Helper: return secret or empty string for optional config
 const optionalSecret = (key: string) =>
-  appConfig.getSecret(key) ?? pulumi.output("");
+	appConfig.getSecret(key) ?? pulumi.output("");
 
 // ── Step 0: Create VPS on 1gb.ru ────────────────────────────────────────────
 const vps = new OneGbVps("staging-vps", {
-  token: vpsConfig.getSecret("oneGbToken"),
-  vcpu: 2,
-  memoryMb: 4096,
-  diskGb: 40,
+	token: vpsConfig.getSecret("oneGbToken"),
+	vcpu: 2,
+	memoryMb: 4096,
+	diskGb: 40,
 });
 
 // IP flows from VPS creation → connection → everything else
@@ -35,62 +35,75 @@ const vpsIp = vps.ip;
 // On a fresh 1gb.ru Ubuntu 24.04 VPS, root SSH password auth is blocked;
 // we connect as ubuntu+password first, install this key, then use root+key.
 const deployKey = new tls.PrivateKey("deploy-key", {
-  algorithm: "ED25519",
+	algorithm: "ED25519",
 });
 
 // Main connection: root + generated private key (used after key installation)
 const connection: command.types.input.remote.ConnectionArgs = {
-  host: vpsIp,
-  user: sshUser,
-  port: sshPort,
-  privateKey: deployKey.privateKeyOpenssh,
+	host: vpsIp,
+	user: sshUser,
+	port: sshPort,
+	privateKey: deployKey.privateKeyOpenssh,
 };
 
 // ── Step 1: Bootstrap VPS (Docker, Dokku, UFW, fail2ban) ────────────────────
-const bootstrap = new VpsBootstrap("vps", {
-  connection,
-  sshUser,
-  initUser: "ubuntu",
-  initPassword: vps.password,
-  deployPublicKey: deployKey.publicKeyOpenssh,
-}, { dependsOn: [vps] });
+const bootstrap = new VpsBootstrap(
+	"vps",
+	{
+		connection,
+		sshUser,
+		initUser: "ubuntu",
+		initPassword: vps.password,
+		deployPublicKey: deployKey.publicKeyOpenssh,
+	},
+	{ dependsOn: [vps] }
+);
 
 // ── Step 2: Configure Dokku apps ────────────────────────────────────────────
-const apps = new DokkuApps("apps", {
-  connection,
-  domain,
-  ghcrUser: ghcrConfig.require("user"),
-  ghcrToken: ghcrConfig.requireSecret("token"),
-  postgresPassword: appConfig.requireSecret("postgresPassword"),
-  env: {
-    BETTER_AUTH_SECRET: appConfig.requireSecret("betterAuthSecret"),
-    // BETTER_AUTH_URL must point to the API server (where better-auth is hosted),
-    // not the web frontend. Used as better-auth baseURL across all services.
-    BETTER_AUTH_URL: `https://api.${domain}`,
-    SERVER_URL: `https://api.${domain}`,
-    CORS_ORIGIN: `https://${domain},https://api.${domain},https://assistant.${domain},https://notifications.${domain}`,
-    OPEN_ROUTER_API_KEY: optionalSecret("openRouterApiKey"),
-    OPENAI_API_KEY: optionalSecret("openaiApiKey"),
-    AI_MODEL: appConfig.get("aiModel") ?? "openai/gpt-4o-mini",
-    SMTP_FROM: appConfig.get("smtpFrom") ?? `noreply@${domain}`,
-    SMTP_USER: appConfig.get("smtpUser") ?? "",
-    SMTP_PASS: optionalSecret("smtpPass"),
-    TELEGRAM_BOT_TOKEN: optionalSecret("telegramBotToken"),
-    TELEGRAM_BOT_USERNAME: appConfig.get("telegramBotUsername") ?? "",
-    TELEGRAM_CHAT_ID: optionalSecret("telegramChatId"),
-    GRAFANA_PASSWORD: appConfig.requireSecret("grafanaPassword"),
-    GRAFANA_ALERT_EMAIL: appConfig.get("grafanaAlertEmail") ?? `ops@${domain}`,
-  },
-}, { dependsOn: [bootstrap] });
+const apps = new DokkuApps(
+	"apps",
+	{
+		connection,
+		domain,
+		ghcrUser: ghcrConfig.require("user"),
+		ghcrToken: ghcrConfig.requireSecret("token"),
+		postgresPassword: appConfig.requireSecret("postgresPassword"),
+		env: {
+			BETTER_AUTH_SECRET: appConfig.requireSecret("betterAuthSecret"),
+			// BETTER_AUTH_URL must point to the API server (where better-auth is hosted),
+			// not the web frontend. Used as better-auth baseURL across all services.
+			BETTER_AUTH_URL: `https://api.${domain}`,
+			SERVER_URL: `https://api.${domain}`,
+			CORS_ORIGIN: `https://${domain},https://api.${domain},https://assistant.${domain},https://notifications.${domain}`,
+			OPEN_ROUTER_API_KEY: optionalSecret("openRouterApiKey"),
+			OPENAI_API_KEY: optionalSecret("openaiApiKey"),
+			AI_MODEL: appConfig.get("aiModel") ?? "openai/gpt-4o-mini",
+			SMTP_FROM: appConfig.get("smtpFrom") ?? `noreply@${domain}`,
+			SMTP_USER: appConfig.get("smtpUser") ?? "",
+			SMTP_PASS: optionalSecret("smtpPass"),
+			TELEGRAM_BOT_TOKEN: optionalSecret("telegramBotToken"),
+			TELEGRAM_BOT_USERNAME: appConfig.get("telegramBotUsername") ?? "",
+			TELEGRAM_CHAT_ID: optionalSecret("telegramChatId"),
+			GRAFANA_PASSWORD: appConfig.requireSecret("grafanaPassword"),
+			GRAFANA_ALERT_EMAIL:
+				appConfig.get("grafanaAlertEmail") ?? `ops@${domain}`,
+		},
+	},
+	{ dependsOn: [bootstrap] }
+);
 
 // ── Step 3: DNS records (Cloudflare) ────────────────────────────────────────
 const dns = new DnsRecords("dns", { domain, vpsIp });
 
 // ── Step 4: Sync deployment config to GitHub Actions secrets ────────────────
-const sshKeyB64 = deployKey.privateKeyOpenssh.apply(k => Buffer.from(k).toString("base64"));
+const sshKeyB64 = deployKey.privateKeyOpenssh.apply((k) =>
+	Buffer.from(k).toString("base64")
+);
 const ghRepo = config.get("ghRepo") ?? "aydadevelop/turborepo-starter";
-new command.local.Command("sync-ci-secrets", {
-  create: pulumi.interpolate`
+new command.local.Command(
+	"sync-ci-secrets",
+	{
+		create: pulumi.interpolate`
     gh secret set SSH_HOST            --repo "${ghRepo}" --body "${vpsIp}" && \\
     gh secret set SSH_USER            --repo "${ghRepo}" --body "${sshUser}" && \\
     gh secret set SSH_PORT            --repo "${ghRepo}" --body "${sshPort}" && \\
@@ -99,20 +112,21 @@ new command.local.Command("sync-ci-secrets", {
     gh secret set SSH_HOST_KEY        --repo "${ghRepo}" --body "$(ssh-keyscan -p 443 -t ed25519 ${vpsIp} 2>/dev/null)" && \\
     echo "${deployKey.publicKeyOpenssh}" | ssh -i /tmp/vps_key -o StrictHostKeyChecking=no root@${vpsIp} 'dokku ssh-keys:add github-actions 2>/dev/null || true'
   `,
-  triggers: [vpsIp, sshUser, String(sshPort), sshKeyB64],
-}, { dependsOn: [bootstrap, apps, dns] });
-
+		triggers: [vpsIp, sshUser, String(sshPort), sshKeyB64],
+	},
+	{ dependsOn: [bootstrap, apps, dns] }
+);
 
 // ── Exports ─────────────────────────────────────────────────────────────────
 export const ssh = {
-  host: vpsIp,
-  user: sshUser,
-  port: sshPort,
+	host: vpsIp,
+	user: sshUser,
+	port: sshPort,
 };
 export const deployPublicKey = deployKey.publicKeyOpenssh;
 export const appUrls = {
-  web: `https://${domain}`,
-  api: `https://api.${domain}`,
-  assistant: `https://assistant.${domain}`,
-  grafana: `https://grafana.${domain}`,
+	web: `https://${domain}`,
+	api: `https://api.${domain}`,
+	assistant: `https://assistant.${domain}`,
+	grafana: `https://grafana.${domain}`,
 };
