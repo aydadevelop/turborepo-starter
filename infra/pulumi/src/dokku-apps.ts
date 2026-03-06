@@ -106,8 +106,8 @@ export class DokkuApps extends pulumi.ComponentResource {
 				port: 3000,
 				extraEnv: {
 					ORIGIN: `https://${domain}`,
-					INTERNAL_SERVER_URL: "http://server.web1:3000",
-					INTERNAL_ASSISTANT_URL: "http://assistant.web1:3001",
+					INTERNAL_SERVER_URL: "http://server.web:3000",
+					INTERNAL_ASSISTANT_URL: "http://assistant.web:3001",
 					// Public env vars — exposed to the browser via SvelteKit
 					PUBLIC_SERVER_URL: `https://api.${domain}`,
 					PUBLIC_ASSISTANT_URL: `https://assistant.${domain}`,
@@ -125,7 +125,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 				port: 3001,
 				buildArg: "assistant",
 				extraEnv: {
-					SERVER_URL: "http://server.web1:3000",
+					SERVER_URL: "http://server.web:3000",
 				},
 			},
 			{
@@ -134,8 +134,8 @@ export class DokkuApps extends pulumi.ComponentResource {
 				port: 3002,
 				buildArg: "notifications",
 				extraEnv: {
-					SERVER_URL: "http://server.web1:3000",
-					SMTP_HOST: "smtp.web1",
+					SERVER_URL: "http://server.web:3000",
+					SMTP_HOST: "smtp",
 					SMTP_PORT: "25",
 				},
 			},
@@ -327,7 +327,7 @@ export class DokkuApps extends pulumi.ComponentResource {
             -e GF_ALERTING_ENABLED=true \
             -e GF_UNIFIED_ALERTING_ENABLED=true \
             -e GF_SMTP_ENABLED=true \
-            -e GF_SMTP_HOST=smtp.web1:25 \
+            -e GF_SMTP_HOST=smtp:25 \
             -e GF_SMTP_FROM_NAME="Grafana Alerts" \
             -e GF_SMTP_SKIP_VERIFY=true \
             --network dokku \

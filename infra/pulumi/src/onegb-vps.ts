@@ -284,7 +284,7 @@ export class OneGbVps extends pulumi.dynamic.Resource {
 				diskGb: args.diskGb ?? 40,
 				template: args.template ?? "nv.lin.ubuntu2404v1",
 			},
-			{ ...opts, protect: true } // Protect by default — don't accidentally delete VPS
+			{ ...opts, protect: true } 
 		);
 	}
 }

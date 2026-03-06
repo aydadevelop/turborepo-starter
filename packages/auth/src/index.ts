@@ -32,7 +32,7 @@ const initAuth = () => {
 	const corsOrigins = parseCorsOrigins(env.CORS_ORIGIN);
 
 	// BETTER_AUTH_URL is always the public-facing API server URL (e.g. https://api.staging.ayda.studio).
-	// Use it (not SERVER_URL, which may be an internal Docker URL like http://server.web1:3000)
+	// Use it (not SERVER_URL, which may be an internal Docker URL like http://server.web:3000)
 	// to derive cookie attributes. Using an HTTP internal URL would drop the __Secure- prefix,
 	// causing session cookies set by the server (HTTPS) to be unreadable by other services.
 	const authBaseUrl = env.BETTER_AUTH_URL.replace(TRAILING_SLASH_RE, "");
