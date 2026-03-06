@@ -157,15 +157,113 @@ jobs:
             packages/e2e-web/test-results
           retention-days: 7
 
+  # ── Plan: determine which apps are affected ─────────────────────────────────
+  plan:
+    name: Plan deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.affected.outputs.matrix }}
+      has_apps: ${{ steps.affected.outputs.has_apps }}
+      run_migrations: ${{ steps.affected.outputs.run_migrations }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Detect affected apps
+        id: affected
+        run: |
+          # Map: turbo package name → dockerfile
+          declare -A DOCKERFILES=(
+            [server]=Dockerfile
+            [assistant]=Dockerfile
+            [notifications]=Dockerfile
+            [web]=Dockerfile.web
+          )
+          DEPLOY_APPS=("server" "assistant" "notifications" "web")
+
+          # Get affected packages from Turborepo
+          AFFECTED=$(bunx turbo ls --affected --output=json 2>/dev/null)
+          AFFECTED_NAMES=$(echo "$AFFECTED" | jq -r '.packages.items[].name')
+          echo "Affected packages: $AFFECTED_NAMES"
+
+          # Also detect if any affected package depends on a deploy app via dry-run
+          # (e.g. a shared package change affects server transitively)
+          MATRIX_INCLUDES="[]"
+          RUN_MIGRATIONS=false
+
+          for app in "${DEPLOY_APPS[@]}"; do
+            # Check if the app itself or any of its dependencies are affected
+            # turbo run build --filter=$app --affected --dry=json will output tasks
+            # only if $app is affected (directly or transitively)
+            DRY=$(bunx turbo run build --filter="$app" --affected --dry=json 2>/dev/null)
+            TASK_COUNT=$(echo "$DRY" | jq '.tasks | length')
+
+            if [ "$TASK_COUNT" -gt 0 ]; then
+              echo "  → $app is affected ($TASK_COUNT tasks)"
+              MATRIX_INCLUDES=$(echo "$MATRIX_INCLUDES" | jq \
+                --arg app "$app" \
+                --arg dockerfile "${DOCKERFILES[$app]}" \
+                '. + [{"app": $app, "dockerfile": $dockerfile}]')
+            else
+              echo "  → $app is NOT affected, skipping"
+            fi
+          done
+
+          # Check if migrations are needed (packages/db is affected)
+          DB_DRY=$(bunx turbo run build --filter="@my-app/db" --affected --dry=json 2>/dev/null)
+          DB_TASK_COUNT=$(echo "$DB_DRY" | jq '.tasks | length')
+          if [ "$DB_TASK_COUNT" -gt 0 ]; then
+            RUN_MIGRATIONS=true
+            echo "  → @my-app/db is affected, migrations will run"
+          fi
+
+          MATRIX=$(echo "$MATRIX_INCLUDES" | jq -c '{include: .}')
+          HAS_APPS=$(echo "$MATRIX_INCLUDES" | jq 'length > 0')
+
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "has_apps=$HAS_APPS" >> "$GITHUB_OUTPUT"
+          echo "run_migrations=$RUN_MIGRATIONS" >> "$GITHUB_OUTPUT"
+          echo "Deploy matrix: $MATRIX"
+          echo "Has apps to deploy: $HAS_APPS"
+          echo "Run migrations: $RUN_MIGRATIONS"
+
   # ── Deploy (only on push to main, after both jobs pass) ────────────────────
   deploy:
     name: Deploy
-    needs: [build, e2e]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build, e2e, plan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.plan.outputs.has_apps == 'true'
     permissions:
       contents: read
       packages: write
     uses: ./.github/workflows/deploy-docker.yml
     with:
       environment: staging
+      app_matrix: ${{ needs.plan.outputs.matrix }}
+      run_migrations: ${{ needs.plan.outputs.run_migrations == 'true' }}
     secrets: inherit

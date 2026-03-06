@@ -1428,6 +1428,76 @@ jobs:
 
 ## Local Workflow Patterns (Your Repos)
 
+### Turborepo + Bun CI (monorepo)
+
+- Use `actions/checkout` with enough history for affected detection. Prefer `fetch-depth: 0`.
+- For Bun repos, use `oven-sh/setup-bun@v2` and `bun install --frozen-lockfile`.
+- Prefer **affected-only** execution over “run everything faster”. In Turborepo this means `--affected` or an explicit filter such as `--filter='...[<base>...<head>]'`.
+- Pin the comparison range with explicit SHAs on CI (`base` / `head`) so merges to `main` do not change the task graph mid-run.
+
+Example with Bun + Turborepo:
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build, test, lint affected packages
+        run: bunx turbo run build test lint --filter='...[${{ github.event.before }}...${{ github.sha }}]'
+```
+
+#### Remote cache (preferred)
+
+- Best option for teams and repeat CI runs.
+- Share Turborepo artifacts across developers and branches.
+- Configure `TURBO_TOKEN` and `TURBO_TEAM` in workflow env.
+
+```yaml
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+```
+
+#### Local `.turbo` cache with `actions/cache`
+
+- Works, but is less effective than remote cache because restores are coarse and branch/run-local.
+- Cache the `.turbo` directory using **content-based keys**, not commit SHA keys.
+- Treat it as a helpful fallback, not equivalent to remote cache.
+
+```yaml
+- uses: actions/cache@v4
+  with:
+    path: .turbo
+    key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'package.json', 'apps/**/package.json', 'packages/**/package.json', 'bun.lock', 'bun.lockb') }}
+    restore-keys: |
+      turbo-${{ runner.os }}-
+```
+
+Important caveat:
+
+- A single coarse GitHub cache archive does **not** behave like Turborepo remote cache.
+- If one package changes, the cache restore may still be useful, but it cannot provide the same per-artifact sharing semantics as remote cache.
+- If CI minutes matter, prioritize: **affected-only execution first**, **remote cache second**, **local `.turbo` cache third**.
+
+#### Dynamic matrix pattern
+
+- For deploy/test fan-out, detect affected packages first, write a JSON matrix to `GITHUB_OUTPUT`, then feed it to `fromJSON(...)`.
+- Keep the detection logic in a repository script when it grows beyond a few lines. Avoid embedding large Python/Bash blocks in workflow YAML.
+
 ### Python + uv CI (mcp-vector-search)
 
 - Install uv: `astral-sh/setup-uv@v3` and `uv python install 3.11`.

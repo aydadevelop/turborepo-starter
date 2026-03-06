@@ -8,6 +8,16 @@ on:
         required: false
         default: "staging"
         type: string
+      app_matrix:
+        description: 'JSON matrix for apps to deploy, e.g. {"include":[{"app":"server","dockerfile":"Dockerfile"}]}'
+        required: false
+        default: '{"include":[{"app":"server","dockerfile":"Dockerfile"},{"app":"assistant","dockerfile":"Dockerfile"},{"app":"notifications","dockerfile":"Dockerfile"},{"app":"web","dockerfile":"Dockerfile.web"}]}'
+        type: string
+      run_migrations:
+        description: "Whether to run DB migrations after deploy"
+        required: false
+        default: true
+        type: boolean
   workflow_dispatch:
     inputs:
       environment:
@@ -18,6 +28,16 @@ on:
         options:
           - production
           - staging
+      app_matrix:
+        description: 'JSON matrix for apps to deploy (leave empty for all)'
+        required: false
+        default: '{"include":[{"app":"server","dockerfile":"Dockerfile"},{"app":"assistant","dockerfile":"Dockerfile"},{"app":"notifications","dockerfile":"Dockerfile"},{"app":"web","dockerfile":"Dockerfile.web"}]}'
+        type: string
+      run_migrations:
+        description: "Whether to run DB migrations after deploy"
+        required: false
+        default: true
+        type: boolean
 
 concurrency:
   group: deploy-${{ github.ref }}-${{ inputs.environment || github.event.inputs.environment || 'staging' }}
@@ -36,16 +56,7 @@ jobs:
       contents: read
       packages: write
     strategy:
-      matrix:
-        include:
-          - app: server
-            dockerfile: Dockerfile
-          - app: assistant
-            dockerfile: Dockerfile
-          - app: notifications
-            dockerfile: Dockerfile
-          - app: web
-            dockerfile: Dockerfile.web
+      matrix: ${{ fromJSON(inputs.app_matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -93,8 +104,7 @@ jobs:
       name: ${{ inputs.environment || github.event.inputs.environment || 'staging' }}
     strategy:
       max-parallel: 2
-      matrix:
-        app: [server, assistant, notifications, web]
+      matrix: ${{ fromJSON(inputs.app_matrix) }}
     steps:
       - name: Deploy ${{ matrix.app }} to Dokku
         run: |
@@ -115,7 +125,7 @@ jobs:
     name: Run DB migrations
     runs-on: [self-hosted, vps]
     needs: deploy
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && inputs.run_migrations
     steps:
       - name: Run migrations
         run: sudo dokku run server node dist/migrate.mjs
