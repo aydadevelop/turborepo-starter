@@ -77,7 +77,7 @@ const apps = new DokkuApps(
 			CORS_ORIGIN: `https://${domain},https://api.${domain},https://assistant.${domain},https://notifications.${domain}`,
 			OPEN_ROUTER_API_KEY: optionalSecret("openRouterApiKey"),
 			OPENAI_API_KEY: optionalSecret("openaiApiKey"),
-			AI_MODEL: appConfig.get("aiModel") ?? "openai/gpt-4o-mini",
+			AI_MODEL: appConfig.get("aiModel") ?? "openai/gpt-5-nano:nitro",
 			SMTP_FROM: appConfig.get("smtpFrom") ?? `noreply@${domain}`,
 			SMTP_USER: appConfig.get("smtpUser") ?? "",
 			SMTP_PASS: optionalSecret("smtpPass"),

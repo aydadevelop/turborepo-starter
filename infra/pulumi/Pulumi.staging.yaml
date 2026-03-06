@@ -15,7 +15,7 @@ config:
   ghcr:token:
     secure: v1:HNZjttXvly3Zm07q:2vs3r4V9bb/CRszwdazL2ABQCefAJ8ow/LdGZ6T6ha8wdvIVHoZpBCgQXmpVSwXh9g80V+CGG2g=
   # ── App config ─────────────────────────────────────────────────────────
-  app:aiModel: "openai/gpt-4o-mini"
+  app:aiModel: "openai/gpt-5-nano:nitro"
   app:smtpFrom: "noreply@staging.ayda.studio"
   app:grafanaAlertEmail: "ops@staging.ayda.studio"
   app:telegramBotUsername: ""
@@ -36,4 +36,6 @@ config:
   app:openRouterApiKey:
     secure: v1:PhQ/C9Xw7eym71CK:L3ZNgO/t0Z5Fq/uzrOYfbRiMQ05xrhB52bLGhKV4IDfN6fitPtGzMnrq7XaeveGUAcgCTT4RVM7bzq6BaVVSaKLqKkSKn2VaWzXiW8vXkIfE56AyMHUh1SM=
   my-app-infra:ghRepo: aydadevelop/turborepo-starter
+  my-app-infra:openRouterApiKey:
+    secure: v1:WdQMnDdNfNiIJhi1:zpDbd28qOEN1eJG/pCLbhSVWBSdD1EK2jS909u+QF7auSM7pdj+qYANDIU11vYnX+pDCkGohlwvqqwDug96n+5Ivc3m60YC2+ORK9xOBRDEKGf8Rx4STGxw=
 encryptionsalt: v1:sZkwHedKYyw=:v1:YK3Y242igjnaPvG+:+sUwEoTQ09jXV16Me7P5ee1ktXdAZQ==

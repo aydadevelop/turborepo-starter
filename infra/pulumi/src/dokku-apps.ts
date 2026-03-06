@@ -261,6 +261,8 @@ export class DokkuApps extends pulumi.ComponentResource {
 				{
 					connection: conn,
 					create: pulumi.interpolate`dokku config:set --no-restart ${app.name} ${envString}`,
+					update: pulumi.interpolate`dokku config:set ${app.name} ${envString}`,
+					triggers: [envString],
 				},
 				{ parent: this, dependsOn: [create] }
 			);
@@ -278,6 +280,19 @@ export class DokkuApps extends pulumi.ComponentResource {
 
 			appResources.push(ssl, attachNetwork);
 		}
+
+		// ── Let's Encrypt auto-renewal cron ───────────────────────────────────
+		// Registers the system cron job so certs renew automatically before they
+		// expire (90-day validity). Must run after all per-app letsencrypt:enable
+		// calls so the cron job covers every app cert. Idempotent — safe to re-run.
+		new command.remote.Command(
+			`${name}-letsencrypt-cron`,
+			{
+				connection: conn,
+				create: `dokku letsencrypt:cron-job --add`,
+			},
+			{ parent: this, dependsOn: appResources }
+		);
 
 		// ── Observability: Loki + Grafana (Docker containers) ─────────────────
 		const loki = new command.remote.Command(
