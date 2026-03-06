@@ -85,6 +85,19 @@ export class DokkuApps extends pulumi.ComponentResource {
 			{ parent: this }
 		);
 
+		// ── Internal Docker network for cross-app communication ─────────────
+		// Creates a named network so Dokku registers DNS aliases (APP.PROC_TYPE)
+		// that containers on the same network can resolve. Without an explicit
+		// named network the aliases are not registered and inter-app calls fail.
+		const internalNetwork = new command.remote.Command(
+			`${name}-internal-network`,
+			{
+				connection: conn,
+				create: `dokku network:create internal 2>/dev/null || true && echo "internal-network-ok"`,
+			},
+			{ parent: this }
+		);
+
 		// ── App definitions ───────────────────────────────────────────────────
 		const apps: AppDef[] = [
 			{
@@ -140,6 +153,19 @@ export class DokkuApps extends pulumi.ComponentResource {
 					create: `dokku apps:create ${app.name} 2>/dev/null || true && echo "created"`,
 				},
 				{ parent: this, dependsOn: [globalDomain] }
+			);
+
+			// Attach to internal network — registers the APP.PROC_TYPE DNS alias
+			// (e.g. server.web1, assistant.web1) so other containers can resolve it.
+			// attach-post-create is required so the alias exists when the container
+			// starts; attach-post-deploy would be too late for health-check phases.
+			const attachNetwork = new command.remote.Command(
+				`${name}-network-${app.name}`,
+				{
+					connection: conn,
+					create: `dokku network:set ${app.name} attach-post-create internal`,
+				},
+				{ parent: this, dependsOn: [create, internalNetwork] }
 			);
 
 			// Set domain
@@ -250,7 +276,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 				{ parent: this, dependsOn: [setDomain, letsencrypt, installSigil] }
 			);
 
-			appResources.push(ssl);
+			appResources.push(ssl, attachNetwork);
 		}
 
 		// ── Observability: Loki + Grafana (Docker containers) ─────────────────
