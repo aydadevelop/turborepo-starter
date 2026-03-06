@@ -43,7 +43,7 @@ This monorepo is a full-stack starter deployed to a VPS via Dokku:
 - **Production/staging**: deployed via Dokku on the VPS. Pulumi (`infra/pulumi/`) bootstraps the VPS and configures Dokku apps. CI deploys images via `dokku git:from-image`.
 - **Local dev**: `docker-compose.yml` (Dokku is not used locally).
 - `Dockerfile` / `Dockerfile.web`: per-app lean images using `turbo prune --docker`.
-- All app services run as non-root user (`uid 1001`).
+- All app services must run as a non-root user. Current Bun runtime images use `uid 1000`; exact numeric UID may vary by base image.
 - Dokku handles SSL (Let's Encrypt), reverse proxy (nginx), env vars, and zero-downtime deploys.
 - Secrets are set on the VPS via `dokku config:set` (managed by Pulumi). Never committed to git.
 - smtp4dev captures all outgoing email in dev/staging — never configure it to relay externally.

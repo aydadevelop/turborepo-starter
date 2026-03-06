@@ -151,6 +151,50 @@ Manual deploy from VPS (if needed):
 sudo dokku git:from-image <app> ghcr.io/<org>/<repo>/<app>:<tag>
 ```
 
+### Rollback runbook (Dokku)
+
+If a release is unhealthy after deploy, rollback immediately:
+
+```bash
+sudo dokku ps:rollback <app>
+```
+
+Validate rollback:
+
+- `https://<app-domain>/health` returns `200`.
+- `sudo dokku ps:report <app> --deployed` shows the expected prior release.
+- Critical path smoke checks pass (auth, API, chat flow).
+
+For multi-app incidents, rollback affected apps one-by-one in dependency order (`server` first, then `assistant` / `notifications` / `web`) and re-check health after each rollback.
+
+### Staging DB backup / restore (early-stage baseline)
+
+This repository is currently in early stage. Keep a simple staging baseline:
+
+- Take regular logical backups before risky schema changes.
+- Keep recent dumps locally or in a secure private location.
+- Practice restore on staging after major migration changes.
+
+Create a backup dump:
+
+```bash
+sudo dokku postgres:export myapp-db > myapp-db-$(date +%Y%m%d-%H%M%S).sql
+```
+
+Restore from dump:
+
+```bash
+sudo dokku postgres:import myapp-db < myapp-db-YYYYMMDD-HHMMSS.sql
+```
+
+After restore:
+
+- Run app health checks (`/health`) for all services.
+- Run a quick smoke flow (create chat, send message, verify API writes).
+- Re-run migrations only if restore source requires it.
+
+> Note: automation helper scripts for backup/restore are intentionally postponed for now.
+
 ### Required GitHub secrets
 
 Managed automatically by `pulumi up` (synced via `gh secret set`).

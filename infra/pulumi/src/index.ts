@@ -124,6 +124,7 @@ export const ssh = {
 	port: sshPort,
 };
 export const deployPublicKey = deployKey.publicKeyOpenssh;
+export const deployPrivateKeyB64 = pulumi.secret(sshKeyB64);
 export const appUrls = {
 	web: `https://${domain}`,
 	api: `https://api.${domain}`,

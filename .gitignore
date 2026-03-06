@@ -9,8 +9,6 @@ out
 build
 *.tsbuildinfo
 .git 
-.agents
-.vscode
 /scripts
 !/scripts/
 !/scripts/measure-type-graph.mjs
