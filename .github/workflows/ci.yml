@@ -207,40 +207,66 @@ jobs:
           )
           DEPLOY_APPS=("server" "assistant" "notifications" "web")
 
-          # Get affected packages from Turborepo
-          AFFECTED=$(bunx turbo ls --affected --output=json 2>/dev/null)
-          AFFECTED_NAMES=$(echo "$AFFECTED" | jq -r '.packages.items[].name')
-          echo "Affected packages: $AFFECTED_NAMES"
-
-          # Also detect if any affected package depends on a deploy app via dry-run
-          # (e.g. a shared package change affects server transitively)
           MATRIX_INCLUDES="[]"
           RUN_MIGRATIONS=false
+          FALLBACK=false
 
-          for app in "${DEPLOY_APPS[@]}"; do
-            # Check if the app itself or any of its dependencies are affected
-            # turbo run build --filter=$app --affected --dry=json will output tasks
-            # only if $app is affected (directly or transitively)
-            DRY=$(bunx turbo run build --filter="$app" --affected --dry=json 2>/dev/null)
-            TASK_COUNT=$(echo "$DRY" | jq '.tasks | length')
+          # Try affected detection; fall back to "deploy all" if turbo can't determine SCM base
+          if ! AFFECTED=$(bunx turbo ls --affected --output=json 2>&1); then
+            echo "::warning::turbo ls --affected failed, falling back to full deploy"
+            echo "turbo output: $AFFECTED"
+            FALLBACK=true
+          fi
 
-            if [ "$TASK_COUNT" -gt 0 ]; then
-              echo "  → $app is affected ($TASK_COUNT tasks)"
+          if [ "$FALLBACK" = "true" ]; then
+            # Deploy everything + run migrations when affected detection is unavailable
+            for app in "${DEPLOY_APPS[@]}"; do
+              echo "  → $app (fallback: deploying all)"
               MATRIX_INCLUDES=$(echo "$MATRIX_INCLUDES" | jq \
                 --arg app "$app" \
                 --arg dockerfile "${DOCKERFILES[$app]}" \
                 '. + [{"app": $app, "dockerfile": $dockerfile}]')
-            else
-              echo "  → $app is NOT affected, skipping"
-            fi
-          done
-
-          # Check if migrations are needed (packages/db is affected)
-          DB_DRY=$(bunx turbo run build --filter="@my-app/db" --affected --dry=json 2>/dev/null)
-          DB_TASK_COUNT=$(echo "$DB_DRY" | jq '.tasks | length')
-          if [ "$DB_TASK_COUNT" -gt 0 ]; then
+            done
             RUN_MIGRATIONS=true
-            echo "  → @my-app/db is affected, migrations will run"
+          else
+            AFFECTED_NAMES=$(echo "$AFFECTED" | jq -r '.packages.items[].name // empty')
+            echo "Affected packages: $AFFECTED_NAMES"
+
+            for app in "${DEPLOY_APPS[@]}"; do
+              # turbo run build --filter=$app --affected --dry=json outputs tasks
+              # only if $app is affected (directly or transitively)
+              if ! DRY=$(bunx turbo run build --filter="$app" --affected --dry=json 2>&1); then
+                echo "  → $app: dry-run failed, including as precaution"
+                MATRIX_INCLUDES=$(echo "$MATRIX_INCLUDES" | jq \
+                  --arg app "$app" \
+                  --arg dockerfile "${DOCKERFILES[$app]}" \
+                  '. + [{"app": $app, "dockerfile": $dockerfile}]')
+                continue
+              fi
+              TASK_COUNT=$(echo "$DRY" | jq '.tasks | length')
+
+              if [ "$TASK_COUNT" -gt 0 ]; then
+                echo "  → $app is affected ($TASK_COUNT tasks)"
+                MATRIX_INCLUDES=$(echo "$MATRIX_INCLUDES" | jq \
+                  --arg app "$app" \
+                  --arg dockerfile "${DOCKERFILES[$app]}" \
+                  '. + [{"app": $app, "dockerfile": $dockerfile}]')
+              else
+                echo "  → $app is NOT affected, skipping"
+              fi
+            done
+
+            # Check if migrations are needed (packages/db is affected)
+            if ! DB_DRY=$(bunx turbo run build --filter="@my-app/db" --affected --dry=json 2>&1); then
+              RUN_MIGRATIONS=true
+              echo "  → @my-app/db: dry-run failed, running migrations as precaution"
+            else
+              DB_TASK_COUNT=$(echo "$DB_DRY" | jq '.tasks | length')
+              if [ "$DB_TASK_COUNT" -gt 0 ]; then
+                RUN_MIGRATIONS=true
+                echo "  → @my-app/db is affected, migrations will run"
+              fi
+            fi
           fi
 
           MATRIX=$(echo "$MATRIX_INCLUDES" | jq -c '{include: .}')
