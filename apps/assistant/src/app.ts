@@ -17,7 +17,7 @@ app.use("/*", rpcMiddleware);
 app.notFound((c) => {
 	return c.json({ error: "Not Found" }, 404);
 });
-
+// Hono's default 404 handler returns an HTML page, so we override it to return JSON instead.
 app.onError((error, c) => {
 	if (error instanceof HTTPException) {
 		return error.getResponse();
