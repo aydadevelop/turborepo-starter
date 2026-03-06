@@ -1,0 +1,29 @@
+name: 'Plan Deploy Matrix'
+description: 'Determines affected apps using Turborepo and generates a deployment matrix for Dokku'
+outputs:
+  matrix:
+    description: 'JSON matrix for Docker builds'
+    value: ${{ steps.affected.outputs.matrix }}
+  has_apps:
+    description: 'Boolean indicating if any apps need to be deployed'
+    value: ${{ steps.affected.outputs.has_apps }}
+  run_migrations:
+    description: 'Boolean indicating if database changes require migrations'
+    value: ${{ steps.affected.outputs.run_migrations }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Detect affected apps
+      id: affected
+      shell: bash
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          FILT="...[origin/main]"
+        else
+          if [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            FILT="...[${{ github.event.before }}]"
+          else
+            FILT="...[origin/main]"
+          fi
+        fi
+        bun run scripts/plan-deploy.ts "$FILT" >> "$GITHUB_OUTPUT"

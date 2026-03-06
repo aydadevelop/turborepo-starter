@@ -44,6 +44,7 @@ RUN echo '{"type":"module"}' > package.json && \
 
 ARG APP=server
 # oven/bun ships with a non-root 'bun' user (uid 1000) — use it directly.
+COPY --from=build --chown=bun:bun /app/apps/${APP}/app.json ./app.json
 COPY --from=build --chown=bun:bun /app/apps/${APP}/dist ./dist
 COPY --from=build --chown=bun:bun /app/packages/db/src/migrations ./migrations
 

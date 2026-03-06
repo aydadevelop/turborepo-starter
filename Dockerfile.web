@@ -30,6 +30,9 @@ FROM oven/bun:${BUN_VERSION} AS runtime
 # oven/bun ships with a non-root 'bun' user (uid 1000) — use it directly.
 WORKDIR /app
 
+# Ensure Dokku picks up the healthchecks for zero-downtime deployment
+COPY --from=build --chown=bun:bun /app/apps/web/app.json ./app.json
+
 COPY --from=build --chown=bun:bun /app/apps/web/build ./build
 # Bun treats pruned installs as frozen in CI, and `bun install --production`
 # still tries to rewrite the pruned lockfile. Reuse the already-resolved deps
