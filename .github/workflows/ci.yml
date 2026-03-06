@@ -14,9 +14,115 @@ env:
   TURBO_LOG_ORDER: grouped
 
 jobs:
+  # ── Plan: determine which apps are affected ─────────────────────────────────
+  plan:
+    name: Plan deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.affected.outputs.matrix }}
+      has_apps: ${{ steps.affected.outputs.has_apps }}
+      run_migrations: ${{ steps.affected.outputs.run_migrations }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Detect affected apps
+        id: affected
+        run: |
+          declare -A DOCKERFILES=(
+            [server]=Dockerfile
+            [assistant]=Dockerfile
+            [notifications]=Dockerfile
+            [web]=Dockerfile.web
+          )
+          DEPLOY_APPS=("server" "assistant" "notifications" "web")
+
+          MATRIX_INCLUDES="[]"
+          RUN_MIGRATIONS=false
+          FALLBACK=false
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            FILT="...[origin/main]"
+          else
+            if [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+              FILT="...[${{ github.event.before }}]"
+            else
+              # Use origin/main as fallback for push to main if before sha is missing
+              FILT="...[origin/main]"
+            fi
+          fi
+
+          echo "Using turbo filter: $FILT"
+
+          # Only capture stdout for JSON, errors to stderr
+          if ! bunx turbo ls --filter="$FILT" --output=json > affected.json 2> turbo_err.log; then
+            echo "::warning::turbo ls failed, falling back to full deploy"
+            cat turbo_err.log
+            FALLBACK=true
+          fi
+
+          if [ "$FALLBACK" = "true" ]; then
+            for app in "${DEPLOY_APPS[@]}"; do
+              echo "  → $app (fallback: deploying all)"
+              MATRIX_INCLUDES=$(echo "$MATRIX_INCLUDES" | jq \
+                --arg app "$app" \
+                --arg dockerfile "${DOCKERFILES[$app]}" \
+                '. + [{"app": $app, "dockerfile": $dockerfile}]')
+            done
+            RUN_MIGRATIONS=true
+          else
+            # Extract package names safely
+            AFFECTED_NAMES=$(jq -r '.packages.items[].name // empty' affected.json)
+            echo "Affected package names:"
+            echo "$AFFECTED_NAMES"
+
+            for app in "${DEPLOY_APPS[@]}"; do
+              if echo "$AFFECTED_NAMES" | grep -qx "$app"; then
+                echo "  → $app is affected"
+                MATRIX_INCLUDES=$(echo "$MATRIX_INCLUDES" | jq \
+                  --arg app "$app" \
+                  --arg dockerfile "${DOCKERFILES[$app]}" \
+                  '. + [{"app": $app, "dockerfile": $dockerfile}]')
+              else
+                echo "  → $app is NOT affected, skipping"
+              fi
+            done
+
+            # Dependencies indicating migrations should run
+            if echo "$AFFECTED_NAMES" | grep -qx "@my-app/db" || echo "$AFFECTED_NAMES" | grep -qx "server"; then
+              RUN_MIGRATIONS=true
+              echo "  → db/server is affected, migrations will run"
+            fi
+          fi
+
+          MATRIX=$(echo "$MATRIX_INCLUDES" | jq -c '{include: .}')
+          HAS_APPS=$(echo "$MATRIX_INCLUDES" | jq 'length > 0')
+
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "has_apps=$HAS_APPS" >> "$GITHUB_OUTPUT"
+          echo "run_migrations=$RUN_MIGRATIONS" >> "$GITHUB_OUTPUT"
+          echo "Deploy matrix: $MATRIX"
+          echo "Has apps to deploy: $HAS_APPS"
+          echo "Run migrations: $RUN_MIGRATIONS"
+
   # ── Job A: Build, Lint, Type Check, Unit Tests ────────────────────────────
   build:
     name: Build & Test
+    needs: [plan]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -84,11 +190,12 @@ jobs:
   # ── Job B: E2E Tests (runs in parallel with build) ─────────────────────────
   e2e:
     name: E2E Tests
+    needs: [plan]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
-    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    if: (github.event_name != 'pull_request' || github.event.action != 'closed') && needs.plan.outputs.has_apps == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -157,133 +264,12 @@ jobs:
             packages/e2e-web/test-results
           retention-days: 7
 
-  # ── Plan: determine which apps are affected ─────────────────────────────────
-  plan:
-    name: Plan deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-    outputs:
-      matrix: ${{ steps.affected.outputs.matrix }}
-      has_apps: ${{ steps.affected.outputs.has_apps }}
-      run_migrations: ${{ steps.affected.outputs.run_migrations }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.10
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Detect affected apps
-        id: affected
-        run: |
-          # Map: turbo package name → dockerfile
-          declare -A DOCKERFILES=(
-            [server]=Dockerfile
-            [assistant]=Dockerfile
-            [notifications]=Dockerfile
-            [web]=Dockerfile.web
-          )
-          DEPLOY_APPS=("server" "assistant" "notifications" "web")
-
-          MATRIX_INCLUDES="[]"
-          RUN_MIGRATIONS=false
-          FALLBACK=false
-
-          # Try affected detection; fall back to "deploy all" if turbo can't determine SCM base
-          if ! AFFECTED=$(bunx turbo ls --affected --output=json 2>&1); then
-            echo "::warning::turbo ls --affected failed, falling back to full deploy"
-            echo "turbo output: $AFFECTED"
-            FALLBACK=true
-          fi
-
-          if [ "$FALLBACK" = "true" ]; then
-            # Deploy everything + run migrations when affected detection is unavailable
-            for app in "${DEPLOY_APPS[@]}"; do
-              echo "  → $app (fallback: deploying all)"
-              MATRIX_INCLUDES=$(echo "$MATRIX_INCLUDES" | jq \
-                --arg app "$app" \
-                --arg dockerfile "${DOCKERFILES[$app]}" \
-                '. + [{"app": $app, "dockerfile": $dockerfile}]')
-            done
-            RUN_MIGRATIONS=true
-          else
-            AFFECTED_NAMES=$(echo "$AFFECTED" | jq -r '.packages.items[].name // empty')
-            echo "Affected packages: $AFFECTED_NAMES"
-
-            for app in "${DEPLOY_APPS[@]}"; do
-              # turbo run build --filter=$app --affected --dry=json outputs tasks
-              # only if $app is affected (directly or transitively)
-              if ! DRY=$(bunx turbo run build --filter="$app" --affected --dry=json 2>&1); then
-                echo "  → $app: dry-run failed, including as precaution"
-                MATRIX_INCLUDES=$(echo "$MATRIX_INCLUDES" | jq \
-                  --arg app "$app" \
-                  --arg dockerfile "${DOCKERFILES[$app]}" \
-                  '. + [{"app": $app, "dockerfile": $dockerfile}]')
-                continue
-              fi
-              TASK_COUNT=$(echo "$DRY" | jq '.tasks | length')
-
-              if [ "$TASK_COUNT" -gt 0 ]; then
-                echo "  → $app is affected ($TASK_COUNT tasks)"
-                MATRIX_INCLUDES=$(echo "$MATRIX_INCLUDES" | jq \
-                  --arg app "$app" \
-                  --arg dockerfile "${DOCKERFILES[$app]}" \
-                  '. + [{"app": $app, "dockerfile": $dockerfile}]')
-              else
-                echo "  → $app is NOT affected, skipping"
-              fi
-            done
-
-            # Check if migrations are needed (packages/db is affected)
-            if ! DB_DRY=$(bunx turbo run build --filter="@my-app/db" --affected --dry=json 2>&1); then
-              RUN_MIGRATIONS=true
-              echo "  → @my-app/db: dry-run failed, running migrations as precaution"
-            else
-              DB_TASK_COUNT=$(echo "$DB_DRY" | jq '.tasks | length')
-              if [ "$DB_TASK_COUNT" -gt 0 ]; then
-                RUN_MIGRATIONS=true
-                echo "  → @my-app/db is affected, migrations will run"
-              fi
-            fi
-          fi
-
-          MATRIX=$(echo "$MATRIX_INCLUDES" | jq -c '{include: .}')
-          HAS_APPS=$(echo "$MATRIX_INCLUDES" | jq 'length > 0')
-
-          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
-          echo "has_apps=$HAS_APPS" >> "$GITHUB_OUTPUT"
-          echo "run_migrations=$RUN_MIGRATIONS" >> "$GITHUB_OUTPUT"
-          echo "Deploy matrix: $MATRIX"
-          echo "Has apps to deploy: $HAS_APPS"
-          echo "Run migrations: $RUN_MIGRATIONS"
-
   # ── Deploy (only on push to main, after both jobs pass) ────────────────────
   deploy:
     name: Deploy
     needs: [build, e2e, plan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.plan.outputs.has_apps == 'true'
+    # Always require build and e2e to succeed (or skip). The condition verifies it's push to main, apps are affected
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.plan.outputs.has_apps == 'true' && needs.build.result == 'success' && (needs.e2e.result == 'success' || needs.e2e.result == 'skipped')
     permissions:
       contents: read
       packages: write
