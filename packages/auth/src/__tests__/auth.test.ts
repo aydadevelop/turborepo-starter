@@ -1,12 +1,14 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { createTestAuth, type TestAuth } from "../test";
+import { createTestAuth, type TestAuth, type TestHelpers } from "../test";
 
 describe("Authentication", () => {
 	let testAuth: TestAuth;
+	let test: TestHelpers;
 
 	beforeAll(async () => {
 		testAuth = await createTestAuth();
+		test = testAuth.test;
 	}, 30_000);
 
 	afterAll(async () => {
@@ -105,13 +107,15 @@ describe("Authentication", () => {
 				})
 			).rejects.toThrow();
 		});
+	});
 
+	describe("Sign In edge cases", () => {
 		it("rejects non-existent email", async () => {
 			await expect(
 				testAuth.auth.api.signInEmail({
 					body: {
 						email: "nonexistent@example.com",
-						password: testUser.password,
+						password: "SomePassword123!",
 					},
 				})
 			).rejects.toThrow();
@@ -119,18 +123,57 @@ describe("Authentication", () => {
 	});
 
 	describe("Session Management", () => {
-		it("creates a valid token on sign up", async () => {
-			const signupResponse = await testAuth.auth.api.signUpEmail({
-				body: {
-					name: "Session User",
-					email: "session@example.com",
-					password: "SecurePassword123!",
-				},
-			});
+		it("login creates a valid session with token", async () => {
+			const user = test.createUser({ email: "session@example.com" });
+			await test.saveUser(user);
 
-			expect(signupResponse.token).toBeDefined();
-			expect(signupResponse.token).toBeTruthy();
-			expect(signupResponse.user).toBeDefined();
+			const { token, session } = await test.login({ userId: user.id });
+
+			expect(token).toBeTruthy();
+			expect(session).toBeDefined();
+			expect(session.userId).toBe(user.id);
+		});
+	});
+
+	describe("Auth Helpers (testUtils)", () => {
+		it("getAuthHeaders returns headers that authenticate requests", async () => {
+			const user = test.createUser({ email: "headers@example.com" });
+			await test.saveUser(user);
+
+			const headers = await test.getAuthHeaders({ userId: user.id });
+			const session = await testAuth.auth.api.getSession({ headers });
+
+			expect(session?.user.id).toBe(user.id);
+			expect(session?.user.email).toBe("headers@example.com");
+		});
+
+		it("login returns session, headers, cookies, and token", async () => {
+			const user = test.createUser({ email: "login-helper@example.com" });
+			await test.saveUser(user);
+
+			const result = await test.login({ userId: user.id });
+
+			expect(result.session).toBeDefined();
+			expect(result.session.userId).toBe(user.id);
+			expect(result.headers).toBeInstanceOf(Headers);
+			expect(result.cookies).toBeInstanceOf(Array);
+			expect(result.cookies.length).toBeGreaterThan(0);
+			expect(result.token).toBeTruthy();
+		});
+
+		it("saveUser and deleteUser manage DB records", async () => {
+			const user = test.createUser({ email: "save-delete@example.com" });
+			const saved = await test.saveUser(user);
+
+			expect(saved.id).toBe(user.id);
+			expect(saved.email).toBe("save-delete@example.com");
+
+			// Confirm user is accessible via a session before deletion
+			const headers = await test.getAuthHeaders({ userId: user.id });
+			const session = await testAuth.auth.api.getSession({ headers });
+			expect(session?.user.id).toBe(user.id);
+
+			await test.deleteUser(user.id);
 		});
 	});
 });

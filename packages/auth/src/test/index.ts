@@ -10,6 +10,8 @@ import {
 import { clearTestDatabase, createTestDatabase } from "@my-app/db/test";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { testUtils } from "better-auth/plugins";
+import type { TestHelpers } from "better-auth/plugins";
 import { organization as organizationPlugin } from "better-auth/plugins/organization";
 
 import {
@@ -39,7 +41,11 @@ export const createTestAuth = async () => {
 		emailAndPassword: {
 			enabled: true,
 		},
+		telemetry: { 
+			enabled: false
+		},
 		plugins: [
+			testUtils(),
 			organizationPlugin({
 				ac: organizationAccessControl,
 				creatorRole: "org_owner",
@@ -77,11 +83,15 @@ export const createTestAuth = async () => {
 		baseURL: "http://localhost:3000",
 	});
 
+	const ctx = await auth.$context;
+
 	return {
 		auth,
+		test: ctx.test as TestHelpers,
 		clearDb: () => clearTestDatabase(db),
 		close,
 	};
 };
 
 export type TestAuth = Awaited<ReturnType<typeof createTestAuth>>;
+export type { TestHelpers };
