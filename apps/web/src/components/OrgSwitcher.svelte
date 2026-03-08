@@ -9,7 +9,7 @@
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
-	import { queryClient } from "$lib/orpc";
+	import { orpc, queryClient } from "$lib/orpc";
 	import { queryKeys } from "$lib/query-keys";
 	import { userOrganizationsQueryOptions } from "$lib/query-options";
 
@@ -37,9 +37,11 @@
 		switching = false;
 		if (error) return;
 		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
-		queryClient.invalidateQueries({ queryKey: queryKeys.org.canManage });
-		queryClient.invalidateQueries({ queryKey: queryKeys.notifications.root });
-		queryClient.invalidateQueries({ queryKey: queryKeys.todos.root });
+		queryClient.invalidateQueries({
+			queryKey: orpc.canManageOrganization.key(),
+		});
+		queryClient.invalidateQueries({ queryKey: orpc.notifications.key() });
+		queryClient.invalidateQueries({ queryKey: orpc.todo.key() });
 		queryClient.invalidateQueries({ queryKey: queryKeys.assistant.root });
 	};
 </script>

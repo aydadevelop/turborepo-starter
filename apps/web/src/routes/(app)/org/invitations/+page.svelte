@@ -4,17 +4,11 @@
 	import * as Card from "@my-app/ui/components/card";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { authClient } from "$lib/auth-client";
-	import { queryClient } from "$lib/orpc";
+	import { orpc, queryClient } from "$lib/orpc";
+	import { queryKeys } from "$lib/query-keys";
+	import { userInvitationsQueryOptions } from "$lib/query-options";
 
-	const invitationsQuery = createQuery(() => ({
-		queryKey: ["user-invitations"],
-		queryFn: async () => {
-			const { data, error } =
-				await authClient.organization.listUserInvitations();
-			if (error) throw error;
-			return data ?? [];
-		},
-	}));
+	const invitationsQuery = createQuery(() => userInvitationsQueryOptions());
 
 	let pendingId = $state<string | null>(null);
 	let errorMessage = $state<string | null>(null);
@@ -40,10 +34,12 @@
 				"Failed to accept invitation.";
 			return;
 		}
-		queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
-		queryClient.invalidateQueries({ queryKey: ["organization"] });
-		queryClient.invalidateQueries({ queryKey: ["user-organizations"] });
-		queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all });
+		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
+		queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all });
+		queryClient.invalidateQueries({
+			queryKey: orpc.canManageOrganization.key(),
+		});
 	};
 
 	const handleReject = async (invitationId: string) => {
@@ -59,7 +55,7 @@
 				"Failed to reject invitation.";
 			return;
 		}
-		queryClient.invalidateQueries({ queryKey: ["user-invitations"] });
+		queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all });
 	};
 
 	const formatDate = (date: Date | string) =>

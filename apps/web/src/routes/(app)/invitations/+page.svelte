@@ -8,7 +8,7 @@
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
-	import { queryClient } from "$lib/orpc";
+	import { orpc, queryClient } from "$lib/orpc";
 	import { queryKeys } from "$lib/query-keys";
 	import { userInvitationsQueryOptions } from "$lib/query-options";
 
@@ -55,6 +55,10 @@
 		}
 		queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all });
 		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
+		queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all });
+		queryClient.invalidateQueries({
+			queryKey: orpc.canManageOrganization.key(),
+		});
 	};
 
 	const handleReject = async (invitationId: string) => {

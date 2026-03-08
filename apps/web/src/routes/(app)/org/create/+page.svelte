@@ -10,7 +10,9 @@
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
-	import { client, queryClient } from "$lib/orpc";
+	import { client, orpc, queryClient } from "$lib/orpc";
+	import { queryKeys } from "$lib/query-keys";
+	import { userOrganizationsQueryOptions } from "$lib/query-options";
 
 	let orgName = $state("");
 	let pending = $state(false);
@@ -90,14 +92,11 @@
 		}
 	});
 
-	const orgsQuery = createQuery(() => ({
-		queryKey: ["user-organizations"],
-		queryFn: async () => {
-			const { data } = await authClient.organization.list();
-			return data ?? [];
-		},
-		enabled: hasAuthenticatedSession($sessionQuery.data),
-	}));
+	const orgsQuery = createQuery(() =>
+		userOrganizationsQueryOptions({
+			enabled: hasAuthenticatedSession($sessionQuery.data),
+		})
+	);
 
 	const hasExistingOrg = $derived((orgsQuery.data?.length ?? 0) > 0);
 
@@ -173,14 +172,20 @@
 			}
 
 			await Promise.all([
-				queryClient.invalidateQueries({ queryKey: ["organization"] }),
-				queryClient.invalidateQueries({ queryKey: ["organization", "full"] }),
-				queryClient.invalidateQueries({ queryKey: ["user-organizations"] }),
-				queryClient.invalidateQueries({ queryKey: ["canManageOrganization"] }),
+				queryClient.invalidateQueries({ queryKey: queryKeys.org.root }),
+				queryClient.invalidateQueries({
+					queryKey: queryKeys.organizations.all,
+				}),
+				queryClient.invalidateQueries({
+					queryKey: orpc.canManageOrganization.key(),
+				}),
 			]);
 
 			const orgsResult = await authClient.organization.list();
-			queryClient.setQueryData(["user-organizations"], orgsResult.data ?? []);
+			queryClient.setQueryData(
+				queryKeys.organizations.all,
+				orgsResult.data ?? []
+			);
 
 			goto(postCreateRedirectPath, { replaceState: true });
 		} catch (err) {

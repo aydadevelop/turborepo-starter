@@ -7,36 +7,31 @@
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { orpc } from "$lib/orpc";
+	import {
+		userInvitationsQueryOptions,
+		userOrganizationsQueryOptions,
+	} from "$lib/query-options";
 
 	const { children } = $props();
 
 	const sessionQuery = authClient.useSession();
 
-	const orgsQuery = createQuery(() => ({
-		queryKey: ["user-organizations"],
-		queryFn: async () => {
-			const { data, error } = await authClient.organization.list();
-			if (error) throw error;
-			return data ?? [];
-		},
-		enabled: hasAuthenticatedSession($sessionQuery.data),
-	}));
+	const orgsQuery = createQuery(() =>
+		userOrganizationsQueryOptions({
+			enabled: hasAuthenticatedSession($sessionQuery.data),
+		})
+	);
 
 	const canManageQuery = createQuery(() => ({
 		...orpc.canManageOrganization.queryOptions(),
 		retry: false,
 	}));
 
-	const invitationsQuery = createQuery(() => ({
-		queryKey: ["user-invitations"],
-		queryFn: async () => {
-			const { data, error } =
-				await authClient.organization.listUserInvitations();
-			if (error) throw error;
-			return data ?? [];
-		},
-		enabled: hasAuthenticatedSession($sessionQuery.data),
-	}));
+	const invitationsQuery = createQuery(() =>
+		userInvitationsQueryOptions({
+			enabled: hasAuthenticatedSession($sessionQuery.data),
+		})
+	);
 
 	$effect(() => {
 		if ($sessionQuery.isPending) return;

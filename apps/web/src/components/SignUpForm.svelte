@@ -17,7 +17,7 @@ import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 import { page } from "$app/state";
 import { authClient } from "$lib/auth-client";
-import { queryClient } from "$lib/orpc";
+import { orpc, queryClient } from "$lib/orpc";
 import { queryKeys } from "$lib/query-keys";
 
 let { switchToSignIn } = $props<{ switchToSignIn: () => void }>();
@@ -84,12 +84,11 @@ const form = createForm(() => ({
 				onSuccess: async () => {
 					await Promise.all([
 						queryClient.invalidateQueries({ queryKey: queryKeys.org.root }),
-						queryClient.invalidateQueries({ queryKey: queryKeys.org.full }),
 						queryClient.invalidateQueries({
 							queryKey: queryKeys.organizations.all,
 						}),
 						queryClient.invalidateQueries({
-							queryKey: queryKeys.org.canManage,
+							queryKey: orpc.canManageOrganization.key(),
 						}),
 						queryClient.invalidateQueries({
 							queryKey: queryKeys.invitations.all,

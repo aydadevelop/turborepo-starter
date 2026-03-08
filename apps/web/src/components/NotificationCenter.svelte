@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
 	import { consumeEventIterator } from "@orpc/client";
-	import { createMutation, createQuery } from "@tanstack/svelte-query";
+	import {
+		createMutation,
+		createQuery,
+		useQueryClient,
+	} from "@tanstack/svelte-query";
 	import { onMount } from "svelte";
 	import { resolve } from "$app/paths";
 	import type { authClient } from "$lib/auth-client";
@@ -27,6 +31,8 @@
 		sessionQuery,
 	}: { sessionQuery: ReturnType<typeof authClient.useSession> } = $props();
 
+	const queryClient = useQueryClient();
+
 	const MAX_ITEMS = 20;
 	const notificationsQuery = createQuery(() =>
 		orpc.notifications.listMe.queryOptions({
@@ -37,7 +43,7 @@
 	const markViewedMutation = createMutation(() =>
 		orpc.notifications.markViewed.mutationOptions({
 			onSuccess: () => {
-				notificationsQuery.refetch();
+				queryClient.invalidateQueries({ queryKey: orpc.notifications.key() });
 			},
 			onError: (error) => {
 				setLoadError(error, "Failed to update notification");
@@ -47,7 +53,7 @@
 	const markAllViewedMutation = createMutation(() =>
 		orpc.notifications.markAllViewed.mutationOptions({
 			onSuccess: () => {
-				notificationsQuery.refetch();
+				queryClient.invalidateQueries({ queryKey: orpc.notifications.key() });
 			},
 			onError: (error) => {
 				setLoadError(error, "Failed to mark notifications as viewed");

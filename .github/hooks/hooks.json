@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "echo \"🚀 Copilot session started: $(date)\" && bun --version && echo 'Monorepo ready.'",
+        "cwd": ".",
+        "timeoutSec": 15
+      },
+      {
+        "type": "command",
+        "bash": ".github/hooks/scripts/check-ports.sh",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": ".github/hooks/scripts/post-write-lint.sh",
+        "cwd": ".",
+        "timeoutSec": 60
+      }
+    ],
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": ".github/hooks/scripts/post-agent-snapshot.sh",
+        "cwd": ".",
+        "timeoutSec": 60
+      }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "bash": "echo '🏁 Session ended — running final lint + type check...' && bun ultracite fix && bun run check && echo '✅ Done.'",
+        "cwd": ".",
+        "timeoutSec": 180
+      }
+    ],
+    "errorOccurred": [
+      {
+        "type": "command",
+        "bash": "echo \"❌ Error at $(date): $(echo \"$HOOK_INPUT\" | jq -r '.error // \"unknown\"' 2>/dev/null || true)\" >&2",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

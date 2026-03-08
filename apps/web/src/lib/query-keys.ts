@@ -21,15 +21,6 @@ export const queryKeys = {
 	org: {
 		root: ["organization"] as const,
 		full: ["organization", "full"] as const,
-		canManage: ["canManageOrganization"] as const,
-	},
-
-	notifications: {
-		root: ["notifications"] as const,
-	},
-
-	todos: {
-		root: ["todos"] as const,
 	},
 
 	assistant: {

@@ -4,7 +4,7 @@
  * re-creating identical closures in every component that shows orgs,
  * invitations, or the full-org payload.
  */
-import type { CreateQueryOptions } from "@tanstack/svelte-query";
+import { queryOptions } from "@tanstack/svelte-query";
 
 import { authClient } from "./auth-client";
 import { queryKeys } from "./query-keys";
@@ -37,41 +37,34 @@ export const fetchFullOrganization = async () => {
 
 // ── Option builders (pass `enabled` from caller) ──────
 
-type Opts<T> = Omit<CreateQueryOptions<T>, "queryKey" | "queryFn"> & {
+interface Extra {
 	enabled?: boolean;
-};
+	retry?: boolean | number;
+	staleTime?: number;
+}
 
-export function userOrganizationsQueryOptions(
-	extra?: Opts<Awaited<ReturnType<typeof fetchUserOrganizations>>>
-) {
-	return {
+export const userOrganizationsQueryOptions = (extra?: Extra) =>
+	queryOptions({
 		queryKey: queryKeys.organizations.all,
 		queryFn: fetchUserOrganizations,
 		staleTime: 30_000,
 		retry: false,
 		...extra,
-	};
-}
+	});
 
-export function userInvitationsQueryOptions(
-	extra?: Opts<Awaited<ReturnType<typeof fetchUserInvitations>>>
-) {
-	return {
+export const userInvitationsQueryOptions = (extra?: Extra) =>
+	queryOptions({
 		queryKey: queryKeys.invitations.all,
 		queryFn: fetchUserInvitations,
 		staleTime: 30_000,
 		retry: false,
 		...extra,
-	};
-}
+	});
 
-export function fullOrganizationQueryOptions(
-	extra?: Opts<Awaited<ReturnType<typeof fetchFullOrganization>>>
-) {
-	return {
+export const fullOrganizationQueryOptions = (extra?: Extra) =>
+	queryOptions({
 		queryKey: queryKeys.org.full,
 		queryFn: fetchFullOrganization,
 		staleTime: 30_000,
 		...extra,
-	};
-}
+	});

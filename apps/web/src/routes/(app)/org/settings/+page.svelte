@@ -106,7 +106,9 @@
 
 		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
 		queryClient.invalidateQueries({ queryKey: queryKeys.organizations.all });
-		queryClient.invalidateQueries({ queryKey: queryKeys.org.canManage });
+		queryClient.invalidateQueries({
+			queryKey: orpc.canManageOrganization.key(),
+		});
 		goto(resolve("/org"));
 	};
 

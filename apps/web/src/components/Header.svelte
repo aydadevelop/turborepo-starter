@@ -4,7 +4,6 @@
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
 	import { orpc, queryClient } from "$lib/orpc";
-	import { queryKeys } from "$lib/query-keys";
 	import { userInvitationsQueryOptions } from "$lib/query-options";
 	import NotificationCenter from "./NotificationCenter.svelte";
 	import OrgSwitcher from "./OrgSwitcher.svelte";

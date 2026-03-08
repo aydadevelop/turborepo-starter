@@ -2,7 +2,11 @@
 	import { Button } from "@my-app/ui/components/button";
 	import * as Card from "@my-app/ui/components/card";
 	import { Input } from "@my-app/ui/components/input";
-	import { createMutation, createQuery } from "@tanstack/svelte-query";
+	import {
+		createMutation,
+		createQuery,
+		useQueryClient,
+	} from "@tanstack/svelte-query";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -12,6 +16,7 @@
 
 	let newTodoText = $state("");
 	const sessionQuery = authClient.useSession();
+	const queryClient = useQueryClient();
 
 	const todosQuery = createQuery(() => orpc.todo.getAll.queryOptions());
 
@@ -27,7 +32,7 @@
 	const addMutation = createMutation(() =>
 		orpc.todo.create.mutationOptions({
 			onSuccess: () => {
-				todosQuery.refetch();
+				queryClient.invalidateQueries({ queryKey: orpc.todo.key() });
 				newTodoText = "";
 			},
 			onError: (error) => {
@@ -39,7 +44,7 @@
 	const toggleMutation = createMutation(() =>
 		orpc.todo.toggle.mutationOptions({
 			onSuccess: () => {
-				todosQuery.refetch();
+				queryClient.invalidateQueries({ queryKey: orpc.todo.key() });
 			},
 			onError: (error) => {
 				console.error("Failed to toggle todo:", error?.message ?? error);
@@ -50,7 +55,7 @@
 	const deleteMutation = createMutation(() =>
 		orpc.todo.delete.mutationOptions({
 			onSuccess: () => {
-				todosQuery.refetch();
+				queryClient.invalidateQueries({ queryKey: orpc.todo.key() });
 			},
 			onError: (error) => {
 				console.error("Failed to delete todo:", error?.message ?? error);
