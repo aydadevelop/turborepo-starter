@@ -80,9 +80,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: Extract availability ownership, slot evaluation, and overlap protections
-- [ ] 04-02: Extract pricing profiles, pricing rules, and quote calculation behavior
-- [ ] 04-03: Wire quote and availability flows through thin transport with parity coverage
+- [ ] 04-01-PLAN.md — Scaffold `@my-app/availability` (CRUD for rules/blocks/exceptions + slot overlap detection) and add RBAC availability/pricing resources
+- [ ] 04-02-PLAN.md — TDD `@my-app/pricing` (pricing profiles + rule CRUD + pure `calculateQuote` with transparent breakdown)
+- [ ] 04-03-PLAN.md — Wire availability and pricing through oRPC contracts and thin handlers in `packages/api`
 
 ### Phase 5: Booking Core & Customer Access
 **Goal**: Customers can create bookings for available inventory, operators can manage lifecycle state safely, and access boundaries stay org-correct.
