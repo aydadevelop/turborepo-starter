@@ -14,6 +14,7 @@ import {
 import { userConsent } from "../schema/consent";
 import {
 	booking,
+	bookingCancellationRequest,
 	cancellationPolicy,
 	listing,
 	listingPricingProfile,
@@ -762,12 +763,210 @@ describe("Test Database Setup", () => {
 				scope: "organization",
 				name: "Default policy",
 				freeWindowHours: 48,
-				penaltyPercentage: 50,
+				penaltyBps: 5000,
 			});
 
 			const policies = await db.select().from(cancellationPolicy);
 			expect(policies).toHaveLength(1);
 			expect(policies[0]?.freeWindowHours).toBe(48);
+		});
+	});
+
+	describe("Cancellation request tables", () => {
+		it("supports dual-approval cancellation flow", async () => {
+			await db.insert(organization).values({
+				id: "org-cancelreq-1",
+				name: "CancelReq Org",
+				slug: "cancelreq-org",
+			});
+			await db.insert(user).values([
+				{
+					id: "user-cancelreq-customer",
+					name: "Customer",
+					email: "cancelreq-customer@example.com",
+					emailVerified: true,
+				},
+				{
+					id: "user-cancelreq-manager",
+					name: "Manager",
+					email: "cancelreq-manager@example.com",
+					emailVerified: true,
+				},
+			]);
+			await db.insert(listingTypeConfig).values({
+				id: "lt-cancelreq-1",
+				slug: "cancelreq-boat",
+				label: "Boat",
+				metadataJsonSchema: { type: "object" },
+			});
+			await db.insert(listing).values({
+				id: "listing-cancelreq-1",
+				organizationId: "org-cancelreq-1",
+				listingTypeSlug: "cancelreq-boat",
+				name: "Cancel Test Boat",
+				slug: "cancel-test-boat",
+			});
+			await db.insert(paymentProviderConfig).values({
+				id: "ppc-cancelreq-1",
+				provider: "cloudpayments",
+				displayName: "CP",
+				supportedCurrencies: ["RUB"],
+			});
+			await db.insert(organizationPaymentConfig).values({
+				id: "opc-cancelreq-1",
+				organizationId: "org-cancelreq-1",
+				providerConfigId: "ppc-cancelreq-1",
+				provider: "cloudpayments",
+				encryptedCredentials: "enc_test",
+				webhookEndpointId: "wh-cancelreq-1",
+			});
+			await db.insert(listingPublication).values({
+				id: "pub-cancelreq-1",
+				listingId: "listing-cancelreq-1",
+				organizationId: "org-cancelreq-1",
+				channelType: "own_site",
+			});
+			await db.insert(booking).values({
+				id: "booking-cancelreq-1",
+				organizationId: "org-cancelreq-1",
+				listingId: "listing-cancelreq-1",
+				publicationId: "pub-cancelreq-1",
+				merchantOrganizationId: "org-cancelreq-1",
+				customerUserId: "user-cancelreq-customer",
+				source: "web",
+				status: "confirmed",
+				startsAt: new Date("2026-03-15T10:00:00Z"),
+				endsAt: new Date("2026-03-15T14:00:00Z"),
+				basePriceCents: 50_000,
+				totalPriceCents: 50_000,
+				currency: "RUB",
+			});
+
+			// Customer initiates cancellation request
+			await db.insert(bookingCancellationRequest).values({
+				id: "cr-1",
+				bookingId: "booking-cancelreq-1",
+				organizationId: "org-cancelreq-1",
+				requestedByUserId: "user-cancelreq-customer",
+				initiatedByRole: "customer",
+				status: "requested",
+				reason: "Weather forecast is bad",
+				bookingTotalPriceCents: 50_000,
+				penaltyAmountCents: 0,
+				refundAmountCents: 50_000,
+				currency: "RUB",
+			});
+
+			const requests = await db.select().from(bookingCancellationRequest);
+			expect(requests).toHaveLength(1);
+			expect(requests[0]?.status).toBe("requested");
+			expect(requests[0]?.customerDecision).toBe("pending");
+			expect(requests[0]?.managerDecision).toBe("pending");
+
+			// Manager approves
+			await db
+				.update(bookingCancellationRequest)
+				.set({
+					managerDecision: "approved",
+					managerDecisionByUserId: "user-cancelreq-manager",
+					managerDecisionAt: new Date(),
+					status: "approved",
+				})
+				.where(eq(bookingCancellationRequest.id, "cr-1"));
+
+			const updated = await db
+				.select()
+				.from(bookingCancellationRequest)
+				.where(eq(bookingCancellationRequest.id, "cr-1"));
+			expect(updated[0]?.status).toBe("approved");
+			expect(updated[0]?.managerDecision).toBe("approved");
+		});
+
+		it("enforces one cancellation request per booking", async () => {
+			await db.insert(organization).values({
+				id: "org-cancelreq-dup",
+				name: "Dup Org",
+				slug: "dup-org",
+			});
+			await db.insert(user).values({
+				id: "user-cancelreq-dup",
+				name: "Dup User",
+				email: "cancelreq-dup@example.com",
+				emailVerified: true,
+			});
+			await db.insert(listingTypeConfig).values({
+				id: "lt-cancelreq-dup",
+				slug: "cancelreq-dup-boat",
+				label: "Boat",
+				metadataJsonSchema: { type: "object" },
+			});
+			await db.insert(listing).values({
+				id: "listing-cancelreq-dup",
+				organizationId: "org-cancelreq-dup",
+				listingTypeSlug: "cancelreq-dup-boat",
+				name: "Dup Boat",
+				slug: "dup-boat",
+			});
+			await db.insert(paymentProviderConfig).values({
+				id: "ppc-cancelreq-dup",
+				provider: "stripe",
+				displayName: "Stripe",
+				supportedCurrencies: ["RUB"],
+			});
+			await db.insert(organizationPaymentConfig).values({
+				id: "opc-cancelreq-dup",
+				organizationId: "org-cancelreq-dup",
+				providerConfigId: "ppc-cancelreq-dup",
+				provider: "stripe",
+				encryptedCredentials: "enc_dup",
+				webhookEndpointId: "wh-cancelreq-dup",
+			});
+			await db.insert(listingPublication).values({
+				id: "pub-cancelreq-dup",
+				listingId: "listing-cancelreq-dup",
+				organizationId: "org-cancelreq-dup",
+				channelType: "own_site",
+			});
+			await db.insert(booking).values({
+				id: "booking-cancelreq-dup",
+				organizationId: "org-cancelreq-dup",
+				listingId: "listing-cancelreq-dup",
+				publicationId: "pub-cancelreq-dup",
+				merchantOrganizationId: "org-cancelreq-dup",
+				source: "web",
+				status: "confirmed",
+				startsAt: new Date("2026-03-15T10:00:00Z"),
+				endsAt: new Date("2026-03-15T14:00:00Z"),
+				basePriceCents: 30_000,
+				totalPriceCents: 30_000,
+				currency: "RUB",
+			});
+
+			await db.insert(bookingCancellationRequest).values({
+				id: "cr-dup-1",
+				bookingId: "booking-cancelreq-dup",
+				organizationId: "org-cancelreq-dup",
+				requestedByUserId: "user-cancelreq-dup",
+				initiatedByRole: "customer",
+				bookingTotalPriceCents: 30_000,
+				penaltyAmountCents: 0,
+				refundAmountCents: 30_000,
+				currency: "RUB",
+			});
+
+			await expect(
+				db.insert(bookingCancellationRequest).values({
+					id: "cr-dup-2",
+					bookingId: "booking-cancelreq-dup",
+					organizationId: "org-cancelreq-dup",
+					requestedByUserId: "user-cancelreq-dup",
+					initiatedByRole: "manager",
+					bookingTotalPriceCents: 30_000,
+					penaltyAmountCents: 0,
+					refundAmountCents: 30_000,
+					currency: "RUB",
+				})
+			).rejects.toThrow();
 		});
 	});
 

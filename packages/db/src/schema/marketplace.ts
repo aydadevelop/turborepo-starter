@@ -149,6 +149,15 @@ export const reviewStatusValues = [
 ] as const;
 export const listingAssetKindValues = ["image", "document", "other"] as const;
 
+export const cancellationRequestStatusValues = [
+	"requested",
+	"pending_review",
+	"approved",
+	"rejected",
+	"applied",
+	"cancelled",
+] as const;
+
 export const staffAssignmentRoleValues = [
 	"primary",
 	"backup",
@@ -221,6 +230,10 @@ export const listingAssetKindEnum = pgEnum(
 	"listing_asset_kind",
 	listingAssetKindValues
 );
+export const cancellationRequestStatusEnum = pgEnum(
+	"cancellation_request_status",
+	cancellationRequestStatusValues
+);
 export const staffAssignmentRoleEnum = pgEnum(
 	"staff_assignment_role",
 	staffAssignmentRoleValues
@@ -246,7 +259,7 @@ export const organizationSettings = pgTable(
 		cancellationFreeWindowHours: integer("cancellation_free_window_hours")
 			.notNull()
 			.default(24),
-		cancellationPenaltyPercentage: integer("cancellation_penalty_percentage")
+		cancellationPenaltyBps: integer("cancellation_penalty_bps")
 			.notNull()
 			.default(0),
 		bookingRequiresApproval: boolean("booking_requires_approval")
@@ -429,17 +442,11 @@ export const listingPricingProfile = pgTable(
 		currency: text("currency").notNull(),
 		baseHourlyPriceCents: integer("base_hourly_price_cents").notNull(),
 		minimumHours: integer("minimum_hours").notNull().default(1),
-		depositPercentage: integer("deposit_percentage").notNull().default(0),
-		serviceFeePercentage: integer("service_fee_percentage")
-			.notNull()
-			.default(0),
-		affiliateFeePercentage: integer("affiliate_fee_percentage")
-			.notNull()
-			.default(0),
-		taxPercentage: integer("tax_percentage").notNull().default(0),
-		acquiringFeePercentage: integer("acquiring_fee_percentage")
-			.notNull()
-			.default(0),
+		depositBps: integer("deposit_bps").notNull().default(0),
+		serviceFeeBps: integer("service_fee_bps").notNull().default(0),
+		affiliateFeeBps: integer("affiliate_fee_bps").notNull().default(0),
+		taxBps: integer("tax_bps").notNull().default(0),
+		acquiringFeeBps: integer("acquiring_fee_bps").notNull().default(0),
 		validFrom: timestamp("valid_from", { withTimezone: true, mode: "date" }),
 		validTo: timestamp("valid_to", { withTimezone: true, mode: "date" }),
 		isDefault: boolean("is_default").notNull().default(false),
@@ -489,16 +496,10 @@ export const platformFeeConfig = pgTable(
 	{
 		id: text("id").primaryKey(),
 		currency: text("currency").notNull(),
-		platformFeePercentage: integer("platform_fee_percentage")
-			.notNull()
-			.default(0),
-		affiliateFeePercentage: integer("affiliate_fee_percentage")
-			.notNull()
-			.default(0),
-		taxPercentage: integer("tax_percentage").notNull().default(0),
-		acquiringFeePercentage: integer("acquiring_fee_percentage")
-			.notNull()
-			.default(0),
+		platformFeeBps: integer("platform_fee_bps").notNull().default(0),
+		affiliateFeeBps: integer("affiliate_fee_bps").notNull().default(0),
+		taxBps: integer("tax_bps").notNull().default(0),
+		acquiringFeeBps: integer("acquiring_fee_bps").notNull().default(0),
 		isActive: boolean("is_active").notNull().default(true),
 		createdByUserId: text("created_by_user_id").references(() => user.id, {
 			onDelete: "set null",
@@ -522,15 +523,13 @@ export const paymentProviderConfig = pgTable(
 		supportedCurrencies: jsonb("supported_currencies")
 			.$type<string[]>()
 			.notNull(),
-		defaultAcquiringFeePercentage: integer("default_acquiring_fee_percentage")
+		defaultAcquiringFeeBps: integer("default_acquiring_fee_bps")
 			.notNull()
 			.default(0),
-		defaultPlatformFeePercentage: integer("default_platform_fee_percentage")
+		defaultPlatformFeeBps: integer("default_platform_fee_bps")
 			.notNull()
 			.default(0),
-		minPlatformFeePercentage: integer("min_platform_fee_percentage")
-			.notNull()
-			.default(0),
+		minPlatformFeeBps: integer("min_platform_fee_bps").notNull().default(0),
 		configSchema: jsonb("config_schema").$type<Record<string, unknown>>(),
 		sandboxAvailable: boolean("sandbox_available").notNull().default(false),
 		metadata: jsonb("metadata").$type<Record<string, unknown>>(),
@@ -566,7 +565,7 @@ export const organizationPaymentConfig = pgTable(
 		validationStatus: validationStatusEnum("validation_status")
 			.notNull()
 			.default("pending"),
-		platformServiceFeePercentage: integer("platform_service_fee_percentage"),
+		platformServiceFeeBps: integer("platform_service_fee_bps"),
 		payoutConfig: jsonb("payout_config").$type<Record<string, unknown>>(),
 		metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 		...timestamps,
@@ -635,7 +634,7 @@ export const listingPublication = pgTable(
 			() => organizationPaymentConfig.id,
 			{ onDelete: "set null" }
 		),
-		platformFeePercentage: integer("platform_fee_percentage"),
+		platformFeeBps: integer("platform_fee_bps"),
 		pricingProfileId: text("pricing_profile_id").references(
 			() => listingPricingProfile.id,
 			{ onDelete: "set null" }
@@ -1183,6 +1182,91 @@ export const bookingStaffAssignment = pgTable(
 );
 
 /**
+ * Cancellation request — dual-approval workflow mirroring bookingShiftRequest.
+ * Customer or manager initiates → other party reviews → both approve → booking cancelled + refund.
+ * Keeps full refund calculation snapshot at request time.
+ */
+export const bookingCancellationRequest = pgTable(
+	"booking_cancellation_request",
+	{
+		id: text("id").primaryKey(),
+		bookingId: text("booking_id")
+			.notNull()
+			.references(() => booking.id, { onDelete: "cascade" }),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		requestedByUserId: text("requested_by_user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		initiatedByRole:
+			shiftRequestInitiatorRoleEnum("initiated_by_role").notNull(),
+		status: cancellationRequestStatusEnum("status")
+			.notNull()
+			.default("requested"),
+		reason: text("reason"),
+		reasonCode: text("reason_code"),
+		/** Customer's decision on the cancellation. */
+		customerDecision: shiftRequestDecisionEnum("customer_decision")
+			.notNull()
+			.default("pending"),
+		customerDecisionByUserId: text("customer_decision_by_user_id").references(
+			() => user.id,
+			{ onDelete: "set null" }
+		),
+		customerDecisionAt: timestamp("customer_decision_at", {
+			withTimezone: true,
+			mode: "date",
+		}),
+		customerDecisionNote: text("customer_decision_note"),
+		/** Manager's decision on the cancellation. */
+		managerDecision: shiftRequestDecisionEnum("manager_decision")
+			.notNull()
+			.default("pending"),
+		managerDecisionByUserId: text("manager_decision_by_user_id").references(
+			() => user.id,
+			{ onDelete: "set null" }
+		),
+		managerDecisionAt: timestamp("manager_decision_at", {
+			withTimezone: true,
+			mode: "date",
+		}),
+		managerDecisionNote: text("manager_decision_note"),
+		/** Snapshot of booking financials at request time. */
+		bookingTotalPriceCents: integer("booking_total_price_cents")
+			.notNull()
+			.default(0),
+		penaltyAmountCents: integer("penalty_amount_cents").notNull().default(0),
+		refundAmountCents: integer("refund_amount_cents").notNull().default(0),
+		currency: text("currency").notNull().default("RUB"),
+		/** Refund processing status after approval. */
+		refundStatus: refundStatusEnum("refund_status"),
+		refundReference: text("refund_reference"),
+		appliedByUserId: text("applied_by_user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		appliedAt: timestamp("applied_at", { withTimezone: true, mode: "date" }),
+		requestedAt: timestamp("requested_at", {
+			withTimezone: true,
+			mode: "date",
+		})
+			.default(sql`now()`)
+			.notNull(),
+		metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+		...timestamps,
+	},
+	(table) => [
+		index("booking_cancellation_request_ix_organization_id").on(
+			table.organizationId
+		),
+		index("booking_cancellation_request_ix_status").on(table.status),
+		uniqueIndex("booking_cancellation_request_uq_booking_id").on(
+			table.bookingId
+		),
+	]
+);
+
+/**
  * Cancellation policy — can be scoped to a listing or fall back to organization-wide.
  * Organization-level policy serves as default; listing-level overrides when present.
  */
@@ -1200,12 +1284,10 @@ export const cancellationPolicy = pgTable(
 		name: text("name").notNull(),
 		/** Hours before booking start when free cancellation is allowed. */
 		freeWindowHours: integer("free_window_hours").notNull().default(24),
-		/** Penalty percentage of total price if cancelled inside the free window. */
-		penaltyPercentage: integer("penalty_percentage").notNull().default(0),
-		/** Percentage charged if cancelled with very short notice (e.g. < 2h). */
-		latePenaltyPercentage: integer("late_penalty_percentage")
-			.notNull()
-			.default(100),
+		/** Penalty in basis points of total price if cancelled inside the free window. 10000 = 100%. */
+		penaltyBps: integer("penalty_bps").notNull().default(0),
+		/** Basis points charged if cancelled with very short notice (e.g. < 2h). 10000 = 100%. */
+		latePenaltyBps: integer("late_penalty_bps").notNull().default(10_000),
 		/** Hours threshold for late penalty (cancellations within this window). */
 		latePenaltyWindowHours: integer("late_penalty_window_hours")
 			.notNull()

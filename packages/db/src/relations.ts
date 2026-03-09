@@ -150,6 +150,7 @@ export const relations = defineRelations(schema, (r) => ({
 		bookingDiscountCodes: r.many.bookingDiscountCode(),
 		bookingPaymentAttempts: r.many.bookingPaymentAttempt(),
 		bookingShiftRequests: r.many.bookingShiftRequest(),
+		bookingCancellationRequests: r.many.bookingCancellationRequest(),
 		bookingDisputes: r.many.bookingDispute(),
 		bookingRefunds: r.many.bookingRefund(),
 		listingReviews: r.many.listingReview(),
@@ -507,6 +508,10 @@ export const relations = defineRelations(schema, (r) => ({
 		discountApplications: r.many.bookingDiscountApplication(),
 		paymentAttempts: r.many.bookingPaymentAttempt(),
 		shiftRequests: r.many.bookingShiftRequest(),
+		cancellationRequest: r.one.bookingCancellationRequest({
+			from: r.booking.id,
+			to: r.bookingCancellationRequest.bookingId,
+		}),
 		disputes: r.many.bookingDispute(),
 		refunds: r.many.bookingRefund(),
 		reviews: r.many.listingReview(),
@@ -630,6 +635,37 @@ export const relations = defineRelations(schema, (r) => ({
 			from: r.bookingDispute.resolvedByUserId,
 			to: r.user.id,
 			alias: "dispute_resolver",
+		}),
+	},
+
+	bookingCancellationRequest: {
+		booking: r.one.booking({
+			from: r.bookingCancellationRequest.bookingId,
+			to: r.booking.id,
+		}),
+		organization: r.one.organization({
+			from: r.bookingCancellationRequest.organizationId,
+			to: r.organization.id,
+		}),
+		requestedByUser: r.one.user({
+			from: r.bookingCancellationRequest.requestedByUserId,
+			to: r.user.id,
+			alias: "cancel_req_requester",
+		}),
+		customerDecisionByUser: r.one.user({
+			from: r.bookingCancellationRequest.customerDecisionByUserId,
+			to: r.user.id,
+			alias: "cancel_req_customer_decision",
+		}),
+		managerDecisionByUser: r.one.user({
+			from: r.bookingCancellationRequest.managerDecisionByUserId,
+			to: r.user.id,
+			alias: "cancel_req_manager_decision",
+		}),
+		appliedByUser: r.one.user({
+			from: r.bookingCancellationRequest.appliedByUserId,
+			to: r.user.id,
+			alias: "cancel_req_applier",
 		}),
 	},
 

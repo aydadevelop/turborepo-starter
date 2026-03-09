@@ -1,8 +1,9 @@
-# ADR-002: Legacy Extraction Plan — `cf-boat-api` & `full-stack-cf-app` → turborepo-starter
+# ADR-001: Legacy Extraction Plan — `cf-boat-api` & `full-stack-cf-app` → turborepo-starter
 
 **Date:** 2026-03-09
 **Status:** Proposed
 **Authors:** Platform Team
+**Related:** [ADR-002: Architecture Patterns (Medusa/Mercur)](./002_architecture-patterns.md)
 
 ---
 
@@ -20,15 +21,10 @@
    - [3.5 packages/payments](#35-packagespayments)
    - [3.6 packages/disputes](#36-packagesdisputes)
    - [3.7 packages/messaging](#37-packagesmessaging)
-   - [3.8 packages/workflows](#38-packagesworkflows-new)
-   - [3.9 packages/events](#39-packagesevents-upgrade-from-legacy-eventbus)
-   - [3.10 packages/admin-zones](#310-packagesadmin-zones-new)
-   - [3.11 packages/field-registry](#311-packagesfield-registry-new)
+   - [3.8 packages/events, packages/workflows, packages/admin-zones, packages/field-registry](#38-packagesevents-packagesworkflows-packagesadmin-zones-packagesfield-registry)
 6. [4. What Already Works Well (KEEP AS-IS)](#4-what-already-works-well-keep-as-is)
 7. [5. Migration Waves](#5-migration-waves)
-8. [6. Anti-Patterns to Avoid](#6-anti-patterns-to-avoid)
-9. [7. Dependency Graph (Target State)](#7-dependency-graph-target-state)
-10. [Consequences](#consequences)
+8. [Consequences](#consequences)
 
 ---
 
@@ -42,35 +38,13 @@ We are building a travel-commerce marketplace (similar to Sputnik8/Tripster) and
 
 3. **`aydadevelop/turborepo-starter`** (THIS REPO — the target). Already has: oRPC contract-first approach, Turborepo, Bun, Better Auth, Drizzle, Hono, SvelteKit 5, and the marketplace Drizzle schema.
 
-### Architectural Principles Guiding This Migration
-
-The migration adopts concepts (not frameworks) from Medusa.js and Mercur marketplace patterns:
-
-**From Medusa — adopt concepts:**
-- **Workflows** — `createWorkflow` / `createStep` pattern with retries, compensation, idempotency keys, and execution logs. High ROI especially for bookings and payouts.
-- **Modules** — Self-contained domain packages with clear interfaces.
-- **Providers** — Swappable provider interfaces for external integrations (payment, calendar, notifications, etc.).
-- **Admin injection zones** — Zone constants and a registration API for pluggable admin UI panels.
-- **Typed extension surfaces** — A Custom Field Registry with schema, zone, renderer, validation, and permissions — not just raw metadata blobs.
-- **Subscriber/event model** — Event-driven side effects (already partially present in legacy via `eventBus`).
-
-**From Mercur — adopt thinking:**
-- **Marketplace layering** — Multi-vendor architecture concepts.
-- **Multi-actor platform thinking** — Multiple user types with different permissions and views.
-- **Vendor/operator-oriented architecture** — Owner vs admin vs customer separation.
-- **Policy override mindset** — Configurable business rules per vendor/entity.
-
-**Hard Rules:**
-- **No generic "shared" dumping grounds** — Every package must have a clear domain boundary.
-- **Event-driven side effects** — Notifications, calendar sync, and analytics MUST be triggered via events, never inline.
-- **Provider interfaces** — All external integrations sit behind swappable interfaces.
-- **Custom Field Registry** — Schema, zone, renderer, validation, permissions — not raw metadata.
+The architectural principles guiding the target package design — including the Medusa/Mercur-inspired patterns, hard rules, anti-patterns, and the design of new foundational packages (`packages/workflows`, `packages/events`, `packages/admin-zones`, `packages/field-registry`) — are documented separately in [ADR-002](./002_architecture-patterns.md).
 
 ---
 
 ## Decision
 
-We will execute a phased extraction of all domain logic from both legacy repositories into clearly bounded packages within this monorepo, following a contract-first, event-driven, provider-based architecture.
+We will execute a phased extraction of all domain logic from both legacy repositories into clearly bounded packages within this monorepo, following a contract-first, event-driven, provider-based architecture as defined in [ADR-002](./002_architecture-patterns.md).
 
 ---
 
@@ -142,7 +116,9 @@ The following table maps every major module from `cf-boat-api/src/` to its dispo
 
 ## 2. Domain Package Mapping
 
-### New Packages to Create
+### New Packages to Create (Legacy-Derived)
+
+The following packages are created by extracting and refactoring code from the legacy repositories:
 
 | Package | Source(s) | Interface Exposed | Dependencies | Priority |
 |---|---|---|---|---|
@@ -153,10 +129,17 @@ The following table maps every major module from `cf-boat-api/src/` to its dispo
 | `packages/payments` | `cf-boat-api/src/services/PaymentService/`, `full-stack-cf-app` payment webhook adapters | `PaymentProvider` interface, `PaymentAdapterRegistry`, `CloudPaymentsProvider` impl, webhook handler | `@my-app/db`, `@my-app/events` | **P1** |
 | `packages/disputes` | `cf-boat-api/src/services/DisputeService.ts`, `CancellationService.ts`, `full-stack-cf-app` cancellation flows | `DisputeService`, `CancellationService`, `processCancellationWorkflow`, `processDisputeWorkflow` | `@my-app/db`, `@my-app/events`, `@my-app/workflows`, `@my-app/booking` | **P1** |
 | `packages/messaging` | `cf-boat-api/src/services/messaging/`, `full-stack-cf-app` channel adapters | `OutboundChannelAdapter`, `InboundChannelAdapter`, `ChannelAdapterRegistry`; Telegram, Avito, Email, Web, Sputnik impls | `@my-app/db`, `@my-app/events` | **P2** |
-| `packages/workflows` | NEW (inspired by Medusa; built on our stack) | `createWorkflow`, `createStep`, `WorkflowContext`; retries, compensation, idempotency keys, execution logs | `@my-app/events`, `@my-app/db` (for execution log) | **P0** |
-| `packages/events` | `cf-boat-api/src/events/`, `full-stack-cf-app/packages/api/src/lib/event-bus.ts` | `DomainEvent<T>`, `DomainEventMap`, `EventBus`, `registerEventPusher`; typed discriminated union events | — | **P0** |
-| `packages/admin-zones` | NEW (inspired by Medusa injection zones) | `INJECTION_ZONES` constant map, `registerZoneComponent`; Svelte `ZoneRenderer` component lives in `packages/ui` (see note below) | `@my-app/ui` | **P2** |
-| `packages/field-registry` | NEW (inspired by Medusa custom fields) | `CustomFieldRegistry`, `registerField`; Svelte `FieldRenderer` component lives in `packages/ui` (see note below); schema, zone, validation, permissions per field | `@my-app/ui`, `@my-app/auth` | **P2** |
+
+### New Packages to Create (Architectural — No Legacy Source)
+
+These packages have no direct legacy equivalent. Their design is fully specified in [ADR-002](./002_architecture-patterns.md):
+
+| Package | Design ADR | Purpose | Priority |
+|---|---|---|---|
+| `packages/events` | [ADR-002 §3.1](./002_architecture-patterns.md#31-packagesevents) | Typed `DomainEvent<T>` bus + multi-pusher registry | **P0** |
+| `packages/workflows` | [ADR-002 §3.2](./002_architecture-patterns.md#32-packagesworkflows) | `createStep`/`createWorkflow` with compensation + execution log | **P0** |
+| `packages/admin-zones` | [ADR-002 §3.3](./002_architecture-patterns.md#33-packagesadmin-zones) | Typed injection zone registry for pluggable admin UI | **P2** |
+| `packages/field-registry` | [ADR-002 §3.4](./002_architecture-patterns.md#34-packagesfield-registry) | Typed custom field definitions with Zod schema + permissions | **P2** |
 
 ### Existing Packages — Enhance In Place
 
@@ -165,7 +148,7 @@ The following table maps every major module from `cf-boat-api/src/` to its dispo
 | `packages/api-contract` | ✅ oRPC contract-first with `oc.route()` | Add boat, booking, catalog, calendar, payments, disputes, messaging contracts |
 | `packages/api` | ✅ Implements `appContract` with middleware chain | Slim down: move business logic to domain packages; handlers become thin oRPC wiring (≤10 lines each) |
 | `packages/db` | ✅ Drizzle schema (`marketplace.ts` already has listings, bookings, pricing, etc.) | Migrate remaining tables from legacy `src/db/`: `supportTickets`, `docks`, `blockedDays`, `pricingAdjustments` if not already present |
-| `packages/queue` | ✅ pg-boss abstraction | Wire to `packages/workflows` for workflow step execution and retry logic |
+| `packages/queue` | ✅ pg-boss abstraction | Used for background tasks (e.g., booking expiry checks, recurring reminders). Workflow steps are in-process — `packages/queue` is NOT the workflow step runner. |
 | `packages/notifications` | ✅ Event → intent → delivery pipeline | Enhance: consume events from `packages/events` via multi-pusher `registerEventPusher` |
 | `packages/auth` | ✅ Better Auth with role-based RBAC | No changes needed; already superior to legacy JWT approach |
 
@@ -192,7 +175,7 @@ packages/booking/src/
 ├── workflows/
 │   ├── create-booking.ts # createBookingWorkflow: reserve → charge → emit booking:created
 │   ├── confirm-booking.ts # confirmBookingWorkflow: validate → confirm → emit booking:confirmed
-│   ├── cancel-booking.ts  # cancelBookingWorkflow: policy check → refund → emit booking:cancelled
+│   ├── cancel-booking.ts  # cancelBookingStep: transition booking status → cancelled → emit booking:cancelled
 │   └── reschedule.ts     # rescheduleWorkflow: overlap check → reprice → dual-approve → emit booking:rescheduled
 ├── events.ts             # Event type constants: booking:created, booking:confirmed, booking:cancelled, etc.
 ├── repository.ts         # BookingRepository — Drizzle queries only, no business logic
@@ -202,7 +185,7 @@ packages/booking/src/
 **Event emissions (side effects must NOT be inline):**
 - `booking:created` → calendar sync, customer confirmation email
 - `booking:confirmed` → owner notification, payout schedule
-- `booking:cancelled` → refund, calendar deletion, notification
+- `booking:cancelled` → calendar deletion, notification (refund is a prerequisite in `packages/disputes`, not a downstream effect)
 - `booking:contact-updated` → re-sync external channels
 
 ### 3.2 `packages/pricing`
@@ -332,194 +315,9 @@ packages/messaging/src/
 └── index.ts
 ```
 
-### 3.8 `packages/workflows` (NEW)
+### 3.8 `packages/events`, `packages/workflows`, `packages/admin-zones`, `packages/field-registry`
 
-**Inspired by Medusa; built on our stack — not a dependency on `@medusajs/workflows-sdk`.**
-
-> **Why not use Medusa's workflow package directly?**
-> Medusa's `@medusajs/workflows-sdk` is tightly coupled to Medusa's Module Registry, `MedusaContainer`, and the `@medusajs/orchestration` Redis-backed engine. Our stack uses pg-boss (via `packages/queue`), Drizzle ORM, and oRPC — none of which integrate with Medusa's container system. Additionally, Medusa's workflow engine adds ~2 MB of transitive dependencies. We adopt the *concept* (step + compensation + idempotency key) and implement a minimal version that integrates natively with our `packages/queue` and `packages/db` execution log without external orchestration infrastructure.
-
-```typescript
-// packages/workflows/src/types.ts
-export interface WorkflowContext {
-  organizationId: string
-  actorUserId?: string
-  idempotencyKey: string
-  eventBus: EventBus
-}
-
-export interface StepDef<TIn, TOut> {
-  name: string
-  invoke: (input: TIn, ctx: WorkflowContext) => Promise<TOut>
-  compensate?: (output: TOut, ctx: WorkflowContext) => Promise<void>
-}
-
-// packages/workflows/src/create-step.ts
-export const createStep = <TIn, TOut>(
-  name: string,
-  invoke: StepDef<TIn, TOut>["invoke"],
-  compensate?: StepDef<TIn, TOut>["compensate"]
-): StepDef<TIn, TOut> => ({ name, invoke, compensate })
-
-// packages/workflows/src/create-workflow.ts
-// The engine invokes each step in sequence, tracks completed steps with their outputs,
-// and on failure iterates them in reverse order calling compensate() to roll back.
-export const createWorkflow = <TIn, TOut>(
-  name: string,
-  buildSteps: (ctx: WorkflowContext) => Array<StepDef<unknown, unknown>>,
-  run: (steps: Array<StepDef<unknown, unknown>>, input: TIn, ctx: WorkflowContext) => Promise<TOut>
-) => ({
-  name,
-  execute: async (input: TIn, ctx: WorkflowContext) => {
-    const steps = buildSteps(ctx)
-    const completed: Array<{ step: StepDef<unknown, unknown>; output: unknown }> = []
-    try {
-      const output = await run(steps, input, ctx)
-      return { success: true as const, output }
-    } catch (error) {
-      // Compensate completed steps in reverse order
-      for (const { step, output } of completed.reverse()) {
-        if (step.compensate) {
-          await step.compensate(output, ctx).catch(() => {
-            // Log compensation failure; do not throw — best-effort rollback
-          })
-        }
-      }
-      return {
-        success: false as const,
-        error: error instanceof Error ? error : new Error(String(error)),
-      }
-    }
-  },
-})
-```
-
-**Workflow execution log table** (add to `packages/db`):
-```
-workflow_execution (id, workflow_name, idempotency_key, status, input_snapshot, output_snapshot, error, created_at, completed_at)
-workflow_step_log  (id, execution_id, step_name, status, input_snapshot, output_snapshot, error, started_at, completed_at)
-```
-
-### 3.9 `packages/events` (upgrade from legacy eventBus)
-
-**Source:** `cf-boat-api/src/events/`; `full-stack-cf-app` `DomainEvent<T>` + `DomainEventMap` (already typed — better than legacy, move as-is).
-
-> **Migration path for existing `packages/api/src/lib/event-bus.ts`:** This repo's current `EventBus` class collects `NotificationRecipient[]` objects and flushes them to the notifications pipeline. It is a different interface from the typed `DomainEvent<T>` system. Migration must be done in two steps to avoid breaking existing consumers:
-> 1. **Wave 0:** Create `packages/events` with the new `DomainEvent<T>` interface. Register a compatibility pusher that maps each new `DomainEvent` to the existing `NotificationRecipient` format and calls the existing notifications pipeline. New domain packages use `packages/events` exclusively.
-> 2. **Wave 1:** Once `packages/booking` and `packages/catalog` emit via `packages/events`, remove the old `EventBus` class from `packages/api/src/lib/event-bus.ts` and delete the compatibility pusher. All notification flows now go through the event-driven pipeline.
-
-**Enhancement:** Add multi-pusher registration so modules self-register side-effect handlers without coupling. Export `clearEventPushers` for test isolation (prevents pushers registered in one test from leaking into another):
-
-```typescript
-// packages/events/src/event-bus.ts
-type EventPusher = (event: DomainEvent, queue?: QueueProducer) => Promise<void>
-
-const pushers: EventPusher[] = []
-
-export const registerEventPusher = (pusher: EventPusher): void => {
-  pushers.push(pusher)
-}
-
-/** For use in tests only — clears all registered pushers to prevent cross-test pollution. */
-export const clearEventPushers = (): void => {
-  pushers.length = 0
-}
-
-// How modules self-register at application startup:
-// packages/calendar/src/index.ts
-registerEventPusher(async (event) => {
-  if (event.type === "booking:confirmed") await syncCalendar(event.data)
-  if (event.type === "booking:cancelled") await deleteCalendarEvent(event.data)
-})
-
-// packages/notifications/src/index.ts
-registerEventPusher(async (event, queue) => {
-  await notificationsPusher({ input: mapToNotificationInput(event), queue })
-})
-```
-
-> **Test isolation rule:** Unit tests for domain packages must call `clearEventPushers()` in `beforeEach` (or use a mock `EventBus` injected via `WorkflowContext`) so that side-effect pushers from other packages do not fire unexpectedly.
-
-**Event map (typed discriminated union):**
-```typescript
-export interface DomainEventMap {
-  "booking:created":          { bookingId: string; listingId: string; customerId: string }
-  "booking:confirmed":        { bookingId: string; ownerId: string }
-  "booking:cancelled":        { bookingId: string; reason: string; refundAmount: number }
-  "booking:contact-updated":  { bookingId: string; contactDetails: ContactDetails }
-  "payment:captured":         { bookingId: string; paymentId: string; amount: number }
-  "payment:failed":           { bookingId: string; paymentId: string; error: string }
-  "dispute:opened":           { disputeId: string; bookingId: string }
-  "dispute:resolved":         { disputeId: string; resolution: string }
-  "calendar:sync-requested":  { bookingId: string; calendarId: string }
-}
-```
-
-### 3.10 `packages/admin-zones` (NEW)
-
-**Inspired by Medusa admin injection zones; adapted for SvelteKit.**
-
-> **Note on Svelte components:** Per the project architecture rule ("Keep shared design system pieces in `packages/ui`"), the Svelte `ZoneRenderer` component that renders registered zone widgets belongs in `packages/ui`. `packages/admin-zones` exports only the TypeScript registry logic (zone constants, `registerZoneComponent`, and the `InjectionZone` type). `apps/web` imports both.
-
-```typescript
-// packages/admin-zones/src/constants.ts  (pure TypeScript — no Svelte dependency)
-export const INJECTION_ZONES = [
-  // Booking management
-  "booking.list.before",       "booking.list.after",
-  "booking.details.before",    "booking.details.after",
-  "booking.details.side.before","booking.details.side.after",
-  // Listing management
-  "listing.list.before",       "listing.list.after",
-  "listing.details.before",    "listing.details.after",
-  // Helpdesk / support
-  "ticket.details.before",     "ticket.details.after",
-  // Dashboard
-  "dashboard.overview.before", "dashboard.overview.after",
-  // Pricing & availability
-  "pricing.details.before",    "pricing.details.after",
-] as const
-
-export type InjectionZone = (typeof INJECTION_ZONES)[number]
-
-// packages/admin-zones/src/registry.ts  (pure TypeScript — no Svelte dependency)
-// ZoneComponent is opaque at the registry level; the concrete type (Svelte Component constructor)
-// is resolved by packages/ui/ZoneRenderer at render time via a dynamic lookup map.
-// Consumers register components as: registerZoneComponent("booking.details.after", MyPanel)
-// The component value is typed as `object` to accept any Svelte 5 component without creating
-// a framework dependency in this TypeScript-only package.
-type ZoneComponent = object
-export const registerZoneComponent = (zone: InjectionZone, component: ZoneComponent): void => {
-  zoneRegistry.set(zone, [...(zoneRegistry.get(zone) ?? []), component])
-}
-
-// packages/ui/src/zone-renderer/ZoneRenderer.svelte  (Svelte component — lives in packages/ui)
-// Imports zone registry from @my-app/admin-zones, renders registered components for a given zone.
-```
-
-### 3.11 `packages/field-registry` (NEW)
-
-**Typed custom field registry — not just metadata blobs.**
-
-> **Note on Svelte components:** The Svelte `FieldRenderer` component that renders field widgets belongs in `packages/ui`. `packages/field-registry` exports only pure TypeScript (field definitions, validation, permissions). This keeps design-system components centralized in `packages/ui` per the project rule.
-
-```typescript
-// packages/field-registry/src/types.ts  (pure TypeScript — no Svelte dependency)
-export interface FieldDefinition<TValue = unknown> {
-  name: string
-  zone: InjectionZone           // Which admin zone renders this field
-  schema: ZodSchema<TValue>     // Zod schema for validation
-  rendererKey: string           // Key used by packages/ui FieldRenderer to look up the Svelte component
-  permissions: string[]         // Required roles to view/edit
-  defaultValue?: TValue
-}
-
-export const registerField = (field: FieldDefinition): void => {
-  fieldRegistry.set(field.name, field)
-}
-
-// packages/ui/src/field-renderer/FieldRenderer.svelte  (Svelte component — lives in packages/ui)
-// Imports field registry from @my-app/field-registry, resolves rendererKey to a Svelte component.
-```
+These are new packages with no direct legacy source. Their full design — interfaces, implementation patterns, and rationale — is in [ADR-002](./002_architecture-patterns.md).
 
 ---
 
@@ -573,8 +371,8 @@ export const registerField = (field: FieldDefinition): void => {
 | Create `packages/calendar` | 🆕 New | CalendarService + GoogleCalendarHandler + adapters from `full-stack-cf-app` | Move adapter tree as-is; add to event subscriber |
 | Create `packages/payments` | 🆕 New | PaymentService + CloudPayments webhook adapter from `full-stack-cf-app` | Move adapter tree as-is; see CloudPayments.md |
 | Create `packages/messaging` | 🆕 New | Telegram services + channel adapters from `full-stack-cf-app` | Move 5-channel adapter registry as-is |
-| Register calendar pusher in `packages/events` | Existing | — | `booking:confirmed` → calendar sync |
-| Register payments pusher in `packages/events` | Existing | — | `booking:confirmed` → payout schedule |
+| Register calendar pusher | `packages/calendar` | — | Self-register via `registerEventPusher` in `packages/calendar/src/index.ts`: `booking:confirmed` → calendar sync |
+| Register payments pusher | `packages/payments` | — | Self-register via `registerEventPusher` in `packages/payments/src/index.ts`: `booking:confirmed` → payout schedule |
 
 ### Wave 3 — Operations (Weeks 9–11)
 
@@ -592,166 +390,18 @@ export const registerField = (field: FieldDefinition): void => {
 
 ---
 
-## 6. Anti-Patterns to Avoid
-
-The following patterns found in the legacy code MUST NOT be carried forward:
-
-### ❌ Monolithic Service with Inline Side Effects
-**Legacy:** `BookingService.ts` (858 lines) performs booking creation, calendar sync, Telegram notifications, and payment capture all in a single method.
-
-```typescript
-// ❌ LEGACY ANTI-PATTERN (do not carry forward)
-async function confirmBooking(bookingId: string) {
-  await db.update(bookings).set({ status: "confirmed" }).where(eq(bookings.id, bookingId))
-  // Side effects inline — tightly coupled, untestable, no compensation
-  await googleCalendar.events.insert({ ... })
-  await telegramBot.sendMessage(chatId, "Your booking is confirmed!")
-  await cloudPayments.charge({ amount, token })
-}
-
-// ✅ TARGET PATTERN
-// Domain service: only state transition + event emission
-async function confirmBooking(bookingId: string, ctx: WorkflowContext) {
-  await db.update(bookings).set({ status: "confirmed" }).where(eq(bookings.id, bookingId))
-  ctx.eventBus.emit("booking:confirmed", { bookingId })  // subscribers handle the rest
-}
-
-// Calendar module self-registers as a subscriber (no import in booking service)
-registerEventPusher(async (event) => {
-  if (event.type === "booking:confirmed") await calendarRegistry.getProvider(event.data.listingId).createEvent(...)
-})
-
-// Notifications module self-registers separately
-registerEventPusher(async (event, queue) => {
-  if (event.type === "booking:confirmed") await notificationsPusher({ input: mapEvent(event), queue })
-})
-```
-
-**Rule:** Each domain service does ONE thing. Side effects (calendar sync, notifications, analytics) are emitted as domain events and handled by registered event pushers. Booking service emits `booking:confirmed`; calendar module and notification module subscribe independently.
-
-### ❌ Direct External Service Calls Inside Business Logic
-**Legacy:** `BookingService.ts` calls Google Calendar API directly, inline.
-
-**Rule:** All external integrations go through a `Provider` interface with a registered implementation. The domain service calls `calendarRegistry.getProvider(listingId).createEvent(...)`. The registry resolves the correct provider. Business logic never imports `googleapis` or any external SDK directly.
-
-### ❌ Role Checks Scattered Across Route Files
-**Legacy:** `if (user.role !== 'admin') throw new Error('Forbidden')` repeated across `bookingRoutes.ts`, `manageRoutes.ts`, `paymentRoutes.ts`, etc.
-
-**Rule:** All authorization goes through the oRPC middleware chain (`publicProcedure` → `sessionProcedure` → `protectedProcedure` → `organizationProcedure` → `organizationPermissionProcedure`). Domain services receive a pre-authorized context and do not perform role checks.
-
-### ❌ Pricing Engine Coupled to the Boat Entity
-**Legacy:** `PriceService.ts` imports `BoatRepository` and applies pricing logic specific to boat properties.
-
-**Rule:** The pricing engine is entity-agnostic. It receives a `ListingType` + `PricingProfile` as inputs, not a `Boat` object. This allows pricing to work for future listing types (tours, experiences, docks) without code changes.
-
-### ❌ Ad-hoc Compensation Logic in Route Handlers
-**Legacy:** Compensation code (e.g., "if payment fails, release the availability reservation") is duplicated ad-hoc inside `try/catch` blocks in route handlers.
-
-**Rule:** All multi-step operations with compensation requirements are expressed as `createWorkflow` with `createStep` + `compensate` functions. The workflow engine handles rollback automatically.
-
-### ❌ Generic "shared" or "utils" Packages as Dumping Grounds
-**Legacy:** `src/utils/` contains unrelated utilities (error handling, calendar utilities, role constants).
-
-**Rule:** Every package has a single clear domain boundary. Utilities that don't belong in a domain package belong in the package that owns the concept (calendar utils → `packages/calendar`; role constants → `packages/auth`; error types → the package that defines the error).
-
-### ❌ Inline Queue Calls Without Schema Validation
-**Legacy:** Queue messages are published as raw objects without Zod validation.
-
-**Rule:** All queue messages must be validated against a Zod schema before enqueue and after dequeue, using `safeParse`. Use explicit retry limits and a dead-letter queue strategy.
-
----
-
-## 7. Dependency Graph (Target State)
-
-```
-apps/web ──────────────────┬── @my-app/api-contract
-                           ├── @my-app/assistant      (RouterClient for AI chat)
-                           ├── @my-app/admin-zones
-                           ├── @my-app/field-registry
-                           ├── @my-app/ui, @my-app/ai-chat
-                           ├── @my-app/env
-                           └── @orpc/client, @orpc/tanstack-query
-
-apps/assistant ────────────┬── @my-app/assistant
-                           ├── @my-app/auth
-                           ├── @my-app/env
-                           └── @orpc/server
-
-apps/server ───────────────┬── @my-app/api
-                           ├── @my-app/auth
-                           ├── @my-app/db
-                           ├── @my-app/env
-                           ├── @my-app/queue
-                           └── @orpc/server, @orpc/openapi, @orpc/zod
-
-packages/api ──────────────┬── @my-app/api-contract
-                           ├── @my-app/booking
-                           ├── @my-app/catalog
-                           ├── @my-app/pricing
-                           ├── @my-app/payments
-                           ├── @my-app/calendar
-                           ├── @my-app/disputes
-                           ├── @my-app/messaging
-                           ├── @my-app/events
-                           ├── @my-app/auth, @my-app/db
-                           └── @orpc/server
-
-packages/booking ──────────┬── @my-app/db
-                           ├── @my-app/events
-                           ├── @my-app/workflows
-                           └── @my-app/pricing
-
-packages/pricing ──────────└── @my-app/db
-
-packages/catalog ──────────┬── @my-app/db
-                           └── @my-app/events
-
-packages/calendar ─────────┬── @my-app/db
-                           └── @my-app/events  (self-registers event pusher)
-
-packages/payments ─────────┬── @my-app/db
-                           └── @my-app/events  (self-registers event pusher)
-
-packages/disputes ─────────┬── @my-app/db
-                           ├── @my-app/events
-                           ├── @my-app/workflows
-                           └── @my-app/booking
-
-packages/messaging ────────┬── @my-app/db
-                           └── @my-app/events  (self-registers event pusher)
-
-packages/workflows ────────┬── @my-app/events
-                           └── @my-app/db  (execution log)
-
-packages/events ───────────└── (no internal deps — foundational)
-
-packages/admin-zones ──────└── @my-app/ui
-
-packages/field-registry ───┬── @my-app/ui
-                           └── @my-app/auth
-
-packages/notifications ────┬── @my-app/db
-                           ├── @my-app/queue
-                           └── @my-app/events  (registered as event pusher)
-```
-
----
-
 ## Consequences
 
 ### Positive
-- **Clear domain boundaries**: Every package owns one domain; no shared utility dumping grounds.
+- **Clear domain boundaries**: Every package owns one domain extracted directly from a legacy module; no shared utility dumping grounds.
 - **Testability**: Pure domain services (no oRPC, no HTTP) are trivial to unit-test with a mock `EventBus`.
 - **Extensibility**: New listing types (tours, experiences) reuse the pricing engine and booking workflow without modification.
-- **Compensation safety**: Multi-step operations (charge + calendar create + notify) have automatic rollback via workflow compensation steps.
 - **Provider swappability**: Replacing CloudPayments with Stripe requires only a new `PaymentProvider` implementation with no domain code changes.
-- **Event-driven decoupling**: Calendar, notifications, and messaging teams can work independently once events are published.
 
 ### Negative / Trade-offs
 - **Migration cost**: 11 weeks of phased extraction, with temporary duplication during transition.
 - **Package proliferation**: Going from ~13 packages to ~24 packages increases `turbo.json` task coordination.
-- **Workflow overhead**: Simple CRUD operations gain overhead from the workflow engine; reserve it for multi-step, compensation-requiring flows.
-- **Team coordination**: Each domain package now has an explicit interface that other packages must respect. Contract breakage is caught at compile time (TypeScript) but requires coordination during extraction.
+- **Team coordination**: Each domain package has an explicit interface that other packages must respect. Contract breakage is caught at compile time (TypeScript) but requires coordination during extraction.
 
 ### Migration Safety Net
 - During Wave 1 and Wave 2, existing `packages/api` handlers continue to function using the current implementation.
