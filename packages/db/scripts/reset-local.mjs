@@ -9,27 +9,23 @@ const DEFAULT_DATABASE_URL =
 
 const connectionString = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
 
+/**
+ * Full schema reset: drops all tables, type definitions, functions, and
+ * sequences in the public schema so migrations can be re-applied from scratch.
+ * Uses DROP/CREATE SCHEMA for a clean, atomic wipe — avoids partial drops that
+ * leave behind stale enum types.
+ */
 const main = async () => {
 	const client = new Client({ connectionString });
 	await client.connect();
 
 	try {
-		// Drop all tables in the public schema (cascade handles FK dependencies)
-		const { rows } = await client.query(
-			`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`
-		);
-
-		if (rows.length === 0) {
-			console.log("No tables to drop.");
-			return;
-		}
-
-		const tableNames = rows.map((r) => `"${r.tablename}"`).join(", ");
-		await client.query(`DROP TABLE IF EXISTS ${tableNames} CASCADE`);
-		console.log(`Dropped ${rows.length} tables from public schema.`);
-		console.log(
-			"Run `bun run db:push` or `bun run db:migrate` to recreate the schema."
-		);
+		await client.query("DROP SCHEMA public CASCADE");
+		await client.query("CREATE SCHEMA public");
+		await client.query("GRANT ALL ON SCHEMA public TO postgres");
+		await client.query("GRANT ALL ON SCHEMA public TO public");
+		console.log("Public schema wiped and recreated.");
+		console.log("Run `bun run db:migrate` to apply the baseline migration.");
 	} finally {
 		await client.end();
 	}

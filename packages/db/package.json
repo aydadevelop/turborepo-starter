@@ -15,7 +15,9 @@
   "scripts": {
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:dev": "drizzle-kit migrate --config drizzle.config.dev.ts",
     "db:generate": "drizzle-kit generate",
+    "db:generate:dev": "drizzle-kit generate --config drizzle.config.dev.ts",
     "db:studio": "drizzle-kit studio --config drizzle.config.dev.ts --host 127.0.0.1 --port 4983",
     "db:reset:local": "node ./scripts/reset-local.mjs",
     "db:bootstrap:local:e2e": "node ./scripts/bootstrap-local-e2e.mjs",

@@ -57,23 +57,57 @@ export const waitForDatabase = async ({
 	);
 };
 
-const pushSchema = (connectionString) => {
+/**
+ * Reset the public schema and apply baseline migrations so bootstrap is fully
+ * reproducible from committed artifacts (not schema-push guesswork).
+ *
+ * Flow: DROP/CREATE public schema + clear drizzle migration journal
+ *       → drizzle-kit migrate
+ *       (POST_MIGRATION_TRIGGERS_SQL hook is applied by separate caller if needed)
+ */
+const resetAndMigrateSchema = async (connectionString) => {
+	// 1. Wipe the public schema and drizzle migration journal so drizzle-kit
+	//    starts fresh and re-applies all committed migrations.
+	//    __drizzle_migrations lives in its own `drizzle` schema, so it must be
+	//    cleared separately from DROP SCHEMA public.
+	const { Client } = pg;
+	const client = new Client({ connectionString });
+	await client.connect();
 	try {
-		execFileSync("bunx", ["drizzle-kit", "push", "--config", "drizzle.config.dev.ts"], {
-			cwd: dbPackageRoot,
-			stdio: "inherit",
-			env: { ...process.env, DATABASE_URL: connectionString },
-		});
+		await client.query("DROP SCHEMA public CASCADE");
+		await client.query("DROP SCHEMA IF EXISTS drizzle CASCADE");
+		await client.query("CREATE SCHEMA public");
+		await client.query("GRANT ALL ON SCHEMA public TO postgres");
+		await client.query("GRANT ALL ON SCHEMA public TO public");
+	} finally {
+		await client.end();
+	}
+
+	// 2. Apply committed Drizzle migration chain.
+	try {
+		execFileSync(
+			"bunx",
+			["drizzle-kit", "migrate", "--config", "drizzle.config.dev.ts"],
+			{
+				cwd: dbPackageRoot,
+				stdio: "inherit",
+				env: { ...process.env, DATABASE_URL: connectionString },
+			}
+		);
 	} catch (error) {
 		const fallback = path.resolve(repoRoot, "node_modules/.bin/drizzle-kit");
 		if (!existsSync(fallback)) {
 			throw error;
 		}
-		execFileSync(fallback, ["push", "--config", "drizzle.config.dev.ts"], {
-			cwd: dbPackageRoot,
-			stdio: "inherit",
-			env: { ...process.env, DATABASE_URL: connectionString },
-		});
+		execFileSync(
+			fallback,
+			["migrate", "--config", "drizzle.config.dev.ts"],
+			{
+				cwd: dbPackageRoot,
+				stdio: "inherit",
+				env: { ...process.env, DATABASE_URL: connectionString },
+			}
+		);
 	}
 };
 
@@ -86,7 +120,7 @@ export const bootstrapLocalE2EDatabase = async ({ anchorDate } = {}) => {
 		DEFAULT_DATABASE_URL;
 
 	await waitForDatabase({ connectionString });
-	pushSchema(connectionString);
+	await resetAndMigrateSchema(connectionString);
 
 	execFileSync(
 		"node",
