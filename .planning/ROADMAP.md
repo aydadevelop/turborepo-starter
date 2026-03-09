@@ -96,9 +96,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: Extract booking intake and booking-record shaping from brownfield truth sources
-- [ ] 05-02: Implement org-safe booking lifecycle workflows and operator review surfaces
-- [ ] 05-03: Add customer booking-history access rules and booking-to-org association checks
+- [ ] 05-01-PLAN.md — Scaffold `@my-app/booking` (listOrgBookings, getOrgBooking, listCustomerBookings) + add RBAC `booking` resource to all org roles
+- [ ] 05-02-PLAN.md — TDD `createBooking` (slot check + quote integration) and `updateBookingStatus` (lifecycle state machine)
+- [ ] 05-03-PLAN.md — Wire booking through oRPC contracts and thin handlers in `packages/api` (operator + customer surfaces)
 
 ### Phase 6: Payments, Notifications & Support Operations
 **Goal**: Money movement and post-booking operations behave reliably through provider integrations, event-driven notifications, and support flows.
