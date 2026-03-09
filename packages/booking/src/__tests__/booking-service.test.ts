@@ -229,13 +229,17 @@ const BK2_PUB_BLOCKED_ID = "bk2-pub-blocked";
 const BK2_PUB_NO_PRICING_ID = "bk2-pub-no-pricing";
 const BK2_PROFILE_ID = "bk2-pricing-profile-1";
 
-// Slot times that don't overlap with existing bookings in the first test DB
+// Slot times far in the future — no overlap with seed bookings
 const T_FREE_START = new Date("2030-01-15T10:00:00Z");
 const T_FREE_END = new Date("2030-01-15T12:00:00Z");
 const T_BLOCKED_START = new Date("2030-01-16T10:00:00Z");
 const T_BLOCKED_END = new Date("2030-01-16T12:00:00Z");
 const T_NO_PRICING_START = new Date("2030-01-17T10:00:00Z");
 const T_NO_PRICING_END = new Date("2030-01-17T12:00:00Z");
+
+// Past timestamps for updateBookingStatus seed bookings — no overlap with createBooking test slots
+const SEED_SLOT_START = new Date("2025-06-01T10:00:00Z");
+const SEED_SLOT_END = new Date("2025-06-01T12:00:00Z");
 
 const BK2_PENDING_1_ID = "bk2-pending-1";
 const BK2_CONFIRMED_1_ID = "bk2-confirmed-1";
@@ -323,8 +327,8 @@ const testDbState2 = bootstrapTestDatabase({
 			publicationId: BK2_PUB_FREE_ID,
 			merchantOrganizationId: BK2_ORG_ID,
 			source: "manual" as const,
-			startsAt: T_FREE_START,
-			endsAt: T_FREE_END,
+			startsAt: SEED_SLOT_START,
+			endsAt: SEED_SLOT_END,
 			basePriceCents: 12_000,
 			totalPriceCents: 12_000,
 			currency: "RUB",
