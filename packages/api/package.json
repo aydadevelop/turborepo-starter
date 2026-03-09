@@ -37,10 +37,12 @@
   "dependencies": {
     "@my-app/api-contract": "workspace:*",
     "@my-app/auth": "workspace:*",
+    "@my-app/availability": "workspace:*",
     "@my-app/catalog": "workspace:*",
     "@my-app/db": "workspace:*",
     "@my-app/env": "workspace:*",
     "@my-app/notifications": "workspace:*",
+    "@my-app/pricing": "workspace:*",
     "@my-app/queue": "workspace:*",
     "@orpc/server": "^1.12.2",
     "drizzle-orm": "1.0.0-beta.16-2ffd1a5",

@@ -6,10 +6,12 @@ import {
 	sessionProcedure,
 } from "../index";
 import { adminRouter } from "./admin/router";
+import { availabilityRouter } from "./availability";
 import { consentRouter } from "./consent";
 import { listingRouter } from "./listing";
 import { notificationsRouter } from "./notifications";
 import { paymentsRouter } from "./payments";
+import { pricingRouter } from "./pricing";
 import { storefrontRouter } from "./storefront";
 import { tasksRouter } from "./tasks";
 import { todoRouter } from "./todo";
@@ -43,10 +45,12 @@ export const appRouter = publicProcedure.router({
 		};
 	}),
 	admin: adminRouter,
+	availability: availabilityRouter,
 	consent: consentRouter,
 	listing: listingRouter,
 	notifications: notificationsRouter,
 	payments: paymentsRouter,
+	pricing: pricingRouter,
 	storefront: storefrontRouter,
 	tasks: tasksRouter,
 	todo: todoRouter,

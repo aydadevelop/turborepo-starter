@@ -2,10 +2,12 @@ import type { ContractRouterClient } from "@orpc/contract";
 import { oc } from "@orpc/contract";
 import z from "zod";
 import { adminContract } from "./admin/router";
+import { availabilityContract } from "./availability";
 import { consentContract } from "./consent";
 import { listingContract } from "./listing";
 import { notificationsContract } from "./notifications";
 import { paymentsContract } from "./payments";
+import { pricingContract } from "./pricing";
 import { storefrontContract } from "./storefront";
 import { tasksContract } from "./tasks";
 import { todoContract } from "./todo";
@@ -63,10 +65,12 @@ export const appContract = {
 		),
 
 	admin: adminContract,
+	availability: availabilityContract,
 	consent: consentContract,
 	listing: listingContract,
 	notifications: notificationsContract,
 	payments: paymentsContract,
+	pricing: pricingContract,
 	storefront: storefrontContract,
 	tasks: tasksContract,
 	todo: todoContract,
