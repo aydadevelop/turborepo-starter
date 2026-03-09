@@ -6,6 +6,18 @@
  * e2e-web db-client.ts (test namespace cleanup).
  */
 export const CLEANUP_TABLES = [
+	// marketplace (children first, parents last)
+	"booking_cancellation_request",
+	"booking",
+	"listing_publication",
+	"cancellation_policy",
+	"listing_pricing_profile",
+	"listing",
+	"organization_payment_config",
+	"organization_settings",
+	"payment_provider_config",
+	"listing_type_config",
+	// auth + app tables
 	"assistant_message",
 	"assistant_chat",
 	"notification_in_app",

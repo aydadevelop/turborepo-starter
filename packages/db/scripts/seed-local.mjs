@@ -336,6 +336,154 @@ const buildSeedData = ({ anchorDate, adminPasswordHash, operatorPasswordHash }) 
 			],
 			now
 		),
+
+		// ── Marketplace ──────────────────────────────────────────────────────────
+
+		listingTypeConfigs: withCommon(
+			[
+				{
+					id: "seed_listing_type_vessel",
+					slug: "seed_listing_type_vessel",
+					label: "Vessel",
+					metadata_json_schema: toJson({ type: "object", properties: {} }),
+					is_active: true,
+					sort_order: 1,
+				},
+			],
+			now
+		),
+		orgSettings: withCommon(
+			[
+				{
+					id: "seed_org_starter_settings",
+					organization_id: starterOrgId,
+					timezone: "UTC",
+					default_currency: "RUB",
+					default_language: "ru",
+					search_language: "russian",
+				},
+			],
+			now
+		),
+		listings: withCommon(
+			[
+				{
+					id: "seed_listing_vessel_1",
+					organization_id: starterOrgId,
+					listing_type_slug: "seed_listing_type_vessel",
+					name: "Vessel One",
+					slug: "vessel-one",
+					description: "A standard test vessel listing.",
+					minimum_duration_minutes: 120,
+					minimum_notice_minutes: 60,
+					timezone: "UTC",
+					status: "active",
+					is_active: true,
+				},
+			],
+			now
+		),
+		listingPricingProfiles: withCommon(
+			[
+				{
+					id: "seed_pricing_vessel_1",
+					listing_id: "seed_listing_vessel_1",
+					name: "Standard Hourly",
+					currency: "RUB",
+					base_hourly_price_cents: 300_000,
+					minimum_hours: 2,
+					deposit_bps: 3000,
+					is_default: true,
+				},
+			],
+			now
+		),
+		paymentProviderConfigs: withCommon(
+			[
+				{
+					id: "seed_payment_provider_config_stripe",
+					provider: "stripe",
+					display_name: "Stripe (test)",
+					is_active: true,
+					supported_currencies: toJson(["RUB", "USD"]),
+					sandbox_available: true,
+				},
+			],
+			now
+		),
+		orgPaymentConfigs: withCommon(
+			[
+				{
+					id: "seed_org_payment_config_stripe",
+					organization_id: starterOrgId,
+					provider_config_id: "seed_payment_provider_config_stripe",
+					provider: "stripe",
+					is_active: true,
+					encrypted_credentials: "seed-placeholder-not-real",
+					credential_key_version: 1,
+					webhook_endpoint_id: `seed_webhook_endpoint_${starterOrgId}`,
+					validation_status: "validated",
+					validated_at: now,
+				},
+			],
+			now
+		),
+		listingPublications: withCommon(
+			[
+				{
+					id: "seed_publication_vessel_1_own_site",
+					listing_id: "seed_listing_vessel_1",
+					organization_id: starterOrgId,
+					channel_type: "own_site",
+					is_active: true,
+					visibility: "public",
+					merchant_type: "platform",
+					merchant_payment_config_id: "seed_org_payment_config_stripe",
+					pricing_profile_id: "seed_pricing_vessel_1",
+				},
+			],
+			now
+		),
+		cancellationPolicies: withCommon(
+			[
+				{
+					id: "seed_cancellation_policy_standard",
+					organization_id: starterOrgId,
+					listing_id: "seed_listing_vessel_1",
+					scope: "listing",
+					name: "Standard",
+					free_window_hours: 48,
+					penalty_bps: 5000,
+					is_active: true,
+				},
+			],
+			now
+		),
+		bookings: withCommon(
+			[
+				{
+					id: "seed_booking_confirmed_1",
+					organization_id: starterOrgId,
+					listing_id: "seed_listing_vessel_1",
+					publication_id: "seed_publication_vessel_1_own_site",
+					merchant_organization_id: starterOrgId,
+					merchant_payment_config_id: "seed_org_payment_config_stripe",
+					customer_user_id: memberUserId,
+					source: "web",
+					status: "confirmed",
+					payment_status: "paid",
+					calendar_sync_status: "not_applicable",
+					starts_at: new Date(anchorDateMs + 2 * DAY_MS + 10 * HOUR_MS).toISOString(),
+					ends_at: new Date(anchorDateMs + 2 * DAY_MS + 14 * HOUR_MS).toISOString(),
+					base_price_cents: 1_200_000,
+					discount_amount_cents: 0,
+					total_price_cents: 1_200_000,
+					platform_commission_cents: 0,
+					currency: "RUB",
+				},
+			],
+			now
+		),
 	};
 };
 
@@ -390,6 +538,16 @@ const writeSeedData = async (client, seed) => {
 		["todo", seed.todos],
 		["assistant_chat", seed.assistantChats],
 		["assistant_message", seed.assistantMessages],
+		// marketplace (insert order: parents before children)
+		["listing_type_config", seed.listingTypeConfigs],
+		["organization_settings", seed.orgSettings],
+		["listing", seed.listings],
+		["listing_pricing_profile", seed.listingPricingProfiles],
+		["payment_provider_config", seed.paymentProviderConfigs],
+		["organization_payment_config", seed.orgPaymentConfigs],
+		["listing_publication", seed.listingPublications],
+		["cancellation_policy", seed.cancellationPolicies],
+		["booking", seed.bookings],
 	];
 
 	for (const [table, rows] of tableRows) {
@@ -435,6 +593,7 @@ const main = async () => {
 				`Anchor date: ${options.anchorDate}`,
 				`Organizations: ${seed.organizations.map((org) => org.slug).join(", ")}`,
 				`Users: ${seed.users.length}, notifications: ${seed.notificationEvents.length}, todos: ${seed.todos.length}`,
+				`Listings: ${seed.listings.length}, bookings: ${seed.bookings.length}`,
 				"Admin login: admin@admin.com / admin",
 				"Operator login: operator@example.com / operator",
 			].join("\n")

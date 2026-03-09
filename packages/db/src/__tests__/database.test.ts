@@ -1,6 +1,10 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+	seedMarketplaceScenario,
+	MARKETPLACE_IDS,
+} from "../test/fixtures/marketplace";
+import {
 	affiliateReferral,
 	bookingAffiliateAttribution,
 	bookingAffiliatePayout,
@@ -986,6 +990,70 @@ describe("Test Database Setup", () => {
 			const todos = await db.select().from(todo);
 			expect(users).toHaveLength(0);
 			expect(todos).toHaveLength(0);
+		});
+	});
+
+	describe("Marketplace scenario fixture", () => {
+		const fixtureDb = bootstrapTestDatabase({
+			seed: async (db) => {
+				await seedMarketplaceScenario(db, {
+					anchorDate: new Date("2026-03-15T00:00:00.000Z"),
+				});
+			},
+			seedStrategy: "beforeAll",
+		});
+		let fdb: TestDatabase;
+		beforeEach(() => {
+			fdb = fixtureDb.db;
+		});
+
+		it("seeds operator org and listing", async () => {
+			const orgs = await fdb
+				.select()
+				.from(organization)
+				.where(eq(organization.id, MARKETPLACE_IDS.operatorOrgId));
+			expect(orgs).toHaveLength(1);
+			expect(orgs[0]?.slug).toBe("starter-org");
+
+			const listings = await fdb
+				.select()
+				.from(listing)
+				.where(eq(listing.id, MARKETPLACE_IDS.listingId));
+			expect(listings).toHaveLength(1);
+			expect(listings[0]?.status).toBe("active");
+		});
+
+		it("seeds confirmed paid booking with correct amounts", async () => {
+			const bookings = await fdb
+				.select()
+				.from(booking)
+				.where(eq(booking.id, MARKETPLACE_IDS.bookingId));
+			expect(bookings).toHaveLength(1);
+			const b = bookings[0]!;
+			expect(b.status).toBe("confirmed");
+			expect(b.paymentStatus).toBe("paid");
+			expect(b.totalPriceCents).toBe(1_200_000);
+			expect(b.currency).toBe("RUB");
+		});
+
+		it("seeds active listing publication on own_site channel", async () => {
+			const pubs = await fdb
+				.select()
+				.from(listingPublication)
+				.where(eq(listingPublication.id, MARKETPLACE_IDS.publicationId));
+			expect(pubs).toHaveLength(1);
+			expect(pubs[0]?.channelType).toBe("own_site");
+			expect(pubs[0]?.isActive).toBe(true);
+		});
+
+		it("seeds cancellation policy with correct window", async () => {
+			const policies = await fdb
+				.select()
+				.from(cancellationPolicy)
+				.where(eq(cancellationPolicy.id, MARKETPLACE_IDS.cancellationPolicyId));
+			expect(policies).toHaveLength(1);
+			expect(policies[0]?.freeWindowHours).toBe(48);
+			expect(policies[0]?.penaltyBps).toBe(5000);
 		});
 	});
 });
