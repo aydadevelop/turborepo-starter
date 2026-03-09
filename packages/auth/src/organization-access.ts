@@ -9,6 +9,8 @@ export const organizationStatements = {
 	intake: ["create", "read", "update", "delete"],
 	notification: ["create", "read", "update", "delete"],
 	listing: ["create", "read", "update", "delete"],
+	availability: ["create", "read", "update", "delete"],
+	pricing: ["create", "read", "update", "delete"],
 } as const;
 
 export const organizationAccessControl = createAccessControl(
@@ -27,6 +29,8 @@ export const orgOwnerAc = organizationAccessControl.newRole({
 	intake: ["create", "read", "update", "delete"],
 	notification: ["create", "read", "update", "delete"],
 	listing: ["create", "read", "update", "delete"],
+	availability: ["create", "read", "update", "delete"],
+	pricing: ["create", "read", "update", "delete"],
 });
 
 export const orgAdminAc = organizationAccessControl.newRole({
@@ -41,6 +45,8 @@ export const orgAdminAc = organizationAccessControl.newRole({
 	intake: ["create", "read", "update", "delete"],
 	notification: ["create", "read", "update", "delete"],
 	listing: ["create", "read", "update", "delete"],
+	availability: ["create", "read", "update", "delete"],
+	pricing: ["create", "read", "update", "delete"],
 });
 
 export const managerAc = organizationAccessControl.newRole({
@@ -55,6 +61,8 @@ export const managerAc = organizationAccessControl.newRole({
 	intake: ["create", "read", "update"],
 	notification: ["create", "read", "update"],
 	listing: ["create", "read", "update"],
+	availability: ["create", "read", "update"],
+	pricing: ["create", "read", "update"],
 });
 
 export const agentAc = organizationAccessControl.newRole({
@@ -69,6 +77,8 @@ export const agentAc = organizationAccessControl.newRole({
 	intake: ["create", "read"],
 	notification: ["create", "read"],
 	listing: ["read"],
+	availability: ["read"],
+	pricing: ["read"],
 });
 
 export const memberAc = organizationAccessControl.newRole({
@@ -83,6 +93,8 @@ export const memberAc = organizationAccessControl.newRole({
 	intake: ["read"],
 	notification: ["read"],
 	listing: ["read"],
+	availability: ["read"],
+	pricing: ["read"],
 });
 
 export const customerAc = organizationAccessControl.newRole({
@@ -97,6 +109,8 @@ export const customerAc = organizationAccessControl.newRole({
 	intake: [],
 	notification: [],
 	listing: [],
+	availability: [],
+	pricing: [],
 });
 
 export const organizationRoles = {
