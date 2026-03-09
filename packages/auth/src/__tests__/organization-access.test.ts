@@ -75,3 +75,69 @@ describe("organization access roles", () => {
 		expect(result.success).toBe(false);
 	});
 });
+
+describe("listing resource permissions", () => {
+	it("allows org_owner to create listing", () => {
+		const result = organizationRoles.org_owner.authorize({
+			listing: ["create"],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("allows org_owner to delete listing", () => {
+		const result = organizationRoles.org_owner.authorize({
+			listing: ["delete"],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("allows org_admin to update listing", () => {
+		const result = organizationRoles.org_admin.authorize({
+			listing: ["update"],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("does not allow manager to delete listing", () => {
+		const result = organizationRoles.manager.authorize({
+			listing: ["delete"],
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("allows manager to create listing", () => {
+		const result = organizationRoles.manager.authorize({
+			listing: ["create"],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("does not allow agent to create listing", () => {
+		const result = organizationRoles.agent.authorize({
+			listing: ["create"],
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("allows agent to read listing", () => {
+		const result = organizationRoles.agent.authorize({
+			listing: ["read"],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("does not allow customer any listing permissions", () => {
+		const result = organizationRoles.customer.authorize({
+			listing: ["read"],
+		});
+
+		expect(result.success).toBe(false);
+	});
+});

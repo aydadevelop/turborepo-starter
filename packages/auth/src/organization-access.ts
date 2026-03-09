@@ -8,6 +8,7 @@ export const organizationStatements = {
 	support: ["create", "read", "update", "delete"],
 	intake: ["create", "read", "update", "delete"],
 	notification: ["create", "read", "update", "delete"],
+	listing: ["create", "read", "update", "delete"],
 } as const;
 
 export const organizationAccessControl = createAccessControl(
@@ -25,6 +26,7 @@ export const orgOwnerAc = organizationAccessControl.newRole({
 	support: ["create", "read", "update", "delete"],
 	intake: ["create", "read", "update", "delete"],
 	notification: ["create", "read", "update", "delete"],
+	listing: ["create", "read", "update", "delete"],
 });
 
 export const orgAdminAc = organizationAccessControl.newRole({
@@ -38,6 +40,7 @@ export const orgAdminAc = organizationAccessControl.newRole({
 	support: ["create", "read", "update", "delete"],
 	intake: ["create", "read", "update", "delete"],
 	notification: ["create", "read", "update", "delete"],
+	listing: ["create", "read", "update", "delete"],
 });
 
 export const managerAc = organizationAccessControl.newRole({
@@ -51,6 +54,7 @@ export const managerAc = organizationAccessControl.newRole({
 	support: ["create", "read", "update"],
 	intake: ["create", "read", "update"],
 	notification: ["create", "read", "update"],
+	listing: ["create", "read", "update"],
 });
 
 export const agentAc = organizationAccessControl.newRole({
@@ -64,6 +68,7 @@ export const agentAc = organizationAccessControl.newRole({
 	support: ["create", "read", "update"],
 	intake: ["create", "read"],
 	notification: ["create", "read"],
+	listing: ["read"],
 });
 
 export const memberAc = organizationAccessControl.newRole({
@@ -77,6 +82,7 @@ export const memberAc = organizationAccessControl.newRole({
 	support: ["read"],
 	intake: ["read"],
 	notification: ["read"],
+	listing: ["read"],
 });
 
 export const customerAc = organizationAccessControl.newRole({
@@ -90,6 +96,7 @@ export const customerAc = organizationAccessControl.newRole({
 	support: ["read"],
 	intake: [],
 	notification: [],
+	listing: [],
 });
 
 export const organizationRoles = {
