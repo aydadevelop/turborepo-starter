@@ -64,9 +64,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Harden org-aware access and RBAC acceptance around marketplace listing surfaces
-- [ ] 03-02: Extract generic listing and publication domain behavior behind package-owned boundaries
-- [ ] 03-03: Deliver storefront browse, search/filter, and listing-detail slices with TDD coverage
+- [ ] 03-01-PLAN.md — Add `listing` resource to RBAC statements and extend all org roles with listing permissions
+- [ ] 03-02-PLAN.md — Scaffold `@my-app/catalog` (listing CRUD + publication services) and wire `listing` oRPC contract + handlers
+- [ ] 03-03-PLAN.md — TDD storefront service (searchPublishedListings, getPublishedListing) + public API routes + SvelteKit browse and detail pages
 
 ### Phase 4: Availability & Pricing Core
 **Goal**: Listings expose trustworthy availability and transparent quotes through package-owned pricing and scheduling rules.
