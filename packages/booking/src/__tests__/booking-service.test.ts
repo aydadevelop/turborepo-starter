@@ -1,14 +1,22 @@
 import { organization, user } from "@my-app/db/schema/auth";
+import { listingAvailabilityBlock } from "@my-app/db/schema/availability";
 import {
 	booking,
 	listing,
+	listingPricingProfile,
 	listingPublication,
 	listingTypeConfig,
 } from "@my-app/db/schema/marketplace";
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import { describe, expect, it } from "vitest";
 
-import { getOrgBooking, listCustomerBookings, listOrgBookings } from "../booking-service";
+import {
+	createBooking,
+	getOrgBooking,
+	listCustomerBookings,
+	listOrgBookings,
+	updateBookingStatus,
+} from "../booking-service";
 import type { Db } from "../types";
 
 const ORG_ID = "bk-org-1";
@@ -207,5 +215,304 @@ describe("listCustomerBookings", () => {
 		const ids = rows.map((r) => r.id);
 		expect(ids).toContain(BK_2_ID);
 		expect(ids).toContain(BK_3_ID);
+	});
+});
+
+// ===== Plan 05-02: createBooking + updateBookingStatus TDD =====
+
+const BK2_ORG_ID = "bk2-org-1";
+const BK2_LISTING_FREE_ID = "bk2-listing-free";
+const BK2_LISTING_BLOCKED_ID = "bk2-listing-blocked";
+const BK2_LISTING_NO_PRICING_ID = "bk2-listing-no-pricing";
+const BK2_PUB_FREE_ID = "bk2-pub-free";
+const BK2_PUB_BLOCKED_ID = "bk2-pub-blocked";
+const BK2_PUB_NO_PRICING_ID = "bk2-pub-no-pricing";
+const BK2_PROFILE_ID = "bk2-pricing-profile-1";
+
+// Slot times that don't overlap with existing bookings in the first test DB
+const T_FREE_START = new Date("2030-01-15T10:00:00Z");
+const T_FREE_END = new Date("2030-01-15T12:00:00Z");
+const T_BLOCKED_START = new Date("2030-01-16T10:00:00Z");
+const T_BLOCKED_END = new Date("2030-01-16T12:00:00Z");
+const T_NO_PRICING_START = new Date("2030-01-17T10:00:00Z");
+const T_NO_PRICING_END = new Date("2030-01-17T12:00:00Z");
+
+const BK2_PENDING_1_ID = "bk2-pending-1";
+const BK2_CONFIRMED_1_ID = "bk2-confirmed-1";
+const BK2_IN_PROGRESS_1_ID = "bk2-in-progress-1";
+const BK2_COMPLETED_1_ID = "bk2-completed-1";
+const BK2_CANCELLED_1_ID = "bk2-cancelled-1";
+const BK2_REJECTED_1_ID = "bk2-rejected-1";
+
+const testDbState2 = bootstrapTestDatabase({
+	seed: async (db: TestDatabase) => {
+		await db.insert(listingTypeConfig).values({
+			id: crypto.randomUUID(),
+			slug: "bk2-test-type",
+			label: "BK2 Test Type",
+			metadataJsonSchema: {},
+			isActive: true,
+			sortOrder: 0,
+		});
+		await db.insert(organization).values([{ id: BK2_ORG_ID, name: "BK2 Org", slug: "bk2-org" }]);
+		await db.insert(listing).values([
+			{
+				id: BK2_LISTING_FREE_ID,
+				organizationId: BK2_ORG_ID,
+				listingTypeSlug: "bk2-test-type",
+				name: "BK2 Free Listing",
+				slug: "bk2-listing-free",
+			},
+			{
+				id: BK2_LISTING_BLOCKED_ID,
+				organizationId: BK2_ORG_ID,
+				listingTypeSlug: "bk2-test-type",
+				name: "BK2 Blocked Listing",
+				slug: "bk2-listing-blocked",
+			},
+			{
+				id: BK2_LISTING_NO_PRICING_ID,
+				organizationId: BK2_ORG_ID,
+				listingTypeSlug: "bk2-test-type",
+				name: "BK2 No Pricing Listing",
+				slug: "bk2-listing-no-pricing",
+			},
+		]);
+		await db.insert(listingPublication).values([
+			{
+				id: BK2_PUB_FREE_ID,
+				listingId: BK2_LISTING_FREE_ID,
+				organizationId: BK2_ORG_ID,
+				channelType: "own_site",
+			},
+			{
+				id: BK2_PUB_BLOCKED_ID,
+				listingId: BK2_LISTING_BLOCKED_ID,
+				organizationId: BK2_ORG_ID,
+				channelType: "own_site",
+			},
+			{
+				id: BK2_PUB_NO_PRICING_ID,
+				listingId: BK2_LISTING_NO_PRICING_ID,
+				organizationId: BK2_ORG_ID,
+				channelType: "own_site",
+			},
+		]);
+		// Default pricing profile only for the free listing
+		await db.insert(listingPricingProfile).values({
+			id: BK2_PROFILE_ID,
+			listingId: BK2_LISTING_FREE_ID,
+			name: "Default Profile",
+			currency: "RUB",
+			baseHourlyPriceCents: 6_000,
+			isDefault: true,
+		});
+		// Block the blocked listing's slot
+		await db.insert(listingAvailabilityBlock).values({
+			id: crypto.randomUUID(),
+			listingId: BK2_LISTING_BLOCKED_ID,
+			startsAt: T_BLOCKED_START,
+			endsAt: T_BLOCKED_END,
+			source: "manual",
+			isActive: true,
+		});
+		// Seed bookings in various statuses for updateBookingStatus tests
+		const bkBase = {
+			organizationId: BK2_ORG_ID,
+			listingId: BK2_LISTING_FREE_ID,
+			publicationId: BK2_PUB_FREE_ID,
+			merchantOrganizationId: BK2_ORG_ID,
+			source: "manual" as const,
+			startsAt: T_FREE_START,
+			endsAt: T_FREE_END,
+			basePriceCents: 12_000,
+			totalPriceCents: 12_000,
+			currency: "RUB",
+		};
+		await db.insert(booking).values([
+			{ ...bkBase, id: BK2_PENDING_1_ID, status: "pending" },
+			{ ...bkBase, id: BK2_CONFIRMED_1_ID, status: "confirmed" },
+			{ ...bkBase, id: BK2_IN_PROGRESS_1_ID, status: "in_progress" },
+			{ ...bkBase, id: BK2_COMPLETED_1_ID, status: "completed" },
+			{ ...bkBase, id: BK2_CANCELLED_1_ID, status: "cancelled" },
+			{ ...bkBase, id: BK2_REJECTED_1_ID, status: "rejected" },
+		]);
+	},
+	seedStrategy: "beforeAll",
+});
+
+const getDb2 = () => testDbState2.db as unknown as Db;
+
+// ----- createBooking -----
+
+describe("createBooking", () => {
+	it("creates a booking for a free slot with pricing profile", async () => {
+		const row = await createBooking(
+			{
+				organizationId: BK2_ORG_ID,
+				listingId: BK2_LISTING_FREE_ID,
+				publicationId: BK2_PUB_FREE_ID,
+				startsAt: T_FREE_START,
+				endsAt: T_FREE_END,
+				source: "web",
+				currency: "RUB",
+			},
+			getDb2(),
+		);
+		expect(row.status).toBe("pending");
+		expect(row.paymentStatus).toBe("unpaid");
+		expect(row.calendarSyncStatus).toBe("pending");
+		expect(row.basePriceCents).toBeGreaterThan(0);
+		expect(row.totalPriceCents).toBeGreaterThan(0);
+		expect(row.organizationId).toBe(BK2_ORG_ID);
+	});
+
+	it("throws SLOT_UNAVAILABLE when slot is blocked", async () => {
+		await expect(
+			createBooking(
+				{
+					organizationId: BK2_ORG_ID,
+					listingId: BK2_LISTING_BLOCKED_ID,
+					publicationId: BK2_PUB_BLOCKED_ID,
+					startsAt: T_BLOCKED_START,
+					endsAt: T_BLOCKED_END,
+					source: "web",
+					currency: "RUB",
+				},
+				getDb2(),
+			),
+		).rejects.toThrow("SLOT_UNAVAILABLE");
+	});
+
+	it("throws NO_PRICING_PROFILE when listing has no default profile", async () => {
+		await expect(
+			createBooking(
+				{
+					organizationId: BK2_ORG_ID,
+					listingId: BK2_LISTING_NO_PRICING_ID,
+					publicationId: BK2_PUB_NO_PRICING_ID,
+					startsAt: T_NO_PRICING_START,
+					endsAt: T_NO_PRICING_END,
+					source: "web",
+					currency: "RUB",
+				},
+				getDb2(),
+			),
+		).rejects.toThrow("NO_PRICING_PROFILE");
+	});
+});
+
+// ----- updateBookingStatus -----
+
+describe("updateBookingStatus", () => {
+	it("transitions pending → confirmed", async () => {
+		const row = await updateBookingStatus(
+			{ id: BK2_PENDING_1_ID, organizationId: BK2_ORG_ID, status: "confirmed" },
+			getDb2(),
+		);
+		expect(row.status).toBe("confirmed");
+	});
+
+	it("transitions pending → rejected", async () => {
+		// Use a fresh pending booking to avoid state conflicts
+		const created = await createBooking(
+			{
+				organizationId: BK2_ORG_ID,
+				listingId: BK2_LISTING_FREE_ID,
+				publicationId: BK2_PUB_FREE_ID,
+				startsAt: new Date("2030-02-01T10:00:00Z"),
+				endsAt: new Date("2030-02-01T12:00:00Z"),
+				source: "manual",
+				currency: "RUB",
+			},
+			getDb2(),
+		);
+		const row = await updateBookingStatus(
+			{ id: created.id, organizationId: BK2_ORG_ID, status: "rejected" },
+			getDb2(),
+		);
+		expect(row.status).toBe("rejected");
+	});
+
+	it("transitions pending → cancelled and sets cancelledAt", async () => {
+		const created = await createBooking(
+			{
+				organizationId: BK2_ORG_ID,
+				listingId: BK2_LISTING_FREE_ID,
+				publicationId: BK2_PUB_FREE_ID,
+				startsAt: new Date("2030-02-02T10:00:00Z"),
+				endsAt: new Date("2030-02-02T12:00:00Z"),
+				source: "manual",
+				currency: "RUB",
+			},
+			getDb2(),
+		);
+		const row = await updateBookingStatus(
+			{
+				id: created.id,
+				organizationId: BK2_ORG_ID,
+				status: "cancelled",
+				cancellationReason: "changed mind",
+			},
+			getDb2(),
+		);
+		expect(row.status).toBe("cancelled");
+		expect(row.cancelledAt).toBeTruthy();
+		expect(row.cancellationReason).toBe("changed mind");
+	});
+
+	it("transitions confirmed → in_progress", async () => {
+		const row = await updateBookingStatus(
+			{ id: BK2_CONFIRMED_1_ID, organizationId: BK2_ORG_ID, status: "in_progress" },
+			getDb2(),
+		);
+		expect(row.status).toBe("in_progress");
+	});
+
+	it("transitions in_progress → completed", async () => {
+		const row = await updateBookingStatus(
+			{ id: BK2_IN_PROGRESS_1_ID, organizationId: BK2_ORG_ID, status: "completed" },
+			getDb2(),
+		);
+		expect(row.status).toBe("completed");
+	});
+
+	it("throws INVALID_TRANSITION for pending → completed", async () => {
+		const created = await createBooking(
+			{
+				organizationId: BK2_ORG_ID,
+				listingId: BK2_LISTING_FREE_ID,
+				publicationId: BK2_PUB_FREE_ID,
+				startsAt: new Date("2030-02-03T10:00:00Z"),
+				endsAt: new Date("2030-02-03T12:00:00Z"),
+				source: "manual",
+				currency: "RUB",
+			},
+			getDb2(),
+		);
+		await expect(
+			updateBookingStatus(
+				{ id: created.id, organizationId: BK2_ORG_ID, status: "completed" },
+				getDb2(),
+			),
+		).rejects.toThrow("INVALID_TRANSITION");
+	});
+
+	it("throws INVALID_TRANSITION for terminal state (completed → confirmed)", async () => {
+		await expect(
+			updateBookingStatus(
+				{ id: BK2_COMPLETED_1_ID, organizationId: BK2_ORG_ID, status: "confirmed" },
+				getDb2(),
+			),
+		).rejects.toThrow("INVALID_TRANSITION");
+	});
+
+	it("throws NOT_FOUND for booking in wrong org", async () => {
+		await expect(
+			updateBookingStatus(
+				{ id: BK2_PENDING_1_ID, organizationId: "wrong-org", status: "confirmed" },
+				getDb2(),
+			),
+		).rejects.toThrow("NOT_FOUND");
 	});
 });
