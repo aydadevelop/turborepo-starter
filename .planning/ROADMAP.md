@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Schema Baseline & Replayability** - Lock the database into reproducible migrations, deterministic seeds, snapshots, and real-Postgres verification.
 - [ ] **Phase 2: Events, Workflows & Parity Foundations** - Establish typed side-effect seams and a declared truth-source/parity harness before domain extraction.
 - [x] **Phase 3: Org Access, Catalog & Storefront** - Deliver org-safe operator access plus generic listing creation, publication, browse, and detail flows.
-- [ ] **Phase 4: Availability & Pricing Core** - Deliver schedulable availability, overlap safety, pricing profiles, and transparent quote generation.
+- [x] **Phase 4: Availability & Pricing Core** - Deliver schedulable availability, overlap safety, pricing profiles, and transparent quote generation.
 - [ ] **Phase 5: Booking Core & Customer Access** - Deliver booking intake, org-safe lifecycle workflows, and customer-visible booking access boundaries.
 - [ ] **Phase 6: Payments, Notifications & Support Operations** - Deliver payment collection/reconciliation, lifecycle notifications, support threads, and cancellation/refund handling.
 
@@ -80,9 +80,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Scaffold `@my-app/availability` (CRUD for rules/blocks/exceptions + slot overlap detection) and add RBAC availability/pricing resources
-- [ ] 04-02-PLAN.md — TDD `@my-app/pricing` (pricing profiles + rule CRUD + pure `calculateQuote` with transparent breakdown)
-- [ ] 04-03-PLAN.md — Wire availability and pricing through oRPC contracts and thin handlers in `packages/api`
+- [x] 04-01-PLAN.md — Scaffold `@my-app/availability` (CRUD for rules/blocks/exceptions + slot overlap detection) and add RBAC availability/pricing resources
+- [x] 04-02-PLAN.md — TDD `@my-app/pricing` (pricing profiles + rule CRUD + pure `calculateQuote` with transparent breakdown)
+- [x] 04-03-PLAN.md — Wire availability and pricing through oRPC contracts and thin handlers in `packages/api`
 
 ### Phase 5: Booking Core & Customer Access
 **Goal**: Customers can create bookings for available inventory, operators can manage lifecycle state safely, and access boundaries stay org-correct.

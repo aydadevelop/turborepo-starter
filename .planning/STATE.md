@@ -6,9 +6,9 @@ status: active
 last_updated: "2026-03-10"
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  completed_phases: 4
+  total_plans: 12
+  completed_plans: 12
 ---
 
 # Project State
@@ -22,18 +22,18 @@ See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 ## Current Position
 
-Phase: 3 of 6 (Org Access, Catalog & Storefront) — COMPLETE
-Plan: 9 of 9 total plans complete
-Status: Phase 3 complete; Phase 4 ready for planning
-Last activity: 2026-03-10 — Phase 3 executed: RBAC listing resource, catalog package, storefront service, oRPC contracts wired, SvelteKit listings pages
+Phase: 4 of 6 (Availability & Pricing Core) — COMPLETE
+Plan: 12 of 12 total plans complete
+Status: Phase 4 complete; Phase 5 ready for planning
+Last activity: 2026-03-10 — Phase 4 executed: availability package (9 functions + 15 tests), pricing package (TDD, 10 tests), oRPC contracts and thin handlers wired for both domains, RBAC updated with availability+pricing resources
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Phases completed: 3
+- Total plans completed: 12
+- Phases completed: 4
 
 **By Phase:**
 
@@ -42,7 +42,7 @@ Progress: [█████░░░░░] 50%
 | 01 — Schema Baseline & Replayability | 3 | ✅ Complete |
 | 02 — Auth, RBAC & Multi-tenancy | 3 | ✅ Complete |
 | 03 — Org Access, Catalog & Storefront | 3 | ✅ Complete |
-| 04 — Availability & Pricing Core | TBD | ⬜ Not planned |
+| 04 — Availability & Pricing Core | 3 | ✅ Complete |
 | 05 — Booking Flow | TBD | ⬜ Not planned |
 | 06 — Payments & Notifications | TBD | ⬜ Not planned |
 
@@ -71,5 +71,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Phase 3 complete; Phase 4 ready for `/gsd-plan-phase 4`
+Stopped at: Phase 4 complete; Phase 5 ready for `/gsd-plan-phase 5`
 Resume file: None
