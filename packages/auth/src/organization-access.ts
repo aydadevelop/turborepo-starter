@@ -11,6 +11,7 @@ export const organizationStatements = {
 	listing: ["create", "read", "update", "delete"],
 	availability: ["create", "read", "update", "delete"],
 	pricing: ["create", "read", "update", "delete"],
+	booking: ["create", "read", "update", "delete"],
 } as const;
 
 export const organizationAccessControl = createAccessControl(
@@ -31,6 +32,7 @@ export const orgOwnerAc = organizationAccessControl.newRole({
 	listing: ["create", "read", "update", "delete"],
 	availability: ["create", "read", "update", "delete"],
 	pricing: ["create", "read", "update", "delete"],
+	booking: ["create", "read", "update", "delete"],
 });
 
 export const orgAdminAc = organizationAccessControl.newRole({
@@ -47,6 +49,7 @@ export const orgAdminAc = organizationAccessControl.newRole({
 	listing: ["create", "read", "update", "delete"],
 	availability: ["create", "read", "update", "delete"],
 	pricing: ["create", "read", "update", "delete"],
+	booking: ["create", "read", "update", "delete"],
 });
 
 export const managerAc = organizationAccessControl.newRole({
@@ -63,6 +66,7 @@ export const managerAc = organizationAccessControl.newRole({
 	listing: ["create", "read", "update"],
 	availability: ["create", "read", "update"],
 	pricing: ["create", "read", "update"],
+	booking: ["create", "read", "update", "delete"],
 });
 
 export const agentAc = organizationAccessControl.newRole({
@@ -79,6 +83,7 @@ export const agentAc = organizationAccessControl.newRole({
 	listing: ["read"],
 	availability: ["read"],
 	pricing: ["read"],
+	booking: ["read"],
 });
 
 export const memberAc = organizationAccessControl.newRole({
@@ -95,6 +100,7 @@ export const memberAc = organizationAccessControl.newRole({
 	listing: ["read"],
 	availability: ["read"],
 	pricing: ["read"],
+	booking: ["read"],
 });
 
 export const customerAc = organizationAccessControl.newRole({
@@ -111,6 +117,7 @@ export const customerAc = organizationAccessControl.newRole({
 	listing: [],
 	availability: [],
 	pricing: [],
+	booking: [],
 });
 
 export const organizationRoles = {
