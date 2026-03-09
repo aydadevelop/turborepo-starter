@@ -6,6 +6,7 @@ import { consentContract } from "./consent";
 import { listingContract } from "./listing";
 import { notificationsContract } from "./notifications";
 import { paymentsContract } from "./payments";
+import { storefrontContract } from "./storefront";
 import { tasksContract } from "./tasks";
 import { todoContract } from "./todo";
 
@@ -66,6 +67,7 @@ export const appContract = {
 	listing: listingContract,
 	notifications: notificationsContract,
 	payments: paymentsContract,
+	storefront: storefrontContract,
 	tasks: tasksContract,
 	todo: todoContract,
 };

@@ -10,6 +10,7 @@ import { consentRouter } from "./consent";
 import { listingRouter } from "./listing";
 import { notificationsRouter } from "./notifications";
 import { paymentsRouter } from "./payments";
+import { storefrontRouter } from "./storefront";
 import { tasksRouter } from "./tasks";
 import { todoRouter } from "./todo";
 
@@ -46,6 +47,7 @@ export const appRouter = publicProcedure.router({
 	listing: listingRouter,
 	notifications: notificationsRouter,
 	payments: paymentsRouter,
+	storefront: storefrontRouter,
 	tasks: tasksRouter,
 	todo: todoRouter,
 });
