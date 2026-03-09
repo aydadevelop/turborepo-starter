@@ -413,6 +413,21 @@
         "ultracite": "^7.2.3",
       },
     },
+    "packages/workflows": {
+      "name": "@my-app/workflows",
+      "dependencies": {
+        "@my-app/db": "workspace:*",
+        "@my-app/events": "workspace:*",
+        "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "^2.4.6",
+        "@my-app/config": "workspace:*",
+        "@my-app/vitest-config": "workspace:*",
+        "typescript": "^5",
+        "vitest": "^4.0.18",
+      },
+    },
   },
   "overrides": {
     "@better-auth/core": "^1.5.0",
@@ -702,6 +717,8 @@
     "@my-app/ui": ["@my-app/ui@workspace:packages/ui"],
 
     "@my-app/vitest-config": ["@my-app/vitest-config@workspace:packages/vitest-config"],
+
+    "@my-app/workflows": ["@my-app/workflows@workspace:packages/workflows"],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.1", "", { "dependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1", "@tybys/wasm-util": "^0.10.1" } }, "sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A=="],
 

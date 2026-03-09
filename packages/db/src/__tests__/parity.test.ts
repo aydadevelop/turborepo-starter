@@ -73,6 +73,9 @@ const PHASE_1_BASELINE_TABLES = [
 	"user",
 	"userConsent",
 	"verification",
+	// Added in 02-02: workflow execution log tables
+	"workflowExecution",
+	"workflowStepLog",
 ].sort();
 
 /**
