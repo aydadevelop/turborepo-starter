@@ -48,9 +48,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Introduce typed domain-event foundations and bridge them into current notification delivery
-- [ ] 02-02: Introduce workflow primitives for multi-step marketplace operations and compensation-safe orchestration
-- [ ] 02-03: Establish truth-source declarations and parity test harness rules for brownfield extraction
+- [ ] 02-01-PLAN.md — Scaffold @my-app/events (DomainEvent<T> bus, registerEventPusher, clearEventPushers) and wire packages/notifications as event pusher
+- [ ] 02-02-PLAN.md — Scaffold @my-app/workflows (createStep, createWorkflow, compensation engine) and add workflow execution log schema to packages/db
+- [ ] 02-03-PLAN.md — Establish parity test harness (createParityTest, ParityDeclaration) and canary check in packages/db; write parity-guide.md
 
 ### Phase 3: Org Access, Catalog & Storefront
 **Goal**: Operators can manage generic listings safely inside their organizations, and customers can discover published marketplace inventory.
