@@ -1,0 +1,565 @@
+{
+  "version": "1",
+  "source": "01-schema-baseline-replayability",
+  "exported_at": "2026-03-09T18:12:56.939Z",
+  "tables": [
+    {
+      "table": "organization",
+      "rows": [
+        {
+          "id": "seed_org_admin",
+          "name": "Admin",
+          "slug": "admin",
+          "logo": null,
+          "metadata": "{\"seedNamespace\":\"seed\"}",
+          "created_at": "2026-03-15T09:00:00.000Z"
+        },
+        {
+          "id": "seed_org_starter",
+          "name": "Starter Organization",
+          "slug": "starter-org",
+          "logo": null,
+          "metadata": "{\"seedNamespace\":\"seed\",\"tier\":\"pro\"}",
+          "created_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "user",
+      "rows": [
+        {
+          "id": "seed_user_admin",
+          "name": "Admin",
+          "email": "admin@admin.com",
+          "email_verified": true,
+          "image": null,
+          "phone_number": null,
+          "phone_number_verified": null,
+          "telegram_id": null,
+          "telegram_username": null,
+          "role": "admin",
+          "banned": false,
+          "ban_reason": null,
+          "ban_expires": null,
+          "is_anonymous": false,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        },
+        {
+          "id": "seed_user_member",
+          "name": "Member User",
+          "email": "member@example.com",
+          "email_verified": true,
+          "image": null,
+          "phone_number": null,
+          "phone_number_verified": null,
+          "telegram_id": null,
+          "telegram_username": null,
+          "role": "user",
+          "banned": false,
+          "ban_reason": null,
+          "ban_expires": null,
+          "is_anonymous": false,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        },
+        {
+          "id": "seed_user_operator",
+          "name": "Operations User",
+          "email": "operator@example.com",
+          "email_verified": true,
+          "image": null,
+          "phone_number": null,
+          "phone_number_verified": null,
+          "telegram_id": null,
+          "telegram_username": null,
+          "role": "user",
+          "banned": false,
+          "ban_reason": null,
+          "ban_expires": null,
+          "is_anonymous": false,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "account",
+      "rows": [
+        {
+          "id": "seed_account_admin_credential",
+          "account_id": "seed_user_admin",
+          "provider_id": "credential",
+          "user_id": "seed_user_admin",
+          "access_token": null,
+          "refresh_token": null,
+          "id_token": null,
+          "access_token_expires_at": null,
+          "refresh_token_expires_at": null,
+          "scope": null,
+          "password": "b4ed17e18030702907676d1907473339:d1ab357821707455743856574620a1d5ffb39a440e1fab6a8ca6d56b2490648f1937e668eb7be9a2b2a5947d57b10592d68db624b14235691908de94e53dbaae",
+          "telegram_id": null,
+          "telegram_username": null,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        },
+        {
+          "id": "seed_account_operator_credential",
+          "account_id": "seed_user_operator",
+          "provider_id": "credential",
+          "user_id": "seed_user_operator",
+          "access_token": null,
+          "refresh_token": null,
+          "id_token": null,
+          "access_token_expires_at": null,
+          "refresh_token_expires_at": null,
+          "scope": null,
+          "password": "d4a2886404de726ce702b00be0d9d1f5:513a7aa7dcffcce659ea33d00959748c8073b457dbe9b8fbd32bd9d771bfdbade937fcdfcfee07842b67418e8663a953d03168a256eab688c04164d0e48bccc1",
+          "telegram_id": null,
+          "telegram_username": null,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "member",
+      "rows": [
+        {
+          "id": "seed_member_admin",
+          "organization_id": "seed_org_admin",
+          "user_id": "seed_user_admin",
+          "role": "org_owner",
+          "created_at": "2026-03-15T09:00:00.000Z"
+        },
+        {
+          "id": "seed_member_member",
+          "organization_id": "seed_org_starter",
+          "user_id": "seed_user_member",
+          "role": "member",
+          "created_at": "2026-03-15T09:00:00.000Z"
+        },
+        {
+          "id": "seed_member_operator",
+          "organization_id": "seed_org_starter",
+          "user_id": "seed_user_operator",
+          "role": "manager",
+          "created_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "invitation",
+      "rows": [
+        {
+          "id": "seed_invitation_pending",
+          "organization_id": "seed_org_starter",
+          "email": "invitee@example.com",
+          "role": "member",
+          "status": "pending",
+          "expires_at": "2026-03-17T09:00:00.000Z",
+          "inviter_id": "seed_user_operator",
+          "created_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "user_consent",
+      "rows": [
+        {
+          "id": "seed_consent_member_service",
+          "user_id": "seed_user_member",
+          "consent_type": "service_agreement",
+          "consent_version": "2026-02-14",
+          "consented_at": "2026-03-15T09:00:00.000Z",
+          "ip_address": "127.0.0.1",
+          "user_agent": "seed-local",
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "notification_event",
+      "rows": [
+        {
+          "id": "seed_notification_event_task_1",
+          "organization_id": "seed_org_starter",
+          "actor_user_id": "seed_user_operator",
+          "event_type": "task.recurring.tick",
+          "source_type": "task",
+          "source_id": "seed-task-1",
+          "idempotency_key": "seed:task:recurring:1",
+          "payload": "{\"recipients\":[{\"userId\":\"seed_user_member\",\"title\":\"Recurring reminder\",\"body\":\"This is a seeded recurring reminder.\",\"channels\":[\"in_app\"],\"severity\":\"info\"}]}",
+          "status": "processed",
+          "processing_started_at": "2026-03-15T09:00:00.000Z",
+          "processed_at": "2026-03-15T09:00:00.000Z",
+          "failure_reason": null,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "notification_intent",
+      "rows": [
+        {
+          "id": "seed_notification_intent_task_1",
+          "event_id": "seed_notification_event_task_1",
+          "organization_id": "seed_org_starter",
+          "recipient_user_id": "seed_user_member",
+          "channel": "in_app",
+          "template_key": "task.recurring.tick",
+          "title": "Recurring reminder",
+          "body": "This is a seeded recurring reminder.",
+          "metadata": "{\"taskId\":\"seed-task-1\",\"runNumber\":1}",
+          "status": "sent",
+          "processed_at": "2026-03-15T09:00:00.000Z",
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "notification_delivery",
+      "rows": [
+        {
+          "id": "seed_notification_delivery_task_1",
+          "intent_id": "seed_notification_intent_task_1",
+          "organization_id": "seed_org_starter",
+          "provider": "in_app",
+          "provider_recipient": "seed_user_member",
+          "attempt": 1,
+          "status": "sent",
+          "provider_message_id": "seed-in-app-1",
+          "failure_reason": null,
+          "response_payload": null,
+          "sent_at": "2026-03-15T09:00:00.000Z",
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "notification_in_app",
+      "rows": [
+        {
+          "id": "seed_notification_in_app_1",
+          "event_id": "seed_notification_event_task_1",
+          "intent_id": "seed_notification_intent_task_1",
+          "organization_id": "seed_org_starter",
+          "user_id": "seed_user_member",
+          "title": "Recurring reminder",
+          "body": "This is a seeded recurring reminder.",
+          "cta_url": "/dashboard",
+          "severity": "info",
+          "metadata": "{\"taskId\":\"seed-task-1\"}",
+          "delivered_at": "2026-03-15T09:00:00.000Z",
+          "viewed_at": null,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "notification_preference",
+      "rows": [
+        {
+          "id": "seed_notification_pref_member_global",
+          "user_id": "seed_user_member",
+          "organization_id": null,
+          "organization_scope_key": "global",
+          "event_type": "*",
+          "channel": "in_app",
+          "enabled": true,
+          "quiet_hours_start": null,
+          "quiet_hours_end": null,
+          "timezone": "UTC",
+          "created_by_user_id": "seed_user_admin",
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "todo",
+      "rows": [
+        {
+          "id": 900001,
+          "text": "Review org memberships",
+          "completed": false
+        },
+        {
+          "id": 900002,
+          "text": "Verify notification delivery",
+          "completed": false
+        },
+        {
+          "id": 900003,
+          "text": "Check recurring reminder pipeline",
+          "completed": true
+        }
+      ]
+    },
+    {
+      "table": "assistant_chat",
+      "rows": [
+        {
+          "id": "seed_chat_member_1",
+          "title": "Starter onboarding",
+          "user_id": "seed_user_member",
+          "visibility": "private",
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "assistant_message",
+      "rows": [
+        {
+          "id": "seed_chat_message_member_1",
+          "chat_id": "seed_chat_member_1",
+          "role": "assistant",
+          "parts": [
+            {
+              "text": "Welcome. This starter includes auth, notifications, payments, tasks, and todo flows.",
+              "type": "text"
+            }
+          ],
+          "attachments": [],
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "listing_type_config",
+      "rows": [
+        {
+          "id": "seed_listing_type_vessel",
+          "slug": "seed_listing_type_vessel",
+          "label": "Vessel",
+          "icon": null,
+          "metadata_json_schema": {
+            "type": "object",
+            "properties": {}
+          },
+          "default_amenity_keys": null,
+          "required_fields": null,
+          "supported_pricing_models": null,
+          "is_active": true,
+          "sort_order": 1,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "organization_settings",
+      "rows": [
+        {
+          "id": "seed_org_starter_settings",
+          "organization_id": "seed_org_starter",
+          "timezone": "UTC",
+          "default_currency": "RUB",
+          "default_language": "ru",
+          "search_language": "russian",
+          "business_hours_start": 9,
+          "business_hours_end": 21,
+          "cancellation_free_window_hours": 24,
+          "cancellation_penalty_bps": 0,
+          "booking_requires_approval": false,
+          "contact_email": null,
+          "contact_phone": null,
+          "website_url": null,
+          "brand_config": null,
+          "notification_defaults": null,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "listing",
+      "rows": [
+        {
+          "id": "seed_listing_vessel_1",
+          "organization_id": "seed_org_starter",
+          "listing_type_slug": "seed_listing_type_vessel",
+          "location_id": null,
+          "name": "Vessel One",
+          "slug": "vessel-one",
+          "description": "A standard test vessel listing.",
+          "metadata": null,
+          "minimum_duration_minutes": 120,
+          "minimum_notice_minutes": 60,
+          "allow_shift_requests": true,
+          "working_hours_start": 9,
+          "working_hours_end": 21,
+          "timezone": "UTC",
+          "status": "active",
+          "is_active": true,
+          "approved_at": null,
+          "archived_at": null,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "listing_pricing_profile",
+      "rows": [
+        {
+          "id": "seed_pricing_vessel_1",
+          "listing_id": "seed_listing_vessel_1",
+          "name": "Standard Hourly",
+          "currency": "RUB",
+          "base_hourly_price_cents": 300000,
+          "minimum_hours": 2,
+          "deposit_bps": 3000,
+          "service_fee_bps": 0,
+          "affiliate_fee_bps": 0,
+          "tax_bps": 0,
+          "acquiring_fee_bps": 0,
+          "valid_from": null,
+          "valid_to": null,
+          "is_default": true,
+          "created_by_user_id": null,
+          "archived_at": null,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "payment_provider_config",
+      "rows": [
+        {
+          "id": "seed_payment_provider_config_stripe",
+          "provider": "stripe",
+          "display_name": "Stripe (test)",
+          "description": null,
+          "is_active": true,
+          "supported_currencies": [
+            "RUB",
+            "USD"
+          ],
+          "default_acquiring_fee_bps": 0,
+          "default_platform_fee_bps": 0,
+          "min_platform_fee_bps": 0,
+          "config_schema": null,
+          "sandbox_available": true,
+          "metadata": null,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "organization_payment_config",
+      "rows": [
+        {
+          "id": "seed_org_payment_config_stripe",
+          "organization_id": "seed_org_starter",
+          "provider_config_id": "seed_payment_provider_config_stripe",
+          "provider": "stripe",
+          "is_active": true,
+          "public_key": null,
+          "encrypted_credentials": "seed-placeholder-not-real",
+          "credential_key_version": 1,
+          "webhook_endpoint_id": "seed_webhook_endpoint_seed_org_starter",
+          "validated_at": "2026-03-15T09:00:00.000Z",
+          "validation_status": "validated",
+          "platform_service_fee_bps": null,
+          "payout_config": null,
+          "metadata": null,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "listing_publication",
+      "rows": [
+        {
+          "id": "seed_publication_vessel_1_own_site",
+          "listing_id": "seed_listing_vessel_1",
+          "organization_id": "seed_org_starter",
+          "channel_type": "own_site",
+          "channel_id": null,
+          "is_active": true,
+          "visibility": "public",
+          "merchant_type": "platform",
+          "merchant_payment_config_id": "seed_org_payment_config_stripe",
+          "platform_fee_bps": null,
+          "pricing_profile_id": "seed_pricing_vessel_1",
+          "display_config": null,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "cancellation_policy",
+      "rows": [
+        {
+          "id": "seed_cancellation_policy_standard",
+          "organization_id": "seed_org_starter",
+          "listing_id": "seed_listing_vessel_1",
+          "scope": "listing",
+          "name": "Standard",
+          "free_window_hours": 48,
+          "penalty_bps": 5000,
+          "late_penalty_bps": 10000,
+          "late_penalty_window_hours": 2,
+          "no_show_full_charge": true,
+          "is_active": true,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "table": "booking",
+      "rows": [
+        {
+          "id": "seed_booking_confirmed_1",
+          "organization_id": "seed_org_starter",
+          "listing_id": "seed_listing_vessel_1",
+          "publication_id": "seed_publication_vessel_1_own_site",
+          "merchant_organization_id": "seed_org_starter",
+          "merchant_payment_config_id": "seed_org_payment_config_stripe",
+          "customer_user_id": "seed_user_member",
+          "created_by_user_id": null,
+          "source": "web",
+          "status": "confirmed",
+          "payment_status": "paid",
+          "calendar_sync_status": "not_applicable",
+          "starts_at": "2026-03-17T10:00:00.000Z",
+          "ends_at": "2026-03-17T14:00:00.000Z",
+          "passengers": null,
+          "contact_name": null,
+          "contact_phone": null,
+          "contact_email": null,
+          "timezone": null,
+          "base_price_cents": 1200000,
+          "discount_amount_cents": 0,
+          "total_price_cents": 1200000,
+          "platform_commission_cents": 0,
+          "currency": "RUB",
+          "notes": null,
+          "special_requests": null,
+          "external_ref": null,
+          "cancelled_at": null,
+          "cancelled_by_user_id": null,
+          "cancellation_reason": null,
+          "refund_amount_cents": 0,
+          "metadata": null,
+          "created_at": "2026-03-15T09:00:00.000Z",
+          "updated_at": "2026-03-15T09:00:00.000Z"
+        }
+      ]
+    }
+  ]
+}
