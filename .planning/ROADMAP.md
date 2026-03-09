@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Events, Workflows & Parity Foundations** - Establish typed side-effect seams and a declared truth-source/parity harness before domain extraction.
 - [x] **Phase 3: Org Access, Catalog & Storefront** - Deliver org-safe operator access plus generic listing creation, publication, browse, and detail flows.
 - [x] **Phase 4: Availability & Pricing Core** - Deliver schedulable availability, overlap safety, pricing profiles, and transparent quote generation.
-- [ ] **Phase 5: Booking Core & Customer Access** - Deliver booking intake, org-safe lifecycle workflows, and customer-visible booking access boundaries.
+- [x] **Phase 5: Booking Core & Customer Access** - Deliver booking intake, org-safe lifecycle workflows, and customer-visible booking access boundaries.
 - [ ] **Phase 6: Payments, Notifications & Support Operations** - Deliver payment collection/reconciliation, lifecycle notifications, support threads, and cancellation/refund handling.
 
 ## Phase Details
@@ -96,9 +96,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Scaffold `@my-app/booking` (listOrgBookings, getOrgBooking, listCustomerBookings) + add RBAC `booking` resource to all org roles
-- [ ] 05-02-PLAN.md — TDD `createBooking` (slot check + quote integration) and `updateBookingStatus` (lifecycle state machine)
-- [ ] 05-03-PLAN.md — Wire booking through oRPC contracts and thin handlers in `packages/api` (operator + customer surfaces)
+- [x] 05-01-PLAN.md — Scaffold `@my-app/booking` (listOrgBookings, getOrgBooking, listCustomerBookings) + add RBAC `booking` resource to all org roles
+- [x] 05-02-PLAN.md — TDD `createBooking` (slot check + quote integration) and `updateBookingStatus` (lifecycle state machine)
+- [x] 05-03-PLAN.md — Wire booking through oRPC contracts and thin handlers in `packages/api` (operator + customer surfaces)
 
 ### Phase 6: Payments, Notifications & Support Operations
 **Goal**: Money movement and post-booking operations behave reliably through provider integrations, event-driven notifications, and support flows.

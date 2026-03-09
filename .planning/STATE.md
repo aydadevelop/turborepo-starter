@@ -6,9 +6,9 @@ status: active
 last_updated: "2026-03-10"
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
+  completed_phases: 5
+  total_plans: 15
+  completed_plans: 15
 ---
 
 # Project State
@@ -18,22 +18,22 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Operators can publish and manage flexible bookable listings, and customers can reliably discover, quote, book, pay for, and coordinate those listings through a generic marketplace flow that is testable, extensible, and safe to evolve.
-**Current focus:** Phase 4 — Availability & Pricing Core
+**Current focus:** Phase 5 — Booking Core & Customer Access — COMPLETE
 
 ## Current Position
 
-Phase: 4 of 6 (Availability & Pricing Core) — COMPLETE
-Plan: 12 of 12 total plans complete
-Status: Phase 4 complete; Phase 5 ready for planning
-Last activity: 2026-03-10 — Phase 4 executed: availability package (9 functions + 15 tests), pricing package (TDD, 10 tests), oRPC contracts and thin handlers wired for both domains, RBAC updated with availability+pricing resources
+Phase: 5 of 6 (Booking Core & Customer Access) — COMPLETE
+Plan: 15 of 15 total plans complete
+Status: Phase 5 complete; Phase 6 ready for planning
+Last activity: 2026-03-10 — Phase 5 executed: RBAC booking resource added, @my-app/booking package (5 service functions, 22 tests), oRPC contracts and thin handlers for all 5 booking procedures, AUTH-02 + AUTH-03 requirements satisfied
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Phases completed: 4
+- Total plans completed: 15
+- Phases completed: 5
 
 **By Phase:**
 
@@ -43,7 +43,7 @@ Progress: [███████░░░] 67%
 | 02 — Auth, RBAC & Multi-tenancy | 3 | ✅ Complete |
 | 03 — Org Access, Catalog & Storefront | 3 | ✅ Complete |
 | 04 — Availability & Pricing Core | 3 | ✅ Complete |
-| 05 — Booking Flow | TBD | ⬜ Not planned |
+| 05 — Booking Core & Customer Access | 3 | ✅ Complete |
 | 06 — Payments & Notifications | TBD | ⬜ Not planned |
 
 ## Accumulated Context
