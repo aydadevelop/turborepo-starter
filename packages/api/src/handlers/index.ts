@@ -7,6 +7,7 @@ import {
 } from "../index";
 import { adminRouter } from "./admin/router";
 import { availabilityRouter } from "./availability";
+import { bookingRouter } from "./booking";
 import { consentRouter } from "./consent";
 import { listingRouter } from "./listing";
 import { notificationsRouter } from "./notifications";
@@ -46,6 +47,7 @@ export const appRouter = publicProcedure.router({
 	}),
 	admin: adminRouter,
 	availability: availabilityRouter,
+	booking: bookingRouter,
 	consent: consentRouter,
 	listing: listingRouter,
 	notifications: notificationsRouter,
