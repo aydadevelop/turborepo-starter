@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Schema Baseline & Replayability** - Lock the database into reproducible migrations, deterministic seeds, snapshots, and real-Postgres verification.
 - [ ] **Phase 2: Events, Workflows & Parity Foundations** - Establish typed side-effect seams and a declared truth-source/parity harness before domain extraction.
-- [ ] **Phase 3: Org Access, Catalog & Storefront** - Deliver org-safe operator access plus generic listing creation, publication, browse, and detail flows.
+- [x] **Phase 3: Org Access, Catalog & Storefront** - Deliver org-safe operator access plus generic listing creation, publication, browse, and detail flows.
 - [ ] **Phase 4: Availability & Pricing Core** - Deliver schedulable availability, overlap safety, pricing profiles, and transparent quote generation.
 - [ ] **Phase 5: Booking Core & Customer Access** - Deliver booking intake, org-safe lifecycle workflows, and customer-visible booking access boundaries.
 - [ ] **Phase 6: Payments, Notifications & Support Operations** - Deliver payment collection/reconciliation, lifecycle notifications, support threads, and cancellation/refund handling.
@@ -64,9 +64,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Add `listing` resource to RBAC statements and extend all org roles with listing permissions
-- [ ] 03-02-PLAN.md — Scaffold `@my-app/catalog` (listing CRUD + publication services) and wire `listing` oRPC contract + handlers
-- [ ] 03-03-PLAN.md — TDD storefront service (searchPublishedListings, getPublishedListing) + public API routes + SvelteKit browse and detail pages
+- [x] 03-01-PLAN.md — Add `listing` resource to RBAC statements and extend all org roles with listing permissions
+- [x] 03-02-PLAN.md — Scaffold `@my-app/catalog` (listing CRUD + publication services) and wire `listing` oRPC contract + handlers
+- [x] 03-03-PLAN.md — TDD storefront service (searchPublishedListings, getPublishedListing) + public API routes + SvelteKit browse and detail pages
 
 ### Phase 4: Availability & Pricing Core
 **Goal**: Listings expose trustworthy availability and transparent quotes through package-owned pricing and scheduling rules.

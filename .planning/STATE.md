@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-09T19:03:25.104Z"
+status: active
+last_updated: "2026-03-10"
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_phases: 6
+  completed_phases: 3
+  total_plans: 9
+  completed_plans: 9
 ---
 
 # Project State
@@ -18,57 +18,58 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Operators can publish and manage flexible bookable listings, and customers can reliably discover, quote, book, pay for, and coordinate those listings through a generic marketplace flow that is testable, extensible, and safe to evolve.
-**Current focus:** Phase 1 — Schema Baseline & Replayability
+**Current focus:** Phase 4 — Availability & Pricing Core
 
 ## Current Position
 
-Phase: 1 of 6 (Schema Baseline & Replayability)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-03-09 — Initial roadmap created, requirements mapped, and execution sequencing locked
+Phase: 3 of 6 (Org Access, Catalog & Storefront) — COMPLETE
+Plan: 9 of 9 total plans complete
+Status: Phase 3 complete; Phase 4 ready for planning
+Last activity: 2026-03-10 — Phase 3 executed: RBAC listing resource, catalog package, storefront service, oRPC contracts wired, SvelteKit listings pages
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0.0 hours
+- Total plans completed: 9
+- Phases completed: 3
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
-
-**Recent Trend:**
-- Last 5 plans: none yet
-- Trend: Stable
+| Phase | Plans | Status |
+|-------|-------|--------|
+| 01 — Schema Baseline & Replayability | 3 | ✅ Complete |
+| 02 — Auth, RBAC & Multi-tenancy | 3 | ✅ Complete |
+| 03 — Org Access, Catalog & Storefront | 3 | ✅ Complete |
+| 04 — Availability & Pricing Core | TBD | ⬜ Not planned |
+| 05 — Booking Flow | TBD | ⬜ Not planned |
+| 06 — Payments & Notifications | TBD | ⬜ Not planned |
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in `PROJECT.md` Key Decisions table.
+Decisions are logged in `PROJECT.MD` Key Decisions table.
 Recent decisions affecting current work:
 
 - Phase 1-2 sequencing: baseline migrations, seeds/snapshots, and event/workflow rails ship before domain extraction.
 - Legacy truth rule: `cf-boat-api` supplies behavioral truth; `full-stack-cf-app` supplies stronger architecture and adapter patterns.
 - Extraction rule: legacy code is reference-only; new behavior lands behind package-owned domains and thin transport seams.
+- Catalog pattern: domain service functions accept `db` as parameter; contract-first oRPC with thin handler wiring.
+- Zod v4: `z.record(z.string(), z.unknown())` — key type argument required.
+- oRPC queryOptions: `queryOptions({ input: {...} })` — `input` key required in wrapper object.
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-- Real-Postgres verification must exist before extension-backed schema work is considered trustworthy.
-- `packages/events` and `packages/workflows` foundations are still missing and block safe extraction of booking/payment side effects.
 - Plan/schema vocabulary drift must be reconciled domain-by-domain instead of copied wholesale from docs or legacy code.
 
 ## Session Continuity
 
-Last session: 2026-03-09
-Stopped at: Initialization roadmap created; Phase 1 is ready for `/gsd-plan-phase 1`
+Last session: 2026-03-10
+Stopped at: Phase 3 complete; Phase 4 ready for `/gsd-plan-phase 4`
 Resume file: None
