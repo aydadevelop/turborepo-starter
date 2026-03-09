@@ -16,7 +16,7 @@ Operators can publish and manage flexible bookable listings, and customers can r
 - ✓ Better Auth organization membership, session context, and RBAC middleware are working foundations — existing
 - ✓ Notification event → intent → delivery pipeline exists with queue-backed processing — existing
 - ✓ PostgreSQL/Drizzle schema foundation already covers auth, notifications, assistant, and substantial marketplace modeling draft — existing
-- ✓ Dokku/Pulumi/Docker deployment baseline exists for multi-app runtime delivery — existing
+- ✓ Dokku/Pulumi/Docker/GHA deployment baseline exists for multi-app runtime delivery — existing
 
 ### Active
 
