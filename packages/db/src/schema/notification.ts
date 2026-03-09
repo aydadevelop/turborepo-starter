@@ -2,6 +2,7 @@ import {
 	boolean,
 	index,
 	integer,
+	pgEnum,
 	pgTable,
 	text,
 	timestamp,
@@ -48,6 +49,27 @@ export const notificationSeverityValues = [
 	"error",
 ] as const;
 
+export const notificationChannelEnum = pgEnum(
+	"notification_channel",
+	notificationChannelValues
+);
+export const notificationEventStatusEnum = pgEnum(
+	"notification_event_status",
+	notificationEventStatusValues
+);
+export const notificationIntentStatusEnum = pgEnum(
+	"notification_intent_status",
+	notificationIntentStatusValues
+);
+export const notificationDeliveryStatusEnum = pgEnum(
+	"notification_delivery_status",
+	notificationDeliveryStatusValues
+);
+export const notificationSeverityEnum = pgEnum(
+	"notification_severity",
+	notificationSeverityValues
+);
+
 export type NotificationChannel = (typeof notificationChannelValues)[number];
 export type NotificationEventStatus =
 	(typeof notificationEventStatusValues)[number];
@@ -72,9 +94,7 @@ export const notificationEvent = pgTable(
 		sourceId: text("source_id"),
 		idempotencyKey: text("idempotency_key").notNull(),
 		payload: text("payload").notNull(),
-		status: text("status", { enum: notificationEventStatusValues })
-			.notNull()
-			.default("queued"),
+		status: notificationEventStatusEnum("status").notNull().default("queued"),
 		processingStartedAt: timestamp("processing_started_at", {
 			withTimezone: true,
 			mode: "date",
@@ -111,14 +131,12 @@ export const notificationIntent = pgTable(
 		recipientUserId: text("recipient_user_id").references(() => user.id, {
 			onDelete: "set null",
 		}),
-		channel: text("channel", { enum: notificationChannelValues }).notNull(),
+		channel: notificationChannelEnum("channel").notNull(),
 		templateKey: text("template_key").notNull(),
 		title: text("title"),
 		body: text("body"),
 		metadata: text("metadata"),
-		status: text("status", { enum: notificationIntentStatusValues })
-			.notNull()
-			.default("pending"),
+		status: notificationIntentStatusEnum("status").notNull().default("pending"),
 		processedAt: timestamp("processed_at", {
 			withTimezone: true,
 			mode: "date",
@@ -147,7 +165,7 @@ export const notificationDelivery = pgTable(
 		provider: text("provider").notNull(),
 		providerRecipient: text("provider_recipient"),
 		attempt: integer("attempt").notNull().default(1),
-		status: text("status", { enum: notificationDeliveryStatusValues })
+		status: notificationDeliveryStatusEnum("status")
 			.notNull()
 			.default("queued"),
 		providerMessageId: text("provider_message_id"),
@@ -182,7 +200,7 @@ export const notificationPreference = pgTable(
 			.notNull()
 			.default("global"),
 		eventType: text("event_type").notNull(),
-		channel: text("channel", { enum: notificationChannelValues }).notNull(),
+		channel: notificationChannelEnum("channel").notNull(),
 		enabled: boolean("enabled").notNull().default(true),
 		quietHoursStart: integer("quiet_hours_start"),
 		quietHoursEnd: integer("quiet_hours_end"),
@@ -226,9 +244,7 @@ export const notificationInApp = pgTable(
 		title: text("title").notNull(),
 		body: text("body"),
 		ctaUrl: text("cta_url"),
-		severity: text("severity", { enum: notificationSeverityValues })
-			.notNull()
-			.default("info"),
+		severity: notificationSeverityEnum("severity").notNull().default("info"),
 		metadata: text("metadata"),
 		deliveredAt: timestamp("delivered_at", {
 			withTimezone: true,

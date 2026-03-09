@@ -1,9 +1,13 @@
-import { index, jsonb, pgTable, text } from "drizzle-orm/pg-core";
+import { index, jsonb, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
 
 import { user } from "./auth";
 import { timestamps } from "./columns";
 
 export const assistantChatVisibility = ["public", "private"] as const;
+export const assistantChatVisibilityEnum = pgEnum(
+	"assistant_chat_visibility",
+	assistantChatVisibility
+);
 export type AssistantChatVisibility = (typeof assistantChatVisibility)[number];
 
 export const assistantChat = pgTable(
@@ -14,7 +18,7 @@ export const assistantChat = pgTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
-		visibility: text("visibility", { enum: assistantChatVisibility })
+		visibility: assistantChatVisibilityEnum("visibility")
 			.notNull()
 			.default("private"),
 		...timestamps,
@@ -23,6 +27,10 @@ export const assistantChat = pgTable(
 );
 
 export const assistantMessageRole = ["user", "assistant"] as const;
+export const assistantMessageRoleEnum = pgEnum(
+	"assistant_message_role",
+	assistantMessageRole
+);
 export type AssistantMessageRole = (typeof assistantMessageRole)[number];
 
 export const assistantMessage = pgTable(
@@ -32,7 +40,7 @@ export const assistantMessage = pgTable(
 		chatId: text("chat_id")
 			.notNull()
 			.references(() => assistantChat.id, { onDelete: "cascade" }),
-		role: text("role", { enum: assistantMessageRole }).notNull(),
+		role: assistantMessageRoleEnum("role").notNull(),
 		parts: jsonb("parts").$type<unknown[]>().notNull(),
 		attachments: jsonb("attachments").$type<unknown[]>().notNull().default([]),
 		...timestamps,

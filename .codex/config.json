@@ -36,6 +36,12 @@
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "type": "command",
+        "command": "bun ultracite fix"
+      }
     ]
   }
 }

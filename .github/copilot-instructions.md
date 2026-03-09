@@ -89,3 +89,7 @@ This monorepo is a full-stack starter deployed to a VPS via Dokku:
 - Deploy via `dokku git:from-image` (CI) or `dokku ps:rollback` (manual). Use `pulumi up` for infra changes.
 - Do not add `--no-verify` to git commands or bypass CI checks.
 
+
+# After task completiong steps
+- run subagent `reviewer-agent` with the following prompt:
+```Review the changes you just made. Check for any mistakes, security issues, or areas of improvement```

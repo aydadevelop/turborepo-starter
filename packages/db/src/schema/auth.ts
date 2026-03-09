@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	index,
+	integer,
 	pgTable,
 	text,
 	timestamp,
@@ -16,15 +17,19 @@ export const user = pgTable("user", {
 	email: text("email").notNull().unique(),
 	emailVerified: boolean("email_verified").default(false).notNull(),
 	image: text("image"),
+	// phone-number plugin
 	phoneNumber: text("phone_number").unique(),
-	phoneNumberVerified: boolean("phone_number_verified").default(false),
+	phoneNumberVerified: boolean("phone_number_verified"),
+	// telegram plugin
 	telegramId: text("telegram_id"),
 	telegramUsername: text("telegram_username"),
-	role: text("role").default("user"),
-	isAnonymous: boolean("is_anonymous").default(false),
+	// admin plugin
+	role: text("role"),
 	banned: boolean("banned").default(false),
 	banReason: text("ban_reason"),
 	banExpires: timestamp("ban_expires", { withTimezone: true, mode: "date" }),
+	// anonymous plugin
+	isAnonymous: boolean("is_anonymous").default(false),
 	...timestamps,
 });
 
@@ -37,14 +42,16 @@ export const session = pgTable(
 			mode: "date",
 		}).notNull(),
 		token: text("token").notNull().unique(),
-		...timestamps,
 		ipAddress: text("ip_address"),
 		userAgent: text("user_agent"),
+		// admin plugin
 		impersonatedBy: text("impersonated_by"),
+		// organization plugin
 		activeOrganizationId: text("active_organization_id"),
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
+		...timestamps,
 	},
 	(table) => [index("session_userId_idx").on(table.userId)]
 );
@@ -71,6 +78,7 @@ export const account = pgTable(
 		}),
 		scope: text("scope"),
 		password: text("password"),
+		// telegram plugin
 		telegramId: text("telegram_id"),
 		telegramUsername: text("telegram_username"),
 		...timestamps,
@@ -88,14 +96,15 @@ export const passkey = pgTable(
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
 		credentialID: text("credential_id").notNull(),
-		counter: text("counter").notNull(),
+		counter: integer("counter").notNull(),
 		deviceType: text("device_type").notNull(),
-		backedUp: boolean("backed_up").default(false).notNull(),
+		backedUp: boolean("backed_up").notNull(),
 		transports: text("transports"),
 		aaguid: text("aaguid"),
-		createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-			.default(sql`now()`)
-			.notNull(),
+		createdAt: timestamp("created_at", {
+			withTimezone: true,
+			mode: "date",
+		}).default(sql`now()`),
 	},
 	(table) => [
 		index("passkey_userId_idx").on(table.userId),
@@ -143,7 +152,7 @@ export const member = pgTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
-		role: text("role").notNull().default("member"),
+		role: text("role").default("member").notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
 			.default(sql`now()`)
 			.notNull(),
@@ -167,7 +176,7 @@ export const invitation = pgTable(
 			.references(() => organization.id, { onDelete: "cascade" }),
 		email: text("email").notNull(),
 		role: text("role"),
-		status: text("status").notNull().default("pending"),
+		status: text("status").default("pending").notNull(),
 		expiresAt: timestamp("expires_at", {
 			withTimezone: true,
 			mode: "date",

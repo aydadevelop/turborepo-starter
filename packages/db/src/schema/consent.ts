@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { user } from "./auth";
 import { timestamps } from "./columns";
@@ -8,6 +8,7 @@ export const consentTypeValues = [
 	"user_agreement",
 	"privacy_policy",
 ] as const;
+export const consentTypeEnum = pgEnum("consent_type", consentTypeValues);
 export type ConsentType = (typeof consentTypeValues)[number];
 
 export const userConsent = pgTable(
@@ -17,7 +18,7 @@ export const userConsent = pgTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
-		consentType: text("consent_type", { enum: consentTypeValues }).notNull(),
+		consentType: consentTypeEnum("consent_type").notNull(),
 		consentVersion: text("consent_version").notNull(),
 		consentedAt: timestamp("consented_at", {
 			withTimezone: true,

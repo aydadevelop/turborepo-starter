@@ -1,9 +1,29 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-
+import {
+	affiliateReferral,
+	bookingAffiliateAttribution,
+	bookingAffiliatePayout,
+} from "../schema/affiliate";
 import { assistantChat, assistantMessage } from "../schema/assistant";
 import { invitation, member, organization, user } from "../schema/auth";
+import {
+	listingAvailabilityBlock,
+	listingAvailabilityRule,
+} from "../schema/availability";
 import { userConsent } from "../schema/consent";
+import {
+	booking,
+	cancellationPolicy,
+	listing,
+	listingPricingProfile,
+	listingPublication,
+	listingStaffAssignment,
+	listingTypeConfig,
+	organizationPaymentConfig,
+	organizationSettings,
+	paymentProviderConfig,
+} from "../schema/marketplace";
 import {
 	notificationDelivery,
 	notificationEvent,
@@ -11,6 +31,11 @@ import {
 	notificationIntent,
 	notificationPreference,
 } from "../schema/notification";
+import {
+	inboundMessage,
+	supportTicket,
+	supportTicketMessage,
+} from "../schema/support";
 import { todo } from "../schema/todo";
 import {
 	bootstrapTestDatabase,
@@ -335,6 +360,414 @@ describe("Test Database Setup", () => {
 					enabled: false,
 				})
 			).rejects.toThrow();
+		});
+	});
+
+	describe("Marketplace draft tables", () => {
+		it("supports core marketplace inserts", async () => {
+			await db.insert(organization).values({
+				id: "org-market-1",
+				name: "Market Org",
+				slug: "market-org",
+			});
+			await db.insert(user).values({
+				id: "user-market-1",
+				name: "Market Owner",
+				email: "market-owner@example.com",
+				emailVerified: true,
+			});
+
+			await db.insert(organizationSettings).values({
+				id: "org-settings-1",
+				organizationId: "org-market-1",
+			});
+
+			await db.insert(listingTypeConfig).values({
+				id: "listing-type-1",
+				slug: "boat",
+				label: "Boat",
+				metadataJsonSchema: { type: "object" },
+			});
+
+			await db.insert(listing).values({
+				id: "listing-1",
+				organizationId: "org-market-1",
+				listingTypeSlug: "boat",
+				name: "Catamaran Serenity",
+				slug: "catamaran-serenity",
+				status: "active",
+			});
+
+			await db.insert(listingPricingProfile).values({
+				id: "pricing-1",
+				listingId: "listing-1",
+				name: "Base Price",
+				currency: "RUB",
+				baseHourlyPriceCents: 5000,
+				createdByUserId: "user-market-1",
+				isDefault: true,
+			});
+
+			await db.insert(paymentProviderConfig).values({
+				id: "provider-config-cp",
+				provider: "cloudpayments",
+				displayName: "CloudPayments",
+				supportedCurrencies: ["RUB", "USD", "EUR"],
+			});
+
+			await db.insert(organizationPaymentConfig).values({
+				id: "payment-config-1",
+				organizationId: "org-market-1",
+				providerConfigId: "provider-config-cp",
+				provider: "cloudpayments",
+				encryptedCredentials: "encrypted-json",
+				webhookEndpointId: "webhook-endpoint-1",
+			});
+
+			await db.insert(listingPublication).values({
+				id: "publication-1",
+				listingId: "listing-1",
+				organizationId: "org-market-1",
+				channelType: "platform_marketplace",
+				merchantType: "platform",
+				merchantPaymentConfigId: "payment-config-1",
+				pricingProfileId: "pricing-1",
+			});
+
+			await db.insert(booking).values({
+				id: "booking-1",
+				organizationId: "org-market-1",
+				listingId: "listing-1",
+				publicationId: "publication-1",
+				merchantOrganizationId: "org-market-1",
+				merchantPaymentConfigId: "payment-config-1",
+				customerUserId: "user-market-1",
+				createdByUserId: "user-market-1",
+				source: "web",
+				startsAt: new Date("2026-03-09T10:00:00.000Z"),
+				endsAt: new Date("2026-03-09T12:00:00.000Z"),
+				basePriceCents: 10_000,
+				totalPriceCents: 10_000,
+				currency: "RUB",
+			});
+
+			const settings = await db.select().from(organizationSettings);
+			const listings = await db.select().from(listing);
+			const bookings = await db.select().from(booking);
+
+			expect(settings).toHaveLength(1);
+			expect(listings).toHaveLength(1);
+			expect(bookings).toHaveLength(1);
+			expect(bookings[0]?.publicationId).toBe("publication-1");
+		});
+	});
+
+	describe("Availability tables", () => {
+		it("supports availability rules and blocks", async () => {
+			await db.insert(organization).values({
+				id: "org-avail-1",
+				name: "Avail Org",
+				slug: "avail-org",
+			});
+			await db.insert(listingTypeConfig).values({
+				id: "lt-avail-1",
+				slug: "avail-boat",
+				label: "Boat",
+				metadataJsonSchema: { type: "object" },
+			});
+			await db.insert(listing).values({
+				id: "listing-avail-1",
+				organizationId: "org-avail-1",
+				listingTypeSlug: "avail-boat",
+				name: "Avail Catamaran",
+				slug: "avail-catamaran",
+				status: "active",
+			});
+
+			await db.insert(listingAvailabilityRule).values({
+				id: "rule-1",
+				listingId: "listing-avail-1",
+				dayOfWeek: 1,
+				startMinute: 540,
+				endMinute: 1080,
+			});
+
+			await db.insert(listingAvailabilityBlock).values({
+				id: "block-1",
+				listingId: "listing-avail-1",
+				source: "maintenance",
+				startsAt: new Date("2026-03-15T09:00:00.000Z"),
+				endsAt: new Date("2026-03-15T18:00:00.000Z"),
+				reason: "Engine maintenance",
+			});
+
+			const rules = await db.select().from(listingAvailabilityRule);
+			const blocks = await db.select().from(listingAvailabilityBlock);
+			expect(rules).toHaveLength(1);
+			expect(blocks).toHaveLength(1);
+			expect(rules[0]?.dayOfWeek).toBe(1);
+		});
+	});
+
+	describe("Affiliate tables", () => {
+		it("supports referral and attribution chain", async () => {
+			await db.insert(organization).values({
+				id: "org-aff-1",
+				name: "Aff Org",
+				slug: "aff-org",
+			});
+			await db.insert(user).values({
+				id: "user-aff-1",
+				name: "Affiliate",
+				email: "affiliate@example.com",
+				emailVerified: true,
+			});
+			await db.insert(user).values({
+				id: "user-cust-aff-1",
+				name: "Customer",
+				email: "cust-aff@example.com",
+				emailVerified: true,
+			});
+
+			await db.insert(affiliateReferral).values({
+				id: "ref-1",
+				affiliateUserId: "user-aff-1",
+				code: "AFF2026",
+				name: "Summer campaign",
+			});
+
+			// Create a booking to attribute
+			await db.insert(listingTypeConfig).values({
+				id: "lt-aff-1",
+				slug: "aff-boat",
+				label: "Boat",
+				metadataJsonSchema: { type: "object" },
+			});
+			await db.insert(listing).values({
+				id: "listing-aff-1",
+				organizationId: "org-aff-1",
+				listingTypeSlug: "aff-boat",
+				name: "Aff Catamaran",
+				slug: "aff-catamaran",
+				status: "active",
+			});
+			await db.insert(paymentProviderConfig).values({
+				id: "ppc-aff-1",
+				provider: "stripe",
+				displayName: "Stripe",
+				supportedCurrencies: ["RUB"],
+			});
+			await db.insert(organizationPaymentConfig).values({
+				id: "opc-aff-1",
+				organizationId: "org-aff-1",
+				providerConfigId: "ppc-aff-1",
+				provider: "stripe",
+				encryptedCredentials: "enc",
+				webhookEndpointId: "wh-aff-1",
+			});
+			await db.insert(listingPublication).values({
+				id: "pub-aff-1",
+				listingId: "listing-aff-1",
+				organizationId: "org-aff-1",
+				channelType: "partner_site",
+				merchantType: "platform",
+				merchantPaymentConfigId: "opc-aff-1",
+			});
+			await db.insert(booking).values({
+				id: "booking-aff-1",
+				organizationId: "org-aff-1",
+				listingId: "listing-aff-1",
+				publicationId: "pub-aff-1",
+				merchantOrganizationId: "org-aff-1",
+				customerUserId: "user-cust-aff-1",
+				source: "partner",
+				startsAt: new Date("2026-04-01T10:00:00.000Z"),
+				endsAt: new Date("2026-04-01T12:00:00.000Z"),
+				basePriceCents: 8000,
+				totalPriceCents: 8000,
+				currency: "RUB",
+			});
+
+			await db.insert(bookingAffiliateAttribution).values({
+				id: "attr-1",
+				bookingId: "booking-aff-1",
+				affiliateUserId: "user-aff-1",
+				referralId: "ref-1",
+				referralCode: "AFF2026",
+				source: "cookie",
+			});
+
+			await db.insert(bookingAffiliatePayout).values({
+				id: "payout-1",
+				attributionId: "attr-1",
+				bookingId: "booking-aff-1",
+				affiliateUserId: "user-aff-1",
+				commissionAmountCents: 400,
+				currency: "RUB",
+				status: "pending",
+			});
+
+			const refs = await db.select().from(affiliateReferral);
+			const payouts = await db.select().from(bookingAffiliatePayout);
+			expect(refs).toHaveLength(1);
+			expect(payouts).toHaveLength(1);
+			expect(payouts[0]?.commissionAmountCents).toBe(400);
+		});
+	});
+
+	describe("Support ticket tables", () => {
+		it("supports ticket -> message -> inbound flow", async () => {
+			await db.insert(organization).values({
+				id: "org-sup-1",
+				name: "Support Org",
+				slug: "support-org",
+			});
+			await db.insert(user).values({
+				id: "user-sup-1",
+				name: "Support Operator",
+				email: "support-op@example.com",
+				emailVerified: true,
+			});
+
+			await db.insert(supportTicket).values({
+				id: "ticket-1",
+				organizationId: "org-sup-1",
+				customerUserId: "user-sup-1",
+				subject: "Cannot access booking",
+				source: "web",
+				priority: "high",
+			});
+
+			await db.insert(inboundMessage).values({
+				id: "inbound-1",
+				organizationId: "org-sup-1",
+				ticketId: "ticket-1",
+				channel: "web",
+				externalMessageId: "ext-msg-1",
+				dedupeKey: "web:ext-msg-1",
+				payload: { text: "Help, I cannot see my booking" },
+				status: "processed",
+			});
+
+			await db.insert(supportTicketMessage).values({
+				id: "msg-sup-1",
+				ticketId: "ticket-1",
+				organizationId: "org-sup-1",
+				authorUserId: "user-sup-1",
+				inboundMessageId: "inbound-1",
+				channel: "web",
+				body: "Help, I cannot see my booking",
+			});
+
+			// Internal note
+			await db.insert(supportTicketMessage).values({
+				id: "msg-sup-2",
+				ticketId: "ticket-1",
+				organizationId: "org-sup-1",
+				authorUserId: "user-sup-1",
+				channel: "internal",
+				body: "Checking booking status...",
+				isInternal: true,
+			});
+
+			const tickets = await db.select().from(supportTicket);
+			const messages = await db.select().from(supportTicketMessage);
+			const inbound = await db.select().from(inboundMessage);
+			expect(tickets).toHaveLength(1);
+			expect(messages).toHaveLength(2);
+			expect(inbound).toHaveLength(1);
+			expect(tickets[0]?.priority).toBe("high");
+		});
+
+		it("enforces inbound message deduplication", async () => {
+			await db.insert(inboundMessage).values({
+				id: "inbound-dup-1",
+				channel: "telegram",
+				externalMessageId: "tg-123",
+				dedupeKey: "tg:chat:123",
+				payload: { text: "Hello" },
+			});
+
+			await expect(
+				db.insert(inboundMessage).values({
+					id: "inbound-dup-2",
+					channel: "telegram",
+					externalMessageId: "tg-456",
+					dedupeKey: "tg:chat:123",
+					payload: { text: "Hello again" },
+				})
+			).rejects.toThrow();
+		});
+	});
+
+	describe("Staff assignment tables", () => {
+		it("supports listing and booking staff assignment", async () => {
+			await db.insert(organization).values({
+				id: "org-staff-1",
+				name: "Staff Org",
+				slug: "staff-org",
+			});
+			await db.insert(user).values({
+				id: "user-staff-1",
+				name: "Captain",
+				email: "captain@example.com",
+				emailVerified: true,
+			});
+			await db.insert(member).values({
+				id: "member-staff-1",
+				organizationId: "org-staff-1",
+				userId: "user-staff-1",
+				role: "member",
+			});
+			await db.insert(listingTypeConfig).values({
+				id: "lt-staff-1",
+				slug: "staff-boat",
+				label: "Boat",
+				metadataJsonSchema: { type: "object" },
+			});
+			await db.insert(listing).values({
+				id: "listing-staff-1",
+				organizationId: "org-staff-1",
+				listingTypeSlug: "staff-boat",
+				name: "Staff Catamaran",
+				slug: "staff-catamaran",
+				status: "active",
+			});
+
+			await db.insert(listingStaffAssignment).values({
+				id: "lsa-1",
+				listingId: "listing-staff-1",
+				memberId: "member-staff-1",
+				organizationId: "org-staff-1",
+				role: "primary",
+			});
+
+			const assignments = await db.select().from(listingStaffAssignment);
+			expect(assignments).toHaveLength(1);
+			expect(assignments[0]?.role).toBe("primary");
+		});
+	});
+
+	describe("Cancellation policy table", () => {
+		it("supports org-level and listing-level policies", async () => {
+			await db.insert(organization).values({
+				id: "org-cancel-1",
+				name: "Cancel Org",
+				slug: "cancel-org",
+			});
+
+			await db.insert(cancellationPolicy).values({
+				id: "cp-org-1",
+				organizationId: "org-cancel-1",
+				scope: "organization",
+				name: "Default policy",
+				freeWindowHours: 48,
+				penaltyPercentage: 50,
+			});
+
+			const policies = await db.select().from(cancellationPolicy);
+			expect(policies).toHaveLength(1);
+			expect(policies[0]?.freeWindowHours).toBe(48);
 		});
 	});
 
