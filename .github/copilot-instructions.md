@@ -44,3 +44,11 @@ applyTo: "**/*.{ts,tsx,js,jsx,svelte,mjs,cjs,sh,yml,yaml,dockerfile,Dockerfile}"
 - Surface tradeoffs briefly when they matter.
 - If a change is target-state guidance rather than present-day implementation, say so clearly.
 - When architecture guidance changes, keep related instructions and docs aligned.
+
+
+# Instructions for GSD
+
+- Use the get-shit-done skill when the user asks for GSD or uses a `gsd-*` command.
+- Treat `/gsd-...` or `gsd-...` as command invocations and load the matching file from `.github/skills/gsd-*`.
+- When a command says to spawn a subagent, prefer a matching custom agent from `.github/agents`.
+- Do not apply GSD workflows unless the user explicitly asks for them.
