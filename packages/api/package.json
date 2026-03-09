@@ -37,6 +37,7 @@
   "dependencies": {
     "@my-app/api-contract": "workspace:*",
     "@my-app/auth": "workspace:*",
+    "@my-app/catalog": "workspace:*",
     "@my-app/db": "workspace:*",
     "@my-app/env": "workspace:*",
     "@my-app/notifications": "workspace:*",

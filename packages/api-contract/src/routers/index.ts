@@ -3,6 +3,7 @@ import { oc } from "@orpc/contract";
 import z from "zod";
 import { adminContract } from "./admin/router";
 import { consentContract } from "./consent";
+import { listingContract } from "./listing";
 import { notificationsContract } from "./notifications";
 import { paymentsContract } from "./payments";
 import { tasksContract } from "./tasks";
@@ -62,6 +63,7 @@ export const appContract = {
 
 	admin: adminContract,
 	consent: consentContract,
+	listing: listingContract,
 	notifications: notificationsContract,
 	payments: paymentsContract,
 	tasks: tasksContract,
