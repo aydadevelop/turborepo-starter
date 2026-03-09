@@ -123,3 +123,6 @@ export const bootstrapTestDatabase = (
 
 	return state;
 };
+
+export { createParityTest } from "./parity";
+export type { ParityDeclaration, ParityResult } from "./parity";
