@@ -17,7 +17,10 @@ export type {
 	BookingCancellationReasonCode,
 	BookingCancellationPolicyActor,
 } from "./policy-templates";
-export type { CancellationWorkflowInput } from "./cancellation-workflow";
+export type {
+	CancellationWorkflowInput,
+	CancellationWorkflowResult,
+} from "./cancellation-workflow";
 export { processCancellationWorkflow } from "./cancellation-workflow";
 export type { OpenDisputeInput, ResolveDisputeInput } from "./dispute-workflow";
 export { processDisputeWorkflow } from "./dispute-workflow";

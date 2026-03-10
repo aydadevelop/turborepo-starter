@@ -52,7 +52,6 @@ const dbState = bootstrapTestDatabase({
 			name: "Disputes Org",
 			slug: "disputes-org",
 			createdAt: NOW,
-			updatedAt: NOW,
 		});
 
 		await db.insert(user).values({
