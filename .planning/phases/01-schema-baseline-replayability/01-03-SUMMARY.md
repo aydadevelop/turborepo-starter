@@ -1,3 +1,49 @@
+---
+phase: 01-schema-baseline-replayability
+plan: "03"
+subsystem: testing
+tags: [snapshot, postgres, replayability, verification, cli]
+
+requires:
+	- phase: 01-schema-baseline-replayability
+		provides: "baseline migrations and deterministic marketplace seed scenario"
+provides:
+	- "Snapshot export and import scripts for replayable baseline data"
+	- "Committed baseline snapshot artifact"
+	- "Real-Postgres verification lane for migrate-seed-export-import cycles"
+affects: [database, testing, parity, debugging]
+
+tech-stack:
+	added: []
+	patterns:
+		- "Replayable state is captured as committed JSON snapshots, not ad hoc SQL dumps"
+		- "Real-Postgres verification exercises reset, migrate, seed, export, import, and assert in one lane"
+
+key-files:
+	created:
+		- packages/db/scripts/export-snapshot.mjs
+		- packages/db/scripts/import-snapshot.mjs
+		- packages/db/scripts/verify-postgres-baseline.mjs
+		- packages/db/snapshots/phase1-baseline.json
+	modified:
+		- packages/db/package.json
+
+key-decisions:
+	- "Snapshot import pre-serializes JSONB values before passing them to pg"
+	- "Baseline verification uses a real Postgres loop instead of relying only on PGlite"
+
+patterns-established:
+	- "Committed snapshot artifacts document reproducible baseline state for debugging and parity"
+	- "Database acceptance lanes validate restore behavior against real Postgres before release"
+
+requirements-completed:
+	- PLAT-03
+	- PLAT-04
+
+duration: "n/a"
+completed: 2026-03-09
+---
+
 # Plan 01-03 Summary
 
 **Phase:** 01-schema-baseline-replayability  

@@ -1,3 +1,47 @@
+---
+phase: 01-schema-baseline-replayability
+plan: "02"
+subsystem: database
+tags: [seeding, fixtures, postgres, pglite, marketplace]
+
+requires:
+	- phase: 01-schema-baseline-replayability
+		provides: "baseline migration chain and migrate-backed bootstrap"
+provides:
+	- "Representative marketplace seed scenario shared by CLI and DB tests"
+	- "Reusable fixture builders for listings, publications, bookings, and payment config"
+	- "Deterministic IDs and anchor-date behavior for baseline data"
+affects: [database, testing, snapshots, booking, pricing]
+
+tech-stack:
+	added: []
+	patterns:
+		- "Seed scenarios live in reusable fixture builders that both scripts and tests consume"
+		- "Marketplace fixture IDs stay deterministic so snapshots and parity work stay stable"
+
+key-files:
+	created:
+		- packages/db/src/test/fixtures/marketplace.ts
+	modified:
+		- packages/db/scripts/cleanup-tables.mjs
+		- packages/db/scripts/seed-local.mjs
+		- packages/db/src/__tests__/database.test.ts
+
+key-decisions:
+	- "Fixture builders mirror real schema names and constraints instead of legacy field guesses"
+	- "Seed-local and PGlite tests share one marketplace scenario definition to avoid drift"
+
+patterns-established:
+	- "Add new baseline data through fixture builders first, then reuse them in scripts and tests"
+	- "Cleanup order stays FK-safe by deleting marketplace child tables before parent tables"
+
+requirements-completed:
+	- PLAT-02
+
+duration: "n/a"
+completed: 2026-03-09
+---
+
 # Plan 01-02 Summary
 
 **Phase:** 01-schema-baseline-replayability  

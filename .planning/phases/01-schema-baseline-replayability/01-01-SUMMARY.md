@@ -1,3 +1,47 @@
+---
+phase: 01-schema-baseline-replayability
+plan: "01"
+subsystem: database
+tags: [drizzle, postgres, migrations, bootstrap, schema]
+
+requires: []
+provides:
+	- "Committed baseline migration chain for the marketplace schema"
+	- "Migrate-backed local and e2e bootstrap flow"
+	- "Migration smoke-check coverage for baseline artifacts"
+affects: [database, seeds, snapshots, testing]
+
+tech-stack:
+	added: []
+	patterns:
+		- "Use committed Drizzle migrations, never push-first bootstrap, for schema recreation"
+		- "Reset both public and drizzle schemas before replaying baseline migrations"
+
+key-files:
+	created:
+		- packages/db/src/migrations/20260309174754_wooden_hex/migration.sql
+		- packages/db/src/migrations/20260309174754_wooden_hex/snapshot.json
+		- packages/db/src/__tests__/migrations.test.ts
+	modified:
+		- packages/db/scripts/bootstrap-local-e2e.mjs
+		- packages/db/scripts/reset-local.mjs
+		- packages/db/package.json
+
+key-decisions:
+	- "Bootstrap resets both public and drizzle schemas so committed migrations can replay cleanly"
+	- "Post-migration hooks stay as TypeScript exports instead of .mjs runtime imports"
+
+patterns-established:
+	- "Schema baseline changes land as committed Drizzle migrations plus snapshot.json"
+	- "Bootstrap and verification flows call migrate-backed reset helpers instead of drizzle-kit push"
+
+requirements-completed:
+	- PLAT-01
+
+duration: "n/a"
+completed: 2026-03-09
+---
+
 # Plan 01-01 Summary
 
 **Phase:** 01-schema-baseline-replayability  
