@@ -1,3 +1,51 @@
+---
+phase: 07-review-missing-extractions
+plan: "03"
+subsystem: calendar
+tags: [calendar, google, events, sync, server]
+
+requires:
+	- phase: 07-review-missing-extractions
+		provides: "CalendarAdapter interface, registry, and package scaffold"
+	- phase: 02-events-workflows-parity-foundations
+		provides: "typed event bus registration for side-effect subscribers"
+provides:
+	- "GoogleCalendarAdapter implementation with Web Crypto JWT auth"
+	- "Calendar use cases for connect, disconnect, and busy-slot lookup"
+	- "Booking lifecycle event subscriber for outbound calendar sync"
+affects: [calendar, booking, events, server-runtime]
+
+tech-stack:
+	added: []
+	patterns:
+		- "Server startup registers concrete adapters and then registers lifecycle subscribers"
+		- "Calendar sync failures are logged and swallowed so bookings are not blocked by external calendar issues"
+
+key-files:
+	created:
+		- packages/calendar/src/google-adapter.ts
+		- packages/calendar/src/use-cases.ts
+		- packages/calendar/src/booking-lifecycle-sync.ts
+	modified:
+		- packages/calendar/src/index.ts
+		- apps/server/src/index.ts
+		- apps/server/package.json
+
+key-decisions:
+	- "Google Calendar auth uses Web Crypto directly instead of another auth client dependency"
+	- "Credentials resolve from explicit config before constructor defaults"
+
+patterns-established:
+	- "Concrete calendar adapters remain provider-specific while package use cases stay provider-agnostic"
+	- "Lifecycle subscribers upsert external-link records so retries stay idempotent"
+
+requirements-completed:
+	- EXTR-03
+
+duration: "n/a"
+completed: 2026-03-10
+---
+
 # Phase 07-03 Summary: Google Calendar Adapter + Use Cases + Lifecycle Sync
 
 ## Objective

@@ -1,3 +1,52 @@
+---
+phase: 07-review-missing-extractions
+plan: "04"
+subsystem: disputes
+tags: [disputes, cancellation, workflow, refunds, policy]
+
+requires:
+  - phase: 06-payments-notifications-support
+    provides: "booking cancellation/refund data model and payment/support context"
+  - phase: 02-events-workflows-parity-foundations
+    provides: "workflow engine and typed event bus"
+provides:
+  - "Pure cancellation policy evaluation service"
+  - "Cancellation workflow factory with refund and booking-status steps"
+  - "Dispute open/resolve workflow factories"
+affects: [disputes, booking, payment, events]
+
+tech-stack:
+  added: []
+  patterns:
+    - "Workflow factories close over db so step execution stays typed without global state"
+    - "Cancellation policy logic stays pure and reusable outside workflow execution"
+
+key-files:
+  created:
+    - packages/disputes/package.json
+    - packages/disputes/src/policy-templates.ts
+    - packages/disputes/src/cancellation-policy-service.ts
+    - packages/disputes/src/cancellation-workflow.ts
+    - packages/disputes/src/dispute-workflow.ts
+    - packages/disputes/src/__tests__/cancellation-policy.test.ts
+    - packages/disputes/src/index.ts
+  modified: []
+
+key-decisions:
+  - "Refund initiation is deferred; workflows currently record requested refunds instead of calling a provider SDK"
+  - "Dispute workflows are split into open and resolve variants because their input shapes differ materially"
+
+patterns-established:
+  - "Pure policy services feed workflow steps so business rules can be tested without DB setup"
+  - "Workflow compensation writes enum-valid statuses rather than inventing new rollback states"
+
+requirements-completed:
+  - EXTR-04
+
+duration: "n/a"
+completed: 2026-03-10
+---
+
 # Phase 07-04 Summary: packages/disputes scaffold
 
 ## Objective
