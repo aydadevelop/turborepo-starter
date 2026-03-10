@@ -48,7 +48,6 @@ const ORG_PAYMENT_CONFIG_ID = "api-cancel-org-payment-config-1";
 const LISTING_ID = "api-cancel-listing-1";
 const PUBLICATION_ID = "api-cancel-publication-1";
 const BOOKING_ID = "api-cancel-booking-1";
-const REQUEST_ID = "api-cancel-request-1";
 const NOW = new Date("2026-03-10T12:00:00.000Z");
 const FUTURE_START = new Date("2026-03-25T12:00:00.000Z");
 const FUTURE_END = new Date("2026-03-25T16:00:00.000Z");
@@ -173,13 +172,18 @@ const createRpcContext = (overrides: Partial<Context> = {}): Context => ({
 	session: {
 		session: {
 			id: "session-1",
+			createdAt: NOW,
+			updatedAt: NOW,
+			userId: USER_ID,
+			expiresAt: new Date("2026-03-11T12:00:00.000Z"),
+			token: "session-token",
 			activeOrganizationId: ORG_ID,
 		},
 		user: {
 			id: USER_ID,
 			email: "api-cancel@example.com",
 		},
-	} as Context["session"],
+	} as unknown as Context["session"],
 	...overrides,
 });
 

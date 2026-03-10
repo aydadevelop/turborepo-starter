@@ -1,7 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { db } from "@my-app/db";
 import {
-	applyCancellation,
 	createBooking,
 	getActiveCancellationRequest,
 	getOrgBooking,
@@ -14,6 +13,8 @@ import {
 	type CancellationReasonCode,
 	type CancellationRequestRow,
 } from "@my-app/booking";
+import { processCancellationWorkflow } from "@my-app/disputes";
+import { EventBus } from "@my-app/events";
 import { notificationsPusher } from "@my-app/notifications/pusher";
 
 import { organizationPermissionProcedure, protectedProcedure } from "../index";
@@ -34,6 +35,20 @@ const formatCancellationRequest = (row: CancellationRequestRow) => ({
 	createdAt: row.createdAt.toISOString(),
 	updatedAt: row.updatedAt.toISOString(),
 });
+
+const throwApplyCancellationError = (error: Error): never => {
+	if (error.message === "NOT_FOUND") {
+		throw new ORPCError("NOT_FOUND");
+	}
+
+	if (error.message === "INVALID_STATE") {
+		throw new ORPCError("BAD_REQUEST", {
+			message: "Request is not in 'requested' state",
+		});
+	}
+
+	throw error;
+};
 
 export const bookingRouter = {
 	create: protectedProcedure.booking.create.handler(async ({ context, input }) => {
@@ -189,21 +204,30 @@ export const bookingRouter = {
 	applyCancellation: organizationPermissionProcedure({
 		booking: ["update"],
 	}).booking.applyCancellation.handler(async ({ context, input }) => {
-		try {
-			const { request, refundId } = await applyCancellation(
-				input.requestId,
-				context.activeMembership.organizationId,
-				context.session?.user?.id ?? "system",
-				db,
-			);
-			return { requestId: request.id, refundId };
-		} catch (e) {
-			if (e instanceof Error) {
-				if (e.message === "NOT_FOUND") throw new ORPCError("NOT_FOUND");
-				if (e.message === "INVALID_STATE") throw new ORPCError("BAD_REQUEST", { message: "Request is not in 'requested' state" });
-			}
-			throw e;
+		const result = await processCancellationWorkflow(db).execute(
+			{
+				requestId: input.requestId,
+				organizationId: context.activeMembership.organizationId,
+				appliedByUserId: context.session?.user?.id ?? "system",
+			},
+			{
+				organizationId: context.activeMembership.organizationId,
+				actorUserId: context.session?.user?.id,
+				idempotencyKey: `booking-cancellation:${input.requestId}`,
+				eventBus: new EventBus(context.notificationQueue),
+			},
+		);
+
+		if (!result.success) {
+			return throwApplyCancellationError(result.error);
 		}
+
+		const { output } = result;
+
+		return {
+			requestId: output.requestId,
+			refundId: output.refundId,
+		};
 	}),
 
 	getActiveCancellationRequest: organizationPermissionProcedure({
