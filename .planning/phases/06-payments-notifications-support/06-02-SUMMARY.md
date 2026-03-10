@@ -1,3 +1,53 @@
+---
+phase: 06-payments-notifications-support
+plan: "02"
+subsystem: support
+tags: [support, tickets, api, messaging, organization]
+
+requires:
+  - phase: 05-booking-core-customer-access
+    provides: "booking identifiers and org-scoped booking context"
+provides:
+  - "@my-app/support package for org-scoped support tickets and messages"
+  - "support oRPC contract and thin API handlers"
+  - "Date-normalized support ticket/message transport models"
+affects: [support, api, booking, customer-follow-up]
+
+tech-stack:
+  added: []
+  patterns:
+    - "Support ticket ownership is validated in package services, with handlers translating NOT_FOUND only"
+    - "Org-scoped support APIs are thin wrappers around package-owned services"
+
+key-files:
+  created:
+    - packages/support/package.json
+    - packages/support/tsconfig.json
+    - packages/support/vitest.config.ts
+    - packages/support/src/types.ts
+    - packages/support/src/support-service.ts
+    - packages/support/src/index.ts
+    - packages/support/src/__tests__/support-service.test.ts
+    - packages/api-contract/src/routers/support.ts
+    - packages/api/src/handlers/support.ts
+  modified:
+    - packages/api-contract/src/routers/index.ts
+    - packages/api/src/handlers/index.ts
+
+key-decisions:
+  - "Support remains org-scoped at this stage; customer-facing history is deferred"
+  - "Ticket and message output schemas normalize Date values at the transport edge"
+
+patterns-established:
+  - "Support service methods validate booking/ticket org ownership before mutating data"
+  - "Thin transport handlers format support artifacts through dedicated helper functions"
+
+requirements-completed: []
+
+duration: "n/a"
+completed: 2026-03-10
+---
+
 # Phase 06-02 Summary: Support Package & API Wiring
 
 ## What Was Built

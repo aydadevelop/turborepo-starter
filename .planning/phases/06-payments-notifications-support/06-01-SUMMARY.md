@@ -1,3 +1,51 @@
+---
+phase: 06-payments-notifications-support
+plan: "01"
+subsystem: payments
+tags: [payments, webhook, provider, api, reconciliation]
+
+requires:
+  - phase: 05-booking-core-customer-access
+    provides: "booking lifecycle records for payment updates"
+provides:
+  - "@my-app/payment package with provider config and webhook reconciliation scaffolding"
+  - "payment oRPC routes and handlers for provider config lookup and webhook intake"
+  - "Idempotent webhook event recording keyed by request signature"
+affects: [payments, booking, api, webhook-ingress]
+
+tech-stack:
+  added: []
+  patterns:
+    - "Payment provider integration stays behind package-owned services with thin transport wiring"
+    - "Webhook idempotency is modeled through stored request signatures rather than handler-local state"
+
+key-files:
+  created:
+    - packages/payment/package.json
+    - packages/payment/tsconfig.json
+    - packages/payment/vitest.config.ts
+    - packages/payment/src/types.ts
+    - packages/payment/src/payment-service.ts
+    - packages/payment/src/__tests__/payment-service.test.ts
+  modified:
+    - packages/api-contract/src/routers/payments.ts
+    - packages/api/src/handlers/payments.ts
+    - packages/api/package.json
+
+key-decisions:
+  - "Webhook idempotency uses requestSignature storage instead of JSON-path querying in tests"
+  - "Provider type matches the database paymentProviderEnum values exactly"
+
+patterns-established:
+  - "Provider config and webhook reconciliation are package concerns, not route-local logic"
+  - "Webhook endpoints remain public at the transport edge while domain services own error semantics"
+
+requirements-completed: []
+
+duration: "n/a"
+completed: 2026-03-10
+---
+
 # Phase 06-01 Summary: Payment Package & API Wiring
 
 ## What Was Built

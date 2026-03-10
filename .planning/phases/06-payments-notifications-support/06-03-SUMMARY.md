@@ -1,3 +1,51 @@
+---
+phase: 06-payments-notifications-support
+plan: "03"
+subsystem: booking
+tags: [cancellation, refunds, booking, policy, api]
+
+requires:
+  - phase: 05-booking-core-customer-access
+    provides: "booking lifecycle package and booking API surfaces"
+  - phase: 06-payments-notifications-support
+    provides: "payment attempt data used for cancellation refund calculations"
+provides:
+  - "Cancellation reason catalog and policy outcome calculation"
+  - "Cancellation request/apply services inside the booking package"
+  - "Booking API routes for cancellation previews and apply flows"
+affects: [booking, refunds, support, disputes]
+
+tech-stack:
+  added: []
+  patterns:
+    - "Cancellation policy outcomes are computed in package-owned helpers before request persistence"
+    - "Transport handlers translate rich domain errors instead of encoding cancellation rules inline"
+
+key-files:
+  created:
+    - packages/booking/src/cancellation-reasons.ts
+    - packages/booking/src/cancellation-service.ts
+    - packages/booking/src/__tests__/cancellation-service.test.ts
+  modified:
+    - packages/booking/src/types.ts
+    - packages/booking/src/index.ts
+    - packages/api-contract/src/routers/booking.ts
+    - packages/api/src/handlers/booking.ts
+
+key-decisions:
+  - "Cancellation request rows snapshot captured, penalty, and refund amounts using existing schema column names"
+  - "Manager safety rejection requires evidence and can override refund percentages independently of time windows"
+
+patterns-established:
+  - "Cancellation APIs separate preview/request and apply steps around a persisted request row"
+  - "Reason-code catalogs centralize actor permissions and refund overrides"
+
+requirements-completed: []
+
+duration: "n/a"
+completed: 2026-03-10
+---
+
 # Phase 06-03 Summary: Cancellation Policy Engine & API Wiring
 
 ## What Was Built
