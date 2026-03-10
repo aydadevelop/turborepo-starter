@@ -5,6 +5,9 @@
     "./contracts": {
       "default": "./src/contracts.ts"
     },
+    "./events-bridge": {
+      "default": "./src/events-bridge.ts"
+    },
     "./pusher": {
       "default": "./src/pusher.ts"
     },

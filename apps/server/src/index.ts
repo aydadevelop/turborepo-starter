@@ -5,6 +5,7 @@ import {
 	registerBookingLifecycleSync,
 	registerCalendarAdapter,
 } from "@my-app/calendar";
+import { registerNotificationEventPusher } from "@my-app/notifications/events-bridge";
 import { RECURRING_TASK_QUEUE, startBoss, stopBoss } from "@my-app/queue";
 import { registerWorker } from "@my-app/queue/worker";
 import { app } from "./app";
@@ -22,6 +23,7 @@ const googleServiceAccountKey: Record<string, unknown> = (() => {
 })();
 registerCalendarAdapter("google", new GoogleCalendarAdapter(googleServiceAccountKey));
 registerBookingLifecycleSync(db);
+registerNotificationEventPusher(undefined, db);
 
 serve({ fetch: app.fetch, port }, (info) => {
 	console.log(`Server listening on http://${info.address}:${info.port}`);
