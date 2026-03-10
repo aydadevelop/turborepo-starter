@@ -39,7 +39,7 @@
 - [ ] **BOOK-02**: Operator can review and move a booking through the agreed lifecycle states using org-safe domain workflows
 - [ ] **BOOK-03**: System can reconcile payment webhooks idempotently and update booking/payment state consistently
 - [ ] **BOOK-04**: Customer and operator receive booking confirmation or cancellation notifications triggered by booking lifecycle events
-- [ ] **BOOK-05**: System can execute a baseline cancellation and refund flow that applies policy, records refund state, and keeps booking/payment state in sync
+- [x] **BOOK-05**: System can execute a baseline cancellation and refund flow that applies policy, records refund state, and keeps booking/payment state in sync
 
 ### Operations and Support
 
@@ -112,7 +112,7 @@
 | BOOK-02 | Phase 8 | Satisfied |
 | BOOK-03 | Phase 10 | Pending |
 | BOOK-04 | Phase 11 | Pending |
-| BOOK-05 | Phase 10 | Pending |
+| BOOK-05 | Phase 10 | Complete |
 | OPER-01 | Phase 10 | Pending |
 | OPER-02 | Phase 11 | Pending |
 | OPER-03 | Phase 11 | Pending |

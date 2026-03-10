@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: active
-last_updated: "2026-03-10T13:42:23Z"
+last_updated: "2026-03-10T14:32:32Z"
 progress:
   total_phases: 11
   completed_phases: 9
   total_plans: 32
-  completed_plans: 28
+  completed_plans: 29
 ---
 
 # Project State
@@ -18,21 +18,21 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Operators can publish and manage flexible bookable listings, and customers can reliably discover, quote, book, pay for, and coordinate those listings through a generic marketplace flow that is testable, extensible, and safe to evolve.
-**Current focus:** Phase 10 — Payment Webhook & Cancellation Live Path — PLANNED, NEXT TO EXECUTE
+**Current focus:** Phase 10 — Payment Webhook & Cancellation Live Path — IN PROGRESS; `10-02` complete and the payment refund provider boundary is ready for disputes workflow integration
 
 ## Current Position
 
-Phase: 10 of 11 (Payment Webhook & Cancellation Live Path) — PLANNED
-Plan: 28 of 32 planned plans complete
-Status: Phase 10 now has four plans across three waves covering live webhook reconciliation, payment refund execution, snapshot-backed disputes orchestration, and final booking handler adoption
-Last activity: 2026-03-10 — Planned Phase 10 with `10-01` through `10-04`; next recommended command is `/gsd-execute-phase 10`
+Phase: 10 of 11 (Payment Webhook & Cancellation Live Path) — IN PROGRESS
+Plan: 29 of 32 planned plans complete
+Status: Phase 10 now has one executed plan; `10-02` shipped the execution-side payment provider contract, registry, and CloudPayments refund adapter needed by the disputes live path
+Last activity: 2026-03-10 — Executed `10-02` with runtime payment provider wiring; remaining Phase 10 plans are `10-01`, `10-03`, and `10-04`; next recommended command is `/gsd-execute-phase 10`
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 28
+- Total plans completed: 29
 - Phases completed: 9
 
 **By Phase:**
@@ -48,8 +48,9 @@ Progress: [████████░░] 82%
 | 07 — Review Missing Extractions | 4 | ✅ Complete |
 | 08 — Verification & Traceability Backfill | 3 | ✅ Complete |
 | 09 — Operator Catalog & Booking Intake Wiring | 3 | ✅ Complete |
-| 10 — Payment Webhook & Cancellation Live Path | 0 | 📝 Planned |
+| 10 — Payment Webhook & Cancellation Live Path | 1/4 | 🚧 In Progress |
 | 11 — Events, Notifications, Calendar & Support Integration | 0 | 📝 Planned |
+| Phase 10 P02 | 5 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,9 @@ Recent decisions affecting current work:
 - Catalog pattern: domain service functions accept `db` as parameter; contract-first oRPC with thin handler wiring.
 - Zod v4: `z.record(z.string(), z.unknown())` — key type argument required.
 - oRPC queryOptions: `queryOptions({ input: {...} })` — `input` key required in wrapper object.
+- [Phase 10]: Payment execution credentials are injected per call instead of stored on adapter instances — Matches the calendar runtime-config pattern and keeps payment credentials org-scoped at execution time.
+- [Phase 10]: CloudPayments refund idempotency is carried with X-Request-ID at the adapter boundary — Keeps retry safety provider-specific without leaking transport details into disputes workflows.
+- [Phase 10]: CloudPayments refund requests validate numeric transaction ids and positive integer-cent amounts before sending — Prevents malformed provider calls and preserves cent-based domain invariants until the adapter converts to decimal amounts.
 
 ### Roadmap Evolution
 
@@ -74,16 +78,16 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Execute Phase 10 via `/gsd-execute-phase 10`
+- Execute remaining Phase 10 plans (`10-01`, `10-03`, `10-04`) via `/gsd-execute-phase 10`
 - Plan Phase 11 after Phase 10 verification closes the payment/cancellation live-path gaps
 
 ### Blockers/Concerns
 
 - Plan/schema vocabulary drift must be reconciled domain-by-domain instead of copied wholesale from docs or legacy code.
-- Phase 10 refund execution must reuse org-scoped DB credentials passed at call time rather than inventing a new encryption subsystem mid-phase.
+- Phase 10 refund execution now lives behind `@my-app/payment`; remaining live-path work must wire it through disputes and booking handlers without reintroducing apply-time policy drift.
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Phase 10 planned; ready for `/gsd-execute-phase 10`
+Stopped at: Completed 10-02-PLAN.md
 Resume file: None

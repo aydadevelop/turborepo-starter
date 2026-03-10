@@ -75,6 +75,7 @@ turborepo-alchemy/
 **Core Logic:**
 - `packages/api/src/handlers/`: main API router handlers.
 - `packages/api/src/payments/webhooks/`: payment provider webhook adapters and registry.
+- `packages/payment/src/`: payment config, webhook reconciliation, and execution-side provider registry/adapters for refund flows.
 - `packages/assistant/src/`: assistant contract, router, tools, and transport helpers.
 - `packages/notifications/src/`: notification contracts, pusher, processor, preference logic.
 - `packages/auth/src/`: Better Auth setup and org access control.

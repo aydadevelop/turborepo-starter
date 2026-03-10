@@ -138,7 +138,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. Review Missing Extractions | 4/4 | Complete | 2026-03-10 |
 | 8. Verification & Traceability Backfill | 3/3 | Complete | 2026-03-10 |
 | 9. Operator Catalog & Booking Intake Wiring | 3/3 | Complete | 2026-03-10 |
-| 10. Payment Webhook & Cancellation Live Path | 0/4 | Planned | - |
+| 10. Payment Webhook & Cancellation Live Path | 1/4 | In Progress|  |
 | 11. Events, Notifications, Calendar & Support Integration | 0/0 | Planned | - |
 
 ### Phase 7: review missing extractions
