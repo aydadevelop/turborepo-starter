@@ -1,3 +1,47 @@
+---
+phase: 05-booking-core-customer-access
+plan: "03"
+subsystem: api
+tags: [booking, orpc, handlers, auth, transport]
+
+requires:
+	- phase: 05-booking-core-customer-access
+		provides: "booking read and mutation services"
+provides:
+	- "booking oRPC contracts for customer and operator surfaces"
+	- "thin handlers for booking creation, org review, lifecycle updates, and my-bookings lookup"
+	- "date-normalized booking transport models"
+affects: [api, booking, web, auth]
+
+tech-stack:
+	added: []
+	patterns:
+		- "Protected procedures derive customer identity from the session instead of client-supplied user IDs"
+		- "Transport handlers normalize Date values and translate package domain errors to ORPCError codes"
+
+key-files:
+	created:
+		- packages/api-contract/src/routers/booking.ts
+	modified:
+		- packages/api/src/handlers/booking.ts
+		- packages/api-contract/src/routers/index.ts
+		- packages/api/src/handlers/index.ts
+		- packages/api/package.json
+
+key-decisions:
+	- "listMyBookings is session-scoped and accepts no userId from the client"
+	- "booking.create currently records organization linkage but does not yet validate live publication ownership"
+
+patterns-established:
+	- "Operator review routes use organizationPermissionProcedure while customer booking history uses protectedProcedure"
+	- "Booking transport schemas share a single output formatter for ISO-normalized date fields"
+
+requirements-completed: []
+
+duration: "n/a"
+completed: 2026-03-10
+---
+
 # Phase 05-03 Summary: Booking oRPC Contracts + Thin Handlers
 
 ## What Was Built

@@ -1,3 +1,48 @@
+---
+phase: 05-booking-core-customer-access
+plan: "02"
+subsystem: booking
+tags: [booking, tdd, lifecycle, state-machine, pricing]
+
+requires:
+  - phase: 05-booking-core-customer-access
+    provides: "booking package scaffold and read services"
+  - phase: 04-availability-pricing-core
+    provides: "slot checks and quote calculation services"
+provides:
+  - "createBooking mutation with slot-availability and quote integration"
+  - "Org-safe booking status state machine"
+  - "Booking package tests for lifecycle transitions and failure cases"
+affects: [booking, api, payments, cancellations]
+
+tech-stack:
+  added: []
+  patterns:
+    - "TDD is used for booking mutations with well-defined state transition inputs and outputs"
+    - "Booking lifecycle rules are encoded as package-owned VALID_TRANSITIONS data, not handler logic"
+
+key-files:
+  created: []
+  modified:
+    - packages/booking/package.json
+    - packages/booking/src/booking-service.ts
+    - packages/booking/src/__tests__/booking-service.test.ts
+
+key-decisions:
+  - "merchantOrganizationId defaults to organizationId for the baseline marketplace booking flow"
+  - "Status updates enforce org isolation atomically in the query itself"
+
+patterns-established:
+  - "Booking mutation services compose availability and pricing packages instead of reimplementing their logic"
+  - "Lifecycle transition validation lives inside the booking package as a state-machine map"
+
+requirements-completed:
+  - BOOK-02
+
+duration: "n/a"
+completed: 2026-03-10
+---
+
 # Phase 05-02 Summary: TDD createBooking + updateBookingStatus
 
 ## What Was Built

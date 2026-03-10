@@ -1,3 +1,50 @@
+---
+phase: 05-booking-core-customer-access
+plan: "01"
+subsystem: booking
+tags: [booking, rbac, domain-package, queries, organization]
+
+requires:
+	- phase: 04-availability-pricing-core
+		provides: "availability and pricing foundations used by downstream booking work"
+provides:
+	- "booking RBAC resource across org roles"
+	- "@my-app/booking read services for org and customer booking queries"
+	- "booking package scaffold for later lifecycle and mutation work"
+affects: [booking, api, auth, customer-surfaces]
+
+tech-stack:
+	added: []
+	patterns:
+		- "Booking package services accept db as the final argument and enforce org scoping in queries"
+		- "Customer booking access is handled by protected procedures rather than org RBAC grants"
+
+key-files:
+	created:
+		- packages/booking/package.json
+		- packages/booking/tsconfig.json
+		- packages/booking/vitest.config.ts
+		- packages/booking/src/types.ts
+		- packages/booking/src/booking-service.ts
+		- packages/booking/src/index.ts
+		- packages/booking/src/__tests__/booking-service.test.ts
+	modified:
+		- packages/auth/src/organization-access.ts
+
+key-decisions:
+	- "Customer booking access stays outside org RBAC because it is derived from authenticated identity"
+	- "Org-safe lookup uses AND(id, organizationId) inside booking service queries"
+
+patterns-established:
+	- "Package scaffolds start with read services and tests before mutation workflows are layered in"
+	- "Booking test data uses distinct listing/publication seeds to exercise realistic filters"
+
+requirements-completed: []
+
+duration: "n/a"
+completed: 2026-03-10
+---
+
 # Phase 05-01 Summary: Booking Package Scaffold + RBAC + Read Service
 
 ## What Was Built
