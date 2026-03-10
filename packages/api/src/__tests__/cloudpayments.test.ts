@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CloudPaymentsWebhookAdapter } from "../payments/webhooks/cloudpayments";
@@ -18,39 +19,84 @@ const sampleNotification = {
 	Status: "Completed",
 };
 
+const createRequestHmac = (body: string) =>
+	createHmac("sha256", "api_secret").update(body, "utf8").digest("base64");
+
 describe("CloudPaymentsWebhookAdapter.authenticateWebhook", () => {
-	it("accepts valid Basic Auth credentials", () => {
+	it("accepts valid Basic Auth credentials", async () => {
 		const credentials = btoa("pk_test:api_secret");
 		const request = new Request("https://example.com/webhook", {
+			method: "POST",
 			headers: { Authorization: `Basic ${credentials}` },
 		});
 
-		expect(() => adapter.authenticateWebhook(request)).not.toThrow();
+		await expect(adapter.authenticateWebhook(request)).resolves.toBeUndefined();
 	});
 
-	it("rejects invalid Basic Auth credentials", () => {
+	it("rejects invalid Basic Auth credentials", async () => {
 		const credentials = btoa("pk_test:wrong_secret");
 		const request = new Request("https://example.com/webhook", {
+			method: "POST",
 			headers: { Authorization: `Basic ${credentials}` },
 		});
 
-		expect(() => adapter.authenticateWebhook(request)).toThrow(
+		await expect(adapter.authenticateWebhook(request)).rejects.toThrow(
 			WebhookAuthError
 		);
 	});
 
-	it("accepts Content-HMAC header as fallback auth", () => {
+	it("rejects invalid HMAC headers", async () => {
+		const body = JSON.stringify(sampleNotification);
 		const request = new Request("https://example.com/webhook", {
-			headers: { "Content-HMAC": "some-hmac-value" },
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"Content-HMAC": "not-the-right-hash",
+			},
+			body,
 		});
 
-		expect(() => adapter.authenticateWebhook(request)).not.toThrow();
+		await expect(adapter.authenticateWebhook(request)).rejects.toThrow(
+			WebhookAuthError
+		);
 	});
 
-	it("rejects missing authentication", () => {
+	it("accepts a valid computed HMAC header without consuming the body", async () => {
+		const body = JSON.stringify(sampleNotification);
+		const request = new Request("https://example.com/webhook", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"X-Content-HMAC": createRequestHmac(body),
+			},
+			body,
+		});
+
+		await expect(adapter.authenticateWebhook(request)).resolves.toBeUndefined();
+		await expect(adapter.parseWebhookBody(request)).resolves.toMatchObject(
+			sampleNotification
+		);
+	});
+
+	it("accepts Basic Auth as an alternative authentication path", async () => {
+		const credentials = btoa("pk_test:api_secret");
+		const body = JSON.stringify(sampleNotification);
+		const request = new Request("https://example.com/webhook", {
+			method: "POST",
+			headers: {
+				Authorization: `Basic ${credentials}`,
+				"Content-Type": "application/json",
+			},
+			body,
+		});
+
+		await expect(adapter.authenticateWebhook(request)).resolves.toBeUndefined();
+	});
+
+	it("rejects missing authentication", async () => {
 		const request = new Request("https://example.com/webhook");
 
-		expect(() => adapter.authenticateWebhook(request)).toThrow(
+		await expect(adapter.authenticateWebhook(request)).rejects.toThrow(
 			WebhookAuthError
 		);
 	});

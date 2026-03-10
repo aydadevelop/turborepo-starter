@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { organization } from "@my-app/db/schema/auth";
 import {
 	booking,
+	bookingPaymentAttempt,
 	listing,
 	listingPublication,
 	listingTypeConfig,
@@ -127,6 +128,22 @@ describe("reconcilePaymentWebhook", () => {
 			.limit(1);
 		expect(updatedBooking?.paymentStatus).toBe("paid");
 
+		const [updatedConfig] = await getDb()
+			.select()
+			.from(organizationPaymentConfig)
+			.where(
+				eq(
+					organizationPaymentConfig.webhookEndpointId,
+					WEBHOOK_ENDPOINT_ID
+				)
+			)
+			.limit(1);
+		expect(updatedConfig?.validationStatus).toBe("validated");
+		expect(updatedConfig?.isActive).toBe(true);
+		expect(updatedConfig?.validatedAt).toBeInstanceOf(Date);
+
+		const validatedAtAfterFirstIngress = updatedConfig?.validatedAt?.toISOString();
+
 		// Second call (duplicate) — should be idempotent
 		const result2 = await reconcilePaymentWebhook(
 			WEBHOOK_ENDPOINT_ID,
@@ -137,6 +154,42 @@ describe("reconcilePaymentWebhook", () => {
 
 		expect(result2.idempotent).toBe(true);
 		expect(result2.processed).toBe(false);
+
+		const matchingEvents = await getDb()
+			.select()
+			.from(paymentWebhookEvent)
+			.where(
+				eq(
+					paymentWebhookEvent.requestSignature,
+					`${WEBHOOK_ENDPOINT_ID}:pay:${VALID_PAY_PAYLOAD.TransactionId}`
+				)
+			);
+		expect(matchingEvents).toHaveLength(1);
+
+		const matchingAttempts = await getDb()
+			.select()
+			.from(bookingPaymentAttempt)
+			.where(
+				eq(
+					bookingPaymentAttempt.providerIntentId,
+					String(VALID_PAY_PAYLOAD.TransactionId)
+				)
+			);
+		expect(matchingAttempts).toHaveLength(1);
+
+		const [configAfterDuplicate] = await getDb()
+			.select()
+			.from(organizationPaymentConfig)
+			.where(
+				eq(
+					organizationPaymentConfig.webhookEndpointId,
+					WEBHOOK_ENDPOINT_ID
+				)
+			)
+			.limit(1);
+		expect(configAfterDuplicate?.validatedAt?.toISOString()).toBe(
+			validatedAtAfterFirstIngress
+		);
 	});
 
 	it("throws ENDPOINT_NOT_FOUND for unknown endpointId", async () => {
