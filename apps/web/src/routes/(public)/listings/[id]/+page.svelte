@@ -1,4 +1,6 @@
 <script lang="ts">
+	import * as Card from "@my-app/ui/components/card";
+	import BookingRequestPanel from "../../../../components/public/BookingRequestPanel.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { page } from "$app/state";
 	import { orpc } from "$lib/orpc";
@@ -18,39 +20,66 @@
 	</a>
 
 	{#if listingQuery.isPending}
-		<div class="animate-pulse">
-			<div class="mb-4 h-8 w-2/3 rounded bg-gray-200"></div>
-			<div class="mb-2 h-4 w-1/4 rounded bg-gray-100"></div>
-			<div class="h-24 w-full rounded bg-gray-100"></div>
+		<div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+			<div class="animate-pulse space-y-4">
+				<div class="h-8 w-2/3 rounded bg-gray-200"></div>
+				<div class="h-4 w-1/4 rounded bg-gray-100"></div>
+				<div class="h-64 w-full rounded-lg bg-gray-100"></div>
+			</div>
+			<div class="h-[420px] rounded-lg border bg-gray-50"></div>
 		</div>
 	{:else if listingQuery.isError}
-		<p class="text-red-600">Listing not found or unavailable.</p>
+		<div class="rounded-lg border border-destructive bg-card p-6 text-red-600">
+			Listing not found or unavailable.
+		</div>
 	{:else if listingQuery.data}
 		{@const listing = listingQuery.data}
 
-		{#if listing.primaryImageKey}
-			<img
-				src="/assets/{listing.primaryImageKey}"
-				alt={listing.name}
-				class="mb-6 h-64 w-full rounded-lg object-cover"
-			/>
-		{/if}
+		<div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] lg:items-start">
+			<div class="space-y-6">
+				{#if listing.primaryImageKey}
+					<img
+						src="/assets/{listing.primaryImageKey}"
+						alt={listing.name}
+						class="h-64 w-full rounded-lg object-cover"
+					/>
+				{/if}
 
-		<span class="mb-2 inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-			{listing.listingTypeSlug}
-		</span>
+				<Card.Root>
+					<Card.Content class="space-y-4 py-6">
+						<span class="inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+							{listing.listingTypeSlug}
+						</span>
 
-		<h1 class="mb-4 text-3xl font-bold">{listing.name}</h1>
+						<div class="space-y-2">
+							<h1 class="text-3xl font-bold">{listing.name}</h1>
+							{#if listing.description}
+								<p class="text-gray-700">{listing.description}</p>
+							{:else}
+								<p class="text-sm text-muted-foreground">
+									The operator has not added a description yet.
+								</p>
+							{/if}
+						</div>
+					</Card.Content>
+				</Card.Root>
 
-		{#if listing.description}
-			<p class="mb-6 text-gray-700">{listing.description}</p>
-		{/if}
-
-		{#if listing.metadata}
-			<div class="rounded-lg bg-gray-50 p-4">
-				<h2 class="mb-2 text-sm font-semibold text-gray-600">Details</h2>
-				<pre class="overflow-x-auto text-xs text-gray-700">{JSON.stringify(listing.metadata, null, 2)}</pre>
+				{#if listing.metadata}
+					<Card.Root>
+						<Card.Header>
+							<Card.Title>Listing details</Card.Title>
+							<Card.Description>
+								Metadata published with this marketplace listing.
+							</Card.Description>
+						</Card.Header>
+						<Card.Content>
+							<pre class="overflow-x-auto rounded bg-gray-50 p-4 text-xs text-gray-700">{JSON.stringify(listing.metadata, null, 2)}</pre>
+						</Card.Content>
+					</Card.Root>
+				{/if}
 			</div>
-		{/if}
+
+			<BookingRequestPanel listingId={listing.id} listingName={listing.name} />
+		</div>
 	{/if}
 </div>
