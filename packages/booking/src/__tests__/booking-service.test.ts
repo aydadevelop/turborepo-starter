@@ -425,9 +425,7 @@ describe("createBooking", () => {
 	it("resolves the active marketplace publication and organization from listingId", async () => {
 		const row = await createBooking(
 			{
-				organizationId: BK2_OTHER_ORG_ID,
 				listingId: BK2_LISTING_FREE_ID,
-				publicationId: BK2_PUB_FREE_ID,
 				startsAt: new Date("2030-01-14T10:00:00Z"),
 				endsAt: new Date("2030-01-14T12:00:00Z"),
 				source: "web",
@@ -444,9 +442,7 @@ describe("createBooking", () => {
 	it("creates a booking for a free slot with pricing profile", async () => {
 		const row = await createBooking(
 			{
-				organizationId: BK2_ORG_ID,
 				listingId: BK2_LISTING_FREE_ID,
-				publicationId: BK2_PUB_FREE_ID,
 				startsAt: T_FREE_START,
 				endsAt: T_FREE_END,
 				source: "web",
@@ -466,9 +462,7 @@ describe("createBooking", () => {
 		await expect(
 			createBooking(
 				{
-					organizationId: BK2_ORG_ID,
 					listingId: BK2_LISTING_MARKETLESS_ID,
-					publicationId: BK2_PUB_FREE_ID,
 					startsAt: T_MARKETLESS_START,
 					endsAt: T_MARKETLESS_END,
 					source: "web",
@@ -483,9 +477,7 @@ describe("createBooking", () => {
 		await expect(
 			createBooking(
 				{
-					organizationId: BK2_ORG_ID,
 					listingId: BK2_LISTING_MISMATCH_ID,
-					publicationId: BK2_PUB_MISMATCH_MARKET_ID,
 					startsAt: T_MISMATCH_START,
 					endsAt: T_MISMATCH_END,
 					source: "web",
@@ -500,9 +492,7 @@ describe("createBooking", () => {
 		await expect(
 			createBooking(
 				{
-					organizationId: BK2_ORG_ID,
 					listingId: BK2_LISTING_BLOCKED_ID,
-					publicationId: BK2_PUB_BLOCKED_ID,
 					startsAt: T_BLOCKED_START,
 					endsAt: T_BLOCKED_END,
 					source: "web",
@@ -517,9 +507,7 @@ describe("createBooking", () => {
 		await expect(
 			createBooking(
 				{
-					organizationId: BK2_ORG_ID,
 					listingId: BK2_LISTING_NO_PRICING_ID,
-					publicationId: BK2_PUB_NO_PRICING_ID,
 					startsAt: T_NO_PRICING_START,
 					endsAt: T_NO_PRICING_END,
 					source: "web",
@@ -546,9 +534,7 @@ describe("updateBookingStatus", () => {
 		// Use a fresh pending booking to avoid state conflicts
 		const created = await createBooking(
 			{
-				organizationId: BK2_ORG_ID,
 				listingId: BK2_LISTING_FREE_ID,
-				publicationId: BK2_PUB_FREE_ID,
 				startsAt: new Date("2030-02-01T10:00:00Z"),
 				endsAt: new Date("2030-02-01T12:00:00Z"),
 				source: "manual",
@@ -566,9 +552,7 @@ describe("updateBookingStatus", () => {
 	it("transitions pending → cancelled and sets cancelledAt", async () => {
 		const created = await createBooking(
 			{
-				organizationId: BK2_ORG_ID,
 				listingId: BK2_LISTING_FREE_ID,
-				publicationId: BK2_PUB_FREE_ID,
 				startsAt: new Date("2030-02-02T10:00:00Z"),
 				endsAt: new Date("2030-02-02T12:00:00Z"),
 				source: "manual",
@@ -609,9 +593,7 @@ describe("updateBookingStatus", () => {
 	it("throws INVALID_TRANSITION for pending → completed", async () => {
 		const created = await createBooking(
 			{
-				organizationId: BK2_ORG_ID,
 				listingId: BK2_LISTING_FREE_ID,
-				publicationId: BK2_PUB_FREE_ID,
 				startsAt: new Date("2030-02-03T10:00:00Z"),
 				endsAt: new Date("2030-02-03T12:00:00Z"),
 				source: "manual",

@@ -41,9 +41,7 @@ export const bookingRouter = {
 		try {
 			const row = await createBooking(
 				{
-					organizationId: input.organizationId,
 					listingId: input.listingId,
-					publicationId: input.publicationId,
 					startsAt: new Date(input.startsAt),
 					endsAt: new Date(input.endsAt),
 					passengers: input.passengers,
@@ -65,7 +63,8 @@ export const bookingRouter = {
 			if (e instanceof Error) {
 				if (e.message === "SLOT_UNAVAILABLE") throw new ORPCError("CONFLICT", { message: "Slot is unavailable" });
 				if (e.message === "NO_PRICING_PROFILE") throw new ORPCError("PRECONDITION_FAILED", { message: "No pricing profile for this listing" });
-				if (e.message === "NOT_FOUND") throw new ORPCError("NOT_FOUND");
+				if (e.message === "PUBLICATION_ORG_MISMATCH") throw new ORPCError("PRECONDITION_FAILED", { message: "Listing publication is misconfigured" });
+				if (e.message === "NOT_FOUND") throw new ORPCError("NOT_FOUND", { message: "Listing is not bookable" });
 			}
 			throw e;
 		}

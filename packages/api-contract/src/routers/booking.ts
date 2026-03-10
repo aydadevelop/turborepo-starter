@@ -54,8 +54,6 @@ export const bookingContract = {
 		.input(
 			z.object({
 				listingId: z.string(),
-				publicationId: z.string(),
-				organizationId: z.string(),
 				startsAt: z.string().datetime(),
 				endsAt: z.string().datetime(),
 				passengers: z.number().int().optional(),

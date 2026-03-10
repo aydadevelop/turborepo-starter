@@ -7,9 +7,7 @@ export type BookingRow = typeof booking.$inferSelect;
 export type CancellationRequestRow = typeof bookingCancellationRequest.$inferSelect;
 
 export interface CreateBookingInput {
-	organizationId: string;
 	listingId: string;
-	publicationId: string;
 	startsAt: Date;
 	endsAt: Date;
 	passengers?: number;

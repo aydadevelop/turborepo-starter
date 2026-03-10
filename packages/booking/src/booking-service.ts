@@ -1,7 +1,7 @@
 import { assertSlotAvailable } from "@my-app/availability";
 import { calculateQuote } from "@my-app/pricing";
 import { and, desc, eq } from "drizzle-orm";
-import { booking } from "@my-app/db/schema/marketplace";
+import { booking, listing, listingPublication } from "@my-app/db/schema/marketplace";
 import type { BookingRow, CreateBookingInput, Db, ListOrgBookingsFilter, UpdateBookingStatusInput } from "./types";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -52,7 +52,44 @@ export async function listCustomerBookings(customerUserId: string, db: Db): Prom
 		.limit(100);
 }
 
+async function resolveBookingContext(listingId: string, db: Db) {
+	const [row] = await db
+		.select({
+			listingOrganizationId: listing.organizationId,
+			publicationId: listingPublication.id,
+			publicationOrganizationId: listingPublication.organizationId,
+			merchantPaymentConfigId: listingPublication.merchantPaymentConfigId,
+		})
+		.from(listing)
+		.leftJoin(
+			listingPublication,
+			and(
+				eq(listingPublication.listingId, listing.id),
+				eq(listingPublication.isActive, true),
+				eq(listingPublication.channelType, "platform_marketplace"),
+			),
+		)
+		.where(and(eq(listing.id, listingId), eq(listing.isActive, true)))
+		.limit(1);
+
+	if (!row?.publicationId || !row.publicationOrganizationId) {
+		throw new Error("NOT_FOUND");
+	}
+
+	if (row.listingOrganizationId !== row.publicationOrganizationId) {
+		throw new Error("PUBLICATION_ORG_MISMATCH");
+	}
+
+	return {
+		organizationId: row.listingOrganizationId,
+		publicationId: row.publicationId,
+		merchantOrganizationId: row.publicationOrganizationId,
+		merchantPaymentConfigId: row.merchantPaymentConfigId,
+	};
+}
+
 export async function createBooking(input: CreateBookingInput, db: Db): Promise<BookingRow> {
+	const bookingContext = await resolveBookingContext(input.listingId, db);
 	await assertSlotAvailable(input.listingId, input.startsAt, input.endsAt, db);
 	const quote = await calculateQuote(
 		{ listingId: input.listingId, startsAt: input.startsAt, endsAt: input.endsAt, passengers: input.passengers },
@@ -62,10 +99,11 @@ export async function createBooking(input: CreateBookingInput, db: Db): Promise<
 		.insert(booking)
 		.values({
 			id: crypto.randomUUID(),
-			organizationId: input.organizationId,
+			organizationId: bookingContext.organizationId,
 			listingId: input.listingId,
-			publicationId: input.publicationId,
-			merchantOrganizationId: input.organizationId,
+			publicationId: bookingContext.publicationId,
+			merchantOrganizationId: bookingContext.merchantOrganizationId,
+			merchantPaymentConfigId: bookingContext.merchantPaymentConfigId,
 			customerUserId: input.customerUserId,
 			createdByUserId: input.createdByUserId,
 			source: input.source,
