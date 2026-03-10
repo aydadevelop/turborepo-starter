@@ -69,7 +69,7 @@ completed: 2026-03-10
 
 1. **Task 1: Add the org listings index and live publish/unpublish controls** — `b6bd292` (`feat`)
 2. **Task 2: Add create/edit listing routes with a shared editor form** — `daab0f8` (`feat`)
-3. **Plan metadata:** `50c9e45`
+3. **Plan metadata:** `c41fd4f`
 
 ## Files Created/Modified
 

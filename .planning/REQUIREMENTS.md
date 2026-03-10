@@ -30,7 +30,7 @@
 
 - [ ] **AVPR-01**: Operator can define availability rules and one-off blocks for a listing
 - [ ] **AVPR-02**: System prevents overlapping active bookings for the same listing and surfaces a clean failure when a slot is unavailable
-- [ ] **AVPR-03**: Customer can request a quote for a candidate slot and receive a transparent pricing breakdown before booking
+- [x] **AVPR-03**: Customer can request a quote for a candidate slot and receive a transparent pricing breakdown before booking
 - [ ] **AVPR-04**: Operator can manage pricing profiles and rules without inline pricing logic living in transport handlers
 
 ### Booking and Payments
@@ -106,7 +106,7 @@
 | CATL-04 | Phase 8 | Satisfied |
 | AVPR-01 | Phase 8 | Satisfied |
 | AVPR-02 | Phase 8 | Satisfied |
-| AVPR-03 | Phase 9 | Pending |
+| AVPR-03 | Phase 9 | Complete |
 | AVPR-04 | Phase 8 | Satisfied |
 | BOOK-01 | Phase 9 | Complete |
 | BOOK-02 | Phase 8 | Satisfied |

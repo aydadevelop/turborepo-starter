@@ -69,7 +69,7 @@ completed: 2026-03-10
 
 1. **RED: Add failing tests for server-trusted booking context** — `a762740` (`test`)
 2. **GREEN: Resolve booking publication context server-side** — `9a7fc50` (`feat`)
-3. **Plan metadata:** `50c9e45`
+3. **Plan metadata:** `c41fd4f`
 
 ## Files Created/Modified
 
