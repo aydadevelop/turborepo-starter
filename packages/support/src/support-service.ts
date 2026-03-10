@@ -115,3 +115,59 @@ export async function listOrgTickets(
 
 	return query;
 }
+
+export async function listCustomerTickets(
+	customerUserId: string,
+	filter: ListTicketsFilter,
+	db: Db,
+): Promise<SupportTicketRow[]> {
+	const conditions = [eq(supportTicket.customerUserId, customerUserId)];
+
+	if (filter.status) {
+		conditions.push(eq(supportTicket.status, filter.status));
+	}
+	if (filter.bookingId) {
+		conditions.push(eq(supportTicket.bookingId, filter.bookingId));
+	}
+
+	const query = db
+		.select()
+		.from(supportTicket)
+		.where(and(...conditions))
+		.orderBy(supportTicket.createdAt);
+
+	if (filter.limit !== undefined) {
+		query.limit(filter.limit);
+	}
+	if (filter.offset !== undefined) {
+		query.offset(filter.offset);
+	}
+
+	return query;
+}
+
+export async function getCustomerTicket(
+	ticketId: string,
+	customerUserId: string,
+	db: Db,
+): Promise<SupportTicketRow> {
+	const [row] = await db
+		.select()
+		.from(supportTicket)
+		.where(and(eq(supportTicket.id, ticketId), eq(supportTicket.customerUserId, customerUserId)))
+		.limit(1);
+
+	if (!row) {
+		throw new Error("NOT_FOUND");
+	}
+
+	return row;
+}
+
+export async function listTicketMessages(ticketId: string, db: Db): Promise<SupportTicketMessageRow[]> {
+	return db
+		.select()
+		.from(supportTicketMessage)
+		.where(and(eq(supportTicketMessage.ticketId, ticketId), eq(supportTicketMessage.isInternal, false)))
+		.orderBy(supportTicketMessage.createdAt);
+}

@@ -110,4 +110,49 @@ export const supportContract = {
 		})
 		.input(listTicketsInputSchema)
 		.output(z.array(ticketOutput)),
+
+	listMyTickets: oc
+		.route({
+			tags: ["Support"],
+			summary: "List the authenticated customer's own tickets",
+			description:
+				"Returns support tickets where the caller is the customerUserId. Scoped to the authenticated user only.",
+		})
+		.input(
+			z.object({
+				bookingId: z.string().optional(),
+				limit: z.number().int().min(1).max(200).optional(),
+				offset: z.number().int().min(0).optional(),
+			}),
+		)
+		.output(z.array(ticketOutput)),
+
+	getMyTicket: oc
+		.route({
+			tags: ["Support"],
+			summary: "Get the caller's own ticket with messages",
+			description:
+				"Fetch a ticket where the caller is the customerUserId. Returns ticket metadata and non-internal messages.",
+		})
+		.input(z.object({ ticketId: z.string().trim().min(1) }))
+		.output(
+			z.object({
+				ticket: ticketOutput,
+				messages: z.array(messageOutput),
+			}),
+		),
+
+	addMyMessage: oc
+		.route({
+			tags: ["Support"],
+			summary: "Add a customer reply to their own ticket",
+			description: "Append a customer-facing (non-internal) message to a ticket the caller owns.",
+		})
+		.input(
+			z.object({
+				ticketId: z.string().trim().min(1),
+				body: z.string().trim().min(1).max(10_000),
+			}),
+		)
+		.output(messageOutput),
 };

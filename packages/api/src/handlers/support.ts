@@ -1,13 +1,18 @@
 import { db } from "@my-app/db";
+import { supportTicket } from "@my-app/db/schema/support";
 import {
 	addTicketMessage,
 	createSupportTicket,
+	getCustomerTicket,
 	getTicket,
+	listCustomerTickets,
 	listOrgTickets,
+	listTicketMessages,
 } from "@my-app/support";
 import { ORPCError } from "@orpc/server";
+import { eq } from "drizzle-orm";
 
-import { organizationPermissionProcedure } from "../index";
+import { organizationPermissionProcedure, protectedProcedure } from "../index";
 
 function formatTicket(row: {
 	id: string;
@@ -123,5 +128,64 @@ export const supportRouter = {
 			db,
 		);
 		return tickets.map(formatTicket);
+	}),
+
+	listMyTickets: protectedProcedure.support.listMyTickets.handler(async ({ context, input }) => {
+		const customerUserId = context.session!.user!.id;
+		const tickets = await listCustomerTickets(
+			customerUserId,
+			{
+				bookingId: input.bookingId,
+				limit: input.limit,
+				offset: input.offset,
+			},
+			db,
+		);
+		return tickets.map(formatTicket);
+	}),
+
+	getMyTicket: protectedProcedure.support.getMyTicket.handler(async ({ context, input }) => {
+		const userId = context.session!.user!.id;
+		try {
+			const ticket = await getCustomerTicket(input.ticketId, userId, db);
+			const messages = await listTicketMessages(input.ticketId, db);
+			return {
+				ticket: formatTicket(ticket),
+				messages: messages.map(formatMessage),
+			};
+		} catch (e) {
+			if (e instanceof Error && e.message === "NOT_FOUND") {
+				throw new ORPCError("NOT_FOUND", { message: "Ticket not found" });
+			}
+			throw e;
+		}
+	}),
+
+	addMyMessage: protectedProcedure.support.addMyMessage.handler(async ({ context, input }) => {
+		const userId = context.session!.user!.id;
+		const [ticket] = await db
+			.select({
+				id: supportTicket.id,
+				organizationId: supportTicket.organizationId,
+				customerUserId: supportTicket.customerUserId,
+			})
+			.from(supportTicket)
+			.where(eq(supportTicket.id, input.ticketId))
+			.limit(1);
+		if (!ticket || ticket.customerUserId !== userId) {
+			throw new ORPCError("NOT_FOUND", { message: "Ticket not found" });
+		}
+		const message = await addTicketMessage(
+			{
+				ticketId: input.ticketId,
+				organizationId: ticket.organizationId,
+				authorUserId: userId,
+				channel: "web",
+				body: input.body,
+				isInternal: false,
+			},
+			db,
+		);
+		return formatMessage(message);
 	}),
 };
