@@ -1,10 +1,27 @@
 import { serve } from "@hono/node-server";
+import { db } from "@my-app/db";
+import {
+	GoogleCalendarAdapter,
+	registerBookingLifecycleSync,
+	registerCalendarAdapter,
+} from "@my-app/calendar";
 import { RECURRING_TASK_QUEUE, startBoss, stopBoss } from "@my-app/queue";
 import { registerWorker } from "@my-app/queue/worker";
 import { app } from "./app";
 import { handleRecurringTaskJob } from "./queues/recurring-task-consumer";
 
 const port = Number(process.env.SERVER_PORT ?? process.env.PORT ?? 3000);
+
+// Register external integrations before starting the HTTP server
+const googleServiceAccountKey: Record<string, unknown> = (() => {
+	try {
+		return JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY ?? "{}") as Record<string, unknown>;
+	} catch {
+		return {};
+	}
+})();
+registerCalendarAdapter("google", new GoogleCalendarAdapter(googleServiceAccountKey));
+registerBookingLifecycleSync(db);
 
 serve({ fetch: app.fetch, port }, (info) => {
 	console.log(`Server listening on http://${info.address}:${info.port}`);
