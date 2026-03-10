@@ -1,3 +1,52 @@
+---
+phase: 03-org-access-catalog-storefront
+plan: "02"
+subsystem: api
+tags: [catalog, listing, orpc, handlers, domain-package]
+
+requires:
+	- phase: 03-org-access-catalog-storefront
+		provides: "listing RBAC permissions for organization roles"
+provides:
+	- "@my-app/catalog domain package for listing CRUD and publication services"
+	- "listing oRPC contract and thin API handlers"
+	- "organization-derived listing ownership in transport handlers"
+affects: [catalog, api, storefront, operator-surfaces]
+
+tech-stack:
+	added: []
+	patterns:
+		- "Domain service functions accept db as a parameter for testability"
+		- "Handlers derive organizationId from active membership instead of trusting client input"
+
+key-files:
+	created:
+		- packages/catalog/src/types.ts
+		- packages/catalog/src/listing-service.ts
+		- packages/catalog/src/publication-service.ts
+		- packages/catalog/src/index.ts
+		- packages/catalog/src/__tests__/listing-service.test.ts
+		- packages/api-contract/src/routers/listing.ts
+		- packages/api/src/handlers/listing.ts
+	modified:
+		- packages/api-contract/src/routers/index.ts
+		- packages/api/src/handlers/index.ts
+		- packages/api/package.json
+
+key-decisions:
+	- "publishListing is idempotent and reactivates existing publication rows instead of duplicating them"
+	- "Listing services stay package-owned and transport remains thin"
+
+patterns-established:
+	- "Contract-first oRPC routers map to thin handlers that delegate to package-owned services"
+	- "Organization ownership is enforced server-side from context, not client payload"
+
+requirements-completed: []
+
+duration: "n/a"
+completed: 2026-03-09
+---
+
 # 03-02 Summary: Catalog Package + Listing oRPC Contract
 
 ## Status: Complete

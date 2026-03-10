@@ -1,3 +1,40 @@
+---
+phase: 03-org-access-catalog-storefront
+plan: "01"
+subsystem: auth
+tags: [rbac, auth, organization, listing, permissions]
+
+requires:
+	- phase: 02-events-workflows-parity-foundations
+		provides: "package conventions and auth foundation for extracted domains"
+provides:
+	- "listing resource permissions across organization roles"
+	- "Acceptance tests for listing authorization behavior"
+affects: [catalog, api, operator-surfaces]
+
+tech-stack:
+	added: []
+	patterns:
+		- "Operator resources are added centrally in organization-access.ts with role-focused acceptance tests"
+
+key-files:
+	created: []
+	modified:
+		- packages/auth/src/organization-access.ts
+		- packages/auth/src/__tests__/organization-access.test.ts
+
+key-decisions:
+	- "Customer listing access stays empty in RBAC because storefront browse is public"
+
+patterns-established:
+	- "When a new org-scoped resource is introduced, update both statements and every role definition"
+
+requirements-completed: []
+
+duration: "n/a"
+completed: 2026-03-09
+---
+
 # 03-01 Summary: RBAC listing resource
 
 ## Status: Complete

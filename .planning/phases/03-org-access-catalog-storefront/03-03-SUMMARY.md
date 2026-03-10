@@ -1,3 +1,53 @@
+---
+phase: 03-org-access-catalog-storefront
+plan: "03"
+subsystem: ui
+tags: [storefront, sveltekit, orpc, catalog, search]
+
+requires:
+	- phase: 03-org-access-catalog-storefront
+		provides: "catalog listing and publication services plus listing API contracts"
+provides:
+	- "public storefront browse and detail services for published listings"
+	- "unauthenticated storefront oRPC endpoints"
+	- "SvelteKit browse and detail pages backed by typed storefront queries"
+affects: [storefront, web, discovery, booking-intake]
+
+tech-stack:
+	added: []
+	patterns:
+		- "Public storefront flows use publicProcedure and typed queryOptions({ input }) wrappers"
+		- "Storefront service joins publication state and primary image metadata in one pragmatic Postgres query"
+
+key-files:
+	created:
+		- packages/catalog/src/storefront-service.ts
+		- packages/catalog/src/__tests__/storefront-service.test.ts
+		- packages/api-contract/src/routers/storefront.ts
+		- packages/api/src/handlers/storefront.ts
+		- apps/web/src/routes/(public)/+layout.svelte
+		- apps/web/src/routes/(public)/listings/+page.svelte
+		- apps/web/src/routes/(public)/listings/[id]/+page.svelte
+	modified:
+		- packages/api-contract/src/routers/index.ts
+		- packages/api/src/handlers/index.ts
+
+key-decisions:
+	- "Storefront browse and detail are fully public, with handler translation of NOT_FOUND domain errors"
+	- "Keyword and type filters use a pragmatic Postgres-backed query rather than a heavier search system"
+
+patterns-established:
+	- "Public catalog discovery lives in package-owned services with thin API handlers and typed SvelteKit consumers"
+	- "Primary image metadata is derived alongside listing browse results so pages avoid extra fetches"
+
+requirements-completed:
+	- CATL-03
+	- CATL-04
+
+duration: "n/a"
+completed: 2026-03-09
+---
+
 # 03-03 Summary: Storefront Service (TDD) + Public API + SvelteKit Pages
 
 ## Status: Complete
