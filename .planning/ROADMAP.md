@@ -217,7 +217,8 @@ Plans:
   2. Notification delivery wiring is registered at startup and produces valid recipient payloads for booking lifecycle events.
   3. Calendar sync subscribers receive the booking lifecycle events they need from the live runtime.
   4. Customers can view and follow booking-linked support history through the live API and web surfaces.
-**Plans**: 0 plans
+**Plans**: 2 plans
 
 Plans:
-- [ ] To be planned with `/gsd-plan-phase 11`
+- [ ] 11-01-PLAN.md — OPER-03 + BOOK-04: Emit typed domain events from booking.updateStatus + notification events-bridge recipient resolution at startup
+- [ ] 11-02-PLAN.md — AUTH-02 + OPER-02: listCustomerTickets domain function, customer-scoped API endpoint, /dashboard/bookings web page
