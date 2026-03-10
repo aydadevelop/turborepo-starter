@@ -1,3 +1,49 @@
+---
+phase: 04-availability-pricing-core
+plan: "01"
+subsystem: availability
+tags: [availability, rbac, scheduling, overlap, domain-package]
+
+requires:
+  - phase: 03-org-access-catalog-storefront
+    provides: "listing domain foundation and organization-scoped permissions"
+provides:
+  - "@my-app/availability service package for rules, blocks, exceptions, and slot checks"
+  - "availability and pricing RBAC resources across organization roles"
+  - "test coverage for ownership and overlap protection behavior"
+affects: [availability, pricing, booking, operator-surfaces]
+
+tech-stack:
+  added: []
+  patterns:
+    - "Availability services verify listing ownership through the listing table instead of duplicating org columns"
+    - "Package services throw plain domain errors and accept db as the final argument"
+
+key-files:
+  created:
+    - packages/availability/src/types.ts
+    - packages/availability/src/availability-service.ts
+    - packages/availability/src/index.ts
+    - packages/availability/src/__tests__/availability-service.test.ts
+  modified:
+    - packages/auth/src/organization-access.ts
+
+key-decisions:
+  - "Duplicate-date detection is handled with a pre-check query because PGlite hides useful constraint names"
+  - "Availability ownership is derived through listing joins because listingAvailabilityRule has no organizationId column"
+
+patterns-established:
+  - "Availability CRUD belongs in package-owned services with explicit org/listing validation"
+  - "RBAC resource additions ship alongside focused permission tests"
+
+requirements-completed:
+  - AVPR-01
+  - AVPR-02
+
+duration: "n/a"
+completed: 2026-03-10
+---
+
 # 04-01 Summary: Availability Package Scaffold + RBAC
 
 ## Status: COMPLETE

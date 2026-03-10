@@ -1,3 +1,49 @@
+---
+phase: 04-availability-pricing-core
+plan: "03"
+subsystem: api
+tags: [availability, pricing, orpc, handlers, transport]
+
+requires:
+	- phase: 04-availability-pricing-core
+		provides: "availability and pricing package services"
+provides:
+	- "oRPC contracts and thin handlers for availability CRUD and slot checks"
+	- "oRPC contracts and thin handlers for pricing profile/rule management and quote lookup"
+	- "public transport seams for check-slot and get-quote operations"
+affects: [api, availability, pricing, web]
+
+tech-stack:
+	added: []
+	patterns:
+		- "Handlers translate plain domain errors into ORPCError codes without embedding business logic"
+		- "Public quote and slot-check endpoints stay separate from operator-authenticated CRUD endpoints"
+
+key-files:
+	created:
+		- packages/api-contract/src/routers/availability.ts
+		- packages/api-contract/src/routers/pricing.ts
+		- packages/api/src/handlers/availability.ts
+		- packages/api/src/handlers/pricing.ts
+	modified:
+		- packages/api-contract/src/routers/index.ts
+		- packages/api/src/handlers/index.ts
+		- packages/api/package.json
+
+key-decisions:
+	- "Transport wiring exposes getQuote and checkSlot publicly while operator CRUD stays permission-guarded"
+	- "Handler formatting normalizes Date columns to ISO strings at the edge"
+
+patterns-established:
+	- "oRPC contracts mirror package-owned availability and pricing service boundaries"
+	- "Thin handlers are responsible for auth and error translation only"
+
+requirements-completed: []
+
+duration: "n/a"
+completed: 2026-03-10
+---
+
 # 04-03 Summary: Transport Wiring (oRPC Contracts + Handlers)
 
 ## Status: COMPLETE

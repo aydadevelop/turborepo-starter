@@ -1,3 +1,50 @@
+---
+phase: 04-availability-pricing-core
+plan: "02"
+subsystem: pricing
+tags: [pricing, quotes, tdd, rules, domain-package]
+
+requires:
+  - phase: 04-availability-pricing-core
+    provides: "availability package foundation and listing ownership patterns"
+provides:
+  - "@my-app/pricing package for pricing profiles and rules"
+  - "Pure rule-resolution logic for stacking and exclusivity"
+  - "Transparent quote calculation with breakdown fields"
+affects: [pricing, booking, quote-surfaces, operator-surfaces]
+
+tech-stack:
+  added: []
+  patterns:
+    - "Pricing rule resolution stays pure and testable outside DB operations"
+    - "Quote calculation composes profile lookup, rule resolution, and fee/tax breakdowns inside the package"
+
+key-files:
+  created:
+    - packages/pricing/src/types.ts
+    - packages/pricing/src/rule-resolver.ts
+    - packages/pricing/src/pricing-service.ts
+    - packages/pricing/src/quote-service.ts
+    - packages/pricing/src/index.ts
+    - packages/pricing/src/__tests__/pricing-service.test.ts
+    - packages/pricing/src/__tests__/quote-service.test.ts
+  modified: []
+
+key-decisions:
+  - "Legacy pricing-rule behavior was adapted into pure package-owned resolver helpers"
+  - "Profile listing and rule CRUD stay package-owned even before live booking wiring is complete"
+
+patterns-established:
+  - "Use TDD for pricing logic with pure helpers where inputs and outputs are well defined"
+  - "Quote breakdowns surface base, adjustment, service fee, tax, and total as explicit fields"
+
+requirements-completed:
+  - AVPR-04
+
+duration: "n/a"
+completed: 2026-03-10
+---
+
 # 04-02 Summary: Pricing Package Scaffold (TDD)
 
 ## Status: COMPLETE
