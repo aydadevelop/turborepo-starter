@@ -221,13 +221,22 @@ describe("listCustomerBookings", () => {
 // ===== Plan 05-02: createBooking + updateBookingStatus TDD =====
 
 const BK2_ORG_ID = "bk2-org-1";
+const BK2_OTHER_ORG_ID = "bk2-org-2";
 const BK2_LISTING_FREE_ID = "bk2-listing-free";
 const BK2_LISTING_BLOCKED_ID = "bk2-listing-blocked";
 const BK2_LISTING_NO_PRICING_ID = "bk2-listing-no-pricing";
+const BK2_LISTING_MARKETLESS_ID = "bk2-listing-marketless";
+const BK2_LISTING_MISMATCH_ID = "bk2-listing-mismatch";
 const BK2_PUB_FREE_ID = "bk2-pub-free";
 const BK2_PUB_BLOCKED_ID = "bk2-pub-blocked";
 const BK2_PUB_NO_PRICING_ID = "bk2-pub-no-pricing";
+const BK2_PUB_FREE_MARKET_ID = "bk2-pub-free-market";
+const BK2_PUB_BLOCKED_MARKET_ID = "bk2-pub-blocked-market";
+const BK2_PUB_NO_PRICING_MARKET_ID = "bk2-pub-no-pricing-market";
+const BK2_PUB_MISMATCH_MARKET_ID = "bk2-pub-mismatch-market";
 const BK2_PROFILE_ID = "bk2-pricing-profile-1";
+const BK2_PROFILE_MARKETLESS_ID = "bk2-pricing-profile-marketless";
+const BK2_PROFILE_MISMATCH_ID = "bk2-pricing-profile-mismatch";
 
 // Slot times far in the future — no overlap with seed bookings
 const T_FREE_START = new Date("2030-01-15T10:00:00Z");
@@ -236,6 +245,10 @@ const T_BLOCKED_START = new Date("2030-01-16T10:00:00Z");
 const T_BLOCKED_END = new Date("2030-01-16T12:00:00Z");
 const T_NO_PRICING_START = new Date("2030-01-17T10:00:00Z");
 const T_NO_PRICING_END = new Date("2030-01-17T12:00:00Z");
+const T_MARKETLESS_START = new Date("2030-01-18T10:00:00Z");
+const T_MARKETLESS_END = new Date("2030-01-18T12:00:00Z");
+const T_MISMATCH_START = new Date("2030-01-19T10:00:00Z");
+const T_MISMATCH_END = new Date("2030-01-19T12:00:00Z");
 
 // Past timestamps for updateBookingStatus seed bookings — no overlap with createBooking test slots
 const SEED_SLOT_START = new Date("2025-06-01T10:00:00Z");
@@ -258,7 +271,10 @@ const testDbState2 = bootstrapTestDatabase({
 			isActive: true,
 			sortOrder: 0,
 		});
-		await db.insert(organization).values([{ id: BK2_ORG_ID, name: "BK2 Org", slug: "bk2-org" }]);
+		await db.insert(organization).values([
+			{ id: BK2_ORG_ID, name: "BK2 Org", slug: "bk2-org" },
+			{ id: BK2_OTHER_ORG_ID, name: "BK2 Other Org", slug: "bk2-other-org" },
+		]);
 		await db.insert(listing).values([
 			{
 				id: BK2_LISTING_FREE_ID,
@@ -281,6 +297,20 @@ const testDbState2 = bootstrapTestDatabase({
 				name: "BK2 No Pricing Listing",
 				slug: "bk2-listing-no-pricing",
 			},
+			{
+				id: BK2_LISTING_MARKETLESS_ID,
+				organizationId: BK2_ORG_ID,
+				listingTypeSlug: "bk2-test-type",
+				name: "BK2 Marketless Listing",
+				slug: "bk2-listing-marketless",
+			},
+			{
+				id: BK2_LISTING_MISMATCH_ID,
+				organizationId: BK2_ORG_ID,
+				listingTypeSlug: "bk2-test-type",
+				name: "BK2 Mismatch Listing",
+				slug: "bk2-listing-mismatch",
+			},
 		]);
 		await db.insert(listingPublication).values([
 			{
@@ -290,10 +320,22 @@ const testDbState2 = bootstrapTestDatabase({
 				channelType: "own_site",
 			},
 			{
+				id: BK2_PUB_FREE_MARKET_ID,
+				listingId: BK2_LISTING_FREE_ID,
+				organizationId: BK2_ORG_ID,
+				channelType: "platform_marketplace",
+			},
+			{
 				id: BK2_PUB_BLOCKED_ID,
 				listingId: BK2_LISTING_BLOCKED_ID,
 				organizationId: BK2_ORG_ID,
 				channelType: "own_site",
+			},
+			{
+				id: BK2_PUB_BLOCKED_MARKET_ID,
+				listingId: BK2_LISTING_BLOCKED_ID,
+				organizationId: BK2_ORG_ID,
+				channelType: "platform_marketplace",
 			},
 			{
 				id: BK2_PUB_NO_PRICING_ID,
@@ -301,16 +343,46 @@ const testDbState2 = bootstrapTestDatabase({
 				organizationId: BK2_ORG_ID,
 				channelType: "own_site",
 			},
+			{
+				id: BK2_PUB_NO_PRICING_MARKET_ID,
+				listingId: BK2_LISTING_NO_PRICING_ID,
+				organizationId: BK2_ORG_ID,
+				channelType: "platform_marketplace",
+			},
+			{
+				id: BK2_PUB_MISMATCH_MARKET_ID,
+				listingId: BK2_LISTING_MISMATCH_ID,
+				organizationId: BK2_OTHER_ORG_ID,
+				channelType: "platform_marketplace",
+			},
 		]);
 		// Default pricing profile only for the free listing
-		await db.insert(listingPricingProfile).values({
-			id: BK2_PROFILE_ID,
-			listingId: BK2_LISTING_FREE_ID,
-			name: "Default Profile",
-			currency: "RUB",
-			baseHourlyPriceCents: 6_000,
-			isDefault: true,
-		});
+		await db.insert(listingPricingProfile).values([
+			{
+				id: BK2_PROFILE_ID,
+				listingId: BK2_LISTING_FREE_ID,
+				name: "Default Profile",
+				currency: "RUB",
+				baseHourlyPriceCents: 6_000,
+				isDefault: true,
+			},
+			{
+				id: BK2_PROFILE_MARKETLESS_ID,
+				listingId: BK2_LISTING_MARKETLESS_ID,
+				name: "Marketless Profile",
+				currency: "RUB",
+				baseHourlyPriceCents: 6_000,
+				isDefault: true,
+			},
+			{
+				id: BK2_PROFILE_MISMATCH_ID,
+				listingId: BK2_LISTING_MISMATCH_ID,
+				name: "Mismatch Profile",
+				currency: "RUB",
+				baseHourlyPriceCents: 6_000,
+				isDefault: true,
+			},
+		]);
 		// Block the blocked listing's slot
 		await db.insert(listingAvailabilityBlock).values({
 			id: crypto.randomUUID(),
@@ -350,6 +422,25 @@ const getDb2 = () => testDbState2.db as unknown as Db;
 // ----- createBooking -----
 
 describe("createBooking", () => {
+	it("resolves the active marketplace publication and organization from listingId", async () => {
+		const row = await createBooking(
+			{
+				organizationId: BK2_OTHER_ORG_ID,
+				listingId: BK2_LISTING_FREE_ID,
+				publicationId: BK2_PUB_FREE_ID,
+				startsAt: new Date("2030-01-14T10:00:00Z"),
+				endsAt: new Date("2030-01-14T12:00:00Z"),
+				source: "web",
+				currency: "RUB",
+			},
+			getDb2(),
+		);
+
+		expect(row.organizationId).toBe(BK2_ORG_ID);
+		expect(row.publicationId).toBe(BK2_PUB_FREE_MARKET_ID);
+		expect(row.merchantOrganizationId).toBe(BK2_ORG_ID);
+	});
+
 	it("creates a booking for a free slot with pricing profile", async () => {
 		const row = await createBooking(
 			{
@@ -369,6 +460,40 @@ describe("createBooking", () => {
 		expect(row.basePriceCents).toBeGreaterThan(0);
 		expect(row.totalPriceCents).toBeGreaterThan(0);
 		expect(row.organizationId).toBe(BK2_ORG_ID);
+	});
+
+	it("throws NOT_FOUND when the listing has no active marketplace publication", async () => {
+		await expect(
+			createBooking(
+				{
+					organizationId: BK2_ORG_ID,
+					listingId: BK2_LISTING_MARKETLESS_ID,
+					publicationId: BK2_PUB_FREE_ID,
+					startsAt: T_MARKETLESS_START,
+					endsAt: T_MARKETLESS_END,
+					source: "web",
+					currency: "RUB",
+				},
+				getDb2(),
+			),
+		).rejects.toThrow("NOT_FOUND");
+	});
+
+	it("throws PUBLICATION_ORG_MISMATCH when publication org differs from the listing org", async () => {
+		await expect(
+			createBooking(
+				{
+					organizationId: BK2_ORG_ID,
+					listingId: BK2_LISTING_MISMATCH_ID,
+					publicationId: BK2_PUB_MISMATCH_MARKET_ID,
+					startsAt: T_MISMATCH_START,
+					endsAt: T_MISMATCH_END,
+					source: "web",
+					currency: "RUB",
+				},
+				getDb2(),
+			),
+		).rejects.toThrow("PUBLICATION_ORG_MISMATCH");
 	});
 
 	it("throws SLOT_UNAVAILABLE when slot is blocked", async () => {
