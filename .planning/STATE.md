@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: active
-last_updated: "2026-03-10T14:37:55.253Z"
+last_updated: "2026-03-10T15:14:52.925Z"
 progress:
   total_phases: 11
   completed_phases: 9
   total_plans: 32
-  completed_plans: 30
+  completed_plans: 31
 ---
 
 # Project State
@@ -18,21 +18,21 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Operators can publish and manage flexible bookable listings, and customers can reliably discover, quote, book, pay for, and coordinate those listings through a generic marketplace flow that is testable, extensible, and safe to evolve.
-**Current focus:** Phase 10 — Payment Webhook & Cancellation Live Path — IN PROGRESS; `10-01` and `10-02` are complete, and the remaining work is disputes/booking cancellation live-path integration.
+**Current focus:** Phase 10 — Payment Webhook & Cancellation Live Path — IN PROGRESS; `10-01` through `10-03` are complete, and `10-04` remains to wire the live booking handler onto the disputes workflow.
 
 ## Current Position
 
 Phase: 10 of 11 (Payment Webhook & Cancellation Live Path) — IN PROGRESS
-Plan: 30 of 32 planned plans complete
-Status: Phase 10 now has two executed plans; `10-01` shipped the live CloudPayments ingress/reconciliation path and `10-02` shipped the refund provider boundary needed by the disputes live path
-Last activity: 2026-03-10 — Executed `10-01` with live webhook reconciliation and config validation; remaining Phase 10 plans are `10-03` and `10-04`; next recommended command is `/gsd-execute-phase 10`
+Plan: 31 of 32 planned plans complete
+Status: Phase 10 now has three executed plans; `10-03` shipped the snapshot-backed disputes cancellation apply workflow with provider-executed refunds and rollback-safe compensation
+Last activity: 2026-03-10 — Executed `10-03`; the remaining Phase 10 plan is `10-04`, which should wire the live booking cancellation handler to the disputes workflow; next recommended command is `/gsd-execute-phase 10`
 
-Progress: [█████████░] 94%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 30
+- Total plans completed: 31
 - Phases completed: 9
 
 **By Phase:**
@@ -48,10 +48,11 @@ Progress: [█████████░] 94%
 | 07 — Review Missing Extractions | 4 | ✅ Complete |
 | 08 — Verification & Traceability Backfill | 3 | ✅ Complete |
 | 09 — Operator Catalog & Booking Intake Wiring | 3 | ✅ Complete |
-| 10 — Payment Webhook & Cancellation Live Path | 2/4 | 🚧 In Progress |
+| 10 — Payment Webhook & Cancellation Live Path | 3/4 | 🚧 In Progress |
 | 11 — Events, Notifications, Calendar & Support Integration | 0 | 📝 Planned |
 | Phase 10 P02 | 5 min | 2 tasks | 5 files |
 | Phase 10 P01 | 2 min | 2 tasks | 7 files |
+| Phase 10 P03 | 6 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,9 @@ Recent decisions affecting current work:
 - [Phase 10]: Production webhook ingress resolves endpointId and delegates directly to reconcilePaymentWebhook() instead of adapter.processWebhook(). — Keeps the Hono/internal route transport thin while ensuring live callbacks reach the payment domain with a real org-scoped endpoint.
 - [Phase 10]: CloudPayments webhook auth now requires either valid Basic Auth or a verified SHA-256 HMAC over the cloned request body. — Prevents trusting header presence alone and preserves adapter ownership of provider-specific auth and body parsing.
 - [Phase 10]: First successful webhook ingress promotes the org payment config to validated/active while duplicate deliveries leave validatedAt unchanged. — Matches the live-validation goal without breaking persistence-backed idempotency.
+- [Phase 10]: Stored bookingCancellationRequest snapshot values are authoritative for apply-time cancellation state and refund execution.
+- [Phase 10]: Disputes assembles runtime payment execution config from persisted organizationPaymentConfig values at the workflow boundary instead of handlers.
+- [Phase 10]: Downstream failures after refund execution compensate booking/request state and mark refund rows rejected to stay enum-valid.
 
 ### Roadmap Evolution
 
@@ -82,7 +86,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Execute remaining Phase 10 plans (`10-03`, `10-04`) via `/gsd-execute-phase 10`
+- Execute the remaining Phase 10 plan (`10-04`) via `/gsd-execute-phase 10`
 - Plan Phase 11 after Phase 10 verification closes the payment/cancellation live-path gaps
 
 ### Blockers/Concerns
@@ -93,5 +97,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Completed 10-01-PLAN.md
+Stopped at: Completed 10-03-PLAN.md
 Resume file: None
