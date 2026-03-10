@@ -15,7 +15,6 @@ import {
 } from "@my-app/booking";
 import { processCancellationWorkflow } from "@my-app/disputes";
 import { EventBus } from "@my-app/events";
-import { notificationsPusher } from "@my-app/notifications/pusher";
 
 import { organizationPermissionProcedure, protectedProcedure } from "../index";
 
@@ -129,29 +128,35 @@ export const bookingRouter = {
 				db,
 			);
 
-			// Emit notifications for status transitions
-			const orgId = context.activeMembership.organizationId;
-			if (input.status === "confirmed" || input.status === "cancelled") {
-				const eventType =
-					input.status === "confirmed"
-						? "booking.status.confirmed"
-						: "booking.status.cancelled";
-				await notificationsPusher({
-					input: {
-						organizationId: orgId,
-						actorUserId: context.session?.user?.id,
-						eventType,
-						sourceType: "booking",
-						sourceId: input.id,
-						idempotencyKey: `${eventType}:${input.id}`,
-						payload: {
-							recipients: [],
-						},
-					},
-					queue: context.notificationQueue,
-				}).catch(() => {
-					// Non-blocking — notification failure must not fail the status update
-				});
+// Emit domain events for status transitions
+				const orgId = context.activeMembership.organizationId;
+				if (input.status === "confirmed" || input.status === "cancelled") {
+					const eventBus = new EventBus(context.notificationQueue);
+					if (input.status === "confirmed") {
+						await eventBus
+							.emit({
+								type: "booking:confirmed",
+								organizationId: orgId,
+								actorUserId: context.session?.user?.id,
+								idempotencyKey: `booking:confirmed:${input.id}`,
+								data: { bookingId: input.id, ownerId: orgId },
+							})
+							.catch(() => {});
+					} else {
+						await eventBus
+							.emit({
+								type: "booking:cancelled",
+								organizationId: orgId,
+								actorUserId: context.session?.user?.id,
+								idempotencyKey: `booking:cancelled:${input.id}`,
+								data: {
+									bookingId: input.id,
+									reason: input.cancellationReason ?? "cancelled",
+									refundAmountKopeks: 0,
+								},
+							})
+							.catch(() => {});
+					}
 			}
 
 			return formatBooking(row);
