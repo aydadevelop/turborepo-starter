@@ -130,3 +130,16 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 4. Availability & Pricing Core | 0/3 | Not started | - |
 | 5. Booking Core & Customer Access | 0/3 | Not started | - |
 | 6. Payments, Notifications & Support Operations | 0/3 | Not started | - |
+
+### Phase 7: review missing extractions
+
+**Goal:** Extract the load-bearing P0 domain services missing from packages/booking and packages/pricing, scaffold the packages/calendar adapter package with Google Calendar integration and domain-event-driven sync, and extract the cancellation policy engine plus dispute/refund workflows into packages/disputes.
+**Requirements**: EXTR-01, EXTR-02, EXTR-03, EXTR-04
+**Depends on:** Phase 6
+**Plans:** 4 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Port booking P0 gaps (action-policy, slots, overlap) + add resolveActivePricingProfile to packages/pricing
+- [ ] 07-02-PLAN.md — Scaffold packages/calendar new package (types, adapter interface, registry, FakeCalendarAdapter)
+- [ ] 07-03-PLAN.md — Implement packages/calendar (GoogleCalendarAdapter + CalendarUseCases + BookingLifecycleSync + registerEventPusher)
+- [ ] 07-04-PLAN.md — Scaffold packages/disputes new package (CancellationPolicyService + processCancellationWorkflow + processDisputeWorkflow)

@@ -60,6 +60,10 @@ Recent decisions affecting current work:
 - Zod v4: `z.record(z.string(), z.unknown())` — key type argument required.
 - oRPC queryOptions: `queryOptions({ input: {...} })` — `input` key required in wrapper object.
 
+### Roadmap Evolution
+
+- Phase 7 added: review missing extractions
+
 ### Pending Todos
 
 None.

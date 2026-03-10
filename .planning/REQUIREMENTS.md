@@ -49,6 +49,13 @@
 
 ## v2 Requirements
 
+### Extraction Completeness (Phase 7)
+
+- [ ] **EXTR-01**: Booking action policy evaluator (BookingActionPolicy, evaluateBookingActionWindow) and slot computation (calculateAvailableSlots, detectOverlap, assertNoOverlap) are available as tested domain functions in packages/booking
+- [ ] **EXTR-02**: Pricing engine can resolve the active pricing profile for a listing at a given date range (resolveActivePricingProfile in packages/pricing) without transport-layer lookup logic
+- [ ] **EXTR-03**: CalendarAdapter interface with GoogleCalendarAdapter implementation and BookingLifecycleSync subscriber reacts to booking domain events to create, update, and delete external calendar entries via packages/calendar
+- [ ] **EXTR-04**: Cancellation policy evaluation (CancellationPolicyService) and dispute/refund orchestration (processCancellationWorkflow, processDisputeWorkflow) are encapsulated in packages/disputes, separate from basic booking status transitions in packages/booking
+
 ### Discovery and AI
 
 - **DISC-01**: Customer can use advanced semantic, BM25-ranked, or image-based search to discover listings
