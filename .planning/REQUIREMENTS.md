@@ -92,30 +92,30 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLAT-01 | Phase 1 | Pending |
-| PLAT-02 | Phase 1 | Pending |
-| PLAT-03 | Phase 1 | Pending |
-| PLAT-04 | Phase 1 | Pending |
+| PLAT-01 | Phase 8 | Pending |
+| PLAT-02 | Phase 8 | Pending |
+| PLAT-03 | Phase 8 | Pending |
+| PLAT-04 | Phase 8 | Pending |
 | PLAT-05 | Phase 2 | Pending |
-| AUTH-01 | Phase 3 | Pending |
-| AUTH-02 | Phase 5 | Pending |
-| AUTH-03 | Phase 5 | Pending |
-| CATL-01 | Phase 3 | Pending |
-| CATL-02 | Phase 3 | Pending |
-| CATL-03 | Phase 3 | Pending |
-| CATL-04 | Phase 3 | Pending |
-| AVPR-01 | Phase 4 | Pending |
-| AVPR-02 | Phase 4 | Pending |
-| AVPR-03 | Phase 4 | Pending |
-| AVPR-04 | Phase 4 | Pending |
-| BOOK-01 | Phase 5 | Pending |
-| BOOK-02 | Phase 5 | Pending |
-| BOOK-03 | Phase 6 | Pending |
-| BOOK-04 | Phase 6 | Pending |
-| BOOK-05 | Phase 6 | Pending |
-| OPER-01 | Phase 6 | Pending |
-| OPER-02 | Phase 6 | Pending |
-| OPER-03 | Phase 2 | Pending |
+| AUTH-01 | Phase 9 | Pending |
+| AUTH-02 | Phase 11 | Pending |
+| AUTH-03 | Phase 9 | Pending |
+| CATL-01 | Phase 9 | Pending |
+| CATL-02 | Phase 9 | Pending |
+| CATL-03 | Phase 8 | Pending |
+| CATL-04 | Phase 8 | Pending |
+| AVPR-01 | Phase 8 | Pending |
+| AVPR-02 | Phase 8 | Pending |
+| AVPR-03 | Phase 9 | Pending |
+| AVPR-04 | Phase 8 | Pending |
+| BOOK-01 | Phase 9 | Pending |
+| BOOK-02 | Phase 8 | Pending |
+| BOOK-03 | Phase 10 | Pending |
+| BOOK-04 | Phase 11 | Pending |
+| BOOK-05 | Phase 10 | Pending |
+| OPER-01 | Phase 10 | Pending |
+| OPER-02 | Phase 11 | Pending |
+| OPER-03 | Phase 11 | Pending |
 
 **Coverage:**
 - v1 requirements: 24 total
@@ -124,4 +124,4 @@
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-09 after roadmap initialization*
+*Last updated: 2026-03-10 after milestone audit gap-closure phases 8-11 were added*

@@ -12,12 +12,17 @@ This roadmap turns the current brownfield starter into a reliable marketplace by
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Schema Baseline & Replayability** - Lock the database into reproducible migrations, deterministic seeds, snapshots, and real-Postgres verification.
-- [ ] **Phase 2: Events, Workflows & Parity Foundations** - Establish typed side-effect seams and a declared truth-source/parity harness before domain extraction.
+- [x] **Phase 1: Schema Baseline & Replayability** - Lock the database into reproducible migrations, deterministic seeds, snapshots, and real-Postgres verification.
+- [x] **Phase 2: Events, Workflows & Parity Foundations** - Establish typed side-effect seams and a declared truth-source/parity harness before domain extraction.
 - [x] **Phase 3: Org Access, Catalog & Storefront** - Deliver org-safe operator access plus generic listing creation, publication, browse, and detail flows.
 - [x] **Phase 4: Availability & Pricing Core** - Deliver schedulable availability, overlap safety, pricing profiles, and transparent quote generation.
 - [x] **Phase 5: Booking Core & Customer Access** - Deliver booking intake, org-safe lifecycle workflows, and customer-visible booking access boundaries.
-- [ ] **Phase 6: Payments, Notifications & Support Operations** - Deliver payment collection/reconciliation, lifecycle notifications, support threads, and cancellation/refund handling.
+- [x] **Phase 6: Payments, Notifications & Support Operations** - Deliver payment collection/reconciliation, lifecycle notifications, support threads, and cancellation/refund handling.
+- [x] **Phase 7: Review Missing Extractions** - Extract load-bearing booking/pricing/calendar/disputes seams identified by the milestone audit before live-path hardening.
+- [ ] **Phase 8: Verification & Traceability Backfill** - Restore phase verification evidence and requirements bookkeeping so the milestone can be re-audited against real delivery.
+- [ ] **Phase 9: Operator Catalog & Booking Intake Wiring** - Wire the missing operator publish flow and customer quote-to-booking intake path through the live web and API surfaces.
+- [ ] **Phase 10: Payment Webhook & Cancellation Live Path** - Put live payment reconciliation and cancellation/refund orchestration onto the production request path.
+- [ ] **Phase 11: Events, Notifications, Calendar & Support Integration** - Converge live booking side effects onto typed events and complete the customer-facing support follow-up flow.
 
 ## Phase Details
 
@@ -120,16 +125,21 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Schema Baseline & Replayability | 0/3 | Not started | - |
-| 2. Events, Workflows & Parity Foundations | 0/3 | Not started | - |
-| 3. Org Access, Catalog & Storefront | 0/3 | Not started | - |
-| 4. Availability & Pricing Core | 0/3 | Not started | - |
-| 5. Booking Core & Customer Access | 0/3 | Not started | - |
-| 6. Payments, Notifications & Support Operations | 0/3 | Not started | - |
+| 1. Schema Baseline & Replayability | 3/3 | Complete | 2026-03-09 |
+| 2. Events, Workflows & Parity Foundations | 3/3 | Complete | 2026-03-09 |
+| 3. Org Access, Catalog & Storefront | 3/3 | Complete | 2026-03-09 |
+| 4. Availability & Pricing Core | 3/3 | Complete | 2026-03-10 |
+| 5. Booking Core & Customer Access | 3/3 | Complete | 2026-03-10 |
+| 6. Payments, Notifications & Support Operations | 3/3 | Complete | 2026-03-10 |
+| 7. Review Missing Extractions | 4/4 | Complete | 2026-03-10 |
+| 8. Verification & Traceability Backfill | 0/0 | Planned | - |
+| 9. Operator Catalog & Booking Intake Wiring | 0/0 | Planned | - |
+| 10. Payment Webhook & Cancellation Live Path | 0/0 | Planned | - |
+| 11. Events, Notifications, Calendar & Support Integration | 0/0 | Planned | - |
 
 ### Phase 7: review missing extractions
 
@@ -143,3 +153,64 @@ Plans:
 - [x] 07-02-PLAN.md — Scaffold packages/calendar: clean CalendarAdapter interface (createEvent/updateEvent/deleteEvent/getBusyIntervals), adapter registry, FakeCalendarAdapter
 - [x] 07-03-PLAN.md — Implement packages/calendar: GoogleCalendarAdapter (WebCrypto JWT, raw fetch), CalendarService, BookingCalendarSync (outbound domain event pushers)
 - [x] 07-04-PLAN.md — Scaffold packages/disputes: evaluateCancellationPolicy (actor-aware), processCancellationWorkflow, processDisputeWorkflow
+
+### Phase 8: Verification & Traceability Backfill
+
+**Goal**: Rebuild the missing verification evidence, summary claims, and requirements traceability needed for the milestone audit to judge delivered work accurately.
+**Depends on:** Phase 7
+**Requirements**: PLAT-01, PLAT-02, PLAT-03, PLAT-04, CATL-03, CATL-04, AVPR-01, AVPR-02, AVPR-04, BOOK-02
+**Gap Closure:** Backfills audit evidence debt from Phases 01 and 03-07 and resets traceability to the phases that now own unresolved work.
+**Success Criteria** (what must be TRUE):
+  1. Every executed phase that the audit depends on has a corresponding verification report and summary frontmatter that declares completed requirements.
+  2. `REQUIREMENTS.md` phase ownership and status match the post-audit remediation plan instead of the pre-audit optimistic state.
+  3. Re-running the milestone audit no longer reports bookkeeping-only false negatives for already-delivered platform, catalog, pricing, and booking lifecycle outcomes.
+**Plans**: 0 plans
+
+Plans:
+- [ ] To be planned with `/gsd-plan-phase 8`
+
+### Phase 9: Operator Catalog & Booking Intake Wiring
+
+**Goal**: Finish the missing operator listing-management and customer booking-intake flows so the catalog and booking surfaces work end-to-end through the live app.
+**Depends on:** Phase 8
+**Requirements**: AUTH-01, AUTH-03, CATL-01, CATL-02, AVPR-03, BOOK-01
+**Gap Closure:** Closes the operator publish and quote-to-booking flow gaps, including the missing server-side organization/publication validation.
+**Success Criteria** (what must be TRUE):
+  1. Operators can create, update, publish, and unpublish listings through `apps/web` using the live typed API surfaces.
+  2. Customers can move from slot/quote discovery to booking request in the live app without client-trusted organization or publication context.
+  3. Booking creation validates listing publication ownership and organization linkage server-side before persisting records.
+**Plans**: 0 plans
+
+Plans:
+- [ ] To be planned with `/gsd-plan-phase 9`
+
+### Phase 10: Payment Webhook & Cancellation Live Path
+
+**Goal**: Route payment reconciliation and cancellation/refund orchestration through the production webhook and booking mutation paths instead of scaffold-only seams.
+**Depends on:** Phase 9
+**Requirements**: OPER-01, BOOK-03, BOOK-05
+**Gap Closure:** Closes the live webhook ingress bypass, unfinished refund execution path, and scaffold-only cancellation workflow integration.
+**Success Criteria** (what must be TRUE):
+  1. Provider webhook ingress reaches `reconcilePaymentWebhook()` on the live path and keeps booking/payment state in sync idempotently.
+  2. Cancellation/refund handling executes through the disputes workflow path used by the live API surface.
+  3. Integration coverage proves webhook reconciliation and refund state transitions behave on the production wiring path.
+**Plans**: 0 plans
+
+Plans:
+- [ ] To be planned with `/gsd-plan-phase 10`
+
+### Phase 11: Events, Notifications, Calendar & Support Integration
+
+**Goal**: Converge booking side effects onto typed events/workflows and finish the customer support follow-up path so notifications, calendar sync, and support history all run on the live surface.
+**Depends on:** Phase 10
+**Requirements**: AUTH-02, BOOK-04, OPER-02, OPER-03
+**Gap Closure:** Closes the legacy event-bus split, broken notification delivery, dead calendar lifecycle triggers, and missing customer-facing support/history integration.
+**Success Criteria** (what must be TRUE):
+  1. Live booking/payment side effects emit through the typed event/workflow boundary instead of the legacy inline API path.
+  2. Notification delivery wiring is registered at startup and produces valid recipient payloads for booking lifecycle events.
+  3. Calendar sync subscribers receive the booking lifecycle events they need from the live runtime.
+  4. Customers can view and follow booking-linked support history through the live API and web surfaces.
+**Plans**: 0 plans
+
+Plans:
+- [ ] To be planned with `/gsd-plan-phase 11`
