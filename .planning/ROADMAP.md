@@ -136,7 +136,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Booking Core & Customer Access | 3/3 | Complete | 2026-03-10 |
 | 6. Payments, Notifications & Support Operations | 3/3 | Complete | 2026-03-10 |
 | 7. Review Missing Extractions | 4/4 | Complete | 2026-03-10 |
-| 8. Verification & Traceability Backfill | 0/0 | Planned | - |
+| 8. Verification & Traceability Backfill | 0/3 | Planned | - |
 | 9. Operator Catalog & Booking Intake Wiring | 0/0 | Planned | - |
 | 10. Payment Webhook & Cancellation Live Path | 0/0 | Planned | - |
 | 11. Events, Notifications, Calendar & Support Integration | 0/0 | Planned | - |
@@ -164,10 +164,12 @@ Plans:
   1. Every executed phase that the audit depends on has a corresponding verification report and summary frontmatter that declares completed requirements.
   2. `REQUIREMENTS.md` phase ownership and status match the post-audit remediation plan instead of the pre-audit optimistic state.
   3. Re-running the milestone audit no longer reports bookkeeping-only false negatives for already-delivered platform, catalog, pricing, and booking lifecycle outcomes.
-**Plans**: 0 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] To be planned with `/gsd-plan-phase 8`
+- [ ] 08-01-PLAN.md — Backfill Phase 01/03/07 verification evidence and summary traceability
+- [ ] 08-02-PLAN.md — Backfill Phase 04/05/06 verification evidence and summary traceability
+- [ ] 08-03-PLAN.md — Re-sync requirements status and rerun the milestone audit
 
 ### Phase 9: Operator Catalog & Booking Intake Wiring
 
