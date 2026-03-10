@@ -68,7 +68,7 @@ completed: 2026-03-10
 
 1. **Task 1: Build a self-contained booking request panel for listing detail pages** — `7cc3b28` (`feat`)
 2. **Task 2: Compose the booking-intake panel into the published listing detail page** — `d8d67cb` (`feat`)
-3. **Plan metadata:** `pending`
+3. **Plan metadata:** `d9d95c3`
 
 ## Files Created/Modified
 
