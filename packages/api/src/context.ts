@@ -10,7 +10,7 @@ export type { QueueProducer as NotificationQueueProducer } from "@my-app/queue/p
 import { and, asc, eq } from "drizzle-orm";
 import type { Context as HonoContext } from "hono";
 
-import type { EventBus } from "./lib/event-bus";
+import type { EventBus } from "@my-app/events";
 
 export interface CreateContextOptions {
 	context: HonoContext;

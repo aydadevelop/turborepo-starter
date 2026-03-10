@@ -2,7 +2,7 @@ import { appContract } from "@my-app/api-contract/routers";
 import { implement, ORPCError } from "@orpc/server";
 
 import type { Context } from "./context";
-import { EventBus } from "./lib/event-bus";
+import { EventBus } from "@my-app/events";
 import {
 	hasOrganizationPermission,
 	type OrganizationPermission,
@@ -59,18 +59,9 @@ const requireActiveOrganization = o.middleware(({ context, next }) => {
 	return next({
 		context: {
 			activeMembership: context.activeMembership,
-			eventBus: context.eventBus ?? new EventBus(),
+			eventBus: new EventBus(context.notificationQueue),
 		},
 	});
-});
-
-const flushEvents = o.middleware(async ({ context, next }) => {
-	const result = await next();
-	const eventBus = (context as Context & { eventBus?: EventBus }).eventBus;
-	if (eventBus && eventBus.size > 0) {
-		await eventBus.flush(context.notificationQueue);
-	}
-	return result;
 });
 
 const requireOrganizationPermission = (permission: OrganizationPermission) =>
@@ -94,9 +85,7 @@ export const sessionProcedure = publicProcedure.use(requireSession);
 export const protectedProcedure = sessionProcedure.use(
 	requireAuthenticatedUser
 );
-export const organizationProcedure = protectedProcedure
-	.use(requireActiveOrganization)
-	.use(flushEvents);
+export const organizationProcedure = protectedProcedure.use(requireActiveOrganization);
 
 export const organizationPermissionProcedure = (
 	permission: OrganizationPermission
