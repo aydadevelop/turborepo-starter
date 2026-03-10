@@ -113,9 +113,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 06-01: Deliver payment-provider connection, validation, and webhook reconciliation
-- [ ] 06-02: Attach notification subscribers and booking-tied support conversations to stable domain events
-- [ ] 06-03: Deliver cancellation-policy, refund, and post-booking operational hard-path coverage
+- [ ] 06-01-PLAN.md — Payment domain package (connectProvider, getOrgConfig, receiveWebhook + idempotent reconciliation)
+- [ ] 06-02-PLAN.md — Support ticket service + booking lifecycle notifications (confirmed/cancelled)
+- [ ] 06-03-PLAN.md — Cancellation policy enforcement + refund flow (requestCancellation, applyCancellation)
 
 ## Progress
 
