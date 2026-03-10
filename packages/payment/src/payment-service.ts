@@ -208,5 +208,21 @@ export async function reconcilePaymentWebhook(
 		.set({ status: "processed", responseCode: 0, updatedAt: sql`now()` })
 		.where(eq(paymentWebhookEvent.id, eventId));
 
+	if (
+		config.validationStatus !== "validated" ||
+		!config.isActive ||
+		!config.validatedAt
+	) {
+		await db
+			.update(organizationPaymentConfig)
+			.set({
+				validationStatus: "validated",
+				validatedAt: config.validatedAt ?? new Date(),
+				isActive: true,
+				updatedAt: sql`now()`,
+			})
+			.where(eq(organizationPaymentConfig.id, config.id));
+	}
+
 	return { processed: true, idempotent: false, bookingId: invoiceId };
 }

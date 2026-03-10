@@ -1,4 +1,6 @@
 import { os } from "@orpc/server";
+import { db } from "@my-app/db";
+import { reconcilePaymentWebhook } from "@my-app/payment";
 import { z } from "zod";
 
 import {
@@ -28,6 +30,17 @@ const processPaymentWebhookInputSchema = z.object({
 	request: z.custom<Request>((val) => val instanceof Request),
 });
 
+const resolveEndpointId = (request: Request): string | null => {
+	const headerEndpointId = request.headers.get("x-endpoint-id")?.trim();
+
+	try {
+		const endpointId = new URL(request.url).searchParams.get("endpointId")?.trim();
+		return endpointId || headerEndpointId || null;
+	} catch {
+		return headerEndpointId || null;
+	}
+};
+
 export const internalServerRouteProcedures = {
 	payment: {
 		webhookProcess: serverRouteProcedure
@@ -55,7 +68,7 @@ export const internalServerRouteProcedures = {
 				}
 
 				try {
-					adapter.authenticateWebhook(request);
+					await adapter.authenticateWebhook(request);
 				} catch (error) {
 					if (error instanceof WebhookAuthError) {
 						return {
@@ -95,18 +108,43 @@ export const internalServerRouteProcedures = {
 					};
 				}
 
+				const endpointId = resolveEndpointId(request);
+				if (!endpointId) {
+					return {
+						status: 400,
+						body: {
+							error:
+								"Missing endpointId query param or x-endpoint-id header",
+						},
+					};
+				}
+
 				try {
-					const result = await adapter.processWebhook(
+					await reconcilePaymentWebhook(
+						endpointId,
 						input.webhookType,
-						payload
+						payload as Record<string, unknown>,
+						db,
 					);
 					return {
 						status: 200,
 						body: {
-							...result,
+							code: 0,
 						},
 					};
 				} catch (error) {
+					if (
+						error instanceof Error &&
+						error.message === "ENDPOINT_NOT_FOUND"
+					) {
+						return {
+							status: 404,
+							body: {
+								error: "Unknown webhook endpoint",
+							},
+						};
+					}
+
 					console.error(
 						`[PaymentWebhook] Error processing ${input.providerName}/${input.webhookType}`,
 						error

@@ -6,7 +6,7 @@ export interface PaymentWebhookResult {
 }
 
 export interface PaymentWebhookAdapter {
-	authenticateWebhook(request: Request): void;
+	authenticateWebhook(request: Request): void | Promise<void>;
 
 	parseWebhookBody(request: Request): Promise<unknown>;
 
