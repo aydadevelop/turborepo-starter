@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Booking Core & Customer Access** - Deliver booking intake, org-safe lifecycle workflows, and customer-visible booking access boundaries.
 - [x] **Phase 6: Payments, Notifications & Support Operations** - Deliver payment collection/reconciliation, lifecycle notifications, support threads, and cancellation/refund handling.
 - [x] **Phase 7: Review Missing Extractions** - Extract load-bearing booking/pricing/calendar/disputes seams identified by the milestone audit before live-path hardening.
-- [ ] **Phase 8: Verification & Traceability Backfill** - Restore phase verification evidence and requirements bookkeeping so the milestone can be re-audited against real delivery.
+- [x] **Phase 8: Verification & Traceability Backfill** - Restore phase verification evidence and requirements bookkeeping so the milestone can be re-audited against real delivery. (completed 2026-03-10)
 - [ ] **Phase 9: Operator Catalog & Booking Intake Wiring** - Wire the missing operator publish flow and customer quote-to-booking intake path through the live web and API surfaces.
 - [ ] **Phase 10: Payment Webhook & Cancellation Live Path** - Put live payment reconciliation and cancellation/refund orchestration onto the production request path.
 - [ ] **Phase 11: Events, Notifications, Calendar & Support Integration** - Converge live booking side effects onto typed events and complete the customer-facing support follow-up flow.
@@ -136,7 +136,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Booking Core & Customer Access | 3/3 | Complete | 2026-03-10 |
 | 6. Payments, Notifications & Support Operations | 3/3 | Complete | 2026-03-10 |
 | 7. Review Missing Extractions | 4/4 | Complete | 2026-03-10 |
-| 8. Verification & Traceability Backfill | 2/3 | In Progress|  |
+| 8. Verification & Traceability Backfill | 2/3 | Complete    | 2026-03-10 |
 | 9. Operator Catalog & Booking Intake Wiring | 0/0 | Planned | - |
 | 10. Payment Webhook & Cancellation Live Path | 0/0 | Planned | - |
 | 11. Events, Notifications, Calendar & Support Integration | 0/0 | Planned | - |
