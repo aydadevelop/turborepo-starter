@@ -7,7 +7,7 @@ last_updated: "2026-03-10T12:04:22.496Z"
 progress:
   total_phases: 11
   completed_phases: 8
-  total_plans: 25
+  total_plans: 28
   completed_plans: 25
 ---
 
@@ -18,14 +18,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Operators can publish and manage flexible bookable listings, and customers can reliably discover, quote, book, pay for, and coordinate those listings through a generic marketplace flow that is testable, extensible, and safe to evolve.
-**Current focus:** Phase 09 — Operator Catalog & Booking Intake Wiring — READY TO PLAN
+**Current focus:** Phase 09 — Operator Catalog & Booking Intake Wiring — PLANNED, READY TO EXECUTE
 
 ## Current Position
 
-Phase: 9 of 11 (Operator Catalog & Booking Intake Wiring) — READY TO PLAN
-Plan: 25 of 25 currently planned plans complete
-Status: Phase 8 completed and verified; roadmap and milestone audit now reflect repaired delivery evidence
-Last activity: 2026-03-10 — Completed Phase 8 verification backfill, refreshed `REQUIREMENTS.md`, reran the milestone audit, and advanced the roadmap to Phase 09; next recommended command is `/gsd-plan-phase 9`
+Phase: 9 of 11 (Operator Catalog & Booking Intake Wiring) — PLANNED
+Plan: 25 of 28 currently planned plans complete
+Status: Phase 9 research and execution plans are in place; next step is to execute the phase in wave order
+Last activity: 2026-03-10 — Created `09-RESEARCH.md` plus `09-01` through `09-03` plans for operator listing management, booking-intake hardening, and quote-to-booking UI; next recommended command is `/gsd-execute-phase 9`
 
 Progress: [███████░░░] 73%
 
@@ -47,7 +47,7 @@ Progress: [███████░░░] 73%
 | 06 — Payments, Notifications & Support Operations | 3 | ✅ Complete |
 | 07 — Review Missing Extractions | 4 | ✅ Complete |
 | 08 — Verification & Traceability Backfill | 3 | ✅ Complete |
-| 09 — Operator Catalog & Booking Intake Wiring | 0 | 📝 Planned |
+| 09 — Operator Catalog & Booking Intake Wiring | 3 | 📝 Planned |
 | 10 — Payment Webhook & Cancellation Live Path | 0 | 📝 Planned |
 | 11 — Events, Notifications, Calendar & Support Integration | 0 | 📝 Planned |
 
@@ -73,7 +73,8 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Plan and execute Phases 09-11, starting with `/gsd-plan-phase 9`
+- Execute Phase 09 via `/gsd-execute-phase 9`
+- Plan and execute Phases 10-11 after Phase 09 verification
 
 ### Blockers/Concerns
 
@@ -82,5 +83,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Phase 8 complete; Phase 09 ready for `/gsd-plan-phase 9`
+Stopped at: Phase 09 planned; ready for `/gsd-execute-phase 9`
 Resume file: None

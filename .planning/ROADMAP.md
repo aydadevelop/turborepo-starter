@@ -136,8 +136,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Booking Core & Customer Access | 3/3 | Complete | 2026-03-10 |
 | 6. Payments, Notifications & Support Operations | 3/3 | Complete | 2026-03-10 |
 | 7. Review Missing Extractions | 4/4 | Complete | 2026-03-10 |
-| 8. Verification & Traceability Backfill | 2/3 | Complete    | 2026-03-10 |
-| 9. Operator Catalog & Booking Intake Wiring | 0/0 | Planned | - |
+| 8. Verification & Traceability Backfill | 3/3 | Complete | 2026-03-10 |
+| 9. Operator Catalog & Booking Intake Wiring | 0/3 | Planned | - |
 | 10. Payment Webhook & Cancellation Live Path | 0/0 | Planned | - |
 | 11. Events, Notifications, Calendar & Support Integration | 0/0 | Planned | - |
 
@@ -181,10 +181,12 @@ Plans:
   1. Operators can create, update, publish, and unpublish listings through `apps/web` using the live typed API surfaces.
   2. Customers can move from slot/quote discovery to booking request in the live app without client-trusted organization or publication context.
   3. Booking creation validates listing publication ownership and organization linkage server-side before persisting records.
-**Plans**: 0 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] To be planned with `/gsd-plan-phase 9`
+- [ ] 09-01-PLAN.md — Build the operator listing-management UI in the existing `/org` shell
+- [ ] 09-02-PLAN.md — Harden `booking.create` so publication/org context is resolved server-side from `listingId`
+- [ ] 09-03-PLAN.md — Add quote-to-booking intake UI to the public listing detail page
 
 ### Phase 10: Payment Webhook & Cancellation Live Path
 
