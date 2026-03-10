@@ -70,6 +70,7 @@
         "@my-app/api": "workspace:*",
         "@my-app/api-contract": "workspace:*",
         "@my-app/auth": "workspace:*",
+        "@my-app/calendar": "workspace:*",
         "@my-app/db": "workspace:*",
         "@my-app/env": "workspace:*",
         "@my-app/queue": "workspace:*",
@@ -174,10 +175,16 @@
       "dependencies": {
         "@my-app/api-contract": "workspace:*",
         "@my-app/auth": "workspace:*",
+        "@my-app/availability": "workspace:*",
+        "@my-app/booking": "workspace:*",
+        "@my-app/catalog": "workspace:*",
         "@my-app/db": "workspace:*",
         "@my-app/env": "workspace:*",
         "@my-app/notifications": "workspace:*",
+        "@my-app/payment": "workspace:*",
+        "@my-app/pricing": "workspace:*",
         "@my-app/queue": "workspace:*",
+        "@my-app/support": "workspace:*",
         "@orpc/server": "^1.12.2",
         "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
         "zod": "^4.1.13",
@@ -251,6 +258,69 @@
         "vitest": "^4.0.18",
       },
     },
+    "packages/availability": {
+      "name": "@my-app/availability",
+      "version": "0.0.0",
+      "dependencies": {
+        "@my-app/db": "workspace:*",
+        "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "^2.4.6",
+        "@my-app/config": "workspace:*",
+        "@my-app/vitest-config": "workspace:*",
+        "typescript": "^5",
+        "vitest": "^4.0.18",
+      },
+    },
+    "packages/booking": {
+      "name": "@my-app/booking",
+      "version": "0.0.0",
+      "dependencies": {
+        "@my-app/availability": "workspace:*",
+        "@my-app/db": "workspace:*",
+        "@my-app/pricing": "workspace:*",
+        "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "^2.4.6",
+        "@my-app/config": "workspace:*",
+        "@my-app/vitest-config": "workspace:*",
+        "typescript": "^5",
+        "vitest": "^4.0.18",
+      },
+    },
+    "packages/calendar": {
+      "name": "@my-app/calendar",
+      "version": "0.0.1",
+      "dependencies": {
+        "@my-app/db": "workspace:*",
+        "@my-app/events": "workspace:*",
+        "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "^2.4.6",
+        "@my-app/config": "workspace:*",
+        "@my-app/vitest-config": "workspace:*",
+        "typescript": "^5.7.3",
+        "vitest": "^4.0.18",
+      },
+    },
+    "packages/catalog": {
+      "name": "@my-app/catalog",
+      "version": "0.0.0",
+      "dependencies": {
+        "@my-app/db": "workspace:*",
+        "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "^2.4.6",
+        "@my-app/config": "workspace:*",
+        "@my-app/vitest-config": "workspace:*",
+        "typescript": "^5",
+        "vitest": "^4.0.18",
+      },
+    },
     "packages/config": {
       "name": "@my-app/config",
       "version": "0.0.0",
@@ -278,6 +348,24 @@
         "pg-mem": "^3.0.6",
         "typescript": "^5",
         "ultracite": "^7.2.3",
+        "vitest": "^4.0.18",
+      },
+    },
+    "packages/disputes": {
+      "name": "@my-app/disputes",
+      "version": "0.0.1",
+      "dependencies": {
+        "@my-app/booking": "workspace:*",
+        "@my-app/db": "workspace:*",
+        "@my-app/events": "workspace:*",
+        "@my-app/workflows": "workspace:*",
+        "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "^2.4.6",
+        "@my-app/config": "workspace:*",
+        "@my-app/vitest-config": "workspace:*",
+        "typescript": "^5",
         "vitest": "^4.0.18",
       },
     },
@@ -342,6 +430,36 @@
         "vitest": "^4.0.18",
       },
     },
+    "packages/payment": {
+      "name": "@my-app/payment",
+      "version": "0.0.0",
+      "dependencies": {
+        "@my-app/db": "workspace:*",
+        "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "^2.4.6",
+        "@my-app/config": "workspace:*",
+        "@my-app/vitest-config": "workspace:*",
+        "typescript": "^5",
+        "vitest": "^4.0.18",
+      },
+    },
+    "packages/pricing": {
+      "name": "@my-app/pricing",
+      "version": "0.0.0",
+      "dependencies": {
+        "@my-app/db": "workspace:*",
+        "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "^2.4.6",
+        "@my-app/config": "workspace:*",
+        "@my-app/vitest-config": "workspace:*",
+        "typescript": "^5",
+        "vitest": "^4.0.18",
+      },
+    },
     "packages/proxy": {
       "name": "@my-app/proxy",
       "devDependencies": {
@@ -362,6 +480,21 @@
       "devDependencies": {
         "@my-app/config": "workspace:*",
         "typescript": "^5",
+      },
+    },
+    "packages/support": {
+      "name": "@my-app/support",
+      "version": "0.0.1",
+      "dependencies": {
+        "@my-app/db": "workspace:*",
+        "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "^2.4.6",
+        "@my-app/config": "workspace:*",
+        "@my-app/vitest-config": "workspace:*",
+        "typescript": "^5",
+        "vitest": "^4.0.18",
       },
     },
     "packages/tailwind-config": {
@@ -696,9 +829,19 @@
 
     "@my-app/auth": ["@my-app/auth@workspace:packages/auth"],
 
+    "@my-app/availability": ["@my-app/availability@workspace:packages/availability"],
+
+    "@my-app/booking": ["@my-app/booking@workspace:packages/booking"],
+
+    "@my-app/calendar": ["@my-app/calendar@workspace:packages/calendar"],
+
+    "@my-app/catalog": ["@my-app/catalog@workspace:packages/catalog"],
+
     "@my-app/config": ["@my-app/config@workspace:packages/config"],
 
     "@my-app/db": ["@my-app/db@workspace:packages/db"],
+
+    "@my-app/disputes": ["@my-app/disputes@workspace:packages/disputes"],
 
     "@my-app/e2e-web": ["@my-app/e2e-web@workspace:packages/e2e-web"],
 
@@ -708,9 +851,15 @@
 
     "@my-app/notifications": ["@my-app/notifications@workspace:packages/notifications"],
 
+    "@my-app/payment": ["@my-app/payment@workspace:packages/payment"],
+
+    "@my-app/pricing": ["@my-app/pricing@workspace:packages/pricing"],
+
     "@my-app/proxy": ["@my-app/proxy@workspace:packages/proxy"],
 
     "@my-app/queue": ["@my-app/queue@workspace:packages/queue"],
+
+    "@my-app/support": ["@my-app/support@workspace:packages/support"],
 
     "@my-app/tailwind-config": ["@my-app/tailwind-config@workspace:packages/tailwind-config"],
 

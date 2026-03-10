@@ -36,8 +36,8 @@ Operators can publish and manage flexible bookable listings, and customers can r
 ## Context
 
 This repository already contains a working starter stack: SvelteKit web, Hono/oRPC services, Better Auth, Drizzle/PostgreSQL, notifications, assistant, and Dokku/Pulumi deployment. It also carries two brownfield sources that must inform the implementation differently:
-- `cf-boat-api` contains the most battle-tested domain behavior from a real boat-listing season and should be treated as the source of business truth where newer code is incomplete.
-- `full-stack-cf-app` contains better abstractions for contracts, webhooks, calendar syncing, payment adapters, and provider-oriented design, but it is only partially complete and cannot be copied blindly.
+- `./legacy/full-stack-cf-app/legacy/cf-boat-api` contains the most battle-tested domain behavior from a real boat-listing season and should be treated as the source of business truth where newer code is incomplete.
+- `./legacy/full-stack-cf-app` contains better abstractions for contracts, webhooks, calendar syncing, payment adapters, and provider-oriented design, but it is only partially complete and cannot be copied blindly.
 
 The current repo is the target system. The schema plan in `docs/drizzle-schema-plan.md`, the architecture ADRs in `docs/ADR/`, and the extracted codebase map in `.planning/codebase/` collectively define the intended shape. The project should progress in small, TDD-managed parts with deterministic seeds/snapshots so progress remains visible and reversible as complexity increases.
 

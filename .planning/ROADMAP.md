@@ -138,7 +138,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. Review Missing Extractions | 4/4 | Complete | 2026-03-10 |
 | 8. Verification & Traceability Backfill | 3/3 | Complete | 2026-03-10 |
 | 9. Operator Catalog & Booking Intake Wiring | 3/3 | Complete | 2026-03-10 |
-| 10. Payment Webhook & Cancellation Live Path | 0/0 | Planned | - |
+| 10. Payment Webhook & Cancellation Live Path | 0/4 | Planned | - |
 | 11. Events, Notifications, Calendar & Support Integration | 0/0 | Planned | - |
 
 ### Phase 7: review missing extractions
@@ -198,10 +198,13 @@ Plans:
   1. Provider webhook ingress reaches `reconcilePaymentWebhook()` on the live path and keeps booking/payment state in sync idempotently.
   2. Cancellation/refund handling executes through the disputes workflow path used by the live API surface.
   3. Integration coverage proves webhook reconciliation and refund state transitions behave on the production wiring path.
-**Plans**: 0 plans
+**Plans**: 4 plans
 
 Plans:
-- [ ] To be planned with `/gsd-plan-phase 10`
+- [ ] 10-01-PLAN.md — Put the production CloudPayments webhook route onto the real reconciliation and config-validation path
+- [ ] 10-02-PLAN.md — Add the execution-side payment provider registry and CloudPayments refund adapter
+- [ ] 10-03-PLAN.md — Make the disputes cancellation workflow snapshot-backed and provider-driven
+- [ ] 10-04-PLAN.md — Wire the live booking cancellation handler to the disputes workflow and prove it at the API layer
 
 ### Phase 11: Events, Notifications, Calendar & Support Integration
 

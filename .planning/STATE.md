@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: active
-last_updated: "2026-03-10T12:50:38.855Z"
+last_updated: "2026-03-10T13:42:23Z"
 progress:
   total_phases: 11
   completed_phases: 9
-  total_plans: 28
+  total_plans: 32
   completed_plans: 28
 ---
 
@@ -18,14 +18,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Operators can publish and manage flexible bookable listings, and customers can reliably discover, quote, book, pay for, and coordinate those listings through a generic marketplace flow that is testable, extensible, and safe to evolve.
-**Current focus:** Phase 10 — Payment Webhook & Cancellation Live Path — NEXT TO PLAN
+**Current focus:** Phase 10 — Payment Webhook & Cancellation Live Path — PLANNED, NEXT TO EXECUTE
 
 ## Current Position
 
-Phase: 10 of 11 (Payment Webhook & Cancellation Live Path) — NEXT TO PLAN
-Plan: 28 of 28 currently planned plans complete
-Status: Phase 09 is verified complete; next step is to plan the live payment webhook and cancellation path for Phase 10
-Last activity: 2026-03-10 — Completed Phase 09 with live operator listing management, server-trusted booking intake hardening, public quote-to-booking UI, and a passing `09-VERIFICATION.md`; next recommended command is `/gsd-plan-phase 10`
+Phase: 10 of 11 (Payment Webhook & Cancellation Live Path) — PLANNED
+Plan: 28 of 32 planned plans complete
+Status: Phase 10 now has four plans across three waves covering live webhook reconciliation, payment refund execution, snapshot-backed disputes orchestration, and final booking handler adoption
+Last activity: 2026-03-10 — Planned Phase 10 with `10-01` through `10-04`; next recommended command is `/gsd-execute-phase 10`
 
 Progress: [████████░░] 82%
 
@@ -74,16 +74,16 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Plan Phase 10 via `/gsd-plan-phase 10`
-- Execute Phase 10 after planning completes
+- Execute Phase 10 via `/gsd-execute-phase 10`
 - Plan Phase 11 after Phase 10 verification closes the payment/cancellation live-path gaps
 
 ### Blockers/Concerns
 
 - Plan/schema vocabulary drift must be reconciled domain-by-domain instead of copied wholesale from docs or legacy code.
+- Phase 10 refund execution must reuse org-scoped DB credentials passed at call time rather than inventing a new encryption subsystem mid-phase.
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Phase 09 complete; ready for `/gsd-plan-phase 10`
+Stopped at: Phase 10 planned; ready for `/gsd-execute-phase 10`
 Resume file: None
