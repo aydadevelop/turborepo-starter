@@ -139,7 +139,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 **Plans:** 4 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Extract booking computation services (evaluateActionPolicy, detectOverlap, findFreeGaps, calculateAvailableSlots) + resolveActivePricingProfile to packages/pricing
-- [ ] 07-02-PLAN.md — Scaffold packages/calendar: clean CalendarAdapter interface (createEvent/updateEvent/deleteEvent/getBusyIntervals), adapter registry, FakeCalendarAdapter
-- [ ] 07-03-PLAN.md — Implement packages/calendar: GoogleCalendarAdapter (WebCrypto JWT, raw fetch), CalendarService, BookingCalendarSync (outbound domain event pushers)
-- [ ] 07-04-PLAN.md — Scaffold packages/disputes: evaluateCancellationPolicy (actor-aware), processCancellationWorkflow, processDisputeWorkflow
+- [x] 07-01-PLAN.md — Extract booking computation services (evaluateActionPolicy, detectOverlap, findFreeGaps, calculateAvailableSlots) + resolveActivePricingProfile to packages/pricing
+- [x] 07-02-PLAN.md — Scaffold packages/calendar: clean CalendarAdapter interface (createEvent/updateEvent/deleteEvent/getBusyIntervals), adapter registry, FakeCalendarAdapter
+- [x] 07-03-PLAN.md — Implement packages/calendar: GoogleCalendarAdapter (WebCrypto JWT, raw fetch), CalendarService, BookingCalendarSync (outbound domain event pushers)
+- [x] 07-04-PLAN.md — Scaffold packages/disputes: evaluateCancellationPolicy (actor-aware), processCancellationWorkflow, processDisputeWorkflow
