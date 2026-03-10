@@ -37,13 +37,13 @@
 
 - [x] **BOOK-01**: Customer can create a booking request for an available slot with publication, contact, and source context captured in the booking record
 - [ ] **BOOK-02**: Operator can review and move a booking through the agreed lifecycle states using org-safe domain workflows
-- [ ] **BOOK-03**: System can reconcile payment webhooks idempotently and update booking/payment state consistently
+- [x] **BOOK-03**: System can reconcile payment webhooks idempotently and update booking/payment state consistently
 - [ ] **BOOK-04**: Customer and operator receive booking confirmation or cancellation notifications triggered by booking lifecycle events
 - [x] **BOOK-05**: System can execute a baseline cancellation and refund flow that applies policy, records refund state, and keeps booking/payment state in sync
 
 ### Operations and Support
 
-- [ ] **OPER-01**: Operator can connect and validate one org-scoped payment provider path for booking collection
+- [x] **OPER-01**: Operator can connect and validate one org-scoped payment provider path for booking collection
 - [ ] **OPER-02**: Customer or operator can create and follow a support conversation tied to a booking when operational issues arise
 - [ ] **OPER-03**: System can trigger side effects through typed events and workflows so booking, payment, and notification behavior does not depend on inline handler logic
 
@@ -110,10 +110,10 @@
 | AVPR-04 | Phase 8 | Satisfied |
 | BOOK-01 | Phase 9 | Complete |
 | BOOK-02 | Phase 8 | Satisfied |
-| BOOK-03 | Phase 10 | Pending |
+| BOOK-03 | Phase 10 | Complete |
 | BOOK-04 | Phase 11 | Pending |
 | BOOK-05 | Phase 10 | Complete |
-| OPER-01 | Phase 10 | Pending |
+| OPER-01 | Phase 10 | Complete |
 | OPER-02 | Phase 11 | Pending |
 | OPER-03 | Phase 11 | Pending |
 
