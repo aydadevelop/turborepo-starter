@@ -10,6 +10,7 @@ import { notificationsContract } from "./notifications";
 import { paymentsContract } from "./payments";
 import { pricingContract } from "./pricing";
 import { storefrontContract } from "./storefront";
+import { supportContract } from "./support";
 import { tasksContract } from "./tasks";
 import { todoContract } from "./todo";
 
@@ -74,6 +75,7 @@ export const appContract = {
 	payments: paymentsContract,
 	pricing: pricingContract,
 	storefront: storefrontContract,
+	support: supportContract,
 	tasks: tasksContract,
 	todo: todoContract,
 };

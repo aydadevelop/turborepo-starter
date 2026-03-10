@@ -1,8 +1,10 @@
 import type { db } from "@my-app/db";
-import type { booking } from "@my-app/db/schema/marketplace";
+import type { booking, bookingCancellationRequest } from "@my-app/db/schema/marketplace";
+import type { CancellationReasonCode } from "./cancellation-reasons";
 
 export type Db = typeof db;
 export type BookingRow = typeof booking.$inferSelect;
+export type CancellationRequestRow = typeof bookingCancellationRequest.$inferSelect;
 
 export interface CreateBookingInput {
 	organizationId: string;
@@ -45,4 +47,39 @@ export interface ListOrgBookingsFilter {
 	status?: BookingRow["status"];
 	limit?: number;
 	offset?: number;
+}
+
+export interface CancellationEvidence {
+	type: "photo" | "document" | "video" | "other";
+	url: string;
+	description?: string;
+}
+
+export interface CancellationPolicyOutcome {
+	actor: "customer" | "manager";
+	policyCode:
+		| "customer_early_full_refund"
+		| "customer_standard_partial_refund"
+		| "customer_late_no_refund"
+		| "manager_default_full_refund"
+		| "reason_override_refund";
+	policyLabel: string;
+	policySource: "default_profile" | "reason_override";
+	reasonCode?: string;
+	hoursUntilStart: number;
+	capturedAmountCents: number;
+	alreadyRefundedCents: number;
+	refundableBaseCents: number;
+	refundPercent: number; // 0–100
+	suggestedRefundCents: number;
+}
+
+export interface RequestCancellationInput {
+	bookingId: string;
+	organizationId: string;
+	requestedByUserId?: string;
+	initiatedByRole: "customer" | "manager";
+	reason?: string;
+	reasonCode?: CancellationReasonCode;
+	evidence?: CancellationEvidence[];
 }

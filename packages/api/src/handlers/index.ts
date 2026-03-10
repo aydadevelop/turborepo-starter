@@ -14,6 +14,7 @@ import { notificationsRouter } from "./notifications";
 import { paymentsRouter } from "./payments";
 import { pricingRouter } from "./pricing";
 import { storefrontRouter } from "./storefront";
+import { supportRouter } from "./support";
 import { tasksRouter } from "./tasks";
 import { todoRouter } from "./todo";
 
@@ -54,6 +55,7 @@ export const appRouter = publicProcedure.router({
 	payments: paymentsRouter,
 	pricing: pricingRouter,
 	storefront: storefrontRouter,
+	support: supportRouter,
 	tasks: tasksRouter,
 	todo: todoRouter,
 });

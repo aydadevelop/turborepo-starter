@@ -113,4 +113,165 @@ export const bookingContract = {
 		.route({ tags: ["Booking"], summary: "List the authenticated customer's own bookings" })
 		.input(z.object({}))
 		.output(z.array(bookingOutput)),
+
+	requestCancellation: oc
+		.route({
+			tags: ["Booking"],
+			summary: "Request booking cancellation (preview)",
+			description:
+				"Validates booking state, computes refund policy outcome, and inserts a cancellation request row. Does not cancel the booking or process a refund.",
+		})
+		.input(
+			z.object({
+				bookingId: z.string(),
+				initiatedByRole: z.enum(["customer", "manager"]),
+				reason: z.string().max(2000).optional(),
+				reasonCode: z.string().optional(),
+				evidence: z
+					.array(
+						z.object({
+							type: z.enum(["photo", "document", "video", "other"]),
+							url: z.string().url(),
+							description: z.string().optional(),
+						}),
+					)
+					.optional(),
+			}),
+		)
+		.output(
+			z.object({
+				request: z.object({
+					id: z.string(),
+					bookingId: z.string(),
+					organizationId: z.string(),
+					requestedByUserId: z.string().nullable(),
+					initiatedByRole: z.enum(["customer", "manager"]),
+					status: z.enum([
+						"requested",
+						"pending_review",
+						"approved",
+						"rejected",
+						"applied",
+						"cancelled",
+					]),
+					reason: z.string().nullable(),
+					reasonCode: z.string().nullable(),
+					bookingTotalPriceCents: z.number().int(),
+					penaltyAmountCents: z.number().int(),
+					refundAmountCents: z.number().int(),
+					currency: z.string(),
+					appliedByUserId: z.string().nullable(),
+					appliedAt: z.string().datetime().nullable(),
+					requestedAt: z.string().datetime(),
+					createdAt: z.string().datetime(),
+					updatedAt: z.string().datetime(),
+				}),
+				outcome: z.object({
+					actor: z.enum(["customer", "manager"]),
+					policyCode: z.string(),
+					policyLabel: z.string(),
+					policySource: z.enum(["default_profile", "reason_override"]),
+					reasonCode: z.string().optional(),
+					hoursUntilStart: z.number(),
+					capturedAmountCents: z.number().int(),
+					alreadyRefundedCents: z.number().int(),
+					refundableBaseCents: z.number().int(),
+					refundPercent: z.number(),
+					suggestedRefundCents: z.number().int(),
+				}),
+			}),
+		),
+
+	applyCancellation: oc
+		.route({
+			tags: ["Booking"],
+			summary: "Apply (commit) an approved cancellation request",
+			description:
+				"Transitions the request to 'applied', cancels the booking, and inserts a refund row if applicable. Uses the stored snapshot — no recalculation.",
+		})
+		.input(
+			z.object({
+				requestId: z.string(),
+			}),
+		)
+		.output(
+			z.object({
+				requestId: z.string(),
+				refundId: z.string().nullable(),
+			}),
+		),
+
+	getActiveCancellationRequest: oc
+		.route({
+			tags: ["Booking"],
+			summary: "Get active cancellation request for a booking",
+		})
+		.input(z.object({ bookingId: z.string() }))
+		.output(
+			z
+				.object({
+					id: z.string(),
+					bookingId: z.string(),
+					organizationId: z.string(),
+					requestedByUserId: z.string().nullable(),
+					initiatedByRole: z.enum(["customer", "manager"]),
+					status: z.enum([
+						"requested",
+						"pending_review",
+						"approved",
+						"rejected",
+						"applied",
+						"cancelled",
+					]),
+					reason: z.string().nullable(),
+					reasonCode: z.string().nullable(),
+					bookingTotalPriceCents: z.number().int(),
+					penaltyAmountCents: z.number().int(),
+					refundAmountCents: z.number().int(),
+					currency: z.string(),
+					appliedByUserId: z.string().nullable(),
+					appliedAt: z.string().datetime().nullable(),
+					requestedAt: z.string().datetime(),
+					createdAt: z.string().datetime(),
+					updatedAt: z.string().datetime(),
+				})
+				.nullable(),
+		),
+
+	listCancellationRequests: oc
+		.route({
+			tags: ["Booking"],
+			summary: "List all cancellation requests for the organization",
+		})
+		.input(z.object({}))
+		.output(
+			z.array(
+				z.object({
+					id: z.string(),
+					bookingId: z.string(),
+					organizationId: z.string(),
+					requestedByUserId: z.string().nullable(),
+					initiatedByRole: z.enum(["customer", "manager"]),
+					status: z.enum([
+						"requested",
+						"pending_review",
+						"approved",
+						"rejected",
+						"applied",
+						"cancelled",
+					]),
+					reason: z.string().nullable(),
+					reasonCode: z.string().nullable(),
+					bookingTotalPriceCents: z.number().int(),
+					penaltyAmountCents: z.number().int(),
+					refundAmountCents: z.number().int(),
+					currency: z.string(),
+					appliedByUserId: z.string().nullable(),
+					appliedAt: z.string().datetime().nullable(),
+					requestedAt: z.string().datetime(),
+					createdAt: z.string().datetime(),
+					updatedAt: z.string().datetime(),
+				}),
+			),
+		),
 };
