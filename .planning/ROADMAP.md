@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Review Missing Extractions** - Extract load-bearing booking/pricing/calendar/disputes seams identified by the milestone audit before live-path hardening.
 - [x] **Phase 8: Verification & Traceability Backfill** - Restore phase verification evidence and requirements bookkeeping so the milestone can be re-audited against real delivery. (completed 2026-03-10)
 - [x] **Phase 9: Operator Catalog & Booking Intake Wiring** - Wire the missing operator publish flow and customer quote-to-booking intake path through the live web and API surfaces. (completed 2026-03-10)
-- [ ] **Phase 10: Payment Webhook & Cancellation Live Path** - Put live payment reconciliation and cancellation/refund orchestration onto the production request path.
+- [x] **Phase 10: Payment Webhook & Cancellation Live Path** - Put live payment reconciliation and cancellation/refund orchestration onto the production request path. (completed 2026-03-10)
 - [ ] **Phase 11: Events, Notifications, Calendar & Support Integration** - Converge live booking side effects onto typed events and complete the customer-facing support follow-up flow.
 
 ## Phase Details
@@ -138,7 +138,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. Review Missing Extractions | 4/4 | Complete | 2026-03-10 |
 | 8. Verification & Traceability Backfill | 3/3 | Complete | 2026-03-10 |
 | 9. Operator Catalog & Booking Intake Wiring | 3/3 | Complete | 2026-03-10 |
-| 10. Payment Webhook & Cancellation Live Path | 3/4 | In Progress|  |
+| 10. Payment Webhook & Cancellation Live Path | 4/4 | Complete   | 2026-03-10 |
 | 11. Events, Notifications, Calendar & Support Integration | 0/0 | Planned | - |
 
 ### Phase 7: review missing extractions
@@ -201,10 +201,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Put the production CloudPayments webhook route onto the real reconciliation and config-validation path
-- [ ] 10-02-PLAN.md — Add the execution-side payment provider registry and CloudPayments refund adapter
+- [x] 10-01-PLAN.md — Put the production CloudPayments webhook route onto the real reconciliation and config-validation path
+- [x] 10-02-PLAN.md — Add the execution-side payment provider registry and CloudPayments refund adapter
 - [x] 10-03-PLAN.md — Make the disputes cancellation workflow snapshot-backed and provider-driven
-- [ ] 10-04-PLAN.md — Wire the live booking cancellation handler to the disputes workflow and prove it at the API layer
+- [x] 10-04-PLAN.md — Wire the live booking cancellation handler to the disputes workflow and prove it at the API layer
 
 ### Phase 11: Events, Notifications, Calendar & Support Integration
 

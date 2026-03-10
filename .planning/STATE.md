@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: active
-last_updated: "2026-03-10T15:14:52.925Z"
+last_updated: "2026-03-10T15:40:14.618Z"
 progress:
   total_phases: 11
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 32
-  completed_plans: 31
+  completed_plans: 32
 ---
 
 # Project State
@@ -18,22 +18,22 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-03-09)
 
 **Core value:** Operators can publish and manage flexible bookable listings, and customers can reliably discover, quote, book, pay for, and coordinate those listings through a generic marketplace flow that is testable, extensible, and safe to evolve.
-**Current focus:** Phase 10 — Payment Webhook & Cancellation Live Path — IN PROGRESS; `10-01` through `10-03` are complete, and `10-04` remains to wire the live booking handler onto the disputes workflow.
+**Current focus:** Phase 11 — Events, Notifications, Calendar & Support Integration — READY TO PLAN; Phase 10 is complete after wiring the live booking cancellation handler onto the disputes workflow.
 
 ## Current Position
 
-Phase: 10 of 11 (Payment Webhook & Cancellation Live Path) — IN PROGRESS
-Plan: 31 of 32 planned plans complete
-Status: Phase 10 now has three executed plans; `10-03` shipped the snapshot-backed disputes cancellation apply workflow with provider-executed refunds and rollback-safe compensation
-Last activity: 2026-03-10 — Executed `10-03`; the remaining Phase 10 plan is `10-04`, which should wire the live booking cancellation handler to the disputes workflow; next recommended command is `/gsd-execute-phase 10`
+Phase: 10 of 11 completed (Payment Webhook & Cancellation Live Path)
+Plan: 32 of 32 planned plans complete
+Status: Phase 10 is fully complete; `10-04` moved the live booking cancellation mutation onto the disputes workflow and added API-level regression coverage for provider-backed refunds on the live path
+Last activity: 2026-03-10 — Executed `10-04` and completed Phase 10; next recommended command is `/gsd-plan-phase 11`
 
-Progress: [██████████] 97%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 31
-- Phases completed: 9
+- Total plans completed: 32
+- Phases completed: 10
 
 **By Phase:**
 
@@ -48,11 +48,12 @@ Progress: [██████████] 97%
 | 07 — Review Missing Extractions | 4 | ✅ Complete |
 | 08 — Verification & Traceability Backfill | 3 | ✅ Complete |
 | 09 — Operator Catalog & Booking Intake Wiring | 3 | ✅ Complete |
-| 10 — Payment Webhook & Cancellation Live Path | 3/4 | 🚧 In Progress |
+| 10 — Payment Webhook & Cancellation Live Path | 4/4 | ✅ Complete |
 | 11 — Events, Notifications, Calendar & Support Integration | 0 | 📝 Planned |
 | Phase 10 P02 | 5 min | 2 tasks | 5 files |
 | Phase 10 P01 | 2 min | 2 tasks | 7 files |
 | Phase 10 P03 | 6 min | 2 tasks | 5 files |
+| Phase 10 P04 | 3 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Recent decisions affecting current work:
 - [Phase 10]: Stored bookingCancellationRequest snapshot values are authoritative for apply-time cancellation state and refund execution.
 - [Phase 10]: Disputes assembles runtime payment execution config from persisted organizationPaymentConfig values at the workflow boundary instead of handlers.
 - [Phase 10]: Downstream failures after refund execution compensate booking/request state and mark refund rows rejected to stay enum-valid.
+- [Phase 10]: booking.applyCancellation now delegates to processCancellationWorkflow(db).execute(...) and maps workflow failures back to the existing NOT_FOUND/BAD_REQUEST ORPC outcomes.
+- [Phase 10]: API-level live cancellation coverage uses RPCHandler directly inside packages/api so the transport seam is tested without introducing a new package-local client dependency.
 
 ### Roadmap Evolution
 
@@ -86,16 +89,16 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Execute the remaining Phase 10 plan (`10-04`) via `/gsd-execute-phase 10`
-- Plan Phase 11 after Phase 10 verification closes the payment/cancellation live-path gaps
+- Plan Phase 11 after Phase 10 completion closes the payment/cancellation live-path gaps
+- Run Phase 10 verification/UAT if needed before Phase 11 execution
 
 ### Blockers/Concerns
 
 - Plan/schema vocabulary drift must be reconciled domain-by-domain instead of copied wholesale from docs or legacy code.
-- Phase 10 refund execution now lives behind `@my-app/payment`; remaining live-path work must wire it through disputes and booking handlers without reintroducing apply-time policy drift.
+- Phase 11 still needs to converge live events, notification delivery, calendar sync, and support follow-up onto the typed runtime seams now that the cancellation live path is in place.
 
 ## Session Continuity
 
 Last session: 2026-03-10
-Stopped at: Completed 10-03-PLAN.md
+Stopped at: Completed 10-04-PLAN.md
 Resume file: None
