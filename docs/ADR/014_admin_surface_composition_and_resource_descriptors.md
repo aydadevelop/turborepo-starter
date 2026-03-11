@@ -25,6 +25,8 @@ Current repo truth:
 - `packages/ui` already provides the design-system primitives needed for most surfaces
 - Formsnap / Superforms are not currently installed or used in the app layer
 - TanStack Form already exists in the app and is a better fit than inventing more local-state form patterns
+- `apps/web` already has Vitest, but does not yet have Browser Mode test infrastructure
+- `packages/e2e-web` already owns the hardened Playwright browser suite for cross-service journeys, storage state, snapshots, and managed local boot
 - admin and org surfaces still mix app-owned oRPC reads with some auth-owned `authClient` calls
 - repeated table, filter, pagination, and mutation patterns already exist in routes such as:
   - `apps/web/src/routes/(app)/admin/organizations/+page.svelte`
@@ -263,6 +265,20 @@ But once a resource module exists:
 If a domain needs many related editors, tables, and actions, the frontend should compose them as a workspace grouped by operator flow.
 
 This is the default rule for listings and other dense operator domains.
+
+### 12. `apps/web` and `packages/e2e-web` use different browser-testing roles
+
+We explicitly split browser testing by intent:
+
+- `apps/web`
+  - Vitest Browser Mode with the Playwright provider
+  - fast UI validation, hot-reloadable local iteration, and AI-assisted surface checks
+  - resource-module, route-slice, and component-level browser tests with mocked or local feature dependencies
+- `packages/e2e-web`
+  - Playwright Test
+  - source of truth for solidified full-browser journeys, storage-state auth, snapshots, cross-service behavior, and dedicated e2e database orchestration
+
+Do not try to make one layer replace the other.
 
 ---
 
@@ -570,9 +586,13 @@ Do not build a generic moderation engine in this ADR. Build a location-specific 
 
 ## Testing Strategy
 
-We do not currently have frontend component test infrastructure in `apps/web`.
+The target test stack is:
 
-Therefore the low-entropy seam should be **pure TypeScript feature modules**.
+1. **Pure TypeScript feature tests in `apps/web`**
+2. **Vitest Browser Mode tests in `apps/web`**
+3. **Full Playwright journeys in `packages/e2e-web`**
+
+### 1. Pure TypeScript feature tests
 
 For each non-trivial resource module, test:
 
@@ -587,16 +607,44 @@ For each non-trivial resource module, test:
 - `surface.ts`
   - descriptor integrity where there is non-trivial field or column logic
 
-Keep Playwright for:
+This remains the default low-entropy seam.
+
+### 2. Vitest Browser Mode tests in `apps/web`
+
+Add Browser Mode in `apps/web` using the Playwright provider for tests that need a real browser DOM but do not need full-system orchestration.
+
+Use it for:
+
+- form interaction and validation
+- table filters, column visibility, and pagination controls
+- dialogs, tabs, and workspace section switching
+- route-level UI composition with mocked feature adapters
+- listing editor and org-account surfaces under active development
+
+Rules:
+
+- Browser Mode tests do not own database bootstrapping or cross-service startup
+- Browser Mode tests should prefer mocked or local feature seams over real backend boot
+- Browser Mode tests should live next to the feature they exercise
+- Browser Mode tests may take snapshots only for unstable-in-development UI slices, not for deployment-gate full-page baselines
+
+### 3. Playwright in `packages/e2e-web`
+
+Keep Playwright there for:
 
 - end-to-end happy paths
 - auth and redirect behavior
-- integration smoke for important operator flows
+- impersonation and org switching
+- cross-service integration smoke
+- solidified visual baselines and snapshots
+
+`packages/e2e-web` is the source of truth for hardened browser journeys after a surface stabilizes.
 
 Do not rely on:
 
 - route-component logic tests as the primary seam
-- giant page snapshots
+- giant page snapshots inside `apps/web`
+- Browser Mode to replace full e2e orchestration
 
 ---
 
@@ -651,6 +699,20 @@ These are mostly table surfaces with small action surfaces.
   - invitation accept / reject
   - org switcher
 
+### Phase 2.5
+
+- Add Vitest Browser Mode with the Playwright provider to `apps/web`
+- Add a shared browser-test harness for:
+  - feature providers
+  - query client
+  - mocked auth client
+  - mocked oRPC resource adapters
+- Use it first on:
+  - org settings
+  - team invite
+  - listing editor basics
+  - one shared table shell
+
 ### Phase 3
 
 - Add shared app-level shells for:
@@ -690,12 +752,15 @@ These are mostly table surfaces with small action surfaces.
 - keeps routes thin
 - gives auth-backed and oRPC-backed mutations one screen architecture
 - keeps most form and table logic in pure TS modules that can be tested without DOM-heavy setup
+- gives `apps/web` a fast browser-feedback layer for active UI work and AI-assisted iteration
+- preserves `packages/e2e-web` as the stable full-browser regression and snapshot layer
 - gives listing and similar dense domains a workspace model instead of scattered CRUD screens
 - leaves room for generated sections without surrendering UX control
 
 ### Negative
 
 - adds a deliberate feature-module layer in `apps/web`
+- adds a second frontend test layer that must be kept scoped and disciplined
 - requires discipline to keep descriptors resource-scoped
 - means some duplication remains intentionally until patterns are proven
 - requires extraction work before the payoff becomes obvious

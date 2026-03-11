@@ -8,6 +8,7 @@ export default mergeConfig(
 			exclude: [
 				"**/node_modules/**",
 				"**/dist/**",
+				"**/*.browser.{test,spec}.{js,ts}",
 				"**/e2e/**",
 				"**/playwright-report/**",
 				"**/test-results/**",

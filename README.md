@@ -113,12 +113,13 @@ act -W .github/workflows/deploy-docker.yml workflow_dispatch \
 ### E2E Suite Roles
 
 - `packages/e2e-web` is the deployment-gate suite used by CI. It runs hardened cross-service user stories against near-production backend startup (`start:test`, no file watch/HMR).
-- `apps/web` Playwright is dev-only for local progress checks and fast UI flow validation while building features.
+- `apps/web` uses Vitest Browser Mode for fast local browser interaction tests while building features.
+- `apps/web` Playwright remains only for heavyweight local checks such as performance guardrails.
 - `bun run test:e2e:docker` starts `db/server/assistant/notifications/web` via Docker Compose (same Dockerfiles as deploy), runs the same `packages/e2e-web` stories, and tears everything down.
 - Local `bun run test:e2e` defaults to a dedicated `myapp_e2e` database. Override with `PLAYWRIGHT_ALLOW_SHARED_DB=1` only if you intentionally want to reuse the shared dev DB.
 
 ```bash
-# Dev-only checks while iterating on frontend flows
+# Fast browser checks while iterating on frontend flows
 cd apps/web
 bun run test:e2e:dev
 ```
