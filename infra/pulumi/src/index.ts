@@ -4,20 +4,72 @@ import * as tls from "@pulumi/tls";
 import { DnsRecords } from "./dns";
 import { DokkuApps } from "./dokku-apps";
 import { OneGbVps } from "./onegb-vps";
+import { StorageResources } from "./storage";
 import { VpsBootstrap } from "./vps-bootstrap";
 
 const config = new pulumi.Config();
 const vpsConfig = new pulumi.Config("vps");
 const appConfig = new pulumi.Config("app");
 const ghcrConfig = new pulumi.Config("ghcr");
+const dnsConfig = new pulumi.Config("dns");
+const storageConfig = new pulumi.Config("storage");
 
 const domain = config.require("domain");
 const sshUser = vpsConfig.get("user") ?? "root";
 const sshPort = Number(vpsConfig.get("sshPort") ?? "22");
+const zoneId = dnsConfig.require("zoneId");
+const storageEnabled = storageConfig.getBoolean("enabled") ?? false;
+const requireStorageValue = (value: string | undefined, key: string): string => {
+	if (!value || value.length === 0) {
+		throw new Error(
+			`storage.${key} is required when storage.enabled is true.`,
+		);
+	}
+
+	return value;
+};
+
+const requireStorageSecret = (
+	value: pulumi.Output<string> | undefined,
+	key: string,
+): pulumi.Output<string> => {
+	if (!value) {
+		throw new Error(
+			`storage.${key} is required when storage.enabled is true.`,
+		);
+	}
+
+	return value;
+};
+
+const storageAccountId = storageEnabled
+	? requireStorageValue(
+			storageConfig.get("cloudflareAccountId") ??
+				process.env.CLOUDFLARE_ACCOUNT_ID,
+			"cloudflareAccountId",
+		)
+	: storageConfig.get("cloudflareAccountId") ??
+		process.env.CLOUDFLARE_ACCOUNT_ID ??
+		"";
+const storageBucketName =
+	storageConfig.get("publicBucketName") ??
+	`${domain.replace(/\./g, "-")}-listing-public-v1`;
+const storagePublicDomain =
+	storageConfig.get("publicDomain") ?? `media.${domain}`;
 
 // Helper: return secret or empty string for optional config
 const optionalSecret = (key: string) =>
 	appConfig.getSecret(key) ?? pulumi.output("");
+
+const storageS3AccessKeyId = storageEnabled
+	? requireStorageSecret(storageConfig.getSecret("s3AccessKeyId"), "s3AccessKeyId")
+	: pulumi.output("");
+const storageS3SecretAccessKey = storageEnabled
+	? requireStorageSecret(
+			storageConfig.getSecret("s3SecretAccessKey"),
+			"s3SecretAccessKey",
+		)
+	: pulumi.output("");
 
 // ── Step 0: Create VPS on 1gb.ru ────────────────────────────────────────────
 const vps = new OneGbVps("staging-vps", {
@@ -87,6 +139,22 @@ const apps = new DokkuApps(
 			GRAFANA_PASSWORD: appConfig.requireSecret("grafanaPassword"),
 			GRAFANA_ALERT_EMAIL:
 				appConfig.get("grafanaAlertEmail") ?? `ops@${domain}`,
+			STORAGE_BACKEND: storageEnabled ? "s3" : "local-file",
+			STORAGE_PUBLIC_BASE_URL: storageEnabled
+				? pulumi.interpolate`https://${storagePublicDomain}`
+				: "",
+			STORAGE_LOCAL_DIR:
+				storageConfig.get("localDir") ?? "/var/lib/myapp/storage/listing-public-v1",
+			STORAGE_S3_ENDPOINT: storageEnabled
+				? `https://${storageAccountId}.r2.cloudflarestorage.com`
+				: "",
+				STORAGE_S3_REGION: storageConfig.get("region") ?? "auto",
+				STORAGE_S3_BUCKET: storageEnabled ? storageBucketName : "",
+				STORAGE_S3_ACCESS_KEY_ID: storageS3AccessKeyId,
+				STORAGE_S3_SECRET_ACCESS_KEY: storageS3SecretAccessKey,
+				STORAGE_S3_FORCE_PATH_STYLE: storageEnabled ? "0" : "1",
+			STORAGE_SIGNED_URL_TTL_SECONDS:
+				storageConfig.get("signedUrlTtlSeconds") ?? "900",
 		},
 	},
 	{ dependsOn: [bootstrap] }
@@ -94,6 +162,19 @@ const apps = new DokkuApps(
 
 // ── Step 3: DNS records (Cloudflare) ────────────────────────────────────────
 const dns = new DnsRecords("dns", { domain, vpsIp });
+
+const storage = storageEnabled
+	? new StorageResources(
+			"storage",
+			{
+				accountId: storageAccountId,
+				bucketName: storageBucketName,
+				publicDomain: storagePublicDomain,
+				zoneId,
+			},
+			{ dependsOn: [dns] },
+		)
+	: undefined;
 
 // ── Step 4: Sync deployment config to GitHub Actions secrets ────────────────
 const sshKeyB64 = deployKey.privateKeyOpenssh.apply((k) =>
@@ -131,3 +212,4 @@ export const appUrls = {
 	assistant: `https://assistant.${domain}`,
 	grafana: `https://grafana.${domain}`,
 };
+export const storagePublicUrl = storage?.publicBaseUrl ?? pulumi.output("");

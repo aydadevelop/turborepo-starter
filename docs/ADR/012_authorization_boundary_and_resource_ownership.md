@@ -67,6 +67,25 @@ We standardize access checks into two layers with clear responsibilities:
 
 These layers are complementary and must not be collapsed into one abstraction.
 
+### Mental model
+
+Every protected operation in the repo should be reasoned about in this order:
+
+1. **Who is the actor?**
+2. **What scope is active for this request?**
+3. **Is this actor allowed to attempt this operation type?**
+4. **What is the authoritative owner scope of the target resource?**
+5. **Does the target resource belong to the active scope?**
+6. **After access is established, what business invariants still need to be checked?**
+
+This yields a stable split:
+
+- Better Auth + middleware answer 1, 2, and 3.
+- Domain/repository code answers 4 and 5.
+- Domain services and workflows answer 6.
+
+Do not merge these questions into one helper or one middleware.
+
 ### 1. Actor authorization belongs to auth + middleware
 
 The canonical source of truth for actor/org access is:
@@ -96,92 +115,127 @@ This rule applies even if transport middleware also performs an early check.
 
 ---
 
-## Standard Access Patterns
+## Canonical Patterns
 
-Every new endpoint or domain mutation should fit one of these patterns.
+Every new endpoint, handler, service method, or workflow step that touches scoped data must fit one of these patterns.
 
-### Pattern A: Actor-gated operation
+If a new case does not fit one of them, the burden is on the author to explain why.
 
-Use this when the operation is not about a pre-existing owned row.
+### Pattern 1: Create-in-scope
 
-Examples:
-
-- create organization-scoped resource
-- create booking from public storefront
-- invite member
-
-Guard:
-
-- middleware only
-
-Typical inputs:
-
-- org context from active membership
-- actor user ID from session
-
-### Pattern B: Direct organization-owned resource
-
-Use this when the row itself carries `organizationId`.
+Use this when creating a new row under an already-authorized scope.
 
 Examples:
 
-- `booking.id + booking.organizationId`
-- `supportTicket.id + supportTicket.organizationId`
-- `listing.id + listing.organizationId`
+- create listing for active organization
+- create support ticket for active organization
+- create org-scoped configuration
 
-Rule:
+Rules:
 
-- queries and mutations must scope by both the resource ID and `organizationId`
+- the scope key must come from trusted context, not from untrusted client input
+- set `organizationId`, `userId`, or `customerUserId` from context in domain code
+- do not trust a client-provided owner scope if the server can derive it
 
-Preferred forms:
+Template:
 
-- single-query scope: `where(id = ? and organization_id = ?)`
-- domain helper: `findXForOrganization(...)` / `requireXForOrganization(...)`
+1. Middleware authorizes actor and active scope.
+2. Handler passes scope from context.
+3. Domain writes row with scope key from context.
 
-### Pattern C: Direct user-owned resource
+Preferred helper shape:
 
-Use this when the row itself carries `userId` or `customerUserId`.
+- no ownership helper needed before insert
+- use clear input types such as `{ organizationId, ... }`
 
-Examples:
+### Pattern 2: Direct org-owned row
 
-- `assistantChat.id + assistantChat.userId`
-- customer-owned support thread
-- customer-owned booking list
-
-Rule:
-
-- queries and mutations must scope by both the resource ID and the user scope key
-
-Preferred forms:
-
-- `findXForUser(...)`
-- `requireXForUser(...)`
-- `listXForUser(...)`
-
-### Pattern D: Parent-owned or indirect resource
-
-Use this when the child row does not carry the full access scope directly, or the real owner is a parent row.
+Use this when the target row itself contains `organizationId`.
 
 Examples:
 
-- availability rule belongs to listing
-- pricing rule belongs to listing
-- calendar connection belongs to listing or organization
-- nested child resources under ticket, booking, or listing
+- `listing`
+- `booking`
+- `supportTicket`
+- any row with direct tenant ownership
 
-Rule:
+Rules:
 
-- scope must be enforced through the authoritative parent relation
+- read/update/delete by both `id` and `organizationId`
+- prefer one SQL predicate over read-then-filter in memory
 
-Preferred forms:
+Template:
 
-- join query that checks parent scope in one statement
-- load child -> resolve parent scope -> require parent ownership
-- domain helper like `requireListingForOrganization(...)` used by child-resource mutations
+1. Middleware authorizes actor and active org.
+2. Domain calls `findXForOrganization(id, organizationId)` or `requireXForOrganization(id, organizationId)`.
+3. Mutation continues only after scoped retrieval succeeds.
 
-### Pattern E: Scoped list query
+Preferred helper names:
 
-Use this when listing multiple rows in a tenant or user scope.
+- `findXForOrganization`
+- `requireXForOrganization`
+- `listXForOrganization`
+
+### Pattern 3: Direct user-owned row
+
+Use this when the target row itself contains `userId` or `customerUserId`.
+
+Examples:
+
+- assistant chat owned by user
+- customer thread owned by customer
+- customer booking list
+
+Rules:
+
+- read/update/delete by both `id` and the user scope key
+- use session-derived user scope, not client-supplied scope
+
+Template:
+
+1. Middleware authenticates actor.
+2. Domain calls `findXForUser(id, userId)` or equivalent.
+3. Mutation continues only after scoped retrieval succeeds.
+
+Preferred helper names:
+
+- `findXForUser`
+- `requireXForUser`
+- `listXForUser`
+- `findXForCustomer`
+- `requireXForCustomer`
+
+### Pattern 4: Parent-owned child row
+
+Use this when the accessed row is owned through a parent resource.
+
+Examples:
+
+- availability rule owned through listing
+- pricing rule owned through listing
+- calendar connection owned through listing or organization
+- any nested child resource under booking, ticket, or listing
+
+Rules:
+
+- the authoritative owner is the parent, not the child helper name or route path
+- child access must be proven through the parent relation
+
+Allowed implementations:
+
+- single query with a join that scopes child through parent ownership
+- load child, extract parent ID, then call `requireParentForScope(...)`
+- repository helper that already encapsulates the join
+
+Preferred helper names:
+
+- `requireListingForOrganization`
+- `findAvailabilityRuleForOrganization`
+- `requireTicketMessageForOrganization`
+
+### Pattern 5: Scoped list query
+
+Use this when listing multiple rows in an org or user scope.
 
 Examples:
 
@@ -190,15 +244,54 @@ Examples:
 - list my chats
 - list my tickets
 
-Rule:
+Rules:
 
-- the root query predicate must include the scope key
-- never fetch a broad set and filter in memory
+- the root SQL query must include the scope predicate
+- never fetch a wider set and then filter in application memory
+- optional filters must narrow within the scoped base query, never replace it
 
-Preferred forms:
+Preferred helper names:
 
-- `listXForOrganization(...)`
-- `listXForUser(...)`
+- `listXForOrganization`
+- `listXForUser`
+
+### Pattern 6: Public-to-scoped resolution
+
+Use this when a public or cross-tenant entrypoint resolves into a scoped owner record before creating downstream state.
+
+Examples:
+
+- public booking creation resolving listing publication to organization
+- invite acceptance resolving into member creation
+
+Rules:
+
+- first resolve the authoritative owner context
+- only then create downstream rows under that resolved scope
+- downstream rows must store the resolved scope explicitly if they are org-owned
+
+This is the one pattern where the caller may not start with an active org in middleware, but the domain must still resolve an authoritative scope before mutating state.
+
+---
+
+## Selection Guide
+
+When adding a new operation, choose a pattern by asking:
+
+1. Is this a create of a new scoped row?
+   - use Pattern 1
+2. Does the target row itself carry `organizationId`?
+   - use Pattern 2
+3. Does the target row itself carry `userId` or `customerUserId`?
+   - use Pattern 3
+4. Is the target row owned through a parent?
+   - use Pattern 4
+5. Is this a list query?
+   - use Pattern 5
+6. Is this a public flow that must resolve owner scope before writing?
+   - use Pattern 6
+
+If the answer is "more than one", use the earliest pattern that establishes the authoritative owner scope, then continue with the later one.
 
 ---
 
@@ -209,7 +302,8 @@ The repo-wide common practice is:
 1. Middleware answers actor and role questions.
 2. Domain/repository code answers concrete row-access questions.
 3. Shared access helpers live below transport.
-4. New code uses standard helper naming instead of ad hoc `verify*` helpers.
+4. Every operation must fit one of the canonical patterns above.
+5. New code uses standard helper naming instead of ad hoc `verify*` helpers.
 
 This means developers should stop inventing one-off patterns such as:
 
@@ -218,7 +312,7 @@ This means developers should stop inventing one-off patterns such as:
 - inline duplicate `(id, organizationId)` lookups scattered per package
 - transport-only ownership checks with no domain enforcement
 
-Instead, each access check should resolve to one of the standard patterns and use canonical helper names.
+Instead, each access check should resolve to one of the canonical patterns and use canonical helper names.
 
 ---
 
@@ -498,4 +592,3 @@ Rejected because:
 - repeated patterns are already diverging
 - helper naming is inconsistent
 - shared practice is needed to keep new code coherent
-

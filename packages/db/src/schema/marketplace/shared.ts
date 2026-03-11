@@ -124,6 +124,7 @@ export const reviewStatusValues = [
 	"flagged",
 ] as const;
 export const listingAssetKindValues = ["image", "document", "other"] as const;
+export const storageAccessValues = ["public", "private"] as const;
 export const cancellationRequestStatusValues = [
 	"requested",
 	"pending_review",
@@ -203,6 +204,7 @@ export const listingAssetKindEnum = pgEnum(
 	"listing_asset_kind",
 	listingAssetKindValues,
 );
+export const storageAccessEnum = pgEnum("storage_access", storageAccessValues);
 export const cancellationRequestStatusEnum = pgEnum(
 	"cancellation_request_status",
 	cancellationRequestStatusValues,

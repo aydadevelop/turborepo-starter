@@ -75,12 +75,12 @@
 					href="/listings/{item.id}"
 					class="block rounded-lg border p-4 transition-shadow hover:shadow-md"
 				>
-					{#if item.primaryImageKey}
-						<img
-							src="/assets/{item.primaryImageKey}"
-							alt={item.name}
-							class="mb-3 h-40 w-full rounded object-cover"
-						/>
+						{#if item.primaryImageUrl}
+							<img
+								src={item.primaryImageUrl}
+								alt={item.name}
+								class="mb-3 h-40 w-full rounded object-cover"
+							/>
 					{/if}
 					<span class="mb-1 inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
 						{item.listingTypeSlug}

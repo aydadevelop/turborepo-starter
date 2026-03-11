@@ -4,6 +4,7 @@ import {
 	listingAsset,
 	listingPublication,
 } from "@my-app/db/schema/marketplace";
+import { resolvePublicObjectUrl } from "@my-app/storage";
 
 import type { Db } from "./types";
 
@@ -21,9 +22,39 @@ export interface StorefrontListItem {
 	slug: string;
 	description: string | null;
 	metadata: Record<string, unknown> | null;
-	primaryImageKey: string | null;
+	primaryImageUrl: string | null;
 	createdAt: string;
 }
+
+interface StorefrontRow {
+	id: string;
+	listingTypeSlug: string;
+	name: string;
+	slug: string;
+	description: string | null;
+	metadata: Record<string, unknown> | null;
+	createdAt: Date;
+	primaryImageAccess: "public" | "private" | null;
+	primaryImageKey: string | null;
+	primaryImageProvider: string | null;
+}
+
+const toStorefrontListItem = (row: StorefrontRow): StorefrontListItem => ({
+	id: row.id,
+	listingTypeSlug: row.listingTypeSlug,
+	name: row.name,
+	slug: row.slug,
+	description: row.description,
+	metadata: row.metadata,
+	createdAt: row.createdAt.toISOString(),
+	primaryImageUrl:
+		row.primaryImageProvider && row.primaryImageKey && row.primaryImageAccess
+			? resolvePublicObjectUrl(row.primaryImageProvider, {
+					key: row.primaryImageKey,
+					access: row.primaryImageAccess,
+				})
+			: null,
+});
 
 function buildWhereClause(input: StorefrontListInput) {
 	const conditions = [
@@ -45,12 +76,14 @@ export async function searchPublishedListings(
 			id: listing.id,
 			listingTypeSlug: listing.listingTypeSlug,
 			name: listing.name,
-			slug: listing.slug,
-			description: listing.description,
-			metadata: listing.metadata,
-			createdAt: listing.createdAt,
-			primaryImageKey: listingAsset.storageKey,
-		})
+				slug: listing.slug,
+				description: listing.description,
+				metadata: listing.metadata,
+				createdAt: listing.createdAt,
+				primaryImageKey: listingAsset.storageKey,
+				primaryImageProvider: listingAsset.storageProvider,
+				primaryImageAccess: listingAsset.access,
+			})
 		.from(listing)
 		.innerJoin(
 			listingPublication,
@@ -87,10 +120,7 @@ export async function searchPublishedListings(
 		.where(where);
 
 	return {
-		items: rows.map((row) => ({
-			...row,
-			createdAt: row.createdAt.toISOString(),
-		})),
+		items: rows.map(toStorefrontListItem),
 		total: countRow?.total ?? 0,
 	};
 }
@@ -104,12 +134,14 @@ export async function getPublishedListing(
 			id: listing.id,
 			listingTypeSlug: listing.listingTypeSlug,
 			name: listing.name,
-			slug: listing.slug,
-			description: listing.description,
-			metadata: listing.metadata,
-			createdAt: listing.createdAt,
-			primaryImageKey: listingAsset.storageKey,
-		})
+				slug: listing.slug,
+				description: listing.description,
+				metadata: listing.metadata,
+				createdAt: listing.createdAt,
+				primaryImageKey: listingAsset.storageKey,
+				primaryImageProvider: listingAsset.storageProvider,
+				primaryImageAccess: listingAsset.access,
+			})
 		.from(listing)
 		.innerJoin(
 			listingPublication,
@@ -132,8 +164,5 @@ export async function getPublishedListing(
 
 	if (!row) throw new Error("NOT_FOUND");
 
-	return {
-		...row,
-		createdAt: row.createdAt.toISOString(),
-	};
+	return toStorefrontListItem(row);
 }

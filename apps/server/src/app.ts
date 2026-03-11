@@ -5,6 +5,7 @@ import { registerServerIntegrations } from "./bootstrap";
 
 import { corsMiddleware } from "./middleware/cors";
 import { authRoutes } from "./routes/auth";
+import { assetRoutes } from "./routes/assets";
 
 import { healthRoutes } from "./routes/health";
 import { paymentWebhookRoutes } from "./routes/payment-webhook";
@@ -17,6 +18,7 @@ export const app = new Hono();
 app.use(logger());
 app.use("/*", corsMiddleware);
 
+app.route("/assets", assetRoutes);
 app.route("/", authRoutes);
 app.route("/", paymentWebhookRoutes);
 app.route("/health", healthRoutes);

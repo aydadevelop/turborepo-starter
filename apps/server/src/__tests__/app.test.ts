@@ -35,6 +35,12 @@ vi.mock("../routes/payment-webhook", () => {
 	};
 });
 
+vi.mock("../routes/assets", () => {
+	return {
+		assetRoutes: new Hono(),
+	};
+});
+
 vi.mock("../rpc/handlers", () => {
 	return {
 		rpcMiddleware: async (_c: unknown, next: () => Promise<void>) => {

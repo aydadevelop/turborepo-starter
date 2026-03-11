@@ -6,7 +6,13 @@ import {
 	listingTypeConfig,
 } from "@my-app/db/schema/marketplace";
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
-import { describe, expect, it } from "vitest";
+import {
+	LISTING_PUBLIC_STORAGE_PROVIDER,
+	createFakeStorageProvider,
+	registerStorageProvider,
+	resetStorageProviderRegistry,
+} from "@my-app/storage";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
 	searchPublishedListings,
@@ -18,6 +24,7 @@ const LISTING_TYPE_SLUG = "sf-listing-type";
 const LISTING_ID = "sf-listing-1";
 const UNPUBLISHED_ID = "sf-listing-unpublished";
 const ASSET_KEY = "images/primary.jpg";
+const ASSET_URL = `https://media.example.test/${LISTING_PUBLIC_STORAGE_PROVIDER}/${ASSET_KEY}`;
 
 const testDbState = bootstrapTestDatabase({
 	seed: async (db: TestDatabase) => {
@@ -60,7 +67,9 @@ const testDbState = bootstrapTestDatabase({
 			id: crypto.randomUUID(),
 			listingId: LISTING_ID,
 			kind: "image",
+			storageProvider: LISTING_PUBLIC_STORAGE_PROVIDER,
 			storageKey: ASSET_KEY,
+			access: "public",
 			isPrimary: true,
 			sortOrder: 0,
 		});
@@ -82,6 +91,19 @@ const testDbState = bootstrapTestDatabase({
 
 type Db = Parameters<typeof searchPublishedListings>[1];
 
+beforeAll(() => {
+	registerStorageProvider(
+		createFakeStorageProvider({
+			providerId: LISTING_PUBLIC_STORAGE_PROVIDER,
+			publicBaseUrl: `https://media.example.test/${LISTING_PUBLIC_STORAGE_PROVIDER}`,
+		}),
+	);
+});
+
+afterAll(() => {
+	resetStorageProviderRegistry();
+});
+
 describe("searchPublishedListings", () => {
 	it("returns only published marketplace listings", async () => {
 		const db = testDbState.db as unknown as Db;
@@ -92,11 +114,11 @@ describe("searchPublishedListings", () => {
 		expect(result.total).toBe(1);
 	});
 
-	it("includes primary image key from listingAsset", async () => {
+	it("includes primary image url from listingAsset", async () => {
 		const db = testDbState.db as unknown as Db;
 		const result = await searchPublishedListings({}, db);
 
-		expect(result.items[0]?.primaryImageKey).toBe(ASSET_KEY);
+		expect(result.items[0]?.primaryImageUrl).toBe(ASSET_URL);
 	});
 
 	it("filters by listingTypeSlug", async () => {
@@ -136,7 +158,7 @@ describe("getPublishedListing", () => {
 
 		expect(item.id).toBe(LISTING_ID);
 		expect(item.name).toBe("Ocean Retreat");
-		expect(item.primaryImageKey).toBe(ASSET_KEY);
+		expect(item.primaryImageUrl).toBe(ASSET_URL);
 	});
 
 	it("throws NOT_FOUND for an unpublished listing", async () => {

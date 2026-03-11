@@ -9,44 +9,51 @@
 
 ## Context
 
-The web app already has several admin and operator surfaces, but they are built ad hoc:
+The web app already has several admin and operator surfaces, but they are still built ad hoc:
 
 - admin tables inline query, filter, pagination, and empty-state logic in route files
-- org and admin forms keep local field state directly in route components
-- backend-governed field composition is now partially standardized for listing types, but there is no wider rule for how tables, forms, filters, and generated admin sections should be authored
+- org and admin forms keep field state and mutation wiring directly in route components
+- auth-owned organization flows and domain-owned oRPC flows use different transport shapes directly in UI code
+- backend-governed field composition is now partially standardized for listing types, but there is no wider rule for how complex org/admin interfaces should be authored
 
 Current repo truth:
 
-- `apps/web` uses SPA-style `createQuery` and `createMutation` flows for most app surfaces
-- `packages/ui` has design-system primitives such as `table`, `select`, `native-select`, `dialog`, `popover`, and basic inputs
+- `apps/web` is primarily a SPA-style app using TanStack Query reads and client-side mutations
+- `apps/web/src/lib/orpc.ts` already exposes both:
+  - `orpc` for query option builders and lightweight action mutations
+  - `client` for raw promise-based oRPC calls
+- `packages/ui` already provides the design-system primitives needed for most surfaces
 - Formsnap / Superforms are not currently installed or used in the app layer
-- admin and org surfaces mix app-owned oRPC reads with some auth-owned `authClient` calls
-- repeated table/filter/pagination code already exists in routes such as:
+- TanStack Form already exists in the app and is a better fit than inventing more local-state form patterns
+- admin and org surfaces still mix app-owned oRPC reads with some auth-owned `authClient` calls
+- repeated table, filter, pagination, and mutation patterns already exist in routes such as:
   - `apps/web/src/routes/(app)/admin/organizations/+page.svelte`
   - `apps/web/src/routes/(app)/admin/users/+page.svelte`
   - `apps/web/src/routes/(app)/org/listings/+page.svelte`
-- repeated local-form patterns already exist in routes and components such as:
   - `apps/web/src/routes/(app)/org/settings/+page.svelte`
+  - `apps/web/src/routes/(app)/org/team/+page.svelte`
+  - `apps/web/src/routes/(app)/org/team/invite/+page.svelte`
   - `apps/web/src/components/org/ListingEditorForm.svelte`
 
-The system needs an organized way to build many admin surfaces without:
+The system needs an organized way to build many admin and operator interfaces without:
 
 - leaking backend rules into the client
-- generating UI directly from database schema
+- generating UI directly from database schema or raw Zod schema
 - inventing a full no-code form engine
-- duplicating filters, columns, field layout rules, and loading/error/empty states in every route
+- duplicating filters, columns, invalidation, field layout, and loading/error states in every route
+- coupling route structure to transport details like `authClient` vs oRPC
 
 ---
 
 ## Decision
 
-We will use a **resource descriptor** model for admin and operator surfaces.
+We will use a **resource descriptor + feature module** model for admin and operator surfaces.
 
 The core rule is:
 
-> Backend owns business meaning and capability. Frontend owns layout and interaction through typed resource descriptors.
+> Backend owns business meaning, capability, and allowed state transitions. Frontend owns layout and interaction through typed resource modules and small descriptors.
 
-This yields four distinct layers:
+This yields five layers:
 
 1. **Canonical registries**
    - stable shared datasets such as timezones, currencies, and country codes
@@ -54,14 +61,52 @@ This yields four distinct layers:
 2. **Backend-governed surface data**
    - option sets, defaults, capability flags, bootstrap payloads, server-driven table rows, and filter contracts
    - live behind oRPC contracts and domain handlers
-3. **Frontend resource descriptors**
+3. **Feature mutation adapters**
+   - normalize auth-backed and oRPC-backed mutations into one screen-facing model
+   - live in `apps/web/src/features/<resource>/`
+4. **Frontend resource descriptors**
    - field layout, section grouping, column definitions, filter presentation, and action placement
-   - live in `apps/web` feature modules
-4. **Shared UI shells**
-   - reusable wrappers for page states, filter bars, resource tables, section scaffolding, and advanced fields
-   - live in `apps/web/src/components` or `packages/ui` depending on whether they are app-specific or design-system-level
+   - live in `apps/web/src/features/<resource>/`
+5. **Shared UI shells**
+   - reusable wrappers for page states, filter bars, resource tables, section scaffolding, confirm flows, and advanced fields
+   - live in `apps/web/src/components` or `packages/ui` depending on scope
 
-We explicitly do **not** adopt a universal schema-to-admin generator in this ADR.
+We explicitly do **not** adopt:
+
+- a universal schema-to-admin generator
+- Superforms as the default form architecture
+- direct route-level transport calls once a feature module exists
+
+---
+
+## Live Surface Inventory
+
+The org/admin mutation surface is **not** currently mostly oRPC. It is split.
+
+### Auth-owned org and admin mutation surfaces
+
+These currently call `authClient` directly from the web layer:
+
+- `apps/web/src/routes/(app)/org/create/+page.svelte`
+- `apps/web/src/components/OrgSwitcher.svelte`
+- `apps/web/src/routes/(app)/org/settings/+page.svelte`
+- `apps/web/src/routes/(app)/org/team/invite/+page.svelte`
+- `apps/web/src/routes/(app)/org/team/+page.svelte`
+- `apps/web/src/routes/(app)/org/invitations/+page.svelte`
+- `apps/web/src/routes/(app)/admin/users/+page.svelte`
+- `apps/web/src/components/Header.svelte`
+
+### Domain-owned oRPC mutation surfaces already in org flows
+
+These already use oRPC-backed mutations:
+
+- `apps/web/src/routes/(app)/org/listings/new/+page.svelte`
+- `apps/web/src/routes/(app)/org/listings/[id]/+page.svelte`
+- `apps/web/src/components/org/ListingPublicationButton.svelte`
+
+This boundary split is acceptable at the backend layer. It must not become the screen architecture.
+
+Routes should compose feature modules. Feature modules should own transport differences.
 
 ---
 
@@ -78,6 +123,8 @@ It does not express:
 - copy, grouping, and field order
 - display-only and action-only fields
 - advanced vs primary editing paths
+- cross-field workflow behavior
+- moderation state
 
 Schema and JSON Schema may inform a surface, but they are not the surface definition.
 
@@ -92,7 +139,8 @@ Examples:
 - calendar providers
 - org-enabled integrations
 - listing-type metadata schema
-- bulk-action capabilities
+- readiness and moderation state
+- allowed actions for a row or section
 
 This extends ADR-013.
 
@@ -108,9 +156,25 @@ Examples:
 
 `packages/api-contract` remains contract-only.
 
-### 4. Frontend descriptors are resource-specific, not global magic
+### 4. Routes stay thin
 
-Each admin surface may define a typed descriptor for:
+Once a resource module exists, route files should primarily:
+
+- read params
+- assemble top-level queries
+- render the feature surface
+
+Route files should not become the home for:
+
+- transport branching
+- schema validation
+- invalidation lists
+- mutation error mapping
+- repeated table/filter definitions
+
+### 5. Frontend descriptors are resource-specific, not global magic
+
+Each admin surface may define typed descriptors for:
 
 - fields
 - sections
@@ -119,15 +183,15 @@ Each admin surface may define a typed descriptor for:
 - row actions
 - bulk actions
 
-But those descriptors belong to the resource module that owns the screen.
+Those descriptors belong to the resource module that owns the screen.
 
 Do not create a single global descriptor registry for the entire app.
 
-### 5. Shared shells may render descriptors, but only for a small whitelisted DSL
+### 6. Shared shells may render descriptors, but only for a small whitelisted DSL
 
 If we render descriptors, we only support a finite set of field and column kinds.
 
-Allowed field kinds should be small and explicit:
+Allowed field kinds should stay small and explicit:
 
 - `text`
 - `textarea`
@@ -140,7 +204,7 @@ Allowed field kinds should be small and explicit:
 - `money`
 - `json-advanced`
 
-Allowed table cell kinds should also be small and explicit:
+Allowed table cell kinds should also stay small and explicit:
 
 - `text`
 - `badge`
@@ -152,7 +216,7 @@ Allowed table cell kinds should also be small and explicit:
 
 No arbitrary component names or executable UI definitions from the backend.
 
-### 6. Tables stay server-driven
+### 7. Tables stay server-driven
 
 Admin and operator tables must use backend contracts for:
 
@@ -164,7 +228,7 @@ Admin and operator tables must use backend contracts for:
 
 The frontend controls rendering, but the backend remains the source of truth for data, filtering, and policy.
 
-### 7. Forms are authored first, rendered second
+### 8. Forms are authored first, rendered second
 
 Default posture:
 
@@ -173,30 +237,102 @@ Default posture:
 
 Do not begin with a generic form generator.
 
-### 8. Formsnap / Superforms are optional, not mandatory
+### 9. TanStack Form is the default for non-trivial SPA forms
 
-This repo currently uses SPA-style TanStack Query mutation forms for most app surfaces.
+For this repo today:
 
-Therefore:
+- keep TanStack Query for reads
+- keep `createMutation(() => orpc.<...>.mutationOptions(...))` for lightweight one-step actions
+- use TanStack Form plus zod for non-trivial SPA resource editors
 
-- do not force all admin forms into Formsnap / Superforms immediately
-- use Formsnap / Superforms when a route is action-based, SSR-heavy, or benefits from server-native validation flow
-- keep mutation-driven forms valid when that is the current surface model
+Do not introduce Superforms as the default mutation architecture for org/admin surfaces at this stage.
 
-For SPA-heavy admin surfaces:
+Superforms remains an optional tool for future action-native routes, not the baseline here.
 
-- simple forms may remain local-state driven initially
-- once a resource form becomes non-trivial, prefer a consistent client-side form layer such as TanStack Form over bespoke field state in the route
-
-This keeps the client-side form model coherent without forcing every screen through SvelteKit actions.
-
-We optimize for consistent composition, not for adopting a form library everywhere at once.
-
-### 9. Better Auth-owned surfaces are a temporary exception
+### 10. Better Auth-owned surfaces are a temporary backend exception, not a frontend exception
 
 Where the source of truth still lives behind Better Auth client APIs, the surface may continue using `authClient`.
 
-But the descriptor and shared-shell rules still apply at the frontend layer.
+But once a resource module exists:
+
+- the screen must consume a feature-layer adapter
+- raw `authClient.organization.*` and `authClient.admin.*` calls should not live in route markup
+
+### 11. Generated interfaces must be built from resource workspaces, not isolated CRUD pages
+
+If a domain needs many related editors, tables, and actions, the frontend should compose them as a workspace grouped by operator flow.
+
+This is the default rule for listings and other dense operator domains.
+
+---
+
+## Query And Mutation Composition
+
+The repo already has two useful clients in `apps/web/src/lib/orpc.ts`:
+
+- `client`
+  - raw oRPC client from `createORPCClient`
+  - promise-based
+  - suitable for pure TypeScript submit adapters
+- `orpc`
+  - TanStack Query utilities from `createTanstackQueryUtils`
+  - suitable for query option builders and lightweight action mutations
+
+### Query rule
+
+For read-side resource data:
+
+- use `orpc.<resource>.<query>.queryOptions(...)`
+- keep resource-specific query composition in feature `queries.ts`
+
+### Mutation rule for non-trivial forms
+
+For non-trivial resource editors:
+
+- use TanStack Form for client-side form state
+- keep zod schemas in feature `schema.ts`
+- call raw `client` or wrapped `authClient` inside a pure TypeScript submit adapter
+- run invalidation through a feature `invalidations.ts`
+
+Why:
+
+- TanStack Form provides submit lifecycle and pending state without forcing SvelteKit actions
+- pure TS adapters are easier to test than Svelte component mutations
+- route and component files stay thin
+
+### Mutation rule for buttons and lightweight actions
+
+For simple non-form actions:
+
+- continue using `createMutation(() => orpc.<resource>.<action>.mutationOptions(...))`
+
+Examples:
+
+- publish / unpublish
+- accept / reject invitation
+- impersonate user
+- quick row actions
+- confirm-dialog actions with one small payload
+
+### Mutation adapter rule
+
+Never make the screen care whether a mutation is backed by:
+
+- `authClient`
+- raw `client`
+- `orpc.<resource>.<action>.mutationOptions`
+
+Instead, feature modules should normalize transport to one screen-facing API.
+
+Example shape:
+
+```ts
+type MutationResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; message: string };
+```
+
+The screen consumes the feature API, not the transport client.
 
 ---
 
@@ -218,6 +354,7 @@ But the descriptor and shared-shell rules still apply at the frontend layer.
 - filter inputs
 - row DTOs
 - action inputs/outputs
+- moderation and readiness state
 
 ### Frontend resource modules
 
@@ -227,17 +364,36 @@ Suggested files:
 
 - `queries.ts`
 - `mutations.ts`
-- `fields.ts`
-- `filters.ts`
-- `columns.ts`
+- `submit.ts`
+- `schema.ts`
 - `surface.ts`
-- `mappers.ts`
+- `invalidations.ts`
+- `errors.ts`
 - `components/*`
+
+File responsibilities:
+
+- `queries.ts`
+  - query option builders
+  - bootstrap query composition
+- `mutations.ts`
+  - lightweight action mutation builders
+  - transport adapters where a full `submit.ts` is unnecessary
+- `submit.ts`
+  - non-trivial form submit flows backed by raw `client` or wrapped `authClient`
+- `schema.ts`
+  - zod schemas and defaults
+- `surface.ts`
+  - sections, columns, filters, actions, and layout descriptors
+- `invalidations.ts`
+  - cache invalidation policy
+- `errors.ts`
+  - transport-to-UI error normalization
 
 Rules:
 
 - keep a route local until logic is reused or exceeds route readability
-- promote to `features/<resource>` when used by two or more routes or when a descriptor becomes non-trivial
+- promote to `features/<resource>` when used by two or more routes or when a surface becomes non-trivial
 
 ### Shared app-level shells
 
@@ -251,6 +407,7 @@ Suggested shared shells:
 - `FilterBar.svelte`
 - `FormSection.svelte`
 - `AdvancedFieldSection.svelte`
+- `ConfirmActionDialog.svelte`
 
 These are app shells, not design-system primitives.
 
@@ -264,6 +421,7 @@ Use only for low-level reusable UI primitives:
 - cards
 - inputs
 - selects
+- native selects
 - tables
 - dialogs
 - popovers
@@ -296,25 +454,182 @@ There are two allowed levels:
 1. **Authored columns on shared table shell**
    - default
 2. **Descriptor-driven columns on shared table shell**
-   - only after repeated admin tables clearly share the same rendering model
+   - only after repeated tables clearly share the same rendering model
 
 No spreadsheet-style generic grid in this ADR.
 
 ---
 
-## Query And Mutation Placement
+## Listing Workspace Rule
 
-Rules:
+Listings are the reference example for a dense operator workspace.
 
-- oRPC query/mutation factories stay in `apps/web/src/lib/orpc.ts`
-- stable shared query option builders may live in `apps/web/src/lib/query-options.ts`
-- resource-specific query and mutation composition belongs in feature modules, not in every route file
+We should not build separate disconnected CRUD pages for:
 
-Route files should primarily:
+- listing basics
+- pricing profiles
+- pricing rules
+- discounts
+- amenities
+- assets
+- calendar connections
+- recurring availability
+- minimum durations
+- blocks and exceptions
+- location moderation
+- publish readiness
 
-- load the relevant feature module
-- pass route params
-- render the resource screen
+Instead, listing surfaces should converge on one workspace at `/org/listings/[id]`, grouped by operator flow.
+
+### Suggested workspace sections
+
+- `Basics`
+  - core listing fields
+  - listing type
+  - timezone
+  - description
+- `Merchandising`
+  - amenities
+  - assets
+- `Pricing`
+  - pricing profiles
+  - pricing rules
+  - discounts
+- `Availability`
+  - recurring rules
+  - minimum durations
+  - exceptions
+  - blocks
+  - calendar connections
+- `Compliance`
+  - location draft
+  - moderation state
+- `Publish`
+  - readiness checklist
+  - publish / unpublish
+
+### Allowed surface archetypes
+
+We should solve most listing screens with a small set of repeatable shells:
+
+- `SingularEditor`
+- `ResourceTable`
+- `PickerManager`
+- `OrderedAssetManager`
+- `ModerationPanel`
+- `ReadinessPanel`
+
+Do not create a generic admin engine just to render these.
+
+### Listing-type-specific behavior
+
+Listing-type differences must come from backend-composed policy/bootstrap data, not scattered frontend branching.
+
+The backend may return editor state such as:
+
+- allowed and default amenities
+- supported pricing models
+- default working-hour or duration bounds
+- required fields
+- metadata schema
+- whether moderation is required
+
+The frontend may use that state to:
+
+- prefill values
+- disable or hide unsupported controls
+- show required fields
+- render advanced metadata only when needed
+
+It must not invent those rules.
+
+---
+
+## Moderation Rule
+
+If a field family requires review before becoming live, do not edit the approved record directly.
+
+For listing locations, the preferred model is a location-specific draft/submission flow:
+
+- live approved location
+- editable draft
+- moderation status: `draft | pending_moderation | approved | rejected`
+- moderator note
+- submitted / approved / rejected timestamps
+
+The flow is:
+
+1. operator edits the draft
+2. operator saves draft or submits for moderation
+3. moderator approves or rejects
+4. approval promotes the draft to the live record
+
+Do not build a generic moderation engine in this ADR. Build a location-specific moderation surface first.
+
+---
+
+## Testing Strategy
+
+We do not currently have frontend component test infrastructure in `apps/web`.
+
+Therefore the low-entropy seam should be **pure TypeScript feature modules**.
+
+For each non-trivial resource module, test:
+
+- `schema.ts`
+  - input validation and defaults
+- `errors.ts`
+  - transport-to-UI error normalization
+- `invalidations.ts`
+  - correct query invalidation policy
+- `submit.ts` and `mutations.ts`
+  - adapter behavior with mocked authClient or oRPC layer
+- `surface.ts`
+  - descriptor integrity where there is non-trivial field or column logic
+
+Keep Playwright for:
+
+- end-to-end happy paths
+- auth and redirect behavior
+- integration smoke for important operator flows
+
+Do not rely on:
+
+- route-component logic tests as the primary seam
+- giant page snapshots
+
+---
+
+## Recommended Resource Breakdown
+
+### Auth-owned org account resources
+
+- `features/org-account/create`
+- `features/org-account/settings`
+- `features/org-account/team`
+- `features/org-account/invitations`
+- `features/org-account/switcher`
+
+These wrap Better Auth and normalize it to the same screen architecture as oRPC resources.
+
+### Domain-owned org operation resources
+
+- `features/org-listings`
+- `features/org-payments`
+- `features/org-calendar`
+- `features/org-pricing`
+- `features/org-availability`
+- `features/org-support`
+- `features/org-bookings`
+
+These remain oRPC-first.
+
+### Admin oversight resources
+
+- `features/admin-organizations`
+- `features/admin-users`
+
+These are mostly table surfaces with small action surfaces.
 
 ---
 
@@ -322,36 +637,47 @@ Route files should primarily:
 
 ### Phase 1
 
-- Move canonical registries out of `@my-app/api-contract` into `@my-app/reference-data`
-- Keep ADR-013 focused on field authority rules
-- Add this ADR for admin surface composition
+- Keep ADR-013 focused on field-authority rules
+- Keep canonical registries in `@my-app/reference-data`
+- Use this ADR as the single composition rule for org/admin surfaces
 
 ### Phase 2
 
 - Introduce `apps/web/src/features/` for the first real resource modules
-- Extract listing editor composition out of route code
-- Extract admin users and organizations tables into resource modules
+- Extract auth-owned org account flows behind feature mutation adapters:
+  - org settings
+  - team invite
+  - team member actions
+  - invitation accept / reject
+  - org switcher
 
 ### Phase 3
 
 - Add shared app-level shells for:
-  - page state
-  - resource toolbar
   - resource table
+  - confirm action dialog
+  - page state
   - advanced metadata section
+- Apply them to:
+  - admin organizations
+  - admin users
+  - org team members and invitations
 
 ### Phase 4
 
-- Introduce descriptor-rendered sections only where duplication justifies it
-- Start with one or two resources, not the whole admin panel
+- Convert listings into a real workspace module using:
+  - backend bootstrap data
+  - TanStack Form for non-trivial editors
+  - shared surface archetypes
+  - moderation and readiness panels
 
 ### Phase 5
 
-- Add backend bootstrap queries for richer editor surfaces where metadata schema, options, and current values must stay coherent
-- Example candidates:
-  - listing create/edit editor state
-  - payment configuration editor state
-  - org integration settings editor state
+- Add richer org operator setup flows:
+  - payment provider setup
+  - calendar connection
+  - organization onboarding panel
+- Introduce descriptor-rendered sections only where duplication clearly justifies it
 
 ---
 
@@ -361,14 +687,17 @@ Route files should primarily:
 
 - keeps API contracts clean
 - prevents the frontend from inventing business options
-- avoids a fragile global form engine
-- gives admin tables and forms a repeatable structure
-- leaves room for generated sections without surrendering control of UX
+- keeps routes thin
+- gives auth-backed and oRPC-backed mutations one screen architecture
+- keeps most form and table logic in pure TS modules that can be tested without DOM-heavy setup
+- gives listing and similar dense domains a workspace model instead of scattered CRUD screens
+- leaves room for generated sections without surrendering UX control
 
 ### Negative
 
-- adds a thin descriptor layer in the frontend
+- adds a deliberate feature-module layer in `apps/web`
 - requires discipline to keep descriptors resource-scoped
 - means some duplication remains intentionally until patterns are proven
+- requires extraction work before the payoff becomes obvious
 
 That tradeoff is acceptable. We prefer controlled repetition over premature meta-frameworks.

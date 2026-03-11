@@ -37,9 +37,9 @@
 
 		<div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] lg:items-start">
 			<div class="space-y-6">
-				{#if listing.primaryImageKey}
+				{#if listing.primaryImageUrl}
 					<img
-						src="/assets/{listing.primaryImageKey}"
+						src={listing.primaryImageUrl}
 						alt={listing.name}
 						class="h-64 w-full rounded-lg object-cover"
 					/>

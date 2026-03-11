@@ -8,7 +8,7 @@ const storefrontListItemSchema = z.object({
 	slug: z.string(),
 	description: z.string().nullable(),
 	metadata: z.record(z.string(), z.unknown()).nullable(),
-	primaryImageKey: z.string().nullable(),
+	primaryImageUrl: z.string().url().nullable(),
 	createdAt: z.string().datetime(),
 });
 

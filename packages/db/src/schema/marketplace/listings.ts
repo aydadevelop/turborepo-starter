@@ -13,7 +13,11 @@ import {
 
 import { organization } from "../auth";
 import { timestamps } from "../columns";
-import { listingAssetKindEnum, listingStatusEnum } from "./shared";
+import {
+	listingAssetKindEnum,
+	listingStatusEnum,
+	storageAccessEnum,
+} from "./shared";
 import { listingLocation, listingTypeConfig } from "./organization";
 
 export const listing = pgTable(
@@ -95,7 +99,11 @@ export const listingAsset = pgTable(
 			.notNull()
 			.references(() => listing.id, { onDelete: "cascade" }),
 		kind: listingAssetKindEnum("kind").notNull().default("image"),
+		storageProvider: text("storage_provider")
+			.notNull()
+			.default("listing-public-v1"),
 		storageKey: text("storage_key").notNull(),
+		access: storageAccessEnum("access").notNull().default("public"),
 		mimeType: text("mime_type"),
 		altText: text("alt_text"),
 		isPrimary: boolean("is_primary").notNull().default(false),
@@ -106,6 +114,7 @@ export const listingAsset = pgTable(
 	(table) => [
 		index("listing_asset_ix_listing_id").on(table.listingId),
 		index("listing_asset_ix_kind").on(table.kind),
+		index("listing_asset_ix_storage_provider").on(table.storageProvider),
 		uniqueIndex("listing_asset_uq_primary_image")
 			.on(table.listingId)
 			.where(sql`${table.isPrimary} = true and ${table.kind} = 'image'`),

@@ -15,6 +15,21 @@ services:
     ports: !reset
       - "${E2E_DB_PORT:-55432}:5432"
 
+  seaweedfs:
+    restart: "no"
+    ports: !reset
+      - "${PLAYWRIGHT_STORAGE_PORT:-4333}:8333"
+      - "127.0.0.1:${PLAYWRIGHT_STORAGE_MASTER_PORT:-49333}:9333"
+      - "127.0.0.1:${PLAYWRIGHT_STORAGE_ADMIN_PORT:-42364}:23646"
+
+  seaweedfs-init:
+    restart: "no"
+    environment:
+      AWS_ACCESS_KEY_ID: seaweedfs-access-key
+      AWS_SECRET_ACCESS_KEY: seaweedfs-secret-key
+      AWS_EC2_METADATA_DISABLED: "true"
+      STORAGE_S3_BUCKET: listing-public-v1
+
   smtp-server:
     restart: "no"
     ports: !reset []
@@ -42,6 +57,15 @@ services:
       TELEGRAM_BOT_API_BASE_URL: ""
       CLOUDPAYMENTS_PUBLIC_ID: ""
       CLOUDPAYMENTS_API_SECRET: ""
+      STORAGE_BACKEND: s3
+      STORAGE_PUBLIC_BASE_URL: http://localhost:${PLAYWRIGHT_STORAGE_PORT:-4333}/listing-public-v1
+      STORAGE_S3_ENDPOINT: http://seaweedfs:8333
+      STORAGE_S3_REGION: us-east-1
+      STORAGE_S3_BUCKET: listing-public-v1
+      STORAGE_S3_ACCESS_KEY_ID: seaweedfs-access-key
+      STORAGE_S3_SECRET_ACCESS_KEY: seaweedfs-secret-key
+      STORAGE_S3_FORCE_PATH_STYLE: "1"
+      STORAGE_SIGNED_URL_TTL_SECONDS: "900"
 
   assistant:
     restart: "no"

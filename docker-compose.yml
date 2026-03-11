@@ -38,6 +38,45 @@ services:
       timeout: 3s
       retries: 5
 
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.17
+    restart: unless-stopped
+    command: ["weed", "mini", "-dir=/data"]
+    environment:
+      AWS_ACCESS_KEY_ID: ${STORAGE_S3_ACCESS_KEY_ID:-seaweedfs-access-key}
+      AWS_SECRET_ACCESS_KEY: ${STORAGE_S3_SECRET_ACCESS_KEY:-seaweedfs-secret-key}
+    ports:
+      - "${STORAGE_PORT:-8333}:8333"
+      - "127.0.0.1:${SEAWEEDFS_MASTER_PORT:-9333}:9333"
+      - "127.0.0.1:${SEAWEEDFS_ADMIN_PORT:-23646}:23646"
+    volumes:
+      - seaweedfs_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9333/cluster/status >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  seaweedfs-init:
+    image: amazon/aws-cli:2
+    restart: "no"
+    environment:
+      AWS_ACCESS_KEY_ID: ${STORAGE_S3_ACCESS_KEY_ID:-seaweedfs-access-key}
+      AWS_SECRET_ACCESS_KEY: ${STORAGE_S3_SECRET_ACCESS_KEY:-seaweedfs-secret-key}
+      AWS_EC2_METADATA_DISABLED: "true"
+      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-listing-public-v1}
+    entrypoint: ["/bin/sh", "-lc"]
+    command: >
+      until aws --endpoint-url http://seaweedfs:8333 s3api list-buckets >/dev/null 2>&1; do
+        sleep 2;
+      done;
+      aws --endpoint-url http://seaweedfs:8333 s3api head-bucket --bucket "$STORAGE_S3_BUCKET" >/dev/null 2>&1 ||
+      aws --endpoint-url http://seaweedfs:8333 s3api create-bucket --bucket "$STORAGE_S3_BUCKET";
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+
   server:
     <<: *loki-logging
     build:
@@ -53,9 +92,22 @@ services:
     environment:
       PORT: 3000
       DATABASE_URL: postgresql://postgres:postgres@db:5432/myapp
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-s3}
+      STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:-http://localhost:${STORAGE_PORT:-8333}/listing-public-v1}
+      STORAGE_S3_ENDPOINT: http://seaweedfs:8333
+      STORAGE_S3_REGION: ${STORAGE_S3_REGION:-us-east-1}
+      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-listing-public-v1}
+      STORAGE_S3_ACCESS_KEY_ID: ${STORAGE_S3_ACCESS_KEY_ID:-seaweedfs-access-key}
+      STORAGE_S3_SECRET_ACCESS_KEY: ${STORAGE_S3_SECRET_ACCESS_KEY:-seaweedfs-secret-key}
+      STORAGE_S3_FORCE_PATH_STYLE: ${STORAGE_S3_FORCE_PATH_STYLE:-1}
+      STORAGE_SIGNED_URL_TTL_SECONDS: ${STORAGE_SIGNED_URL_TTL_SECONDS:-900}
     depends_on:
       db:
         condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+      seaweedfs-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "bun", "--eval", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
@@ -214,6 +266,7 @@ services:
 
 volumes:
   pgdata:
+  seaweedfs_data:
   loki_data:
   grafana_data:
 
