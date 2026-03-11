@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Badge } from "@my-app/ui/components/badge";
 	import { Button } from "@my-app/ui/components/button";
-	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
@@ -33,11 +32,9 @@
 		});
 	}
 
-	function goToLogin() {
-		goto(
-			`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
-		);
-	}
+	const loginHref = $derived(
+		`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+	);
 </script>
 
 <div class="relative">
@@ -79,7 +76,7 @@
 		</div>
 	{:else}
 		<div class="flex items-center gap-2">
-			<Button size="sm" onclick={goToLogin} data-testid="header-sign-in-button">
+			<Button size="sm" href={loginHref} data-testid="header-sign-in-button">
 				Sign In
 			</Button>
 		</div>

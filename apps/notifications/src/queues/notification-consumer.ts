@@ -1,9 +1,12 @@
 import { notificationQueueMessageSchema } from "@my-app/notifications/contracts";
 import { NotificationProcessorService } from "@my-app/notifications/processor";
+import { registerNotificationIntegrations } from "../bootstrap";
 
 const processor = new NotificationProcessorService();
 
 export const handleNotificationJob = async (data: unknown): Promise<void> => {
+	registerNotificationIntegrations();
+
 	const parsed = notificationQueueMessageSchema.safeParse(data);
 	if (!parsed.success) {
 		console.error("Unknown notification queue message", data);

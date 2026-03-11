@@ -42,6 +42,7 @@
     "@my-app/pricing": "workspace:*",
     "@my-app/queue": "workspace:*",
     "@my-app/support": "workspace:*",
+    "@my-app/workflows": "workspace:*",
     "@orpc/server": "^1.12.2",
     "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
     "zod": "^4.1.13"

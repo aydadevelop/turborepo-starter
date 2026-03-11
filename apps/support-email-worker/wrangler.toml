@@ -1,0 +1,14 @@
+name = "support-email-worker"
+main = "src/index.ts"
+compatibility_date = "2026-03-11"
+workers_dev = true
+
+[observability]
+enabled = true
+
+[[send_email]]
+name = "EMAIL"
+
+[vars]
+SUPPORT_EMAIL_WEBHOOK_URL = "http://127.0.0.1:3000/api/support/inbound/email"
+SUPPORT_EMAIL_ALLOWED_RECIPIENTS = ""

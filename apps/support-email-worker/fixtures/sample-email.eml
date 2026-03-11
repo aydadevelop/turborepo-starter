@@ -1,0 +1,12 @@
+Received: from smtp.example.com (127.0.0.1)
+  by cloudflare-email.com (unknown) id sample123
+  for <support@example.com>; Wed, 11 Mar 2026 12:00:00 +0000
+From: "Sample Sender" <sender@example.com>
+Reply-To: sender@example.com
+To: support@example.com
+Subject: Sample support email
+Content-Type: text/plain; charset="utf-8"
+Date: Wed, 11 Mar 2026 12:00:00 +0000
+Message-ID: <sample-message-id@example.com>
+
+Hello from the support email worker fixture.

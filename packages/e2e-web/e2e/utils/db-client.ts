@@ -1,11 +1,13 @@
+import { CLEANUP_TABLES } from "@my-app/db/e2e/cleanup";
 import pg from "pg";
 
-import { CLEANUP_TABLES } from "../../../../packages/db/scripts/cleanup-tables.mjs";
-
 const DEFAULT_DATABASE_URL =
-	"postgresql://postgres:postgres@localhost:5432/myapp";
+	"postgresql://postgres:postgres@localhost:5432/myapp_e2e";
 
-const connectionString = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
+const connectionString =
+	process.env.PLAYWRIGHT_DATABASE_URL ??
+	process.env.DATABASE_URL ??
+	DEFAULT_DATABASE_URL;
 
 const quote = (identifier: string) => `"${identifier}"`;
 
@@ -18,8 +20,8 @@ export const createDbClient = async (): Promise<pg.Client> => {
 /**
  * Delete all rows created by a test namespace.
  *
- * Seed data uses `seed_` prefixed IDs.  Test data uses its own namespace prefix
- * (e.g. `t_1_abc`) so the two never collide.  This function deletes by matching
+ * Baseline data uses `e2e_` prefixed IDs. Test data uses its own namespace prefix
+ * (e.g. `t_1_abc`) so the two never collide. This function deletes by matching
  * the namespace in the `id` column (text columns) and in the `email` column for
  * the user table.
  */

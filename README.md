@@ -70,9 +70,14 @@ Local services use the `.env` file at the repo root. Copy `.env.example` (or the
 # Start everything in containers including Postgres, Loki, Grafana, smtp4dev
 bun run deploy:docker:local
 
+# First local boot with demo data
+SEED_DEMO_DATA=true bun run deploy:docker:local
+
 # Grafana: http://localhost:3110
 # smtp4dev (captured emails): http://localhost:5025
 ```
+
+When `SEED_DEMO_DATA=true`, the `server` container runs migrations and then bootstraps the demo dataset only if the seed namespace is not already present. The first boot can come up ready-to-use; normal restarts do not reseed or wipe data.
 
 ## Quality Gates
 
@@ -110,6 +115,7 @@ act -W .github/workflows/deploy-docker.yml workflow_dispatch \
 - `packages/e2e-web` is the deployment-gate suite used by CI. It runs hardened cross-service user stories against near-production backend startup (`start:test`, no file watch/HMR).
 - `apps/web` Playwright is dev-only for local progress checks and fast UI flow validation while building features.
 - `bun run test:e2e:docker` starts `db/server/assistant/notifications/web` via Docker Compose (same Dockerfiles as deploy), runs the same `packages/e2e-web` stories, and tears everything down.
+- Local `bun run test:e2e` defaults to a dedicated `myapp_e2e` database. Override with `PLAYWRIGHT_ALLOW_SHARED_DB=1` only if you intentionally want to reuse the shared dev DB.
 
 ```bash
 # Dev-only checks while iterating on frontend flows

@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
+const DEFAULT_E2E_DATABASE_URL =
+	"postgresql://postgres:postgres@localhost:5432/myapp_e2e";
 
 const VALID_SERVICES = new Set(["server", "assistant", "notifications"]);
 const DEFAULT_SERVICES = ["server", "assistant", "notifications"];
@@ -78,6 +80,27 @@ const normalizeRuntimeEnv = () => {
 	process.env.ASSISTANT_URL = assistantUrl;
 	process.env.PUBLIC_ASSISTANT_URL = assistantUrl;
 
+	const resolvePlaywrightDatabaseUrl = () => {
+		if (process.env.PLAYWRIGHT_DATABASE_URL) {
+			return process.env.PLAYWRIGHT_DATABASE_URL;
+		}
+
+		try {
+			const parsed = new URL(process.env.DATABASE_URL ?? DEFAULT_E2E_DATABASE_URL);
+			const databaseName =
+				decodeURIComponent(parsed.pathname.replace(/^\/+/, "")) || "myapp";
+			parsed.pathname = `/${encodeURIComponent(
+				databaseName.endsWith("_e2e") ? databaseName : `${databaseName}_e2e`,
+			)}`;
+			return parsed.toString();
+		} catch {
+			return DEFAULT_E2E_DATABASE_URL;
+		}
+	};
+
+	process.env.PLAYWRIGHT_DATABASE_URL = resolvePlaywrightDatabaseUrl();
+	process.env.DATABASE_URL = process.env.PLAYWRIGHT_DATABASE_URL;
+
 	const corsOrigins = new Set(
 		(process.env.CORS_ORIGIN ?? "")
 			.split(",")
@@ -127,6 +150,11 @@ const main = async () => {
 	const { ensureDb, services } = parseArgs(process.argv.slice(2));
 
 	dotenvConfig({ path: path.resolve(repoRoot, ".env"), override: false });
+	dotenvConfig({ path: path.resolve(repoRoot, ".env.e2e"), override: true });
+	dotenvConfig({
+		path: path.resolve(repoRoot, "apps/web/.env.e2e"),
+		override: true,
+	});
 
 	normalizeRuntimeEnv();
 

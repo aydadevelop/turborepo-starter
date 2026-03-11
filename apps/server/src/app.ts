@@ -9,6 +9,7 @@ import { assetRoutes } from "./routes/assets";
 
 import { healthRoutes } from "./routes/health";
 import { paymentWebhookRoutes } from "./routes/payment-webhook";
+import { supportEmailIntakeRoutes } from "./routes/support-email-intake";
 import { rpcMiddleware } from "./rpc/handlers";
 
 registerServerIntegrations();
@@ -21,6 +22,7 @@ app.use("/*", corsMiddleware);
 app.route("/assets", assetRoutes);
 app.route("/", authRoutes);
 app.route("/", paymentWebhookRoutes);
+app.route("/", supportEmailIntakeRoutes);
 app.route("/health", healthRoutes);
 app.use("/*", rpcMiddleware);
 

@@ -17,6 +17,7 @@ const ANCHOR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TODO_ID_MIN = 900_000;
 const TODO_ID_MAX = 900_999;
 const DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:5432/myapp";
+const SEED_MARKER_ORGANIZATION_ID = "seed_org_admin";
 
 const quote = (identifier) => `"${identifier}"`;
 
@@ -27,6 +28,7 @@ const parseCliArgs = () => {
 			append: { type: "boolean", default: false },
 			"database-url": { type: "string" },
 			help: { type: "boolean", short: "h" },
+			"skip-if-present": { type: "boolean", default: false },
 		},
 		strict: true,
 	});
@@ -39,6 +41,7 @@ const parseCliArgs = () => {
 				"Options:",
 				`  --anchor-date <YYYY-MM-DD>  Stable UTC anchor date (default: ${DEFAULT_ANCHOR_DATE})`,
 				"  --append                    Do not clear prior seed namespace before writing",
+				"  --skip-if-present           Exit successfully when the demo seed namespace already exists",
 				"  --database-url <url>        PostgreSQL connection string (default: DATABASE_URL env or localhost)",
 				"  -h, --help                  Show this help message",
 			].join("\n")
@@ -50,6 +53,7 @@ const parseCliArgs = () => {
 		anchorDate: values["anchor-date"],
 		append: values.append ?? false,
 		databaseUrl: values["database-url"] ?? null,
+		skipIfPresent: values["skip-if-present"] ?? false,
 	};
 };
 
@@ -522,6 +526,15 @@ const clearSeedNamespace = async (client) => {
 	);
 };
 
+const seedNamespaceExists = async (client) => {
+	const result = await client.query(
+		`SELECT 1 FROM ${quote("organization")} WHERE ${quote("id")} = $1 LIMIT 1`,
+		[SEED_MARKER_ORGANIZATION_ID]
+	);
+
+	return result.rowCount > 0;
+};
+
 const writeSeedData = async (client, seed) => {
 	const tableRows = [
 		["organization", seed.organizations],
@@ -566,6 +579,17 @@ const main = async () => {
 	await client.connect();
 
 	try {
+		if (options.skipIfPresent && (await seedNamespaceExists(client))) {
+			console.log(
+				[
+					`Seed namespace already present in ${connectionString.replace(/\/\/.*@/, "//***@")}`,
+					`Marker organization: ${SEED_MARKER_ORGANIZATION_ID}`,
+					"Skipping demo seed bootstrap.",
+				].join("\n")
+			);
+			return;
+		}
+
 		const adminPasswordHash = await hashPassword("admin");
 		const operatorPasswordHash = await hashPassword("operator");
 

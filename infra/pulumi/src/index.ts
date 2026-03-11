@@ -1,10 +1,14 @@
+// biome-ignore lint/performance/noNamespaceImport: Pulumi command resources are clearer when namespaced.
 import * as command from "@pulumi/command";
+// biome-ignore lint/performance/noNamespaceImport: This Pulumi entrypoint uses namespaced helpers throughout.
 import * as pulumi from "@pulumi/pulumi";
+// biome-ignore lint/performance/noNamespaceImport: Pulumi TLS resources follow the same namespaced pattern as the rest of infra.
 import * as tls from "@pulumi/tls";
 import { DnsRecords } from "./dns";
 import { DokkuApps } from "./dokku-apps";
 import { OneGbVps } from "./onegb-vps";
 import { StorageResources } from "./storage";
+import { SupportEmailRouting } from "./support-email-routing";
 import { VpsBootstrap } from "./vps-bootstrap";
 
 const config = new pulumi.Config();
@@ -13,17 +17,32 @@ const appConfig = new pulumi.Config("app");
 const ghcrConfig = new pulumi.Config("ghcr");
 const dnsConfig = new pulumi.Config("dns");
 const storageConfig = new pulumi.Config("storage");
+const supportEmailConfig = new pulumi.Config("supportEmail");
 
 const domain = config.require("domain");
 const sshUser = vpsConfig.get("user") ?? "root";
 const sshPort = Number(vpsConfig.get("sshPort") ?? "22");
 const zoneId = dnsConfig.require("zoneId");
 const storageEnabled = storageConfig.getBoolean("enabled") ?? false;
-const requireStorageValue = (value: string | undefined, key: string): string => {
+const supportEmailEnabled = supportEmailConfig.getBoolean("enabled") ?? false;
+const requireSupportEmailValue = (
+	value: string | undefined,
+	key: string
+): string => {
 	if (!value || value.length === 0) {
 		throw new Error(
-			`storage.${key} is required when storage.enabled is true.`,
+			`supportEmail.${key} is required when supportEmail.enabled is true.`
 		);
+	}
+
+	return value;
+};
+const requireStorageValue = (
+	value: string | undefined,
+	key: string
+): string => {
+	if (!value || value.length === 0) {
+		throw new Error(`storage.${key} is required when storage.enabled is true.`);
 	}
 
 	return value;
@@ -31,12 +50,10 @@ const requireStorageValue = (value: string | undefined, key: string): string => 
 
 const requireStorageSecret = (
 	value: pulumi.Output<string> | undefined,
-	key: string,
+	key: string
 ): pulumi.Output<string> => {
 	if (!value) {
-		throw new Error(
-			`storage.${key} is required when storage.enabled is true.`,
-		);
+		throw new Error(`storage.${key} is required when storage.enabled is true.`);
 	}
 
 	return value;
@@ -46,28 +63,38 @@ const storageAccountId = storageEnabled
 	? requireStorageValue(
 			storageConfig.get("cloudflareAccountId") ??
 				process.env.CLOUDFLARE_ACCOUNT_ID,
-			"cloudflareAccountId",
+			"cloudflareAccountId"
 		)
-	: storageConfig.get("cloudflareAccountId") ??
+	: (storageConfig.get("cloudflareAccountId") ??
 		process.env.CLOUDFLARE_ACCOUNT_ID ??
-		"";
+		"");
 const storageBucketName =
 	storageConfig.get("publicBucketName") ??
 	`${domain.replace(/\./g, "-")}-listing-public-v1`;
 const storagePublicDomain =
 	storageConfig.get("publicDomain") ?? `media.${domain}`;
+const supportEmailWorkerScriptName = supportEmailEnabled
+	? requireSupportEmailValue(
+			supportEmailConfig.get("workerScriptName"),
+			"workerScriptName"
+		)
+	: (supportEmailConfig.get("workerScriptName") ?? "");
+const supportEmailLocalPart = supportEmailConfig.get("localPart") ?? "support";
 
 // Helper: return secret or empty string for optional config
 const optionalSecret = (key: string) =>
 	appConfig.getSecret(key) ?? pulumi.output("");
 
 const storageS3AccessKeyId = storageEnabled
-	? requireStorageSecret(storageConfig.getSecret("s3AccessKeyId"), "s3AccessKeyId")
+	? requireStorageSecret(
+			storageConfig.getSecret("s3AccessKeyId"),
+			"s3AccessKeyId"
+		)
 	: pulumi.output("");
 const storageS3SecretAccessKey = storageEnabled
 	? requireStorageSecret(
 			storageConfig.getSecret("s3SecretAccessKey"),
-			"s3SecretAccessKey",
+			"s3SecretAccessKey"
 		)
 	: pulumi.output("");
 
@@ -144,15 +171,16 @@ const apps = new DokkuApps(
 				? pulumi.interpolate`https://${storagePublicDomain}`
 				: "",
 			STORAGE_LOCAL_DIR:
-				storageConfig.get("localDir") ?? "/var/lib/myapp/storage/listing-public-v1",
+				storageConfig.get("localDir") ??
+				"/var/lib/myapp/storage/listing-public-v1",
 			STORAGE_S3_ENDPOINT: storageEnabled
 				? `https://${storageAccountId}.r2.cloudflarestorage.com`
 				: "",
-				STORAGE_S3_REGION: storageConfig.get("region") ?? "auto",
-				STORAGE_S3_BUCKET: storageEnabled ? storageBucketName : "",
-				STORAGE_S3_ACCESS_KEY_ID: storageS3AccessKeyId,
-				STORAGE_S3_SECRET_ACCESS_KEY: storageS3SecretAccessKey,
-				STORAGE_S3_FORCE_PATH_STYLE: storageEnabled ? "0" : "1",
+			STORAGE_S3_REGION: storageConfig.get("region") ?? "auto",
+			STORAGE_S3_BUCKET: storageEnabled ? storageBucketName : "",
+			STORAGE_S3_ACCESS_KEY_ID: storageS3AccessKeyId,
+			STORAGE_S3_SECRET_ACCESS_KEY: storageS3SecretAccessKey,
+			STORAGE_S3_FORCE_PATH_STYLE: storageEnabled ? "0" : "1",
 			STORAGE_SIGNED_URL_TTL_SECONDS:
 				storageConfig.get("signedUrlTtlSeconds") ?? "900",
 		},
@@ -172,7 +200,20 @@ const storage = storageEnabled
 				publicDomain: storagePublicDomain,
 				zoneId,
 			},
-			{ dependsOn: [dns] },
+			{ dependsOn: [dns] }
+		)
+	: undefined;
+
+const supportEmailRouting = supportEmailEnabled
+	? new SupportEmailRouting(
+			"support-email",
+			{
+				domain,
+				localPart: supportEmailLocalPart,
+				workerScriptName: supportEmailWorkerScriptName,
+				zoneId,
+			},
+			{ dependsOn: [dns] }
 		)
 	: undefined;
 
@@ -213,3 +254,7 @@ export const appUrls = {
 	grafana: `https://grafana.${domain}`,
 };
 export const storagePublicUrl = storage?.publicBaseUrl ?? pulumi.output("");
+export const supportEmailAddress =
+	supportEmailRouting?.address ?? pulumi.output("");
+export const supportEmailDnsStatus =
+	supportEmailRouting?.dnsStatus ?? pulumi.output("");

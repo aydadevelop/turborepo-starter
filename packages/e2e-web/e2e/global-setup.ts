@@ -1,4 +1,4 @@
-import { bootstrapLocalE2EDatabase } from "../../db/scripts/bootstrap-local-e2e.mjs";
+import { bootstrapLocalE2EDatabase } from "@my-app/db/e2e/bootstrap";
 
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 
@@ -15,6 +15,16 @@ export default async function globalSetup(): Promise<void> {
 	if (process.env.PLAYWRIGHT_SKIP_SEED === "1") {
 		console.log(
 			"[playwright:global-setup] Skipping DB seed (PLAYWRIGHT_SKIP_SEED=1)"
+		);
+		return;
+	}
+
+	if (
+		process.env.PLAYWRIGHT_MANAGED_SERVERS !== "0" &&
+		process.env.PLAYWRIGHT_DATABASE_URL
+	) {
+		console.log(
+			"[playwright:global-setup] Skipping DB seed because managed services already bootstrap the dedicated E2E database"
 		);
 		return;
 	}

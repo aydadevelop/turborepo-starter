@@ -11,6 +11,7 @@ const DEFAULTS = {
 	serverURL: "http://localhost:43100",
 	assistantURL: "http://localhost:43102",
 	notificationsURL: "http://localhost:43101",
+	databaseURL: "postgresql://postgres:postgres@localhost:5432/myapp_e2e",
 	workersCi: 2,
 	workersLocal: 2,
 	webServerCommand: "bun run dev:web:e2e",
@@ -23,6 +24,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
+const LEADING_SLASHES_RE = /^\/+/;
+
+const deriveE2EDatabaseUrl = (value: string): string => {
+	try {
+		const parsed = new URL(value);
+		const databaseName =
+			decodeURIComponent(parsed.pathname.replace(LEADING_SLASHES_RE, "")) ||
+			"myapp";
+		parsed.pathname = `/${encodeURIComponent(databaseName.endsWith("_e2e") ? databaseName : `${databaseName}_e2e`)}`;
+		return parsed.toString();
+	} catch {
+		return DEFAULTS.databaseURL;
+	}
+};
 
 const isLocalUrl = (value: string): boolean => {
 	try {
@@ -82,6 +97,10 @@ export const getPlaywrightRuntimeEnv = (): PlaywrightRuntimeEnv => {
 	process.env.PLAYWRIGHT_SERVER_URL = serverURL;
 	process.env.PLAYWRIGHT_ASSISTANT_URL = assistantURL;
 	process.env.PLAYWRIGHT_NOTIFICATIONS_URL = notificationsURL;
+	process.env.PLAYWRIGHT_DATABASE_URL =
+		process.env.PLAYWRIGHT_DATABASE_URL ??
+		deriveE2EDatabaseUrl(process.env.DATABASE_URL ?? DEFAULTS.databaseURL);
+	process.env.DATABASE_URL = process.env.PLAYWRIGHT_DATABASE_URL;
 
 	cached = {
 		baseURL,

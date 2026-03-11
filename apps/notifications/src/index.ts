@@ -2,9 +2,12 @@ import { serve } from "@hono/node-server";
 import { NOTIFICATION_QUEUE, startBoss, stopBoss } from "@my-app/queue";
 import { registerWorker } from "@my-app/queue/worker";
 import { app } from "./app";
+import { registerNotificationIntegrations } from "./bootstrap";
 import { handleNotificationJob } from "./queues/notification-consumer";
 
 const port = Number(process.env.NOTIFICATIONS_PORT ?? process.env.PORT ?? 3002);
+
+registerNotificationIntegrations();
 
 serve({ fetch: app.fetch, port }, (info) => {
 	console.log(

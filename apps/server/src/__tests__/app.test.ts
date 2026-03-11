@@ -41,6 +41,12 @@ vi.mock("../routes/assets", () => {
 	};
 });
 
+vi.mock("../routes/support-email-intake", () => {
+	return {
+		supportEmailIntakeRoutes: new Hono(),
+	};
+});
+
 vi.mock("../rpc/handlers", () => {
 	return {
 		rpcMiddleware: async (_c: unknown, next: () => Promise<void>) => {

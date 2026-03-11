@@ -1,0 +1,29 @@
+{
+  "name": "support-email-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy",
+    "check-types": "tsc --noEmit -p tsconfig.json",
+    "lint": "cd ../.. && biome check --config-path biome.json apps/support-email-worker",
+    "lint:fix": "cd ../.. && biome check --config-path biome.json apps/support-email-worker --write",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:email:local": "curl --request POST \"http://127.0.0.1:${SUPPORT_EMAIL_WORKER_PORT:-8787}/cdn-cgi/handler/email\" --url-query \"from=sender@example.com\" --url-query \"to=${SUPPORT_EMAIL_TEST_TO:-support@example.com}\" --header \"Content-Type: application/json\" --data-binary @fixtures/sample-email.eml"
+  },
+  "dependencies": {
+    "@my-app/api-contract": "workspace:*",
+    "postal-mime": "^2.5.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.6",
+    "@cloudflare/workers-types": "^4.20260303.0",
+    "@my-app/config": "workspace:*",
+    "@my-app/vitest-config": "workspace:*",
+    "typescript": "^5",
+    "vitest": "^4.0.18",
+    "wrangler": "^4.36.0"
+  }
+}

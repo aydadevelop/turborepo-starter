@@ -11,6 +11,11 @@ export {
 	getOperatorTicketThread,
 	listTicketMessages,
 } from "./messages/service";
+export {
+	isSupportErrorCode,
+	SUPPORT_ERROR_CODES,
+	SupportError,
+} from "./shared/errors";
 export type {
 	AddCustomerTicketMessageInput,
 	AddTicketMessageInput,

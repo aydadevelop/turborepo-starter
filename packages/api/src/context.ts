@@ -1,16 +1,16 @@
 import { auth } from "@my-app/auth";
 import { db } from "@my-app/db";
 import { member } from "@my-app/db/schema/auth";
+import { EventBus } from "@my-app/events";
 import { NOTIFICATION_QUEUE, RECURRING_TASK_QUEUE } from "@my-app/queue";
 import type { QueueProducer } from "@my-app/queue/producer";
 import { createPgBossProducer } from "@my-app/queue/producer";
+import type { WorkflowContext } from "@my-app/workflows";
 
 export type { QueueProducer as NotificationQueueProducer } from "@my-app/queue/producer";
 
 import { and, asc, eq } from "drizzle-orm";
 import type { Context as HonoContext } from "hono";
-
-import type { EventBus } from "@my-app/events";
 
 export interface CreateContextOptions {
 	context: HonoContext;
@@ -138,6 +138,51 @@ const getActiveOrganizationId = (session: AuthSession) => {
 const notificationQueue = createPgBossProducer(NOTIFICATION_QUEUE);
 const recurringTaskQueue = createPgBossProducer(RECURRING_TASK_QUEUE);
 
+interface BuildWorkflowContextOptions {
+	actorUserId?: string;
+	eventBus?: EventBus;
+	idempotencyKey: string;
+	notificationQueue?: QueueProducer;
+	organizationId: string;
+}
+
+const buildWorkflowContextFromOptions = (
+	options: BuildWorkflowContextOptions
+): WorkflowContext => ({
+	organizationId: options.organizationId,
+	actorUserId: options.actorUserId,
+	idempotencyKey: options.idempotencyKey,
+	eventBus: options.eventBus ?? new EventBus(options.notificationQueue),
+});
+
+export function buildWorkflowContext(
+	context: OrganizationContext,
+	idempotencyKey: string
+): WorkflowContext;
+export function buildWorkflowContext(
+	options: BuildWorkflowContextOptions
+): WorkflowContext;
+export function buildWorkflowContext(
+	contextOrOptions: OrganizationContext | BuildWorkflowContextOptions,
+	idempotencyKey?: string
+): WorkflowContext {
+	if (typeof idempotencyKey === "string") {
+		const context = contextOrOptions as OrganizationContext;
+
+		return buildWorkflowContextFromOptions({
+			actorUserId: context.session?.user?.id ?? undefined,
+			eventBus: context.eventBus,
+			idempotencyKey,
+			notificationQueue: context.notificationQueue,
+			organizationId: context.activeMembership.organizationId,
+		});
+	}
+
+	return buildWorkflowContextFromOptions(
+		contextOrOptions as BuildWorkflowContextOptions
+	);
+}
+
 export async function createContext({
 	context,
 }: CreateContextOptions): Promise<Context> {
@@ -156,6 +201,7 @@ export async function createContext({
 	const requestCookies = parseCookiesFromHeader(
 		context.req.raw.headers.get("cookie")
 	);
+	const eventBus = new EventBus(notificationQueue);
 
 	return {
 		session,
@@ -163,6 +209,7 @@ export async function createContext({
 		requestUrl,
 		requestHostname,
 		requestCookies,
+		eventBus,
 		notificationQueue,
 		recurringTaskQueue,
 	};

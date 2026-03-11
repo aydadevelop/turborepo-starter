@@ -15,6 +15,7 @@ import {
 	processCancellationWorkflow,
 } from "@my-app/booking";
 
+import { buildWorkflowContext } from "../context";
 import { organizationPermissionProcedure, protectedProcedure } from "../index";
 
 const formatBooking = (row: BookingRow) => ({
@@ -123,12 +124,10 @@ export const bookingRouter = {
 					status: input.status,
 					cancellationReason: input.cancellationReason,
 					cancelledByUserId: input.cancelledByUserId,
-					workflowContext: {
-						organizationId: context.activeMembership.organizationId,
-						actorUserId: context.session?.user?.id,
-						idempotencyKey: `booking:${input.status}:${input.id}`,
-						eventBus: context.eventBus,
-					},
+					workflowContext: buildWorkflowContext(
+						context,
+						`booking:${input.status}:${input.id}`
+					),
 				},
 				db,
 			);
@@ -189,12 +188,10 @@ export const bookingRouter = {
 				organizationId: context.activeMembership.organizationId,
 				appliedByUserId: context.session?.user?.id ?? "system",
 			},
-			{
-				organizationId: context.activeMembership.organizationId,
-				actorUserId: context.session?.user?.id,
-				idempotencyKey: `booking-cancellation:${input.requestId}`,
-				eventBus: context.eventBus,
-			},
+			buildWorkflowContext(
+				context,
+				`booking-cancellation:${input.requestId}`
+			),
 		);
 
 		if (!result.success) {

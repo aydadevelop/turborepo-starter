@@ -5,6 +5,9 @@
     ".": {
       "default": "./src/routers/index.ts"
     },
+    "./contracts/support-email-intake": {
+      "default": "./src/contracts/support-email-intake.ts"
+    },
     "./contracts/recurring-task-queue": {
       "default": "./src/contracts/recurring-task-queue.ts"
     },

@@ -13,7 +13,7 @@ const { Client } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../../..");
 const dbPackageRoot = path.resolve(__dirname, "..");
-const seedScriptPath = path.resolve(__dirname, "./seed-local.mjs");
+const seedScriptPath = path.resolve(__dirname, "./seed-e2e.mjs");
 
 const DEFAULT_DATABASE_URL =
 	"postgresql://postgres:postgres@127.0.0.1:5432/myapp";
@@ -122,15 +122,11 @@ export const bootstrapLocalE2EDatabase = async ({ anchorDate } = {}) => {
 	await waitForDatabase({ connectionString });
 	await resetAndMigrateSchema(connectionString);
 
-	execFileSync(
-		"node",
-		[seedScriptPath, "--anchor-date", resolvedAnchorDate],
-		{
-			cwd: repoRoot,
-			stdio: "inherit",
-			env: { ...process.env, DATABASE_URL: connectionString },
-		}
-	);
+	execFileSync("node", [seedScriptPath, "--anchor-date", resolvedAnchorDate], {
+		cwd: repoRoot,
+		stdio: "inherit",
+		env: { ...process.env, DATABASE_URL: connectionString },
+	});
 };
 
 const runFromCli = async () => {

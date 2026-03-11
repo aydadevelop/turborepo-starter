@@ -23,14 +23,16 @@ interface ApiResult {
 
 export class TestDataFactory {
 	private readonly namespace: string;
+	private readonly originURL: string;
 	private readonly serverURL: string;
 	private userCounter = 0;
 	private orgCounter = 0;
 	private dbClient: pg.Client | null = null;
 	private cookies: string | null = null;
 
-	constructor(namespace: string, serverURL: string) {
+	constructor(namespace: string, serverURL: string, originURL: string) {
 		this.namespace = namespace;
+		this.originURL = originURL;
 		this.serverURL = serverURL;
 	}
 
@@ -72,7 +74,7 @@ export class TestDataFactory {
 	async signIn(email: string, password: string): Promise<void> {
 		const response = await fetch(`${this.serverURL}/api/auth/sign-in/email`, {
 			method: "POST",
-			headers: { "content-type": "application/json" },
+			headers: this.buildHeaders(true),
 			body: JSON.stringify({ email, password }),
 			redirect: "manual",
 		});
@@ -86,7 +88,7 @@ export class TestDataFactory {
 	}
 
 	/**
-	 * Create an organization via the RPC endpoint.
+	 * Create an organization via the Better Auth organization endpoint.
 	 * Requires a prior `signIn()` call for authentication cookies.
 	 */
 	async createOrganization(
@@ -96,9 +98,12 @@ export class TestDataFactory {
 		const name = overrides.name ?? `${this.namespace} Org ${n}`;
 		const slug = overrides.slug ?? `${this.namespace}-org-${n}`;
 
-		const result = await this.rpcFetch("organizations/create", {
-			name,
-			slug,
+		const result = await this.serverFetch("/api/auth/organization/create", {
+			method: "POST",
+			body: {
+				name,
+				slug,
+			},
 		});
 
 		if (!result.ok) {
@@ -107,9 +112,9 @@ export class TestDataFactory {
 			);
 		}
 
-		const body = result.json as { json?: { id?: string } };
+		const body = result.json as { id?: string };
 		return {
-			id: body.json?.id ?? `${this.namespace}-org-${n}`,
+			id: body.id ?? `${this.namespace}-org-${n}`,
 			name,
 			slug,
 		};
@@ -150,17 +155,9 @@ export class TestDataFactory {
 		path: string,
 		options: { method: string; body?: unknown }
 	): Promise<ApiResult> {
-		const headers: Record<string, string> = {};
-		if (options.body) {
-			headers["content-type"] = "application/json";
-		}
-		if (this.cookies) {
-			headers.cookie = this.cookies;
-		}
-
 		const response = await fetch(`${this.serverURL}${path}`, {
 			method: options.method,
-			headers,
+			headers: this.buildHeaders(Boolean(options.body)),
 			body: options.body ? JSON.stringify(options.body) : undefined,
 			redirect: "manual",
 		});
@@ -185,5 +182,19 @@ export class TestDataFactory {
 			method: "POST",
 			body: { json: input ?? null },
 		});
+	}
+
+	private buildHeaders(withJsonBody: boolean): Record<string, string> {
+		const headers: Record<string, string> = {
+			origin: this.originURL,
+			referer: `${this.originURL}/`,
+		};
+		if (withJsonBody) {
+			headers["content-type"] = "application/json";
+		}
+		if (this.cookies) {
+			headers.cookie = this.cookies;
+		}
+		return headers;
 	}
 }

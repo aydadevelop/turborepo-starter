@@ -13,6 +13,10 @@ import {
 	type NotificationRecipient,
 	notificationEventPayloadSchema,
 } from "./contracts";
+import {
+	DEFAULT_NOTIFICATION_EMAIL_PROVIDER_ID,
+	EmailNotificationProvider,
+} from "./email";
 import { PreferenceController } from "./preferences";
 
 const TELEGRAM_API_BASE_URL_DEFAULT = "https://api.telegram.org";
@@ -264,30 +268,6 @@ export class MockMaxProvider implements NotificationProvider {
 	}
 }
 
-export class MockEmailProvider implements NotificationProvider {
-	channel: NotificationChannel = "email";
-	name = "mock_email";
-
-	send(params: {
-		intentId: string;
-		recipient: NotificationRecipient;
-	}): Promise<NotificationProviderResult> {
-		const email = String(params.recipient.metadata?.email ?? "").trim();
-		if (!email) {
-			return Promise.resolve({
-				status: "failed",
-				failureReason: "email is missing in recipient metadata",
-			});
-		}
-
-		return Promise.resolve({
-			status: "sent",
-			providerMessageId: `mock-email-${params.intentId}`,
-			providerRecipient: email,
-		});
-	}
-}
-
 export class MockSmsProvider implements NotificationProvider {
 	channel: NotificationChannel = "sms";
 	name = "mock_sms";
@@ -334,7 +314,9 @@ export class NotificationProcessorService {
 			new LegacySocialProvider(),
 			new MockVkProvider(),
 			new MockMaxProvider(),
-			new MockEmailProvider(),
+			new EmailNotificationProvider({
+				emailProviderId: DEFAULT_NOTIFICATION_EMAIL_PROVIDER_ID,
+			}),
 			new MockSmsProvider(),
 		];
 		this.providersByChannel = new Map(

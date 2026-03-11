@@ -4,6 +4,8 @@ import { $ } from "bun";
 const turboGraphFilter = process.argv[2] ?? "...[HEAD~1]";
 console.error(`Using turbo filter: ${turboGraphFilter}`);
 
+const deployableApps = new Set(["assistant", "notifications", "server", "web"]);
+
 let turboPackages = { items: [] as any[] };
 
 try {
@@ -30,7 +32,8 @@ for (const pkg of turboPackages.items) {
     shouldRunMigrations = true;
   }
   
-  const isDeployableApp = pkg.path?.startsWith("apps/") && pkg.name !== "site-astro";
+  const isDeployableApp =
+    pkg.path?.startsWith("apps/") && deployableApps.has(pkg.name);
   if (isDeployableApp) {
     deployMatrix.include.push({
       app: pkg.name,

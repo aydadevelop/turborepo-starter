@@ -1,3 +1,4 @@
+import { E2E_BASELINE } from "@my-app/db/e2e/baseline";
 import { expect, test } from "./fixtures";
 import { url } from "./utils/url";
 
@@ -5,13 +6,15 @@ const DASHBOARD_URL_RE = /\/dashboard/;
 const ADMIN_USERS_URL_RE = /\/admin\/users/;
 
 test.describe("Impersonation & Org Switching", () => {
-	test("seeded admin can impersonate seeded operator", async ({
+	test("baseline admin can impersonate baseline operator", async ({
 		adminPage,
 	}) => {
 		await adminPage.goto(url("/admin/users"));
 		await expect(adminPage.getByTestId("admin-users-heading")).toBeVisible();
 
-		await adminPage.getByTestId("impersonate-user-seed_user_operator").click();
+		await adminPage
+			.getByTestId(`impersonate-user-${E2E_BASELINE.ids.operatorUserId}`)
+			.click();
 
 		await expect(adminPage).toHaveURL(DASHBOARD_URL_RE);
 		await expect(adminPage.getByTestId("impersonation-banner")).toBeVisible();

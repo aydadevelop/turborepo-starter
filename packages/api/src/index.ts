@@ -59,7 +59,7 @@ const requireActiveOrganization = o.middleware(({ context, next }) => {
 	return next({
 		context: {
 			activeMembership: context.activeMembership,
-			eventBus: new EventBus(context.notificationQueue),
+			eventBus: context.eventBus ?? new EventBus(context.notificationQueue),
 		},
 	});
 });

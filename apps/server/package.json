@@ -25,6 +25,8 @@
     "@my-app/payment": "workspace:*",
     "@my-app/queue": "workspace:*",
     "@my-app/storage": "workspace:*",
+    "@my-app/support": "workspace:*",
+    "@my-app/events": "workspace:*",
     "@orpc/openapi": "^1.12.2",
     "@orpc/server": "^1.12.2",
     "@orpc/zod": "^1.12.2",

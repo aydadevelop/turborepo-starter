@@ -52,6 +52,54 @@ function startPostgres() {
 	});
 }
 
+function ensurePlaywrightDatabaseExists() {
+	const databaseUrl = process.env.PLAYWRIGHT_DATABASE_URL;
+	if (!databaseUrl) {
+		return;
+	}
+
+	log(`Ensuring Playwright database exists (${databaseUrl.replace(/\/\/.*@/, "//***@")})`);
+	const result = spawnSync(
+		"bun",
+		["./src/e2e/ensure-database.ts", "--database-url", databaseUrl],
+		{
+			cwd: new URL("../packages/db", import.meta.url).pathname,
+			stdio: "inherit",
+			env: process.env,
+		},
+	);
+
+	if (result.status !== 0) {
+		process.exit(result.status ?? 1);
+	}
+}
+
+function bootstrapPlaywrightDatabase() {
+	const databaseUrl = process.env.PLAYWRIGHT_DATABASE_URL;
+	if (!databaseUrl) {
+		return false;
+	}
+
+	log(
+		`Bootstrapping Playwright database (${databaseUrl.replace(/\/\/.*@/, "//***@")})`
+	);
+	const result = spawnSync(
+		"bun",
+		["./src/e2e/bootstrap.ts", "--database-url", databaseUrl],
+		{
+			cwd: new URL("../packages/db", import.meta.url).pathname,
+			stdio: "inherit",
+			env: process.env,
+		},
+	);
+
+	if (result.status !== 0) {
+		process.exit(result.status ?? 1);
+	}
+
+	return true;
+}
+
 /** Wait for postgres via docker-exec (used when Docker manages the DB). */
 async function waitForPostgresViaDocker() {
 	for (let i = 1; i <= MAX_RETRIES; i++) {
@@ -105,9 +153,16 @@ if (alreadyUp) {
 	await waitForPostgresViaDocker();
 }
 
+ensurePlaywrightDatabaseExists();
+
+// For the dedicated Playwright database, use the typed bootstrap flow instead of
+// drizzle push. That path resets the schema, runs migrations, and seeds the
+// auth/org baseline in one place.
+if (bootstrapPlaywrightDatabase()) {
+	log("Skipping drizzle push because Playwright bootstrap already prepared the database.");
+} else if (process.env.PLAYWRIGHT_SKIP_SEED === "1") {
 // Push schema so tables exist before services start.
 // Skip if PLAYWRIGHT_SKIP_SEED=1 (CI already ran db:push in a prior step).
-if (process.env.PLAYWRIGHT_SKIP_SEED === "1") {
 	log("Skipping schema push (PLAYWRIGHT_SKIP_SEED=1).");
 } else {
 	log("Pushing database schema...");
@@ -116,4 +171,3 @@ if (process.env.PLAYWRIGHT_SKIP_SEED === "1") {
 		stdio: "inherit",
 	});
 }
-

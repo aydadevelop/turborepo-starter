@@ -5,6 +5,9 @@
     ".": {
       "default": "./src/index.ts"
     },
+    "./e2e/*": {
+      "default": "./src/e2e/*.ts"
+    },
     "./*": {
       "default": "./src/*.ts"
     },
@@ -20,8 +23,10 @@
     "db:generate:dev": "drizzle-kit generate --config drizzle.config.dev.ts",
     "db:studio": "drizzle-kit studio --config drizzle.config.dev.ts --host 127.0.0.1 --port 4983",
     "db:reset:local": "node ./scripts/reset-local.mjs",
-    "db:bootstrap:local:e2e": "node ./scripts/bootstrap-local-e2e.mjs",
+    "db:bootstrap:local:e2e": "bun ./src/e2e/bootstrap.ts",
     "db:seed": "node ./scripts/seed-local.mjs",
+    "db:seed:e2e": "bun ./src/e2e/seed.ts",
+    "db:ensure:e2e:database": "bun ./src/e2e/ensure-database.ts",
     "db:snapshot:export": "node ./scripts/export-snapshot.mjs",
     "db:snapshot:import": "node ./scripts/import-snapshot.mjs",
     "db:verify:postgres": "node ./scripts/verify-postgres-baseline.mjs",

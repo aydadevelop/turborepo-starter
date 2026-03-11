@@ -6,7 +6,7 @@ import {
 import { getPlaywrightRuntimeEnv } from "../playwright.env";
 import { TestDataFactory } from "./utils/test-data-factory";
 
-const { serverURL } = getPlaywrightRuntimeEnv();
+const { baseURL, serverURL } = getPlaywrightRuntimeEnv();
 
 export const expect = playwrightExpect;
 
@@ -14,9 +14,9 @@ export const ADMIN_STORAGE_STATE = "e2e/.auth/admin.json";
 export const OPERATOR_STORAGE_STATE = "e2e/.auth/operator.json";
 
 export interface TestFixtures {
-	/** A Page pre-authenticated as the seed admin user. */
+	/** A Page pre-authenticated as the E2E baseline admin user. */
 	adminPage: Page;
-	/** A Page pre-authenticated as the seed operator user. */
+	/** A Page pre-authenticated as the E2E baseline operator user. */
 	operatorPage: Page;
 	/** Factory for creating test-scoped entities — auto-cleans on teardown. */
 	testData: TestDataFactory;
@@ -59,7 +59,7 @@ export const test = base.extend<TestFixtures>({
 		{ testNamespace }: TestFixtures,
 		use: (f: TestDataFactory) => Promise<void>
 	) => {
-		const factory = new TestDataFactory(testNamespace, serverURL);
+		const factory = new TestDataFactory(testNamespace, serverURL, baseURL);
 		await use(factory);
 		await factory.cleanup();
 	},

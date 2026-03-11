@@ -40,15 +40,50 @@ RUN echo '{"type":"module"}' > package.json && \
       'better-auth@^1.5.0' \
       '@better-auth/drizzle-adapter@^1.5.0' \
       '@better-auth/passkey@^1.5.0' \
-      'better-auth-telegram@^0.3.2'
+      'better-auth-telegram@^0.3.2' \
+      'pg@^8.16.0'
 
 ARG APP=server
+ENV APP=${APP}
 # oven/bun ships with a non-root 'bun' user (uid 1000) — use it directly.
 COPY --from=build --chown=bun:bun /app/apps/${APP}/app.json ./app.json
 COPY --from=build --chown=bun:bun /app/apps/${APP}/dist ./dist
 COPY --from=build --chown=bun:bun /app/packages/db/src/migrations ./migrations
+COPY --from=build --chown=bun:bun /app/packages/db/scripts/seed-local.mjs ./seed-local.mjs
+COPY --from=build --chown=bun:bun /app/packages/db/scripts/cleanup-tables.mjs ./cleanup-tables.mjs
+RUN printf '%s\n' \
+  '#!/bin/sh' \
+  'set -eu' \
+  '' \
+  'should_seed_demo_data() {' \
+  '  case "${SEED_DEMO_DATA:-false}" in' \
+  '    1|true|TRUE|yes|YES)' \
+  '      return 0' \
+  '      ;;' \
+  '    *)' \
+  '      return 1' \
+  '      ;;' \
+  '  esac' \
+  '}' \
+  '' \
+  'if [ "${APP:-server}" = "server" ]; then' \
+  '  echo "[docker] running database migrations"' \
+  '  bun ./dist/migrate.mjs' \
+  '' \
+  '  if should_seed_demo_data; then' \
+  '    echo "[docker] ensuring demo seed data exists"' \
+  '    if [ -n "${SEED_ANCHOR_DATE:-}" ]; then' \
+  '      bun ./seed-local.mjs --append --skip-if-present --anchor-date "${SEED_ANCHOR_DATE}"' \
+  '    else' \
+  '      bun ./seed-local.mjs --append --skip-if-present' \
+  '    fi' \
+  '  fi' \
+  'fi' \
+  '' \
+  'exec bun ./dist/index.mjs' \
+  > /app/docker-app-entrypoint.sh && chmod +x /app/docker-app-entrypoint.sh
 
 USER bun
 ENV NODE_ENV=production
 EXPOSE 3000
-CMD ["bun", "run", "dist/index.mjs"]
+CMD ["./docker-app-entrypoint.sh"]

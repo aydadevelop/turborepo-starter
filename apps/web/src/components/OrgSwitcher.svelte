@@ -5,13 +5,17 @@
 		Root as SelectRoot,
 		Trigger as SelectTrigger,
 	} from "@my-app/ui/components/select";
-	import { createQuery } from "@tanstack/svelte-query";
+	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
 	import { hasAuthenticatedSession } from "$lib/auth-session";
-	import { orpc, queryClient } from "$lib/orpc";
-	import { queryKeys } from "$lib/query-keys";
+	import { queryClient } from "$lib/orpc";
 	import { userOrganizationsQueryOptions } from "$lib/query-options";
+	import {
+		getOrgSwitcherInvalidationKeys,
+		invalidateQueryKeys,
+	} from "../features/org-account/shared/invalidations";
+	import { switchActiveOrganization } from "../features/org-account/switcher/mutations";
 
 	const sessionQuery = authClient.useSession();
 
@@ -26,40 +30,40 @@
 			?.activeOrganizationId ?? undefined
 	);
 
-	let switching = $state(false);
+	const switchOrganization = createMutation(() => ({
+		mutationFn: async ({ organizationId }: { organizationId: string }) => {
+			const result = await switchActiveOrganization(
+				{
+					setActiveOrganization: authClient.organization.setActive,
+					invalidateOrgSwitcher: () =>
+						invalidateQueryKeys(queryClient, getOrgSwitcherInvalidationKeys()),
+				},
+				organizationId
+			);
 
-	const handleSwitch = async (orgId: string | undefined) => {
-		if (!orgId || orgId === activeOrgId) return;
-		switching = true;
-		const { error } = await authClient.organization.setActive({
-			organizationId: orgId,
-		});
-		switching = false;
-		if (error) return;
-		queryClient.invalidateQueries({ queryKey: queryKeys.org.root });
-		queryClient.invalidateQueries({
-			queryKey: orpc.canManageOrganization.key(),
-		});
-		queryClient.invalidateQueries({ queryKey: orpc.listing.key() });
-		queryClient.invalidateQueries({ queryKey: orpc.notifications.key() });
-		queryClient.invalidateQueries({ queryKey: orpc.todo.key() });
-		queryClient.invalidateQueries({ queryKey: queryKeys.assistant.root });
-	};
+			if (!result.ok) {
+				throw new Error(result.message);
+			}
+		},
+	}));
 </script>
 
 {#if (orgsQuery.data?.length ?? 0) > 1}
 	<SelectRoot
 		type="single"
 		value={activeOrgId}
-		onValueChange={(v) => void handleSwitch(v)}
-		disabled={switching}
+		onValueChange={(organizationId) => {
+			if (!organizationId || organizationId === activeOrgId) return;
+			switchOrganization.mutate({ organizationId });
+		}}
+		disabled={switchOrganization.isPending}
 	>
 		<SelectTrigger
 			size="sm"
 			class="max-w-[180px]"
 			data-testid="org-switcher-trigger"
 		>
-			{#if switching}
+			{#if switchOrganization.isPending}
 				<span class="text-muted-foreground">Switching...</span>
 			{:else}
 				{orgsQuery.data?.find((o) => o.id === activeOrgId)?.name ??

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { signInAsSeedAdmin } from "./utils/auth";
+import { signInAsBaselineAdmin } from "./utils/auth";
 import { url } from "./utils/url";
 
 const LOGIN_URL_PATTERN = /\/login(\?|$)/;
@@ -46,7 +46,7 @@ test.describe("Dashboard Access", () => {
 	test("chat link in navigation works for authenticated user", async ({
 		page,
 	}) => {
-		await signInAsSeedAdmin(page);
+		await signInAsBaselineAdmin(page);
 		await page.goto(url("/"), NAV_OPTIONS);
 		const chatLink = page.getByTestId("nav-link-chat");
 

@@ -1,6 +1,6 @@
+import { E2E_BASELINE } from "@my-app/db/e2e/baseline";
 import type { Page } from "@playwright/test";
 import { getPlaywrightRuntimeEnv } from "../../playwright.env";
-import { SEED_CREDENTIALS } from "./seed";
 import { url } from "./url";
 
 const { serverURL: SERVER_URL } = getPlaywrightRuntimeEnv();
@@ -81,11 +81,11 @@ export const signInWithEmail = async (
 	}
 };
 
-export const signInAsSeedAdmin = async (page: Page) =>
-	await signInWithEmail(page, SEED_CREDENTIALS.admin);
+export const signInAsBaselineAdmin = async (page: Page) =>
+	await signInWithEmail(page, E2E_BASELINE.admin);
 
-export const signInAsSeedOperator = async (page: Page) =>
-	await signInWithEmail(page, SEED_CREDENTIALS.operator);
+export const signInAsBaselineOperator = async (page: Page) =>
+	await signInWithEmail(page, E2E_BASELINE.operator);
 
 export const rpcRequest = async (
 	page: Page,
