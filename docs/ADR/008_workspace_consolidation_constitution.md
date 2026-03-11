@@ -1,13 +1,20 @@
 # ADR-008: Workspace Consolidation Constitution
 
 **Date:** 2026-03-10
-**Status:** Proposed
+**Status:** Accepted
 **Authors:** Platform Team
 **Related:** [ADR-001: Legacy Extraction Plan](./001_legacy-extraction.md), [ADR-002: Architecture Patterns](./002_architecture-patterns.md), [ADR-007: Schema Hardening and Modularization](./007_schema_hardening_and_modularization.md)
 
 ---
 
 ## Context
+
+Implementation status:
+
+- `packages/availability` and `packages/disputes` have been merged into `packages/booking` as internal subdomains.
+- `packages/support` remains a top-level capability because its actual model is organization- and channel-owned, not booking-owned.
+- payment webhook adapter ownership moved from `packages/api` to `packages/payment/src/webhooks`.
+- server-side integration registration now lives in `apps/server/src/bootstrap.ts`.
 
 The repo already adopted the right Medusa-inspired ideas:
 
@@ -26,11 +33,11 @@ Those ideas are reflected in the local skills:
 
 The problem is not the direction. The problem is that the repo extracted boundaries faster than it defined a reusable rule for **when something deserves a package at all**.
 
-This produced a workspace that is more fragmented than Medusa's actual modularity model:
+Before this ADR was implemented, the workspace was more fragmented than Medusa's actual modularity model:
 
 - `packages/availability` is a thin scheduling slice used mainly by `packages/booking`
 - `packages/disputes` is mostly booking cancellation and refund orchestration
-- `packages/support` is thin CRUD plus API-specific access flow
+- `packages/support` currently has a small surface, but it already owns ticket/message/inbound channel concepts that are broader than booking
 - `packages/api` still contains handler-level business fallback and some direct DB logic
 - schema ownership is still centralized in `packages/db`, so some workspace boundaries do not yet correspond to strong persistence boundaries
 
@@ -71,7 +78,7 @@ What we do **not** copy blindly:
 
 For this repo, Medusa-style modularity means:
 
-- `booking` can contain `availability`, `cancellations`, `disputes`, and `support-facing booking flows` as internal subdomains
+- `booking` can contain `availability`, `cancellations`, `disputes`, and booking-facing support integration flows as internal subdomains
 - `calendar` stays separate because it is an external integration capability
 - `payment` stays separate because it owns provider integration, webhook reconciliation, and money movement concerns
 - `events`, `workflows`, `db`, `queue`, `auth`, `env` stay platform-level
@@ -128,10 +135,10 @@ This skill represents the idea well.
 
 It correctly adapts Medusa workflows to this stack instead of copying Medusa's DSL.
 
-Current repo state mostly matches this skill:
+Current repo state matches this skill:
 
 - `packages/workflows` exists
-- `packages/disputes` already uses `createStep` and `createWorkflow`
+- booking cancellation lives under `packages/booking/src/cancellation` and already uses `createStep` and `createWorkflow`
 
 What is missing is not the workflow package itself, but broader workflow adoption. Important booking flows still happen in service and handler code instead of a workflow boundary.
 
@@ -144,12 +151,12 @@ What is already real:
 - `packages/calendar` has an adapter registry
 - `packages/payment` has a provider registry
 
-What is still inconsistent:
+Current repo state is now consistent:
 
-- payment webhook adapter glue still lives under `packages/api/src/payments/webhooks`
-- runtime startup registers calendar integrations, but not payment providers
+- payment webhook adapter glue lives under `packages/payment/src/webhooks`
+- runtime startup registers both calendar integrations and payment providers from `apps/server/src/bootstrap.ts`
 
-That means the provider pattern exists, but module ownership is not fully consolidated yet.
+That means the provider pattern now has clear package ownership and a single composition point.
 
 ### 2.4 `domain-events`
 
@@ -160,10 +167,10 @@ What is already real:
 - `packages/events` exists
 - `apps/server` registers notification and calendar pushers at startup
 
-What still drifts from the skill:
+Current repo state is aligned:
 
-- some event emission still happens in handlers instead of domain services/workflows
-- the skill still describes `packages/events` as target-state even though it now exists
+- booking lifecycle event emission moved out of handlers and into booking-owned service/workflow paths
+- `packages/events` is live and server pushers are registered at bootstrap time
 
 ### 2.5 Overall conclusion
 
@@ -259,7 +266,9 @@ Examples:
 - `booking/src/availability`
 - `booking/src/cancellation`
 - `booking/src/disputes`
-- `booking/src/support`
+- `support/src/tickets`
+- `support/src/messages`
+- `support/src/inbound`
 - `catalog/src/storefront`
 - `payment/src/webhooks`
 
@@ -396,15 +405,14 @@ Keep as a folder until there is a real operations lifecycle:
 - dispute reporting and analytics
 - channel-specific escalation
 
-#### `packages/support` -> `packages/booking/src/support`
+#### `packages/support`
 
 Reason:
 
-- currently thin ticket CRUD around booking/customer context
-- only consumed by `packages/api`
-- no external integration boundary yet
-
-If support later expands into a real omnichannel case-management capability, extract it then.
+- ticket ownership is organization-first with only an optional booking link
+- channel and inbound-message modeling already make it a broader capability than booking
+- this is the right place for future assignment, SLA, escalation, and omnichannel intake
+Keep it top-level and let `booking` remain only an optional linked context.
 
 ### 4.3 Keep separate but consolidate ownership internally
 
@@ -465,7 +473,6 @@ packages/
       availability/
       cancellation/
       disputes/
-      support/
       workflows/
   calendar/
     src/
@@ -484,6 +491,11 @@ packages/
       webhooks/
   pricing/
   queue/
+  support/
+    src/
+      inbound/
+      messages/
+      tickets/
   ui/
   ai-chat/
   workflows/
@@ -560,7 +572,7 @@ The skills still describe `events` and `workflows` as target-state packages even
 
 - merge `availability` into `booking`
 - merge `disputes` into `booking`
-- merge `support` into `booking`
+- keep `support` as its own capability package
 - leave backward-compatible exports temporarily if needed
 
 ### Phase 3: Finish capability ownership

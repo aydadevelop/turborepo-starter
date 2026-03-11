@@ -12,9 +12,8 @@ import {
 	type BookingRow,
 	type CancellationReasonCode,
 	type CancellationRequestRow,
+	processCancellationWorkflow,
 } from "@my-app/booking";
-import { processCancellationWorkflow } from "@my-app/disputes";
-import { EventBus } from "@my-app/events";
 
 import { organizationPermissionProcedure, protectedProcedure } from "../index";
 
@@ -124,40 +123,15 @@ export const bookingRouter = {
 					status: input.status,
 					cancellationReason: input.cancellationReason,
 					cancelledByUserId: input.cancelledByUserId,
+					workflowContext: {
+						organizationId: context.activeMembership.organizationId,
+						actorUserId: context.session?.user?.id,
+						idempotencyKey: `booking:${input.status}:${input.id}`,
+						eventBus: context.eventBus,
+					},
 				},
 				db,
 			);
-
-// Emit domain events for status transitions
-				const orgId = context.activeMembership.organizationId;
-				if (input.status === "confirmed" || input.status === "cancelled") {
-					const eventBus = new EventBus(context.notificationQueue);
-					if (input.status === "confirmed") {
-						await eventBus
-							.emit({
-								type: "booking:confirmed",
-								organizationId: orgId,
-								actorUserId: context.session?.user?.id,
-								idempotencyKey: `booking:confirmed:${input.id}`,
-								data: { bookingId: input.id, ownerId: orgId },
-							})
-							.catch(() => {});
-					} else {
-						await eventBus
-							.emit({
-								type: "booking:cancelled",
-								organizationId: orgId,
-								actorUserId: context.session?.user?.id,
-								idempotencyKey: `booking:cancelled:${input.id}`,
-								data: {
-									bookingId: input.id,
-									reason: input.cancellationReason ?? "cancelled",
-									refundAmountKopeks: 0,
-								},
-							})
-							.catch(() => {});
-					}
-			}
 
 			return formatBooking(row);
 		} catch (e) {
@@ -219,7 +193,7 @@ export const bookingRouter = {
 				organizationId: context.activeMembership.organizationId,
 				actorUserId: context.session?.user?.id,
 				idempotencyKey: `booking-cancellation:${input.requestId}`,
-				eventBus: new EventBus(context.notificationQueue),
+				eventBus: context.eventBus,
 			},
 		);
 

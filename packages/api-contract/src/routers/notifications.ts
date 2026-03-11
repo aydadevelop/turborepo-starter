@@ -42,7 +42,7 @@ const notificationEventItemSchema = z.object({
 	sourceType: z.string().nullable(),
 	sourceId: z.string().nullable(),
 	idempotencyKey: z.string().trim().min(1),
-	payload: z.string(),
+	payload: z.record(z.string(), z.unknown()),
 	status: z.enum(notificationEventStatusValues),
 	processingStartedAt: z.string().datetime().nullable(),
 	processedAt: z.string().datetime().nullable(),

@@ -1,13 +1,16 @@
 import { clearEventPushers, emitDomainEvent } from "@my-app/events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const { mockLimit } = vi.hoisted(() => ({
+	mockLimit: vi.fn(),
+}));
+
 // Mock notificationsPusher before importing events-bridge
 vi.mock("../pusher", () => ({
 	notificationsPusher: vi.fn().mockResolvedValue({ idempotent: false, queued: true }),
 }));
 
 // Mock @my-app/db with a chainable drizzle-like interface
-const mockLimit = vi.fn().mockResolvedValue([{ customerUserId: "customer-1", organizationId: "org-1" }]);
 vi.mock("@my-app/db", () => ({
 	db: {
 		select: vi.fn().mockReturnThis(),

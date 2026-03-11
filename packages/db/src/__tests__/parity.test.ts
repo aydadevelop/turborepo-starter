@@ -60,6 +60,7 @@ const PHASE_1_BASELINE_TABLES = [
 	"notificationPreference",
 	"organization",
 	"organizationListingType",
+	"organizationOnboarding",
 	"organizationPaymentConfig",
 	"organizationSettings",
 	"passkey",

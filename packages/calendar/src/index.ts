@@ -1,6 +1,7 @@
 export type {
 	CalendarAdapter,
 	CalendarAdapterProvider,
+	CalendarConnectionRow,
 	CalendarConnectionConfig,
 	CalendarEventInput,
 	CalendarEventPresentation,
@@ -16,6 +17,7 @@ export { GoogleCalendarAdapter, GoogleCalendarApiError } from "./google-adapter"
 export {
 	connectCalendar,
 	disconnectCalendar,
+	listCalendarConnections,
 	listCalendarBusySlots,
 } from "./use-cases";
 export { registerBookingLifecycleSync } from "./booking-lifecycle-sync";

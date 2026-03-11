@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import {
 	boolean,
+	check,
+	date,
 	index,
 	integer,
 	jsonb,
@@ -88,6 +90,14 @@ export const listingAvailabilityRule = pgTable(
 			table.dayOfWeek,
 			table.startMinute
 		),
+		check(
+			"listing_availability_rule_ck_day_of_week",
+			sql`${table.dayOfWeek} between 0 and 6`,
+		),
+		check(
+			"listing_availability_rule_ck_minute_range",
+			sql`${table.startMinute} >= 0 and ${table.startMinute} < 1440 and ${table.endMinute} > ${table.startMinute} and ${table.endMinute} <= 1440`,
+		),
 	]
 );
 
@@ -99,7 +109,7 @@ export const listingAvailabilityException = pgTable(
 		listingId: text("listing_id")
 			.notNull()
 			.references(() => listing.id, { onDelete: "cascade" }),
-		date: timestamp("date", { withTimezone: true, mode: "date" }).notNull(),
+		date: date("date", { mode: "string" }).notNull(),
 		isAvailable: boolean("is_available").notNull().default(false),
 		startMinute: integer("start_minute"), // null → whole day
 		endMinute: integer("end_minute"),
@@ -115,6 +125,20 @@ export const listingAvailabilityException = pgTable(
 		uniqueIndex("listing_availability_exception_uq_listing_date").on(
 			table.listingId,
 			table.date
+		),
+		check(
+			"listing_availability_exception_ck_minutes",
+			sql`(
+				(${table.startMinute} is null and ${table.endMinute} is null)
+				or (
+					${table.startMinute} is not null
+					and ${table.endMinute} is not null
+					and ${table.startMinute} >= 0
+					and ${table.startMinute} < 1440
+					and ${table.endMinute} > ${table.startMinute}
+					and ${table.endMinute} <= 1440
+				)
+			)`,
 		),
 	]
 );
@@ -150,8 +174,15 @@ export const listingAvailabilityBlock = pgTable(
 	},
 	(table) => [
 		index("listing_availability_block_ix_listing_id").on(table.listingId),
+		index("listing_availability_block_ix_calendar_connection_id").on(
+			table.calendarConnectionId,
+		),
 		index("listing_availability_block_ix_starts_at").on(table.startsAt),
 		index("listing_availability_block_ix_source").on(table.source),
+		check(
+			"listing_availability_block_ck_window",
+			sql`${table.endsAt} > ${table.startsAt}`,
+		),
 	]
 );
 
@@ -174,6 +205,14 @@ export const listingMinimumDurationRule = pgTable(
 	},
 	(table) => [
 		index("listing_minimum_duration_rule_ix_listing_id").on(table.listingId),
+		check(
+			"listing_minimum_duration_rule_ck_time_bounds",
+			sql`${table.startHour} between 0 and 23 and ${table.endHour} between 0 and 23 and ${table.startMinute} between 0 and 59 and ${table.endMinute} between 0 and 59`,
+		),
+		check(
+			"listing_minimum_duration_rule_ck_positive_duration",
+			sql`${table.minimumDurationMinutes} > 0 and ((${table.endHour} * 60) + ${table.endMinute}) > ((${table.startHour} * 60) + ${table.startMinute})`,
+		),
 	]
 );
 
@@ -219,6 +258,11 @@ export const listingCalendarConnection = pgTable(
 			table.organizationId
 		),
 		index("listing_calendar_connection_ix_sync_status").on(table.syncStatus),
+		uniqueIndex("listing_calendar_connection_uq_primary_listing")
+			.on(table.listingId)
+			.where(
+				sql`${table.isPrimary} = true and ${table.isActive} = true`,
+			),
 	]
 );
 

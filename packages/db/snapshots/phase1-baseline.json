@@ -1,7 +1,7 @@
 {
   "version": "1",
   "source": "01-schema-baseline-replayability",
-  "exported_at": "2026-03-09T18:12:56.939Z",
+  "exported_at": "2026-03-10T22:08:23.855Z",
   "tables": [
     {
       "table": "organization",
@@ -97,7 +97,7 @@
           "access_token_expires_at": null,
           "refresh_token_expires_at": null,
           "scope": null,
-          "password": "b4ed17e18030702907676d1907473339:d1ab357821707455743856574620a1d5ffb39a440e1fab6a8ca6d56b2490648f1937e668eb7be9a2b2a5947d57b10592d68db624b14235691908de94e53dbaae",
+          "password": "e440cec099be2249c5a3578d9adb5cd0:9d88530a003f02e258e1f8706fb8c8fedf9286b46f88c8e1601071fd949148f5e69b3bee7c87173faa35f51c74512eaaef7661a0b52ca15f3cdd4a0db8b41a08",
           "telegram_id": null,
           "telegram_username": null,
           "created_at": "2026-03-15T09:00:00.000Z",
@@ -114,7 +114,7 @@
           "access_token_expires_at": null,
           "refresh_token_expires_at": null,
           "scope": null,
-          "password": "d4a2886404de726ce702b00be0d9d1f5:513a7aa7dcffcce659ea33d00959748c8073b457dbe9b8fbd32bd9d771bfdbade937fcdfcfee07842b67418e8663a953d03168a256eab688c04164d0e48bccc1",
+          "password": "6863c98636b6e3154f50ab3785af9485:43c0acc2c6129900ce24390e2192f77d1cbb2aff484811b23ff14dc514985188735e8c880ad4e9ab20f012667809cea33f576ecabdd9288843d3ac6b35e38a8f",
           "telegram_id": null,
           "telegram_username": null,
           "created_at": "2026-03-15T09:00:00.000Z",
@@ -190,7 +190,19 @@
           "source_type": "task",
           "source_id": "seed-task-1",
           "idempotency_key": "seed:task:recurring:1",
-          "payload": "{\"recipients\":[{\"userId\":\"seed_user_member\",\"title\":\"Recurring reminder\",\"body\":\"This is a seeded recurring reminder.\",\"channels\":[\"in_app\"],\"severity\":\"info\"}]}",
+          "payload": {
+            "recipients": [
+              {
+                "body": "This is a seeded recurring reminder.",
+                "title": "Recurring reminder",
+                "userId": "seed_user_member",
+                "channels": [
+                  "in_app"
+                ],
+                "severity": "info"
+              }
+            ]
+          },
           "status": "processed",
           "processing_started_at": "2026-03-15T09:00:00.000Z",
           "processed_at": "2026-03-15T09:00:00.000Z",
@@ -212,7 +224,10 @@
           "template_key": "task.recurring.tick",
           "title": "Recurring reminder",
           "body": "This is a seeded recurring reminder.",
-          "metadata": "{\"taskId\":\"seed-task-1\",\"runNumber\":1}",
+          "metadata": {
+            "taskId": "seed-task-1",
+            "runNumber": 1
+          },
           "status": "sent",
           "processed_at": "2026-03-15T09:00:00.000Z",
           "created_at": "2026-03-15T09:00:00.000Z",
@@ -253,7 +268,9 @@
           "body": "This is a seeded recurring reminder.",
           "cta_url": "/dashboard",
           "severity": "info",
-          "metadata": "{\"taskId\":\"seed-task-1\"}",
+          "metadata": {
+            "taskId": "seed-task-1"
+          },
           "delivered_at": "2026-03-15T09:00:00.000Z",
           "viewed_at": null,
           "created_at": "2026-03-15T09:00:00.000Z",

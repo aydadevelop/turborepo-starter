@@ -28,6 +28,7 @@ import {
 	organizationPaymentConfig,
 	organizationSettings,
 	paymentProviderConfig,
+	paymentWebhookEvent,
 } from "../schema/marketplace";
 import {
 	notificationDelivery,
@@ -245,7 +246,7 @@ describe("Test Database Setup", () => {
 				organizationId: "org-notify-1",
 				eventType: "task.recurring.tick",
 				idempotencyKey: "notify:org-notify-1:1",
-				payload: JSON.stringify({ recipients: [] }),
+				payload: { recipients: [] },
 			});
 
 			await expect(
@@ -254,7 +255,7 @@ describe("Test Database Setup", () => {
 					organizationId: "org-notify-1",
 					eventType: "task.recurring.tick",
 					idempotencyKey: "notify:org-notify-1:1",
-					payload: JSON.stringify({ recipients: [] }),
+					payload: { recipients: [] },
 				})
 			).rejects.toThrow();
 		});
@@ -277,7 +278,7 @@ describe("Test Database Setup", () => {
 				organizationId: "org-notify-2",
 				eventType: "payment.mock.charge.succeeded",
 				idempotencyKey: "notify:org-notify-2:charge:1",
-				payload: JSON.stringify({ recipients: [{ userId: "user-notify-1" }] }),
+				payload: { recipients: [{ userId: "user-notify-1" }] },
 				status: "queued",
 			});
 
@@ -290,6 +291,7 @@ describe("Test Database Setup", () => {
 				templateKey: "payment.mock.charge",
 				title: "Charge succeeded",
 				body: "Your payment succeeded",
+				metadata: { receiptId: "receipt-1" },
 				status: "sent",
 			});
 
@@ -325,6 +327,7 @@ describe("Test Database Setup", () => {
 				body: "Your payment succeeded",
 				ctaUrl: "/dashboard",
 				severity: "success",
+				metadata: { receiptId: "receipt-1" },
 				deliveredAt: new Date(),
 			});
 
@@ -334,6 +337,7 @@ describe("Test Database Setup", () => {
 			expect(intents).toHaveLength(1);
 			expect(deliveries).toHaveLength(1);
 			expect(inApp).toHaveLength(1);
+			expect(inApp[0]?.metadata).toEqual({ receiptId: "receipt-1" });
 		});
 
 		it("enforces notification preference scope uniqueness", async () => {
@@ -464,6 +468,36 @@ describe("Test Database Setup", () => {
 			expect(listings).toHaveLength(1);
 			expect(bookings).toHaveLength(1);
 			expect(bookings[0]?.publicationId).toBe("publication-1");
+		});
+
+		it("enforces payment webhook idempotency on request signature", async () => {
+			await db.insert(organization).values({
+				id: "org-webhook-1",
+				name: "Webhook Org",
+				slug: "webhook-org",
+			});
+
+			await db.insert(paymentWebhookEvent).values({
+				id: "payment-webhook-1",
+				organizationId: "org-webhook-1",
+				endpointId: "endpoint-1",
+				provider: "cloudpayments",
+				webhookType: "pay",
+				requestSignature: "endpoint-1:pay:tx-1",
+				payload: { transactionId: "tx-1" },
+			});
+
+			await expect(
+				db.insert(paymentWebhookEvent).values({
+					id: "payment-webhook-2",
+					organizationId: "org-webhook-1",
+					endpointId: "endpoint-1",
+					provider: "cloudpayments",
+					webhookType: "pay",
+					requestSignature: "endpoint-1:pay:tx-1",
+					payload: { transactionId: "tx-1" },
+				}),
+			).rejects.toThrow();
 		});
 	});
 
@@ -638,9 +672,12 @@ describe("Test Database Setup", () => {
 				id: "ticket-1",
 				organizationId: "org-sup-1",
 				customerUserId: "user-sup-1",
+				closedByUserId: "user-sup-1",
 				subject: "Cannot access booking",
 				source: "web",
 				priority: "high",
+				status: "closed",
+				closedAt: new Date("2026-03-11T12:00:00.000Z"),
 			});
 
 			await db.insert(inboundMessage).values({
@@ -682,6 +719,7 @@ describe("Test Database Setup", () => {
 			expect(messages).toHaveLength(2);
 			expect(inbound).toHaveLength(1);
 			expect(tickets[0]?.priority).toBe("high");
+			expect(tickets[0]?.closedByUserId).toBe("user-sup-1");
 		});
 
 		it("enforces inbound message deduplication", async () => {

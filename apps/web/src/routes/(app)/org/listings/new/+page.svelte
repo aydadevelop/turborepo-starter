@@ -1,8 +1,15 @@
 <script lang="ts">
+	import { createQuery } from "@tanstack/svelte-query";
 	import { createMutation } from "@tanstack/svelte-query";
 	import { goto } from "$app/navigation";
 	import { orpc, queryClient } from "$lib/orpc";
 	import ListingEditorForm from "../../../../../components/org/ListingEditorForm.svelte";
+
+	const availableListingTypesQuery = createQuery(() =>
+		orpc.listing.listAvailableTypes.queryOptions({
+			input: {},
+		})
+	);
 
 	const createListingMutation = createMutation(() =>
 		orpc.listing.create.mutationOptions({
@@ -37,11 +44,23 @@
 		</p>
 	</div>
 
-	<ListingEditorForm
-		mode="create"
-		submitLabel="Create listing"
-		pending={createListingMutation.isPending}
-		errorMessage={createListingMutation.error?.message ?? null}
-		onSubmit={handleSubmit}
-	/>
+	{#if availableListingTypesQuery.isPending}
+		<div class="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
+			Loading listing types...
+		</div>
+	{:else if availableListingTypesQuery.isError}
+		<div class="rounded-lg border border-destructive bg-card p-6 text-sm text-destructive">
+			{availableListingTypesQuery.error?.message ??
+				"Failed to load available listing types."}
+		</div>
+	{:else}
+		<ListingEditorForm
+			mode="create"
+			submitLabel="Create listing"
+			pending={createListingMutation.isPending}
+			errorMessage={createListingMutation.error?.message ?? null}
+			listingTypeOptions={availableListingTypesQuery.data.items}
+			onSubmit={handleSubmit}
+		/>
+	{/if}
 </div>

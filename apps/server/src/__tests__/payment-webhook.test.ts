@@ -1,8 +1,8 @@
 import {
 	registerPaymentWebhookAdapter,
 	resetPaymentWebhookRegistry,
-} from "@my-app/api/payments/webhooks/registry";
-import type { PaymentWebhookAdapter } from "@my-app/api/payments/webhooks/types";
+} from "@my-app/payment/webhooks/registry";
+import type { PaymentWebhookAdapter } from "@my-app/payment/webhooks/types";
 import { organization } from "@my-app/db/schema/auth";
 import {
 	booking,
@@ -145,9 +145,9 @@ const setupLiveWebhookRoute = async () => {
 		},
 	}));
 
-	const registry = await import("@my-app/api/payments/webhooks/registry");
+	const registry = await import("@my-app/payment/webhooks/registry");
 	const { CloudPaymentsWebhookAdapter } = await import(
-		"@my-app/api/payments/webhooks/cloudpayments/index"
+		"@my-app/payment/webhooks/cloudpayments/index"
 	);
 
 	registry.resetPaymentWebhookRegistry();
@@ -201,7 +201,7 @@ describe("paymentWebhookRoutes", () => {
 
 	it("returns 401 on authentication failure", async () => {
 		const { WebhookAuthError } = await import(
-			"@my-app/api/payments/webhooks/errors"
+			"@my-app/payment/webhooks/errors"
 		);
 		stubAdapter = createStubAdapter({
 			authenticateWebhook: vi.fn(() => {
@@ -223,7 +223,7 @@ describe("paymentWebhookRoutes", () => {
 
 	it("returns 400 on payload parse failure", async () => {
 		const { WebhookPayloadError } = await import(
-			"@my-app/api/payments/webhooks/errors"
+			"@my-app/payment/webhooks/errors"
 		);
 		stubAdapter = createStubAdapter({
 			parseWebhookBody: vi
@@ -278,7 +278,7 @@ describe("paymentWebhookRoutes", () => {
 	it("looks up adapter by provider param", async () => {
 		const spy = vi
 			.spyOn(
-				await import("@my-app/api/payments/webhooks"),
+				await import("@my-app/payment"),
 				"getPaymentWebhookAdapter"
 			)
 			.mockReturnValue(stubAdapter);

@@ -31,7 +31,7 @@ PostgreSQL is a **transactional, MVCC-based database** and the **system of recor
 - Runtime schema entrypoint is `packages/db/src/schema/index.ts`.
 - Generated SQL migrations live in `packages/db/src/migrations`.
 - Fast DB tests use the PGlite harness in `packages/db/src/test/index.ts`.
-- Multi-table business mutations usually live in domain packages such as `packages/booking`, `packages/disputes`, `packages/notifications`, and `packages/calendar`.
+- Multi-table business mutations usually live in domain packages such as `packages/booking`, `packages/notifications`, and `packages/calendar`.
 - Transport handlers stay thin; database logic belongs in the owning domain/service/workflow layer.
 
 ## Use this workflow

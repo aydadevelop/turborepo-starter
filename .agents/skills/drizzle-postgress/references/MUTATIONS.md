@@ -132,5 +132,5 @@ Use a workflow instead of a naked transaction when the mutation also:
 
 Examples in this repo:
 
-- `packages/disputes/src/cancellation-workflow.ts`
+- `packages/booking/src/cancellation/cancellation-workflow.ts`
 - `packages/booking/src/cancellation-service.ts` for pre-workflow request creation and snapshotting

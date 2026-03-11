@@ -40,6 +40,7 @@
 		queryClient.invalidateQueries({
 			queryKey: orpc.canManageOrganization.key(),
 		});
+		queryClient.invalidateQueries({ queryKey: orpc.listing.key() });
 		queryClient.invalidateQueries({ queryKey: orpc.notifications.key() });
 		queryClient.invalidateQueries({ queryKey: orpc.todo.key() });
 		queryClient.invalidateQueries({ queryKey: queryKeys.assistant.root });

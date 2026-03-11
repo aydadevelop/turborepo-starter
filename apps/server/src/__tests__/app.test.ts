@@ -2,12 +2,11 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const configurePaymentWebhookAdaptersFromEnvMock = vi.fn();
+const registerServerIntegrationsMock = vi.fn();
 
-vi.mock("@my-app/api/payments/webhooks", () => {
+vi.mock("../bootstrap", () => {
 	return {
-		configurePaymentWebhookAdaptersFromEnv:
-			configurePaymentWebhookAdaptersFromEnvMock,
+		registerServerIntegrations: registerServerIntegrationsMock,
 	};
 });
 
@@ -15,6 +14,9 @@ vi.mock("@my-app/env/server", () => {
 	return {
 		env: {
 			CORS_ORIGIN: "http://localhost:5173",
+			BETTER_AUTH_SECRET: "test-secret-123456",
+			SERVER_URL: "http://localhost:3000",
+			BETTER_AUTH_URL: "http://localhost:3000/api/auth",
 			CLOUDPAYMENTS_PUBLIC_ID: "pk_test",
 			CLOUDPAYMENTS_API_SECRET: "sk_test",
 		},
@@ -61,7 +63,7 @@ describe("app", () => {
 	beforeEach(() => {
 		// vi.resetModules is vitest-only; safe no-op when run under bun test
 		vi.resetModules?.();
-		configurePaymentWebhookAdaptersFromEnvMock.mockReset();
+		registerServerIntegrationsMock.mockReset();
 	});
 
 	it("returns JSON not found response for unknown routes", async () => {
@@ -91,12 +93,9 @@ describe("app", () => {
 		expect(await response.text()).toContain("teapot");
 	});
 
-	it("configures payment webhook adapters during app bootstrap", async () => {
+	it("registers runtime integrations during app bootstrap", async () => {
 		await import("../app");
 
-		expect(configurePaymentWebhookAdaptersFromEnvMock).toHaveBeenCalledWith({
-			CLOUDPAYMENTS_PUBLIC_ID: "pk_test",
-			CLOUDPAYMENTS_API_SECRET: "sk_test",
-		});
+		expect(registerServerIntegrationsMock).toHaveBeenCalledTimes(1);
 	});
 });

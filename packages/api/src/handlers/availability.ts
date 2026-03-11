@@ -12,7 +12,7 @@ import {
 	type AvailabilityBlockRow,
 	type AvailabilityExceptionRow,
 	type AvailabilityRuleRow,
-} from "@my-app/availability";
+} from "@my-app/booking";
 
 import { organizationPermissionProcedure, publicProcedure } from "../index";
 
@@ -32,7 +32,7 @@ const formatBlock = (row: AvailabilityBlockRow) => ({
 
 const formatException = (row: AvailabilityExceptionRow) => ({
 	...row,
-	date: row.date.toISOString(),
+	date: row.date,
 	createdAt: row.createdAt.toISOString(),
 	updatedAt: row.updatedAt.toISOString(),
 });
@@ -122,7 +122,7 @@ export const availabilityRouter = {
 				{
 					listingId: input.listingId,
 					organizationId: context.activeMembership.organizationId,
-					date: new Date(input.date),
+					date: input.date,
 					isAvailable: input.isAvailable,
 					startMinute: input.startMinute,
 					endMinute: input.endMinute,

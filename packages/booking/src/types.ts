@@ -1,5 +1,6 @@
 import type { db } from "@my-app/db";
 import type { booking, bookingCancellationRequest } from "@my-app/db/schema/marketplace";
+import type { WorkflowContext } from "@my-app/workflows";
 import type { CancellationReasonCode } from "./cancellation-reasons";
 
 export type Db = typeof db;
@@ -38,6 +39,8 @@ export interface UpdateBookingStatusInput {
 		| "disputed";
 	cancellationReason?: string;
 	cancelledByUserId?: string;
+	refundAmountCents?: number;
+	workflowContext?: WorkflowContext;
 }
 
 export interface ListOrgBookingsFilter {

@@ -1,3 +1,6 @@
+import type { db } from "@my-app/db";
+import type { listingCalendarConnection } from "@my-app/db/schema/availability";
+
 // ─── Provider types ──────────────────────────────────────────────────────────
 
 export const calendarAdapterProviderValues = [
@@ -52,6 +55,10 @@ export interface BusySlot {
 	endsAt: Date;
 	externalEventId?: string;
 }
+
+export type Db = typeof db;
+export type CalendarConnectionRow =
+	typeof listingCalendarConnection.$inferSelect;
 
 // ─── Adapter interface ────────────────────────────────────────────────────────
 

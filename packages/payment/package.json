@@ -6,6 +6,12 @@
   "exports": {
     ".": {
       "default": "./src/index.ts"
+    },
+    "./webhooks": {
+      "default": "./src/webhooks/index.ts"
+    },
+    "./webhooks/*": {
+      "default": "./src/webhooks/*.ts"
     }
   },
   "scripts": {
@@ -17,7 +23,8 @@
   },
   "dependencies": {
     "@my-app/db": "workspace:*",
-    "drizzle-orm": "1.0.0-beta.16-2ffd1a5"
+    "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",

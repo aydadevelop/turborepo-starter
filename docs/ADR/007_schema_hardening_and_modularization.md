@@ -1,13 +1,21 @@
 # ADR-007: Database Schema Hardening and Modularization Roadmap
 
 **Date:** 2026-03-10
-**Status:** Proposed
+**Status:** Superseded by [ADR-010: Schema Modernization Constitution](./010_schema_modernization_constitution.md)
 **Authors:** Platform Team
-**Related:** [ADR-006: PostgreSQL + Drizzle beta16 Best Practices](./006_postgres_drizzle_beta16_best_practices.md)
+**Related:** [ADR-006: PostgreSQL + Drizzle beta16 Best Practices](./006_postgres_drizzle_beta16_best_practices.md), [ADR-010: Schema Modernization Constitution](./010_schema_modernization_constitution.md)
 
 ---
 
 ## Context
+
+Implementation status:
+
+- Wave 1-4 rollout landed on 2026-03-10.
+- `updated_at` safety is now backed by shared trigger SQL for the touched tables.
+- low-risk `CHECK` constraints, partial unique indexes, onboarding persistence, and date-only availability exceptions are implemented.
+- notification payload/metadata columns are being normalized to `jsonb`.
+- overlap safety is committed as a dedicated GiST/exclusion migration artifact.
 
 `packages/db` already follows several strong baseline practices:
 
@@ -30,7 +38,7 @@ The largest current audit targets are:
 
 2. **Scheduling correctness is still vulnerable to race conditions**
    - booking overlap is checked in application code before insert in [`packages/booking/src/booking-service.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/booking/src/booking-service.ts#L91).
-   - overlapping bookings and availability blocks are detected with read queries in [`packages/availability/src/availability-service.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/availability/src/availability-service.ts#L172).
+   - overlapping bookings and availability blocks are detected with read queries in [`packages/booking/src/availability/availability-service.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/booking/src/availability/availability-service.ts#L172).
    - the schema does not currently use range types, exclusion constraints, or lock-based write orchestration for these invariants.
 
 3. **Range and numeric invariants are implied, not enforced**

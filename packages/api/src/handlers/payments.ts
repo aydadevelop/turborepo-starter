@@ -3,12 +3,13 @@ import { ORPCError } from "@orpc/server";
 import { db } from "@my-app/db";
 import {
 	connectPaymentProvider,
+	getPaymentWebhookAdapter,
 	getOrgPaymentConfig,
 	reconcilePaymentWebhook,
 } from "@my-app/payment";
+import { recalculateOrganizationOnboarding } from "../services/organization-onboarding";
 
 import { organizationPermissionProcedure, publicProcedure } from "../index";
-import { getPaymentWebhookAdapter } from "../payments/webhooks";
 
 const PAYMENT_PROVIDERS = ["cloudpayments"] as const;
 
@@ -95,6 +96,10 @@ export const paymentsRouter = {
 			},
 			db,
 		);
+		await recalculateOrganizationOnboarding(
+			context.activeMembership.organizationId,
+			db,
+		);
 		return {
 			...row,
 			publicKey: row.publicKey ?? null,
@@ -122,12 +127,18 @@ export const paymentsRouter = {
 	receiveWebhook: publicProcedure.payments.receiveWebhook.handler(
 		async ({ input }) => {
 			try {
-				return await reconcilePaymentWebhook(
+				const result = await reconcilePaymentWebhook(
 					input.endpointId,
 					input.webhookType,
 					input.payload,
 					db,
 				);
+				await recalculateOrganizationOnboarding(result.organizationId, db);
+				return {
+					processed: result.processed,
+					idempotent: result.idempotent,
+					bookingId: result.bookingId,
+				};
 			} catch (e) {
 				if (e instanceof Error && e.message === "ENDPOINT_NOT_FOUND") {
 					throw new ORPCError("NOT_FOUND", {

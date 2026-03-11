@@ -27,6 +27,7 @@
     "lint:fix": "cd ../.. && biome check --config-path biome.json packages/api-contract --write"
   },
   "dependencies": {
+    "@my-app/reference-data": "workspace:*",
     "@orpc/contract": "^1.13.4",
     "zod": "^4.1.13"
   },

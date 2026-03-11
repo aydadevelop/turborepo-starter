@@ -29,7 +29,7 @@ interface NotificationEventItem {
 	id: string;
 	idempotencyKey: string;
 	organizationId: string;
-	payload: string;
+	payload: Record<string, unknown>;
 	processedAt: string | null;
 	processingStartedAt: string | null;
 	sourceId: string | null;

@@ -3,7 +3,8 @@ name: provider-adapters
 description: >
   Create a provider interface, adapter registry, and concrete adapter implementation
   for external service integrations (calendar, payment, messaging channels).
-  This pattern already exists for payments (PaymentWebhookAdapter + registry in packages/api/src/payments/).
+  This pattern already exists for payments and calendar integrations, including the
+  PaymentWebhookAdapter registry in packages/payment/src/webhooks/.
   Use when: adding a new external integration behind a swappable interface, creating
   a CalendarProvider, PaymentProvider, or ChannelAdapter, or adding a new adapter
   implementation (e.g., Stripe alongside CloudPayments).
@@ -17,7 +18,9 @@ External service integrations always sit behind a **Provider interface** with a 
 Domain logic calls the registry — it never imports an external SDK directly.
 
 This pattern already exists in the codebase:
-- `packages/api/src/payments/webhooks/` — `PaymentWebhookAdapter` + registry (reference implementation)
+- `packages/payment/src/webhooks/` — `PaymentWebhookAdapter` + registry
+- `packages/payment/src/registry.ts` — payment provider registry
+- `packages/calendar/src/adapter-registry.ts` — calendar adapter registry
 
 As domain packages are extracted, these move to:
 - `packages/payments/` — `PaymentProvider` interface + registry + `CloudPaymentsProvider`
@@ -40,7 +43,7 @@ packages/<domain>/src/
 
 All monetary amounts are integer kopeks (1 RUB = 100 kopeks) to avoid floating-point errors.
 
-> **Note on naming:** `packages/api/src/payments/webhooks/types.ts` currently exports `PaymentProvider` as a
+> **Note on naming:** `packages/payment/src/webhooks/types.ts` exports `PaymentProvider` as a
 > string-literal type alias. When `packages/payments` is extracted (Wave 1), that alias is replaced by this
 > interface. Until then, these are in different packages and the names don't clash.
 
@@ -255,7 +258,7 @@ export const chargePaymentStep = createStep<
 
 ## Existing reference: PaymentWebhookAdapter
 
-The current webhook adapter registry in `packages/api/src/payments/webhooks/` follows this same pattern and is the canonical reference until `packages/payments` is extracted:
+The current webhook adapter registry in `packages/payment/src/webhooks/` follows this same pattern and is the canonical reference for webhook intake:
 
 | File | Role |
 |---|---|

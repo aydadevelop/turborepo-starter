@@ -52,9 +52,11 @@ describe("Migration artifacts", () => {
 
 			const content = readFileSync(sqlPath, "utf-8").trim();
 			expect(content.length, `${entry}/migration.sql should not be empty`).toBeGreaterThan(0);
-			// Must contain at least one DDL statement
+			// Must contain at least one DDL statement. Index-only migrations are valid.
 			expect(
-				/CREATE TABLE|CREATE TYPE|ALTER TABLE/i.test(content),
+				/CREATE TABLE|CREATE TYPE|ALTER TABLE|CREATE (UNIQUE )?INDEX/i.test(
+					content,
+				),
 				`${entry}/migration.sql should contain DDL statements`
 			).toBe(true);
 		}
@@ -88,5 +90,27 @@ describe("Migration artifacts", () => {
 				`Baseline migrations should include CREATE TABLE "${table}"`
 			).toBe(true);
 		}
+	});
+
+	it("includes overlap safety nets for booking and availability ranges", () => {
+		const entries = readdirSync(migrationsDir).filter((e) =>
+			statSync(path.join(migrationsDir, e)).isDirectory()
+		);
+
+		const allSql = entries
+			.map((entry) => {
+				const sqlPath = path.join(migrationsDir, entry, "migration.sql");
+				return existsSync(sqlPath) ? readFileSync(sqlPath, "utf-8") : "";
+			})
+			.join("\n");
+
+		expect(allSql).toContain('CREATE EXTENSION IF NOT EXISTS btree_gist;');
+		expect(allSql).toContain(
+			'ADD CONSTRAINT "booking_exclude_active_listing_overlap"'
+		);
+		expect(allSql).toContain(
+			'ADD CONSTRAINT "listing_availability_block_exclude_active_overlap"'
+		);
+		expect(allSql).toContain("EXCLUDE USING gist");
 	});
 });

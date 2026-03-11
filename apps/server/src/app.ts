@@ -1,8 +1,7 @@
-import { configurePaymentWebhookAdaptersFromEnv } from "@my-app/api/payments/webhooks";
-import { env } from "@my-app/env/server";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
+import { registerServerIntegrations } from "./bootstrap";
 
 import { corsMiddleware } from "./middleware/cors";
 import { authRoutes } from "./routes/auth";
@@ -11,10 +10,7 @@ import { healthRoutes } from "./routes/health";
 import { paymentWebhookRoutes } from "./routes/payment-webhook";
 import { rpcMiddleware } from "./rpc/handlers";
 
-configurePaymentWebhookAdaptersFromEnv({
-	CLOUDPAYMENTS_PUBLIC_ID: env.CLOUDPAYMENTS_PUBLIC_ID,
-	CLOUDPAYMENTS_API_SECRET: env.CLOUDPAYMENTS_API_SECRET,
-});
+registerServerIntegrations();
 
 export const app = new Hono();
 

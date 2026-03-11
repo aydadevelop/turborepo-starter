@@ -211,7 +211,7 @@ const buildSeedData = ({ anchorDate, adminPasswordHash, operatorPasswordHash }) 
 					source_type: "task",
 					source_id: "seed-task-1",
 					idempotency_key: "seed:task:recurring:1",
-					payload: toJson({
+					payload: {
 						recipients: [
 							{
 								userId: memberUserId,
@@ -221,7 +221,7 @@ const buildSeedData = ({ anchorDate, adminPasswordHash, operatorPasswordHash }) 
 								severity: "info",
 							},
 						],
-					}),
+					},
 					status: "processed",
 					processing_started_at: now,
 					processed_at: now,
@@ -241,7 +241,7 @@ const buildSeedData = ({ anchorDate, adminPasswordHash, operatorPasswordHash }) 
 					template_key: "task.recurring.tick",
 					title: "Recurring reminder",
 					body: "This is a seeded recurring reminder.",
-					metadata: toJson({ taskId: "seed-task-1", runNumber: 1 }),
+					metadata: { taskId: "seed-task-1", runNumber: 1 },
 					status: "sent",
 					processed_at: now,
 				},
@@ -278,7 +278,7 @@ const buildSeedData = ({ anchorDate, adminPasswordHash, operatorPasswordHash }) 
 					body: "This is a seeded recurring reminder.",
 					cta_url: "/dashboard",
 					severity: "info",
-					metadata: toJson({ taskId: "seed-task-1" }),
+					metadata: { taskId: "seed-task-1" },
 					delivered_at: now,
 					viewed_at: null,
 				},

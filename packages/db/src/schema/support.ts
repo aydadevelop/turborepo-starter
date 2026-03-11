@@ -129,6 +129,9 @@ export const supportTicket = pgTable(
 		resolvedByUserId: text("resolved_by_user_id").references(() => user.id, {
 			onDelete: "set null",
 		}),
+		closedByUserId: text("closed_by_user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
 		source: supportTicketSourceEnum("source").notNull().default("manual"),
 		status: supportTicketStatusEnum("status").notNull().default("open"),
 		priority: supportTicketPriorityEnum("priority").notNull().default("normal"),
@@ -187,6 +190,9 @@ export const supportTicketMessage = pgTable(
 	(table) => [
 		index("support_ticket_message_ix_ticket_id").on(table.ticketId),
 		index("support_ticket_message_ix_organization_id").on(table.organizationId),
+		index("support_ticket_message_ix_inbound_message_id").on(
+			table.inboundMessageId,
+		),
 		index("support_ticket_message_ix_channel").on(table.channel),
 		index("support_ticket_message_ix_created_at").on(table.createdAt),
 	]

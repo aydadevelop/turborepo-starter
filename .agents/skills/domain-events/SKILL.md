@@ -12,9 +12,9 @@ description: >
 
 # Domain Events (`packages/events`)
 
-> **Status:** `packages/events` is a new package (Wave 0). It does not exist yet.
-> The old `EventBus` in `packages/api/src/lib/event-bus.ts` is the current implementation.
-> See `docs/ADR/002_architecture-patterns.md §3.1` for the migration plan.
+> **Status:** `packages/events` is live and is the current repo event bus.
+> Booking lifecycle emission now happens in `packages/booking`, and server-side subscribers are registered from `apps/server/src/bootstrap.ts`.
+> Use this skill for new event types, subscriber registration, or tests that need `clearEventPushers()` / `registerEventPusher()`.
 
 ## Core concepts
 

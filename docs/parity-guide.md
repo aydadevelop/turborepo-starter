@@ -61,7 +61,7 @@ createParityTest({
 |---|---|
 | `packages/booking` | `packages/booking/src/__tests__/parity.test.ts` |
 | `packages/catalog` | `packages/catalog/src/__tests__/parity.test.ts` |
-| `packages/disputes` | `packages/disputes/src/__tests__/parity.test.ts` |
+| `packages/booking` cancellation/disputes subdomain | `packages/booking/src/cancellation/__tests__/parity.test.ts` or `packages/booking/src/disputes/__tests__/parity.test.ts` |
 
 One parity test file per domain package. Accumulate all domain-specific checks there.
 

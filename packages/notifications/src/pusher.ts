@@ -87,7 +87,7 @@ export const notificationsPusher = async (params: {
 		sourceType: input.sourceType,
 		sourceId: input.sourceId,
 		idempotencyKey: input.idempotencyKey,
-		payload: JSON.stringify(input.payload),
+		payload: input.payload,
 		status: "queued",
 		createdAt: new Date(),
 		updatedAt: new Date(),

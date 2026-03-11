@@ -96,7 +96,12 @@ export async function reconcilePaymentWebhook(
 		.limit(1);
 
 	if (existingEvent?.status === "processed") {
-		return { processed: false, idempotent: true, bookingId: invoiceId };
+		return {
+			processed: false,
+			idempotent: true,
+			bookingId: invoiceId,
+			organizationId: config.organizationId,
+		};
 	}
 
 	// 3. Insert webhook event record
@@ -224,5 +229,10 @@ export async function reconcilePaymentWebhook(
 			.where(eq(organizationPaymentConfig.id, config.id));
 	}
 
-	return { processed: true, idempotent: false, bookingId: invoiceId };
+	return {
+		processed: true,
+		idempotent: false,
+		bookingId: invoiceId,
+		organizationId: config.organizationId,
+	};
 }

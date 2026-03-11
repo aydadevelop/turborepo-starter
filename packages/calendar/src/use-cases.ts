@@ -1,12 +1,10 @@
-import { eq } from "drizzle-orm";
-import type { db } from "@my-app/db";
+import { and, eq } from "drizzle-orm";
 import {
 	listingCalendarConnection,
 } from "@my-app/db/schema/availability";
+import { listing } from "@my-app/db/schema/marketplace";
 import { getCalendarAdapter } from "./adapter-registry";
-import type { BusySlot } from "./types";
-
-export type Db = typeof db;
+import type { BusySlot, CalendarConnectionRow, Db } from "./types";
 
 export interface ConnectCalendarInput {
 	listingId: string;
@@ -16,13 +14,34 @@ export interface ConnectCalendarInput {
 	createdByUserId?: string;
 }
 
+const verifyListingOwnership = async (
+	listingId: string,
+	organizationId: string,
+	db: Db,
+): Promise<void> => {
+	const [row] = await db
+		.select({ id: listing.id })
+		.from(listing)
+		.where(
+			and(
+				eq(listing.id, listingId),
+				eq(listing.organizationId, organizationId),
+			),
+		)
+		.limit(1);
+
+	if (!row) {
+		throw new Error("NOT_FOUND");
+	}
+};
+
 export async function connectCalendar(
 	input: ConnectCalendarInput,
 	db: Db,
-): Promise<string> {
-	const id = crypto.randomUUID();
-	await db.insert(listingCalendarConnection).values({
-		id,
+): Promise<CalendarConnectionRow> {
+	await verifyListingOwnership(input.listingId, input.organizationId, db);
+	const [row] = await db.insert(listingCalendarConnection).values({
+		id: crypto.randomUUID(),
 		listingId: input.listingId,
 		organizationId: input.organizationId,
 		provider: input.provider,
@@ -31,20 +50,59 @@ export async function connectCalendar(
 		isPrimary: false,
 		syncStatus: "idle",
 		createdByUserId: input.createdByUserId ?? null,
-		createdAt: new Date(),
-		updatedAt: new Date(),
-	});
-	return id;
+	}).returning();
+	if (!row) {
+		throw new Error("Insert failed");
+	}
+	return row;
 }
 
 export async function disconnectCalendar(
 	connectionId: string,
+	organizationId: string,
 	db: Db,
-): Promise<void> {
-	await db
+): Promise<CalendarConnectionRow> {
+	const [connection] = await db
+		.select()
+		.from(listingCalendarConnection)
+		.where(
+			and(
+				eq(listingCalendarConnection.id, connectionId),
+				eq(listingCalendarConnection.organizationId, organizationId),
+			),
+		)
+		.limit(1);
+
+	if (!connection) {
+		throw new Error("NOT_FOUND");
+	}
+
+	const [row] = await db
 		.update(listingCalendarConnection)
 		.set({ isActive: false, updatedAt: new Date() })
-		.where(eq(listingCalendarConnection.id, connectionId));
+		.where(eq(listingCalendarConnection.id, connectionId))
+		.returning();
+	if (!row) {
+		throw new Error("Update failed");
+	}
+	return row;
+}
+
+export async function listCalendarConnections(
+	listingId: string,
+	organizationId: string,
+	db: Db,
+): Promise<CalendarConnectionRow[]> {
+	await verifyListingOwnership(listingId, organizationId, db);
+	return db
+		.select()
+		.from(listingCalendarConnection)
+		.where(
+			and(
+				eq(listingCalendarConnection.listingId, listingId),
+				eq(listingCalendarConnection.organizationId, organizationId),
+			),
+		);
 }
 
 export async function listCalendarBusySlots(

@@ -16,9 +16,11 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
-    "@my-app/availability": "workspace:*",
     "@my-app/db": "workspace:*",
+    "@my-app/events": "workspace:*",
+    "@my-app/payment": "workspace:*",
     "@my-app/pricing": "workspace:*",
+    "@my-app/workflows": "workspace:*",
     "drizzle-orm": "1.0.0-beta.16-2ffd1a5"
   },
   "devDependencies": {

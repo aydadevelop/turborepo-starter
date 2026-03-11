@@ -74,6 +74,7 @@
         "@my-app/db": "workspace:*",
         "@my-app/env": "workspace:*",
         "@my-app/notifications": "workspace:*",
+        "@my-app/payment": "workspace:*",
         "@my-app/queue": "workspace:*",
         "@orpc/openapi": "^1.12.2",
         "@orpc/server": "^1.12.2",
@@ -104,6 +105,7 @@
         "@my-app/ai-chat": "workspace:*",
         "@my-app/assistant": "workspace:*",
         "@my-app/env": "workspace:*",
+        "@my-app/reference-data": "workspace:*",
         "@my-app/ui": "workspace:*",
         "@orpc/client": "^1.13.4",
         "@orpc/tanstack-query": "^1.12.2",
@@ -176,11 +178,10 @@
       "dependencies": {
         "@my-app/api-contract": "workspace:*",
         "@my-app/auth": "workspace:*",
-        "@my-app/availability": "workspace:*",
         "@my-app/booking": "workspace:*",
+        "@my-app/calendar": "workspace:*",
         "@my-app/catalog": "workspace:*",
         "@my-app/db": "workspace:*",
-        "@my-app/disputes": "workspace:*",
         "@my-app/env": "workspace:*",
         "@my-app/events": "workspace:*",
         "@my-app/notifications": "workspace:*",
@@ -206,6 +207,7 @@
     "packages/api-contract": {
       "name": "@my-app/api-contract",
       "dependencies": {
+        "@my-app/reference-data": "workspace:*",
         "@orpc/contract": "^1.13.4",
         "zod": "^4.1.13",
       },
@@ -261,28 +263,15 @@
         "vitest": "^4.0.18",
       },
     },
-    "packages/availability": {
-      "name": "@my-app/availability",
-      "version": "0.0.0",
-      "dependencies": {
-        "@my-app/db": "workspace:*",
-        "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
-      },
-      "devDependencies": {
-        "@biomejs/biome": "^2.4.6",
-        "@my-app/config": "workspace:*",
-        "@my-app/vitest-config": "workspace:*",
-        "typescript": "^5",
-        "vitest": "^4.0.18",
-      },
-    },
     "packages/booking": {
       "name": "@my-app/booking",
       "version": "0.0.0",
       "dependencies": {
-        "@my-app/availability": "workspace:*",
         "@my-app/db": "workspace:*",
+        "@my-app/events": "workspace:*",
+        "@my-app/payment": "workspace:*",
         "@my-app/pricing": "workspace:*",
+        "@my-app/workflows": "workspace:*",
         "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
       },
       "devDependencies": {
@@ -354,25 +343,6 @@
         "vitest": "^4.0.18",
       },
     },
-    "packages/disputes": {
-      "name": "@my-app/disputes",
-      "version": "0.0.1",
-      "dependencies": {
-        "@my-app/booking": "workspace:*",
-        "@my-app/db": "workspace:*",
-        "@my-app/events": "workspace:*",
-        "@my-app/payment": "workspace:*",
-        "@my-app/workflows": "workspace:*",
-        "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
-      },
-      "devDependencies": {
-        "@biomejs/biome": "^2.4.6",
-        "@my-app/config": "workspace:*",
-        "@my-app/vitest-config": "workspace:*",
-        "typescript": "^5",
-        "vitest": "^4.0.18",
-      },
-    },
     "packages/e2e-web": {
       "name": "@my-app/e2e-web",
       "dependencies": {
@@ -440,6 +410,7 @@
       "dependencies": {
         "@my-app/db": "workspace:*",
         "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+        "zod": "^4.1.13",
       },
       "devDependencies": {
         "@biomejs/biome": "^2.4.6",
@@ -486,11 +457,23 @@
         "typescript": "^5",
       },
     },
+    "packages/reference-data": {
+      "name": "@my-app/reference-data",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@biomejs/biome": "^2.4.6",
+        "@my-app/config": "workspace:*",
+        "typescript": "^5",
+        "ultracite": "^7.2.3",
+      },
+    },
     "packages/support": {
       "name": "@my-app/support",
-      "version": "0.0.1",
+      "version": "0.0.0",
       "dependencies": {
         "@my-app/db": "workspace:*",
+        "@my-app/events": "workspace:*",
+        "@my-app/workflows": "workspace:*",
         "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
       },
       "devDependencies": {
@@ -833,8 +816,6 @@
 
     "@my-app/auth": ["@my-app/auth@workspace:packages/auth"],
 
-    "@my-app/availability": ["@my-app/availability@workspace:packages/availability"],
-
     "@my-app/booking": ["@my-app/booking@workspace:packages/booking"],
 
     "@my-app/calendar": ["@my-app/calendar@workspace:packages/calendar"],
@@ -844,8 +825,6 @@
     "@my-app/config": ["@my-app/config@workspace:packages/config"],
 
     "@my-app/db": ["@my-app/db@workspace:packages/db"],
-
-    "@my-app/disputes": ["@my-app/disputes@workspace:packages/disputes"],
 
     "@my-app/e2e-web": ["@my-app/e2e-web@workspace:packages/e2e-web"],
 
@@ -862,6 +841,8 @@
     "@my-app/proxy": ["@my-app/proxy@workspace:packages/proxy"],
 
     "@my-app/queue": ["@my-app/queue@workspace:packages/queue"],
+
+    "@my-app/reference-data": ["@my-app/reference-data@workspace:packages/reference-data"],
 
     "@my-app/support": ["@my-app/support@workspace:packages/support"],
 

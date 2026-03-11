@@ -85,9 +85,7 @@ export class InAppNotificationProvider implements NotificationProvider {
 			body: buildIntentDisplayBody(params.recipient),
 			ctaUrl: params.recipient.ctaUrl,
 			severity: params.recipient.severity,
-			metadata: params.recipient.metadata
-				? JSON.stringify(params.recipient.metadata)
-				: null,
+			metadata: params.recipient.metadata ?? null,
 			deliveredAt: new Date(),
 			createdAt: new Date(),
 			updatedAt: new Date(),
@@ -366,12 +364,7 @@ export class NotificationProcessorService {
 	}
 
 	private parsePayload(event: NotificationEventRow) {
-		try {
-			const payload = JSON.parse(event.payload) as unknown;
-			return notificationEventPayloadSchema.safeParse(payload);
-		} catch {
-			return notificationEventPayloadSchema.safeParse(null);
-		}
+		return notificationEventPayloadSchema.safeParse(event.payload);
 	}
 
 	private async createIntent(params: {
@@ -389,9 +382,7 @@ export class NotificationProcessorService {
 			templateKey: params.event.eventType,
 			title: buildIntentDisplayTitle(params.event.eventType, params.recipient),
 			body: buildIntentDisplayBody(params.recipient),
-			metadata: params.recipient.metadata
-				? JSON.stringify(params.recipient.metadata)
-				: null,
+			metadata: params.recipient.metadata ?? null,
 			status: "pending",
 			createdAt: new Date(),
 			updatedAt: new Date(),

@@ -22,4 +22,5 @@ export interface ReconcileWebhookResult {
 	processed: boolean;
 	idempotent: boolean;
 	bookingId: string | null;
+	organizationId: string;
 }

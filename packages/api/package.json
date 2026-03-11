@@ -8,12 +8,6 @@
     "./*": {
       "default": "./src/*.ts"
     },
-    "./payments/webhooks": {
-      "default": "./src/payments/webhooks/index.ts"
-    },
-    "./payments/webhooks/*": {
-      "default": "./src/payments/webhooks/*.ts"
-    },
     "./tasks/*": {
       "default": "./src/tasks/*.ts"
     },
@@ -37,11 +31,10 @@
   "dependencies": {
     "@my-app/api-contract": "workspace:*",
     "@my-app/auth": "workspace:*",
-    "@my-app/availability": "workspace:*",
     "@my-app/booking": "workspace:*",
+    "@my-app/calendar": "workspace:*",
     "@my-app/catalog": "workspace:*",
     "@my-app/db": "workspace:*",
-    "@my-app/disputes": "workspace:*",
     "@my-app/env": "workspace:*",
     "@my-app/events": "workspace:*",
     "@my-app/notifications": "workspace:*",

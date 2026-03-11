@@ -1,6 +1,8 @@
 import { oc } from "@orpc/contract";
 import z from "zod";
 
+const isoDateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
 const availabilityRuleOutput = z.object({
 	id: z.string(),
 	listingId: z.string(),
@@ -27,7 +29,7 @@ const availabilityBlockOutput = z.object({
 const availabilityExceptionOutput = z.object({
 	id: z.string(),
 	listingId: z.string(),
-	date: z.string(),
+	date: isoDateString,
 	isAvailable: z.boolean(),
 	startMinute: z.number().int().nullable(),
 	endMinute: z.number().int().nullable(),
@@ -81,7 +83,7 @@ export const availabilityContract = {
 		.input(
 			z.object({
 				listingId: z.string(),
-				date: z.string(),
+				date: isoDateString,
 				isAvailable: z.boolean(),
 				startMinute: z.number().int().optional(),
 				endMinute: z.number().int().optional(),

@@ -1,4 +1,4 @@
-import { assertSlotAvailable } from "@my-app/availability";
+import { assertSlotAvailable } from "./availability";
 import { calculateQuote } from "@my-app/pricing";
 import { and, desc, eq } from "drizzle-orm";
 import { booking, listing, listingPublication } from "@my-app/db/schema/marketplace";
@@ -155,5 +155,33 @@ export async function updateBookingStatus(input: UpdateBookingStatusInput, db: D
 		.set(payload)
 		.where(and(eq(booking.id, input.id), eq(booking.organizationId, input.organizationId)))
 		.returning();
+
+	if (input.workflowContext && (input.status === "confirmed" || input.status === "cancelled")) {
+		if (input.status === "confirmed") {
+			await input.workflowContext.eventBus.emit({
+				type: "booking:confirmed",
+				organizationId: updated!.organizationId,
+				actorUserId: input.workflowContext.actorUserId,
+				idempotencyKey: `booking:confirmed:${updated!.id}`,
+				data: {
+					bookingId: updated!.id,
+					ownerId: updated!.organizationId,
+				},
+			});
+		} else {
+			await input.workflowContext.eventBus.emit({
+				type: "booking:cancelled",
+				organizationId: updated!.organizationId,
+				actorUserId: input.workflowContext.actorUserId,
+				idempotencyKey: `booking:cancelled:${updated!.id}`,
+				data: {
+					bookingId: updated!.id,
+					reason: updated!.cancellationReason ?? input.cancellationReason ?? "cancelled",
+					refundAmountKopeks: input.refundAmountCents ?? 0,
+				},
+			});
+		}
+	}
+
 	return updated!;
 }

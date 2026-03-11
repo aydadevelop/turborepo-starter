@@ -2,6 +2,7 @@ import {
 	boolean,
 	index,
 	integer,
+	jsonb,
 	pgEnum,
 	pgTable,
 	text,
@@ -93,7 +94,7 @@ export const notificationEvent = pgTable(
 		sourceType: text("source_type"),
 		sourceId: text("source_id"),
 		idempotencyKey: text("idempotency_key").notNull(),
-		payload: text("payload").notNull(),
+		payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
 		status: notificationEventStatusEnum("status").notNull().default("queued"),
 		processingStartedAt: timestamp("processing_started_at", {
 			withTimezone: true,
@@ -135,7 +136,7 @@ export const notificationIntent = pgTable(
 		templateKey: text("template_key").notNull(),
 		title: text("title"),
 		body: text("body"),
-		metadata: text("metadata"),
+		metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 		status: notificationIntentStatusEnum("status").notNull().default("pending"),
 		processedAt: timestamp("processed_at", {
 			withTimezone: true,
@@ -245,7 +246,7 @@ export const notificationInApp = pgTable(
 		body: text("body"),
 		ctaUrl: text("cta_url"),
 		severity: notificationSeverityEnum("severity").notNull().default("info"),
-		metadata: text("metadata"),
+		metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 		deliveredAt: timestamp("delivered_at", {
 			withTimezone: true,
 			mode: "date",

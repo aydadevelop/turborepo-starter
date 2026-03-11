@@ -25,7 +25,7 @@ Use this for:
 
 ### 2. Domain/workflow tests
 
-Representative example: `packages/disputes/src/__tests__/cancellation-workflow.test.ts`
+Representative example: `packages/booking/src/cancellation/__tests__/cancellation-workflow.test.ts`
 
 Use this lane for:
 
@@ -105,7 +105,7 @@ Use when the seed is larger or reused across many tests. The harness wraps each 
 
 - `packages/db/src/__tests__/database.test.ts` — constraint and schema coverage
 - `packages/db/src/test/fixtures/marketplace.ts` — deterministic scenario fixture builder
-- `packages/disputes/src/__tests__/cancellation-workflow.test.ts` — provider + workflow + rollback testing
+- `packages/booking/src/cancellation/__tests__/cancellation-workflow.test.ts` — provider + workflow + rollback testing
 
 ## Limitations to remember
 

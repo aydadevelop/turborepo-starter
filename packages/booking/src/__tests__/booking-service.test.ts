@@ -1,5 +1,6 @@
 import { organization, user } from "@my-app/db/schema/auth";
 import { listingAvailabilityBlock } from "@my-app/db/schema/availability";
+import { clearEventPushers, EventBus, registerEventPusher } from "@my-app/events";
 import {
 	booking,
 	listing,
@@ -8,7 +9,7 @@ import {
 	listingTypeConfig,
 } from "@my-app/db/schema/marketplace";
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
 	createBooking,
@@ -18,6 +19,10 @@ import {
 	updateBookingStatus,
 } from "../booking-service";
 import type { Db } from "../types";
+
+beforeEach(() => {
+	clearEventPushers();
+});
 
 const ORG_ID = "bk-org-1";
 const OTHER_ORG_ID = "bk-org-2";
@@ -530,6 +535,50 @@ describe("updateBookingStatus", () => {
 		expect(row.status).toBe("confirmed");
 	});
 
+	it("emits booking:confirmed when workflow context is provided", async () => {
+		const created = await createBooking(
+			{
+				listingId: BK2_LISTING_FREE_ID,
+				startsAt: new Date("2030-02-01T14:00:00Z"),
+				endsAt: new Date("2030-02-01T16:00:00Z"),
+				source: "manual",
+				currency: "RUB",
+			},
+			getDb2(),
+		);
+		const pusher = vi.fn().mockResolvedValue(undefined);
+		registerEventPusher(pusher);
+
+		await updateBookingStatus(
+			{
+				id: created.id,
+				organizationId: BK2_ORG_ID,
+				status: "confirmed",
+				workflowContext: {
+					organizationId: BK2_ORG_ID,
+					actorUserId: "manager-1",
+					idempotencyKey: `booking:confirmed:${created.id}`,
+					eventBus: new EventBus(),
+				},
+			},
+			getDb2(),
+		);
+
+		expect(pusher).toHaveBeenCalledWith(
+			{
+				type: "booking:confirmed",
+				organizationId: BK2_ORG_ID,
+				actorUserId: "manager-1",
+				idempotencyKey: `booking:confirmed:${created.id}`,
+				data: {
+					bookingId: created.id,
+					ownerId: BK2_ORG_ID,
+				},
+			},
+			undefined,
+		);
+	});
+
 	it("transitions pending → rejected", async () => {
 		// Use a fresh pending booking to avoid state conflicts
 		const created = await createBooking(
@@ -572,6 +621,52 @@ describe("updateBookingStatus", () => {
 		expect(row.status).toBe("cancelled");
 		expect(row.cancelledAt).toBeTruthy();
 		expect(row.cancellationReason).toBe("changed mind");
+	});
+
+	it("emits booking:cancelled when workflow context is provided", async () => {
+		const created = await createBooking(
+			{
+				listingId: BK2_LISTING_FREE_ID,
+				startsAt: new Date("2030-02-02T14:00:00Z"),
+				endsAt: new Date("2030-02-02T16:00:00Z"),
+				source: "manual",
+				currency: "RUB",
+			},
+			getDb2(),
+		);
+		const pusher = vi.fn().mockResolvedValue(undefined);
+		registerEventPusher(pusher);
+
+		await updateBookingStatus(
+			{
+				id: created.id,
+				organizationId: BK2_ORG_ID,
+				status: "cancelled",
+				cancellationReason: "customer request",
+				workflowContext: {
+					organizationId: BK2_ORG_ID,
+					actorUserId: "manager-2",
+					idempotencyKey: `booking:cancelled:${created.id}`,
+					eventBus: new EventBus(),
+				},
+			},
+			getDb2(),
+		);
+
+		expect(pusher).toHaveBeenCalledWith(
+			{
+				type: "booking:cancelled",
+				organizationId: BK2_ORG_ID,
+				actorUserId: "manager-2",
+				idempotencyKey: `booking:cancelled:${created.id}`,
+				data: {
+					bookingId: created.id,
+					reason: "customer request",
+					refundAmountKopeks: 0,
+				},
+			},
+			undefined,
+		);
 	});
 
 	it("transitions confirmed → in_progress", async () => {

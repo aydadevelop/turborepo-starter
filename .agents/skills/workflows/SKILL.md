@@ -11,8 +11,9 @@ description: >
 
 # Workflows (`packages/workflows`)
 
-> **Status:** `packages/workflows` is a new package (Wave 0). Most examples also depend on
-> target-state `@my-app/events`. See `docs/ADR/002_architecture-patterns.md §3.1` and `§3.2`.
+> **Status:** `packages/workflows` is live and is the repo's workflow engine.
+> Current examples include the booking cancellation workflow under `packages/booking/src/cancellation/`.
+> Use this skill for new multi-step orchestration and compensation boundaries, not for simple CRUD.
 
 ## Repo-native orchestration model
 

@@ -4,9 +4,11 @@ import z from "zod";
 import { adminContract } from "./admin/router";
 import { availabilityContract } from "./availability";
 import { bookingContract } from "./booking";
+import { calendarContract } from "./calendar";
 import { consentContract } from "./consent";
 import { listingContract } from "./listing";
 import { notificationsContract } from "./notifications";
+import { organizationContract } from "./organization";
 import { paymentsContract } from "./payments";
 import { pricingContract } from "./pricing";
 import { storefrontContract } from "./storefront";
@@ -69,9 +71,11 @@ export const appContract = {
 	admin: adminContract,
 	availability: availabilityContract,
 	booking: bookingContract,
+	calendar: calendarContract,
 	consent: consentContract,
 	listing: listingContract,
 	notifications: notificationsContract,
+	organization: organizationContract,
 	payments: paymentsContract,
 	pricing: pricingContract,
 	storefront: storefrontContract,

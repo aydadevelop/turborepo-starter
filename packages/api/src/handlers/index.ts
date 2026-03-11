@@ -8,9 +8,11 @@ import {
 import { adminRouter } from "./admin/router";
 import { availabilityRouter } from "./availability";
 import { bookingRouter } from "./booking";
+import { calendarRouter } from "./calendar";
 import { consentRouter } from "./consent";
 import { listingRouter } from "./listing";
 import { notificationsRouter } from "./notifications";
+import { organizationRouter } from "./organization";
 import { paymentsRouter } from "./payments";
 import { pricingRouter } from "./pricing";
 import { storefrontRouter } from "./storefront";
@@ -49,9 +51,11 @@ export const appRouter = publicProcedure.router({
 	admin: adminRouter,
 	availability: availabilityRouter,
 	booking: bookingRouter,
+	calendar: calendarRouter,
 	consent: consentRouter,
 	listing: listingRouter,
 	notifications: notificationsRouter,
+	organization: organizationRouter,
 	payments: paymentsRouter,
 	pricing: pricingRouter,
 	storefront: storefrontRouter,

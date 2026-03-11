@@ -7,6 +7,7 @@ import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 import { relations } from "../relations";
 // biome-ignore lint/performance/noNamespaceImport: pushSchema requires namespace import
 import * as schema from "../schema";
+import { POST_MIGRATION_TRIGGER_STATEMENTS } from "../triggers";
 
 const require_ = createRequire(import.meta.url);
 const { pushSchema } = require_(
@@ -21,6 +22,11 @@ const createRawTestDatabase = async () => {
 	// biome-ignore lint/suspicious/noExplicitAny: pushSchema requires untyped drizzle instance
 	const { apply } = await pushSchema(schema, db as any);
 	await apply();
+	if (POST_MIGRATION_TRIGGER_STATEMENTS.length > 0) {
+		for (const statement of POST_MIGRATION_TRIGGER_STATEMENTS) {
+			await db.execute(sql.raw(statement));
+		}
+	}
 
 	return { db, client };
 };
@@ -94,7 +100,7 @@ export const bootstrapTestDatabase = (
 				await options.seed(testDb);
 			}
 		}
-	}, 30_000);
+	}, 60_000);
 
 	beforeEach(async () => {
 		if (seedStrategy === "beforeEach") {

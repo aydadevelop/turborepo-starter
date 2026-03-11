@@ -22,6 +22,7 @@
     "@my-app/db": "workspace:*",
     "@my-app/env": "workspace:*",
     "@my-app/notifications": "workspace:*",
+    "@my-app/payment": "workspace:*",
     "@my-app/queue": "workspace:*",
     "@orpc/openapi": "^1.12.2",
     "@orpc/server": "^1.12.2",

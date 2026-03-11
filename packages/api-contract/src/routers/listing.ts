@@ -1,4 +1,5 @@
 import { oc } from "@orpc/contract";
+import { isSupportedTimezone } from "@my-app/reference-data/timezones";
 import z from "zod";
 
 const listingOutputSchema = z.object({
@@ -16,13 +17,25 @@ const listingOutputSchema = z.object({
 	updatedAt: z.string().datetime(),
 });
 
+const listingTypeOptionSchema = z.object({
+	icon: z.string().nullable().optional(),
+	isDefault: z.boolean(),
+	label: z.string(),
+	metadataJsonSchema: z.record(z.string(), z.unknown()),
+	value: z.string(),
+});
+
+const timezoneSchema = z
+	.string()
+	.refine(isSupportedTimezone, "Timezone must be a valid IANA timezone");
+
 const createListingInputSchema = z.object({
 	listingTypeSlug: z.string().min(1),
 	name: z.string().min(1).max(200),
 	slug: z.string().regex(/^[a-z0-9-]+$/),
 	description: z.string().max(2000).optional(),
 	metadata: z.record(z.string(), z.unknown()).optional(),
-	timezone: z.string().optional(),
+	timezone: timezoneSchema.optional(),
 });
 
 const updateListingInputSchema = z.object({
@@ -30,12 +43,17 @@ const updateListingInputSchema = z.object({
 	name: z.string().min(1).max(200).optional(),
 	description: z.string().max(2000).optional(),
 	metadata: z.record(z.string(), z.unknown()).optional(),
-	timezone: z.string().optional(),
+	timezone: timezoneSchema.optional(),
 });
 
 const listListingsOutputSchema = z.object({
 	items: z.array(listingOutputSchema),
 	total: z.number().int(),
+});
+
+const listAvailableTypesOutputSchema = z.object({
+	defaultValue: z.string().nullable(),
+	items: z.array(listingTypeOptionSchema),
 });
 
 const channelTypeSchema = z
@@ -67,6 +85,14 @@ export const listingContract = {
 			}),
 		)
 		.output(listListingsOutputSchema),
+
+	listAvailableTypes: oc
+		.route({
+			tags: ["Listings"],
+			summary: "List available listing types for the organization",
+		})
+		.input(z.object({}))
+		.output(listAvailableTypesOutputSchema),
 
 	publish: oc
 		.route({ tags: ["Listings"], summary: "Publish a listing" })

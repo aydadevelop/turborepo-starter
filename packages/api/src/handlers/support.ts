@@ -1,28 +1,79 @@
 import { db } from "@my-app/db";
-import { supportTicket } from "@my-app/db/schema/support";
+import { EventBus } from "@my-app/events";
 import {
+	addCustomerTicketMessage,
 	addTicketMessage,
+	assignTicket,
 	createSupportTicket,
-	getCustomerTicket,
+	getCustomerTicketThread,
+	getOperatorTicketThread,
 	getTicket,
 	listCustomerTickets,
 	listOrgTickets,
-	listTicketMessages,
+	updateTicketDueAt,
+	updateTicketPriority,
+	updateTicketStatus,
 } from "@my-app/support";
 import { ORPCError } from "@orpc/server";
-import { eq } from "drizzle-orm";
 
 import { organizationPermissionProcedure, protectedProcedure } from "../index";
 
-function formatTicket(row: {
+function toIsoString(value: Date | null | undefined) {
+	return value ? value.toISOString() : null;
+}
+
+function formatOperatorTicket(row: {
 	id: string;
 	organizationId: string;
 	bookingId: string | null;
 	customerUserId: string | null;
 	createdByUserId: string | null;
+	assignedToUserId: string | null;
+	resolvedByUserId: string | null;
+	closedByUserId: string | null;
 	subject: string;
 	description: string | null;
-	status: "open" | "pending_customer" | "pending_operator" | "escalated" | "resolved" | "closed";
+	status:
+		| "open"
+		| "pending_customer"
+		| "pending_operator"
+		| "escalated"
+		| "resolved"
+		| "closed";
+	priority: "low" | "normal" | "high" | "urgent";
+	source: "manual" | "web" | "telegram" | "avito" | "email" | "api";
+	dueAt: Date | null;
+	resolvedAt: Date | null;
+	closedAt: Date | null;
+	metadata: Record<string, unknown> | null;
+	createdAt: Date;
+	updatedAt: Date;
+}) {
+	return {
+		...row,
+		dueAt: toIsoString(row.dueAt),
+		resolvedAt: toIsoString(row.resolvedAt),
+		closedAt: toIsoString(row.closedAt),
+		metadata: row.metadata ?? null,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
+	};
+}
+
+function formatCustomerTicket(row: {
+	id: string;
+	organizationId: string;
+	bookingId: string | null;
+	customerUserId: string | null;
+	subject: string;
+	description: string | null;
+	status:
+		| "open"
+		| "pending_customer"
+		| "pending_operator"
+		| "escalated"
+		| "resolved"
+		| "closed";
 	priority: "low" | "normal" | "high" | "urgent";
 	source: "manual" | "web" | "telegram" | "avito" | "email" | "api";
 	createdAt: Date;
@@ -35,22 +86,84 @@ function formatTicket(row: {
 	};
 }
 
-function formatMessage(row: {
+function formatOperatorMessage(row: {
 	id: string;
 	ticketId: string;
 	authorUserId: string | null;
 	channel: "internal" | "web" | "telegram" | "avito" | "email" | "api";
 	body: string;
 	isInternal: boolean;
+	inboundMessageId: string | null;
+	attachments: Array<{ name: string; url: string; mimeType?: string }> | null;
 	createdAt: Date;
 	updatedAt: Date;
 }) {
 	return {
 		...row,
+		attachments: row.attachments ?? null,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
 	};
 }
+
+function formatCustomerMessage(row: {
+	id: string;
+	ticketId: string;
+	authorUserId: string | null;
+	channel: "internal" | "web" | "telegram" | "avito" | "email" | "api";
+	body: string;
+	isInternal: boolean;
+	attachments: Array<{ name: string; url: string; mimeType?: string }> | null;
+	createdAt: Date;
+	updatedAt: Date;
+}) {
+	return {
+		...row,
+		attachments: row.attachments ?? null,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
+	};
+}
+
+const getSupportActorContext = (context: {
+	eventBus?: EventBus;
+	notificationQueue?: {
+		send(message: unknown, options?: { delaySeconds?: number }): Promise<void>;
+	};
+	session?: {
+		user?: {
+			id?: string | null;
+		};
+	} | null;
+}) => ({
+	actorUserId: context.session?.user?.id ?? undefined,
+	eventBus: context.eventBus ?? new EventBus(context.notificationQueue),
+});
+
+const throwSupportNotFound = (error: unknown) => {
+	if (error instanceof Error && error.message === "NOT_FOUND") {
+		throw new ORPCError("NOT_FOUND", { message: "Ticket not found" });
+	}
+
+	throw error;
+};
+
+const getRequiredSessionUserId = (context: {
+	session?: {
+		user?: {
+			id?: string | null;
+		};
+	} | null;
+}): string => {
+	const userId = context.session?.user?.id;
+	if (!userId) {
+		throw new ORPCError("UNAUTHORIZED", {
+			message: "Authentication required",
+		});
+	}
+
+	return userId;
+};
 
 export const supportRouter = {
 	createTicket: organizationPermissionProcedure({
@@ -68,8 +181,9 @@ export const supportRouter = {
 				source: input.source,
 			},
 			db,
+			getSupportActorContext(context)
 		);
-		return formatTicket(ticket);
+		return formatOperatorTicket(ticket);
 	}),
 
 	addMessage: organizationPermissionProcedure({
@@ -86,13 +200,11 @@ export const supportRouter = {
 					isInternal: input.isInternal,
 				},
 				db,
+				getSupportActorContext(context)
 			);
-			return formatMessage(message);
+			return formatOperatorMessage(message);
 		} catch (e) {
-			if (e instanceof Error && e.message === "NOT_FOUND") {
-				throw new ORPCError("NOT_FOUND", { message: "Ticket not found" });
-			}
-			throw e;
+			return throwSupportNotFound(e);
 		}
 	}),
 
@@ -103,14 +215,11 @@ export const supportRouter = {
 			const ticket = await getTicket(
 				input.ticketId,
 				context.activeMembership.organizationId,
-				db,
+				db
 			);
-			return formatTicket(ticket);
+			return formatOperatorTicket(ticket);
 		} catch (e) {
-			if (e instanceof Error && e.message === "NOT_FOUND") {
-				throw new ORPCError("NOT_FOUND", { message: "Ticket not found" });
-			}
-			throw e;
+			return throwSupportNotFound(e);
 		}
 	}),
 
@@ -121,71 +230,166 @@ export const supportRouter = {
 			context.activeMembership.organizationId,
 			{
 				status: input.status,
+				priority: input.priority,
+				source: input.source,
 				bookingId: input.bookingId,
+				assignedToUserId: input.assignedToUserId,
+				customerUserId: input.customerUserId,
+				onlyUnassigned: input.onlyUnassigned,
+				onlyOverdue: input.onlyOverdue,
 				limit: input.limit,
 				offset: input.offset,
 			},
-			db,
+			db
 		);
-		return tickets.map(formatTicket);
+		return tickets.map(formatOperatorTicket);
 	}),
 
-	listMyTickets: protectedProcedure.support.listMyTickets.handler(async ({ context, input }) => {
-		const customerUserId = context.session!.user!.id;
-		const tickets = await listCustomerTickets(
-			customerUserId,
-			{
-				bookingId: input.bookingId,
-				limit: input.limit,
-				offset: input.offset,
-			},
-			db,
-		);
-		return tickets.map(formatTicket);
-	}),
-
-	getMyTicket: protectedProcedure.support.getMyTicket.handler(async ({ context, input }) => {
-		const userId = context.session!.user!.id;
+	getTicketThread: organizationPermissionProcedure({
+		support: ["update"],
+	}).support.getTicketThread.handler(async ({ context, input }) => {
 		try {
-			const ticket = await getCustomerTicket(input.ticketId, userId, db);
-			const messages = await listTicketMessages(input.ticketId, db);
+			const thread = await getOperatorTicketThread(
+				input.ticketId,
+				context.activeMembership.organizationId,
+				db
+			);
 			return {
-				ticket: formatTicket(ticket),
-				messages: messages.map(formatMessage),
+				ticket: formatOperatorTicket(thread.ticket),
+				messages: thread.messages.map(formatOperatorMessage),
 			};
 		} catch (e) {
-			if (e instanceof Error && e.message === "NOT_FOUND") {
-				throw new ORPCError("NOT_FOUND", { message: "Ticket not found" });
-			}
-			throw e;
+			return throwSupportNotFound(e);
 		}
 	}),
 
-	addMyMessage: protectedProcedure.support.addMyMessage.handler(async ({ context, input }) => {
-		const userId = context.session!.user!.id;
-		const [ticket] = await db
-			.select({
-				id: supportTicket.id,
-				organizationId: supportTicket.organizationId,
-				customerUserId: supportTicket.customerUserId,
-			})
-			.from(supportTicket)
-			.where(eq(supportTicket.id, input.ticketId))
-			.limit(1);
-		if (!ticket || ticket.customerUserId !== userId) {
-			throw new ORPCError("NOT_FOUND", { message: "Ticket not found" });
+	assignTicket: organizationPermissionProcedure({
+		support: ["update"],
+	}).support.assignTicket.handler(async ({ context, input }) => {
+		try {
+			const ticket = await assignTicket(
+				{
+					ticketId: input.ticketId,
+					organizationId: context.activeMembership.organizationId,
+					assignedToUserId: input.assignedToUserId,
+				},
+				db,
+				getSupportActorContext(context)
+			);
+			return formatOperatorTicket(ticket);
+		} catch (e) {
+			return throwSupportNotFound(e);
 		}
-		const message = await addTicketMessage(
-			{
-				ticketId: input.ticketId,
-				organizationId: ticket.organizationId,
-				authorUserId: userId,
-				channel: "web",
-				body: input.body,
-				isInternal: false,
-			},
-			db,
-		);
-		return formatMessage(message);
 	}),
+
+	updateTicketStatus: organizationPermissionProcedure({
+		support: ["update"],
+	}).support.updateTicketStatus.handler(async ({ context, input }) => {
+		try {
+			const ticket = await updateTicketStatus(
+				{
+					ticketId: input.ticketId,
+					organizationId: context.activeMembership.organizationId,
+					status: input.status,
+				},
+				db,
+				getSupportActorContext(context)
+			);
+			return formatOperatorTicket(ticket);
+		} catch (e) {
+			return throwSupportNotFound(e);
+		}
+	}),
+
+	updateTicketPriority: organizationPermissionProcedure({
+		support: ["update"],
+	}).support.updateTicketPriority.handler(async ({ context, input }) => {
+		try {
+			const ticket = await updateTicketPriority(
+				{
+					ticketId: input.ticketId,
+					organizationId: context.activeMembership.organizationId,
+					priority: input.priority,
+				},
+				db
+			);
+			return formatOperatorTicket(ticket);
+		} catch (e) {
+			return throwSupportNotFound(e);
+		}
+	}),
+
+	updateTicketDueAt: organizationPermissionProcedure({
+		support: ["update"],
+	}).support.updateTicketDueAt.handler(async ({ context, input }) => {
+		try {
+			const ticket = await updateTicketDueAt(
+				{
+					ticketId: input.ticketId,
+					organizationId: context.activeMembership.organizationId,
+					dueAt: input.dueAt ? new Date(input.dueAt) : null,
+				},
+				db
+			);
+			return formatOperatorTicket(ticket);
+		} catch (e) {
+			return throwSupportNotFound(e);
+		}
+	}),
+
+	listMyTickets: protectedProcedure.support.listMyTickets.handler(
+		async ({ context, input }) => {
+			const customerUserId = getRequiredSessionUserId(context);
+			const tickets = await listCustomerTickets(
+				customerUserId,
+				{
+					bookingId: input.bookingId,
+					limit: input.limit,
+					offset: input.offset,
+				},
+				db
+			);
+			return tickets.map(formatCustomerTicket);
+		}
+	),
+
+	getMyTicket: protectedProcedure.support.getMyTicket.handler(
+		async ({ context, input }) => {
+			const userId = getRequiredSessionUserId(context);
+			try {
+				const thread = await getCustomerTicketThread(
+					input.ticketId,
+					userId,
+					db
+				);
+				return {
+					ticket: formatCustomerTicket(thread.ticket),
+					messages: thread.messages.map(formatCustomerMessage),
+				};
+			} catch (e) {
+				return throwSupportNotFound(e);
+			}
+		}
+	),
+
+	addMyMessage: protectedProcedure.support.addMyMessage.handler(
+		async ({ context, input }) => {
+			const userId = getRequiredSessionUserId(context);
+			try {
+				const message = await addCustomerTicketMessage(
+					{
+						ticketId: input.ticketId,
+						customerUserId: userId,
+						authorUserId: userId,
+						body: input.body,
+					},
+					db,
+					getSupportActorContext(context)
+				);
+				return formatCustomerMessage(message);
+			} catch (e) {
+				return throwSupportNotFound(e);
+			}
+		}
+	),
 };
