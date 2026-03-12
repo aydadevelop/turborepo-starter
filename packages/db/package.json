@@ -49,7 +49,7 @@
     "@my-app/config": "workspace:*",
     "@my-app/vitest-config": "workspace:*",
     "@types/pg": "^8.11.14",
-    "drizzle-kit": "1.0.0-beta.16-2ffd1a5",
+    "drizzle-kit": "1.0.0-beta.17-160831b",
     "pg-mem": "^3.0.6",
     "typescript": "^5",
     "ultracite": "^7.2.3",

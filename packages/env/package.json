@@ -22,7 +22,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",
     "@my-app/config": "workspace:*",
-    "@types/node": "^22.19.11",
+    "@types/node": "^25.4.0",
     "typescript": "^5",
     "ultracite": "^7.2.3"
   }
