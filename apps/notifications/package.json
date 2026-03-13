@@ -19,7 +19,7 @@
     "@my-app/notifications": "workspace:*",
     "@my-app/queue": "workspace:*",
     "@my-app/telemetry": "workspace:*",
-    "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+    "drizzle-orm": "1.0.0-beta.18-5ffac6d",
     "hono": "^4.8.2"
   },
   "devDependencies": {

@@ -36,8 +36,8 @@
     "@my-app/db": "workspace:*",
     "@my-app/env": "workspace:*",
     "@my-app/events": "workspace:*",
-    "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
-    "nodemailer": "^7.0.10",
+    "drizzle-orm": "1.0.0-beta.18-5ffac6d",
+    "nodemailer": "^8.0.2",
     "zod": "^4.1.13"
   },
   "devDependencies": {
