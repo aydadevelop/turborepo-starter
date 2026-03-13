@@ -22,9 +22,9 @@ metrics_generator:
   processor:
     service_graphs: {}
     span_metrics: {}
-    local_blocks:
-      max_live_traces: 50000
-      flush_to_storage: true
+    # local_blocks removed: requires ingester trace WAL co-location
+    # which is unreliable in Tempo's single-binary mode.
+    # Its absence blocks ALL metrics_generator processing.
 
 storage:
   trace:
@@ -37,4 +37,4 @@ storage:
 overrides:
   defaults:
     metrics_generator:
-      processors: [service-graphs, span-metrics, local-blocks]
+      processors: [service-graphs, span-metrics]

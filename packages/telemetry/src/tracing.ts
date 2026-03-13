@@ -2,6 +2,7 @@ import {
 	type Span,
 	SpanKind,
 	SpanStatusCode,
+	context as otelContext,
 	trace,
 } from "@opentelemetry/api";
 import { os } from "@orpc/server";
@@ -26,6 +27,13 @@ export const tracingMiddleware = os.middleware(async ({ next, path }) => {
 	const tracer = trace.getTracer(TRACER_NAME);
 	const procedurePath = path.join(".");
 	const spanName = `rpc ${procedurePath}`;
+
+	// Rename the parent HTTP span from generic "POST /*" to include the procedure
+	const parentSpan = trace.getSpan(otelContext.active());
+	if (parentSpan) {
+		parentSpan.updateName(`POST /rpc/${procedurePath}`);
+		parentSpan.setAttribute("http.route", `/rpc/${procedurePath}`);
+	}
 
 	return tracer.startActiveSpan(
 		spanName,

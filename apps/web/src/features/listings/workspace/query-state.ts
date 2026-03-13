@@ -136,6 +136,13 @@ export const createListingWorkspaceMutations = (getListingId: () => string) => (
 			},
 		})
 	),
+	disconnectConnectionMutation: createMutation(() =>
+		orpc.calendar.disconnect.mutationOptions({
+			onSuccess: async () => {
+				await queryClient.invalidateQueries({ queryKey: orpc.calendar.key() });
+			},
+		})
+	),
 	approveListingMutation: createMutation(() =>
 		orpc.organization.approveListing.mutationOptions({
 			onSuccess: async () => {
@@ -218,8 +225,11 @@ export const buildListingWorkspaceInitialValue = (
 	};
 };
 
-export const getGoogleCalendarConnectUrl = (): string =>
-	resolveServerPath("/api/calendar/oauth/google/start");
+export const getGoogleCalendarConnectUrl = (returnTo?: string): string => {
+	const base = resolveServerPath("/api/calendar/oauth/google/start");
+	if (returnTo) return `${base}?returnTo=${encodeURIComponent(returnTo)}`;
+	return base;
+};
 
 export const buildCalendarWorkspaceNotice = (
 	searchParams: URLSearchParams

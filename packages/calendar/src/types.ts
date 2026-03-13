@@ -97,8 +97,6 @@ export interface CalendarWorkspaceState {
 	activeConnectionCount: number;
 	connections: CalendarConnectionRow[];
 	hasConnectedCalendar: boolean;
-	hasPrimaryConnection: boolean;
-	primaryConnectionId: string | null;
 	providers: CalendarAdapterProvider[];
 }
 

@@ -99,26 +99,51 @@ const decodeState = (
 	}
 };
 
-const resolveReturnTo = (referer: string | undefined): string => {
-	const allowedOrigins = new Set([
-		...parseCorsOrigins(env.CORS_ORIGIN),
-		getPublicServerBaseUrl(),
-	]);
-	const fallbackOrigin =
-		parseCorsOrigins(env.CORS_ORIGIN)[0] ?? getPublicServerBaseUrl();
+const resolveReturnTo = (
+	hint: string | undefined,
+	referer: string | undefined
+): string => {
+	const serverOrigin = getPublicServerBaseUrl();
+	const corsOrigins = parseCorsOrigins(env.CORS_ORIGIN);
+	const allowedOrigins = new Set([...corsOrigins, serverOrigin]);
 
+	// Extract origin from Referer if it belongs to an allowed origin
+	let refererOrigin: string | undefined;
 	if (referer) {
 		try {
-			const url = new URL(referer);
+			const refUrl = new URL(referer);
+			if (allowedOrigins.has(refUrl.origin)) {
+				refererOrigin = refUrl.origin;
+			}
+		} catch {
+			// malformed referer — ignore
+		}
+	}
+
+	// Best-guess frontend origin: prefer referer, else first non-server CORS origin
+	const fallbackOrigin =
+		refererOrigin ??
+		corsOrigins.find((o) => o !== serverOrigin) ??
+		corsOrigins[0] ??
+		serverOrigin;
+
+	if (hint) {
+		// Try as absolute URL first
+		try {
+			const url = new URL(hint);
 			if (allowedOrigins.has(url.origin)) {
 				return url.toString();
 			}
 		} catch {
-			// ignore invalid referer
+			// Not an absolute URL — treat as path
+		}
+		// Treat as relative path: attach to the best-guess frontend origin
+		if (hint.startsWith("/")) {
+			return new URL(hint, fallbackOrigin).toString();
 		}
 	}
 
-	return new URL("/org/listings", fallbackOrigin).toString();
+	return new URL("/org/calendar", fallbackOrigin).toString();
 };
 
 const buildReturnUrl = (
@@ -158,7 +183,8 @@ calendarOauthRoutes.get("/api/calendar/oauth/google/start", async (c) => {
 	}
 
 	const nonce = randomUUID();
-	const returnTo = resolveReturnTo(c.req.header("referer"));
+	const referer = c.req.header("referer");
+	const returnTo = resolveReturnTo(c.req.query("returnTo") ?? referer, referer);
 	const state = encodeState({
 		nonce,
 		organizationId: activeMembership.organizationId,

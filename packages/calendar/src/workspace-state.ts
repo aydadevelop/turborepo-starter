@@ -3,7 +3,10 @@ import {
 	listCalendarConnections,
 	listOrganizationCalendarAccounts,
 	listOrganizationCalendarSources,
+	listAllOrgConnections,
 } from "./use-cases";
+import { listing } from "@my-app/db/schema/marketplace";
+import { eq } from "drizzle-orm";
 
 export async function getCalendarWorkspaceState(
 	listingId: string,
@@ -31,9 +34,51 @@ export async function getCalendarWorkspaceState(
 		hasConnectedCalendar: activeConnections.some(
 			(connection) => connection.externalCalendarId !== null
 		),
-		hasPrimaryConnection: activeConnections.some((connection) => connection.isPrimary),
-		primaryConnectionId:
-			activeConnections.find((connection) => connection.isPrimary)?.id ?? null,
 		providers: [...new Set(activeConnections.map((connection) => connection.provider))],
+	};
+}
+
+export interface OrgCalendarWorkspaceState {
+	accounts: Awaited<ReturnType<typeof listOrganizationCalendarAccounts>>;
+	sources: Awaited<ReturnType<typeof listOrganizationCalendarSources>>;
+	connections: Array<
+		Awaited<ReturnType<typeof listAllOrgConnections>>[number] & {
+			listingName: string | null;
+		}
+	>;
+}
+
+export async function getOrgCalendarWorkspaceState(
+	organizationId: string,
+	db: Db
+): Promise<OrgCalendarWorkspaceState> {
+	const accounts = await listOrganizationCalendarAccounts(organizationId, db);
+	const sources = await listOrganizationCalendarSources(organizationId, db);
+	const allConnections = await listAllOrgConnections(organizationId, db);
+	const connections = allConnections.filter((c) => c.isActive);
+
+	// Batch-load listing names for connections
+	const listingIds = [...new Set(connections.map((c) => c.listingId))];
+	const listingNameMap = new Map<string, string>();
+	if (listingIds.length > 0) {
+		for (const id of listingIds) {
+			const [row] = await db
+				.select({ id: listing.id, name: listing.name })
+				.from(listing)
+				.where(eq(listing.id, id))
+				.limit(1);
+			if (row) {
+				listingNameMap.set(row.id, row.name);
+			}
+		}
+	}
+
+	return {
+		accounts,
+		sources,
+		connections: connections.map((c) => ({
+			...c,
+			listingName: listingNameMap.get(c.listingId) ?? null,
+		})),
 	};
 }

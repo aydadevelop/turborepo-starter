@@ -44,6 +44,7 @@
 		googleCalendarConnectUrl = null,
 		onRefreshCalendarAccountSources = null,
 		onAttachCalendarSource = null,
+		onDetachConnection = null,
 		refreshingAccountId = null,
 		attachingSourceId = null,
 		calendarActionErrorMessage = null,
@@ -124,6 +125,7 @@
 				{googleCalendarConnectUrl}
 				{onRefreshCalendarAccountSources}
 				{onAttachCalendarSource}
+				{onDetachConnection}
 				{refreshingAccountId}
 				{attachingSourceId}
 				{calendarActionErrorMessage}

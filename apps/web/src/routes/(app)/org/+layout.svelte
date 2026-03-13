@@ -93,6 +93,15 @@
 						Listings
 					</a>
 					<a
+						href={resolve("/org/calendar")}
+						class="whitespace-nowrap px-3 py-2 text-sm transition
+							{isActivePrefix(resolve('/org/calendar'))
+							? 'border-b-2 border-primary font-medium text-foreground'
+							: 'text-muted-foreground hover:text-foreground'}"
+					>
+						Calendar
+					</a>
+					<a
 						href={resolve("/org/settings")}
 						class="whitespace-nowrap px-3 py-2 text-sm transition
 							{isActive(resolve('/org/settings'))

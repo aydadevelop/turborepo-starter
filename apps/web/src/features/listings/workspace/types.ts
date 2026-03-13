@@ -16,6 +16,7 @@ export interface ListingWorkspaceCalendarActions {
 	calendarNoticeTone?: "error" | "success";
 	googleCalendarConnectUrl?: string | null;
 	onAttachCalendarSource?: ((sourceId: string) => void | Promise<void>) | null;
+	onDetachConnection?: ((connectionId: string) => void | Promise<void>) | null;
 	onRefreshCalendarAccountSources?: ((accountId: string) => void | Promise<void>) | null;
 	refreshingAccountId?: string | null;
 }

@@ -1,4 +1,5 @@
 import { passkey } from "@better-auth/passkey";
+import { instrumentBetterAuth } from "@kubiks/otel-better-auth";
 import { db } from "@my-app/db";
 import * as schema from "@my-app/db/schema/auth";
 import { env } from "@my-app/env/server";
@@ -104,7 +105,7 @@ const initAuth = () => {
 		);
 	}
 
-	return betterAuth({
+	return instrumentBetterAuth(betterAuth({
 		database: drizzleAdapter(db, {
 			provider: "pg",
 			schema,
@@ -162,7 +163,7 @@ const initAuth = () => {
 			},
 		},
 		plugins,
-	});
+	}));
 };
 
 // Lazily initialize auth on first access to avoid import-time side effects

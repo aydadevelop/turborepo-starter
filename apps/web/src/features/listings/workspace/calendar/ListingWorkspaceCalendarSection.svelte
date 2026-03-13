@@ -19,6 +19,7 @@
 		googleCalendarConnectUrl = null,
 		onRefreshCalendarAccountSources = null,
 		onAttachCalendarSource = null,
+		onDetachConnection = null,
 		refreshingAccountId = null,
 		attachingSourceId = null,
 		calendarActionErrorMessage = null,
@@ -43,6 +44,13 @@
 		connected: "default",
 		error: "destructive",
 		disconnected: "secondary",
+	};
+
+	const SYNC_STATUS_LABEL: Record<string, string> = {
+		idle: "Ready",
+		syncing: "Syncing",
+		error: "Error",
+		disabled: "Disabled",
 	};
 
 	const SYNC_STATUS_VARIANT: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
@@ -78,18 +86,6 @@
 			{/if}
 		</div>
 
-		<!-- Primary connection warning -->
-		{#if calendar && calendar.connections.length > 0 && !calendar.hasPrimaryConnection}
-			<div class="rounded-lg border border-orange-300 bg-orange-50 p-3 text-sm dark:border-orange-700 dark:bg-orange-950">
-				<p class="font-medium text-orange-800 dark:text-orange-200">No primary calendar set</p>
-				<p class="text-orange-700 dark:text-orange-300">
-					This listing has {calendar.connections.length} connected
-					{calendar.connections.length === 1 ? "calendar" : "calendars"} but
-					none is marked as primary. Availability blocking requires a primary
-					calendar.
-				</p>
-			</div>
-		{/if}
 
 		<!-- Organization accounts -->
 		<div class="space-y-3">
@@ -151,7 +147,7 @@
 		<div class="space-y-3">
 			<p class="text-sm font-semibold">Listing connections</p>
 			<p class="text-xs text-muted-foreground">
-				Calendars attached to this listing whose busy times block availability.
+				Calendars attached to this listing for availability blocking.
 			</p>
 			{#if calendar?.connections.length}
 				{#each calendar.connections as connection (connection.id)}
@@ -168,17 +164,21 @@
 								</p>
 							</div>
 							<div class="flex shrink-0 flex-wrap items-center gap-1.5">
-								{#if connection.isPrimary}
-									<Badge variant="default">Primary</Badge>
-								{/if}
-								<Badge variant={SYNC_STATUS_VARIANT[connection.syncStatus] ?? "outline"}>
-									{connection.syncStatus}
-								</Badge>
 								{#if !connection.isActive}
 									<Badge variant="secondary">Inactive</Badge>
+								{:else if connection.syncStatus === "error"}
+									<Badge variant={SYNC_STATUS_VARIANT[connection.syncStatus]}>
+										{SYNC_STATUS_LABEL[connection.syncStatus] ?? connection.syncStatus}
+									</Badge>
 								{/if}
-								{#if connection.calendarSourceId}
-									<Badge variant="outline">Source-backed</Badge>
+								{#if onDetachConnection}
+									<Button
+										variant="ghost"
+										size="sm"
+										onclick={() => onDetachConnection(connection.id)}
+									>
+										Detach
+									</Button>
 								{/if}
 							</div>
 						</div>

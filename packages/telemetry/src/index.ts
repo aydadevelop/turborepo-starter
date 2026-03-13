@@ -16,9 +16,9 @@ export { tracingMiddleware } from "./tracing";
  * The OTLP endpoint is read from OTEL_EXPORTER_OTLP_ENDPOINT env var.
  * Default (Docker network): http://tempo:4318  (OTLP HTTP)
  *
- * Because Bun runs TypeScript natively, all error stack traces in spans
- * already reference original .ts source files with correct line numbers —
- * no source map processing required.
+ * DB spans are created by the instrumented pg Pool in @my-app/db
+ * (PgInstrumentation from @opentelemetry/instrumentation-pg does not
+ * work in Bun because it relies on Node.js require() hooks).
  */
 export function initTelemetry(serviceName: string): NodeSDK {
 	const sdk = new NodeSDK({

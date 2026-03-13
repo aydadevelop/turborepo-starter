@@ -8,10 +8,12 @@ import {
 	disconnectOrganizationCalendarAccount,
 	disconnectCalendar,
 	getCalendarWorkspaceState,
+	getOrgCalendarWorkspaceState,
 	listCalendarConnections,
 	listOrganizationCalendarAccounts,
 	listOrganizationCalendarSources,
 	refreshOrganizationCalendarSources,
+	setSourceVisibility,
 } from "@my-app/calendar";
 import { db } from "@my-app/db";
 import { ORPCError } from "@orpc/server";
@@ -30,7 +32,6 @@ const formatConnection = (row: CalendarConnectionRow) => ({
 	lastSyncedAt: row.lastSyncedAt?.toISOString() ?? null,
 	lastError: row.lastError ?? null,
 	watchExpiration: row.watchExpiration?.toISOString() ?? null,
-	isPrimary: row.isPrimary,
 	isActive: row.isActive,
 	createdAt: row.createdAt.toISOString(),
 	updatedAt: row.updatedAt.toISOString(),
@@ -252,6 +253,42 @@ export const calendarRouter = {
 				sources: state.sources.map(formatSource),
 				connections: state.connections.map(formatConnection),
 			};
+		} catch (error) {
+			if (error instanceof Error && error.message === "NOT_FOUND") {
+				throw new ORPCError("NOT_FOUND");
+			}
+			throw error;
+		}
+	}),
+
+	getOrgWorkspaceState: organizationPermissionProcedure({
+		availability: ["read"],
+	}).calendar.getOrgWorkspaceState.handler(async ({ context }) => {
+		const state = await getOrgCalendarWorkspaceState(
+			context.activeMembership.organizationId,
+			db
+		);
+		return {
+			accounts: state.accounts.map(formatAccount),
+			sources: state.sources.map(formatSource),
+			connections: state.connections.map((c) => ({
+				...formatConnection(c),
+				listingName: c.listingName,
+			})),
+		};
+	}),
+
+	setSourceVisibility: organizationPermissionProcedure({
+		availability: ["update"],
+	}).calendar.setSourceVisibility.handler(async ({ context, input }) => {
+		try {
+			const row = await setSourceVisibility(
+				input.sourceId,
+				context.activeMembership.organizationId,
+				input.isHidden,
+				db
+			);
+			return formatSource(row);
 		} catch (error) {
 			if (error instanceof Error && error.message === "NOT_FOUND") {
 				throw new ORPCError("NOT_FOUND");

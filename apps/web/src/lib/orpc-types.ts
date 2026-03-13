@@ -25,6 +25,8 @@ export type AvailabilityWorkspaceState =
 	OrpcOutputs["availability"]["getWorkspaceState"];
 export type CalendarWorkspaceState =
 	OrpcOutputs["calendar"]["getWorkspaceState"];
+export type CalendarOrgWorkspaceState =
+	OrpcOutputs["calendar"]["getOrgWorkspaceState"];
 export type CalendarSource =
 	CalendarWorkspaceState["sources"][number];
 

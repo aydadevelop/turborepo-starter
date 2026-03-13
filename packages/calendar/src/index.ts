@@ -32,8 +32,9 @@ export {
 	listOrganizationCalendarAccounts,
 	listOrganizationCalendarSources,
 	refreshOrganizationCalendarSources,
+	setSourceVisibility,
 	listCalendarConnections,
 	listCalendarBusySlots,
 } from "./use-cases";
-export { getCalendarWorkspaceState } from "./workspace-state";
+export { getCalendarWorkspaceState, getOrgCalendarWorkspaceState } from "./workspace-state";
 export { registerBookingLifecycleSync } from "./booking-lifecycle-sync";

@@ -83,6 +83,7 @@
         "@my-app/storage": "workspace:*",
         "@my-app/support": "workspace:*",
         "@my-app/telemetry": "workspace:*",
+        "@opentelemetry/api": "^1.9.0",
         "@orpc/openapi": "^1.12.2",
         "@orpc/server": "^1.12.2",
         "@orpc/zod": "^1.12.2",
@@ -276,6 +277,7 @@
       "dependencies": {
         "@better-auth/drizzle-adapter": "^1.5.0",
         "@better-auth/passkey": "^1.5.0",
+        "@kubiks/otel-better-auth": "^2.0.2",
         "@my-app/db": "workspace:*",
         "@my-app/env": "workspace:*",
         "better-auth": "^1.5.0",
@@ -358,6 +360,8 @@
     "packages/db": {
       "name": "@my-app/db",
       "dependencies": {
+        "@kubiks/otel-drizzle": "^1.0.0",
+        "@opentelemetry/api": "^1.9.0",
         "better-auth": "^1.5.0",
         "dotenv": "^17.2.2",
         "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
@@ -1057,6 +1061,10 @@
     "@js-sdsl/ordered-map": ["@js-sdsl/ordered-map@4.4.2", "", {}, "sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw=="],
 
     "@js-temporal/polyfill": ["@js-temporal/polyfill@0.5.1", "", { "dependencies": { "jsbi": "^4.3.0" } }, "sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ=="],
+
+    "@kubiks/otel-better-auth": ["@kubiks/otel-better-auth@2.0.2", "", { "peerDependencies": { "@opentelemetry/api": ">=1.9.0 <2.0.0", "better-auth": ">=0.1.0" } }, "sha512-xNRTlAu/y1X/9ff9z6ehAZ9txIeOH5u4mYBGSqEuFyUNH/K3KVEIOZqAkUYPAyY057LJAdXaM9abZyBsPWZBOw=="],
+
+    "@kubiks/otel-drizzle": ["@kubiks/otel-drizzle@1.0.0", "", { "peerDependencies": { "@opentelemetry/api": ">=1.9.0 <2.0.0", "drizzle-orm": ">=0.28.0" } }, "sha512-F/zNjGxxMG6MPRYhxcRdGrHf1B78YzCZqat83KYvo11uFfkLL+fjNVFt/bEF2C6xAL3C7uUm2Ku2zxBR/Nib/A=="],
 
     "@layerstack/svelte-actions": ["@layerstack/svelte-actions@1.0.1-next.18", "", { "dependencies": { "@floating-ui/dom": "^1.7.0", "@layerstack/utils": "2.0.0-next.18", "d3-scale": "^4.0.2" } }, "sha512-gxPzCnJ1c9LTfWtRqLUzefCx+k59ZpxDUQ2XB+LokveZQPe7IDSOwHaBOEMlaGoGrtwc3Ft8dSZq+2WT2o9u/g=="],
 

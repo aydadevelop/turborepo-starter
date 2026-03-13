@@ -29,6 +29,7 @@
 		addAvailabilityExceptionMutation,
 		refreshCalendarSourcesMutation,
 		attachCalendarSourceMutation,
+		disconnectConnectionMutation,
 		approveListingMutation,
 		clearListingApprovalMutation,
 		publishListingToChannelMutation,
@@ -56,6 +57,10 @@
 		} finally {
 			attachingSourceId = null;
 		}
+	};
+
+	const detachConnection = async (connectionId: string) => {
+		await disconnectConnectionMutation.mutateAsync({ connectionId });
 	};
 
 	const createPricingProfile = async (input: {
@@ -185,7 +190,7 @@
 		}
 	};
 
-	const googleCalendarConnectUrl = $derived(getGoogleCalendarConnectUrl());
+	const googleCalendarConnectUrl = $derived(getGoogleCalendarConnectUrl(page.url.pathname));
 	const calendarNotice = $derived(
 		buildCalendarWorkspaceNotice(page.url.searchParams)
 	);
@@ -268,10 +273,12 @@
 			googleCalendarConnectUrl={googleCalendarConnectUrl}
 			onRefreshCalendarAccountSources={refreshCalendarSources}
 			onAttachCalendarSource={attachCalendarSource}
+			onDetachConnection={detachConnection}
 			refreshingAccountId={refreshingAccountId}
 			attachingSourceId={attachingSourceId}
 			calendarActionErrorMessage={refreshCalendarSourcesMutation.error?.message ??
 				attachCalendarSourceMutation.error?.message ??
+				disconnectConnectionMutation.error?.message ??
 				null}
 			calendarNoticeMessage={calendarNotice.calendarNoticeMessage}
 			calendarNoticeTone={calendarNotice.calendarNoticeTone}

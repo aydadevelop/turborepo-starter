@@ -14,7 +14,6 @@ const calendarConnectionOutputSchema = z.object({
 	lastSyncedAt: z.string().datetime().nullable(),
 	lastError: z.string().nullable(),
 	watchExpiration: z.string().datetime().nullable(),
-	isPrimary: z.boolean(),
 	isActive: z.boolean(),
 	createdAt: z.string().datetime(),
 	updatedAt: z.string().datetime(),
@@ -60,9 +59,17 @@ const calendarWorkspaceStateOutputSchema = z.object({
 	activeConnectionCount: z.number().int(),
 	connections: z.array(calendarConnectionOutputSchema),
 	hasConnectedCalendar: z.boolean(),
-	hasPrimaryConnection: z.boolean(),
-	primaryConnectionId: z.string().nullable(),
 	providers: z.array(z.enum(["google", "outlook", "ical", "manual"])),
+});
+
+const calendarOrgWorkspaceStateOutputSchema = z.object({
+	accounts: z.array(calendarAccountOutputSchema),
+	sources: z.array(calendarSourceOutputSchema),
+	connections: z.array(
+		calendarConnectionOutputSchema.extend({
+			listingName: z.string().nullable(),
+		}),
+	),
 });
 
 export const calendarContract = {
@@ -167,4 +174,25 @@ export const calendarContract = {
 		})
 		.input(z.object({ listingId: z.string() }))
 		.output(calendarWorkspaceStateOutputSchema),
+
+	getOrgWorkspaceState: oc
+		.route({
+			tags: ["Calendar"],
+			summary: "Get calendar workspace state across all listings in the organization",
+		})
+		.input(z.object({}))
+		.output(calendarOrgWorkspaceStateOutputSchema),
+
+	setSourceVisibility: oc
+		.route({
+			tags: ["Calendar"],
+			summary: "Show or hide a discovered calendar source",
+		})
+		.input(
+			z.object({
+				sourceId: z.string(),
+				isHidden: z.boolean(),
+			}),
+		)
+		.output(calendarSourceOutputSchema),
 };

@@ -5,7 +5,7 @@ import {
 } from "@my-app/db/schema/availability";
 import { listing } from "@my-app/db/schema/marketplace";
 import type { EventBus } from "@my-app/events";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { getCalendarAdapter } from "./adapter-registry";
 import type {
 	BusySlot,
@@ -399,6 +399,26 @@ export async function listOrganizationCalendarSources(
 		);
 }
 
+export async function setSourceVisibility(
+	sourceId: string,
+	organizationId: string,
+	isHidden: boolean,
+	db: Db
+): Promise<CalendarSourceRow> {
+	const [updated] = await db
+		.update(organizationCalendarSource)
+		.set({ isHidden, updatedAt: new Date() })
+		.where(
+			and(
+				eq(organizationCalendarSource.id, sourceId),
+				eq(organizationCalendarSource.organizationId, organizationId)
+			)
+		)
+		.returning();
+	if (!updated) throw new Error("NOT_FOUND");
+	return updated;
+}
+
 export async function refreshOrganizationCalendarSources(
 	accountId: string,
 	organizationId: string,
@@ -573,4 +593,62 @@ export async function listCalendarBusySlots(
 	const adapter = getCalendarAdapter(connection.provider);
 	const config = await getConnectionConfig(connection, db);
 	return adapter.listBusySlots(connection.externalCalendarId, from, to, config);
+}
+
+export async function setConnectionPrimary(
+	connectionId: string,
+	organizationId: string,
+	db: Db,
+	_context?: CalendarMutationContext
+): Promise<CalendarConnectionRow> {
+	const [connection] = await db
+		.select()
+		.from(listingCalendarConnection)
+		.where(
+			and(
+				eq(listingCalendarConnection.id, connectionId),
+				eq(listingCalendarConnection.organizationId, organizationId),
+				eq(listingCalendarConnection.isActive, true)
+			)
+		)
+		.limit(1);
+
+	if (!connection) {
+		throw new Error("NOT_FOUND");
+	}
+
+	// Clear any existing primary for this listing
+	await db
+		.update(listingCalendarConnection)
+		.set({ isPrimary: false, updatedAt: new Date() })
+		.where(
+			and(
+				eq(listingCalendarConnection.listingId, connection.listingId),
+				eq(listingCalendarConnection.organizationId, organizationId),
+				eq(listingCalendarConnection.isPrimary, true),
+				ne(listingCalendarConnection.id, connectionId)
+			)
+		);
+
+	const [row] = await db
+		.update(listingCalendarConnection)
+		.set({ isPrimary: true, updatedAt: new Date() })
+		.where(eq(listingCalendarConnection.id, connectionId))
+		.returning();
+
+	if (!row) {
+		throw new Error("Update failed");
+	}
+
+	return row;
+}
+
+export async function listAllOrgConnections(
+	organizationId: string,
+	db: Db
+): Promise<CalendarConnectionRow[]> {
+	return db
+		.select()
+		.from(listingCalendarConnection)
+		.where(eq(listingCalendarConnection.organizationId, organizationId));
 }

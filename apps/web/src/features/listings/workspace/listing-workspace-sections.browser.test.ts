@@ -244,8 +244,6 @@ const calendar: CalendarWorkspaceState = {
 		},
 	],
 	hasConnectedCalendar: true,
-	hasPrimaryConnection: true,
-	primaryConnectionId: "connection-1",
 	providers: ["google", "manual"],
 	connections: [
 		{
@@ -261,7 +259,6 @@ const calendar: CalendarWorkspaceState = {
 			lastSyncedAt: null,
 			lastError: null,
 			watchExpiration: null,
-			isPrimary: true,
 			isActive: true,
 			createdAt: "2026-03-12T00:00:00.000Z",
 			updatedAt: "2026-03-12T00:00:00.000Z",

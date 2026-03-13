@@ -1,3 +1,4 @@
+import { type Span, SpanKind, SpanStatusCode, trace } from "@opentelemetry/api";
 import { createContext } from "@my-app/api/context";
 import { appRouter } from "@my-app/api/handlers/index";
 import { log } from "@my-app/telemetry";
@@ -112,7 +113,24 @@ export const rpcHandler = new RPCHandler(appRouter, {
 });
 
 export const rpcMiddleware: MiddlewareHandler = async (c, next) => {
-	const context = await createContext({ context: c });
+	const tracer = trace.getTracer("@my-app/telemetry/server");
+	const context = await tracer.startActiveSpan(
+		"createContext",
+		{ kind: SpanKind.INTERNAL },
+		async (span: Span) => {
+			try {
+				const ctx = await createContext({ context: c });
+				span.setStatus({ code: SpanStatusCode.OK });
+				return ctx;
+			} catch (error) {
+				span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : String(error) });
+				if (error instanceof Error) span.recordException(error);
+				throw error;
+			} finally {
+				span.end();
+			}
+		},
+	);
 
 	const rpcResult = await rpcHandler.handle(c.req.raw, {
 		prefix: "/rpc",
