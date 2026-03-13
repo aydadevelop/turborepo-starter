@@ -1,9 +1,11 @@
 import type {
+	CalendarAccountConfig,
 	BusySlot,
 	CalendarAdapter,
 	CalendarConnectionConfig,
 	CalendarEventInput,
 	CalendarEventPresentation,
+	CalendarSourcePresentation,
 } from "./types";
 
 interface FakeEventRecord {
@@ -81,6 +83,59 @@ export class FakeCalendarAdapter implements CalendarAdapter {
 	): Promise<void> {
 		this.events.delete(this.key(config.calendarId, eventId));
 		return Promise.resolve();
+	}
+
+	listCalendars(
+		config: CalendarAccountConfig,
+	): Promise<CalendarSourcePresentation[]> {
+		const configuredSources = config.credentials.sources;
+		if (Array.isArray(configuredSources)) {
+			return Promise.resolve(
+				configuredSources.map((source, index) => ({
+					externalCalendarId: String(
+						(source as { externalCalendarId?: unknown }).externalCalendarId ??
+							`fake-calendar-${index + 1}`,
+					),
+					name: String(
+						(source as { name?: unknown }).name ?? `Fake calendar ${index + 1}`,
+					),
+					timezone:
+						(source as { timezone?: unknown }).timezone == null
+							? null
+							: String((source as { timezone: unknown }).timezone),
+					isPrimary: Boolean(
+						(source as { isPrimary?: unknown }).isPrimary ?? index === 0,
+					),
+					isHidden: Boolean(
+						(source as { isHidden?: unknown }).isHidden ?? false,
+					),
+					metadata:
+						(source as { metadata?: unknown }).metadata &&
+						typeof (source as { metadata?: unknown }).metadata === "object"
+							? ((source as { metadata: Record<string, unknown> }).metadata)
+							: null,
+				})),
+			);
+		}
+
+		return Promise.resolve([
+			{
+				externalCalendarId: "primary-fake-calendar",
+				name: "Primary fake calendar",
+				timezone: "UTC",
+				isPrimary: true,
+				isHidden: false,
+				metadata: null,
+			},
+			{
+				externalCalendarId: "backup-fake-calendar",
+				name: "Backup fake calendar",
+				timezone: "UTC",
+				isPrimary: false,
+				isHidden: false,
+				metadata: null,
+			},
+		]);
 	}
 
 	listBusySlots(

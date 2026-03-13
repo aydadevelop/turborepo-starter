@@ -47,6 +47,9 @@
       "path": "./packages/ui"
     },
     {
+      "path": "./packages/telemetry"
+    },
+    {
       "path": "./packages/vitest-config"
     }
   ],

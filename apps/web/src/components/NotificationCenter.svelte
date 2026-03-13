@@ -14,15 +14,19 @@
 		countUnreadNotifications,
 		deriveCursorMs,
 		formatNotificationDateTime,
-		type InAppNotificationItem,
+		mergeNotificationList,
 		markNotificationsViewedLocally,
+		markNotificationListViewedLocally,
 		mergeNotificationItems,
 		type NotificationStreamState,
 		notificationSeverityClass,
-		sortNotificationsByDeliveredAtDesc,
 		streamStateLabel,
 	} from "$lib/notification-center";
-	import { client, orpc } from "$lib/orpc";
+	import { orpc } from "$lib/orpc";
+	import type {
+		InAppNotificationItem,
+		NotificationListOutput,
+	} from "$lib/orpc-types";
 
 	// Session is passed from Header to avoid a second concurrent useSession()
 	// subscription — two independent subscriptions cause duplicate session-change
@@ -34,9 +38,13 @@
 	const queryClient = useQueryClient();
 
 	const MAX_ITEMS = 20;
+	const notificationsQueryInput = { limit: MAX_ITEMS } as const;
+	const notificationsQueryKey = orpc.notifications.listMe.queryKey({
+		input: notificationsQueryInput,
+	});
 	const notificationsQuery = createQuery(() =>
 		orpc.notifications.listMe.queryOptions({
-			input: { limit: MAX_ITEMS },
+			input: notificationsQueryInput,
 			enabled: Boolean(getAuthenticatedUserId($sessionQuery.data)),
 		})
 	);
@@ -46,6 +54,7 @@
 				queryClient.invalidateQueries({ queryKey: orpc.notifications.key() });
 			},
 			onError: (error) => {
+				queryClient.invalidateQueries({ queryKey: orpc.notifications.key() });
 				setLoadError(error, "Failed to update notification");
 			},
 		})
@@ -56,6 +65,7 @@
 				queryClient.invalidateQueries({ queryKey: orpc.notifications.key() });
 			},
 			onError: (error) => {
+				queryClient.invalidateQueries({ queryKey: orpc.notifications.key() });
 				setLoadError(error, "Failed to mark notifications as viewed");
 			},
 		})
@@ -65,11 +75,11 @@
 	let isOpen = $state(false);
 	let loadError = $state<string | null>(null);
 	let streamState = $state<NotificationStreamState>("idle");
-	let notifications = $state<InAppNotificationItem[]>([]);
-	let unreadCount = $state(0);
 	let currentUserId = $state<string | null>(null);
 	let cursorMs = $state(0);
 	let stopStream: (() => Promise<void>) | null = null;
+	const notifications = $derived(notificationsQuery.data?.items ?? []);
+	const unreadCount = $derived(notificationsQuery.data?.unread ?? 0);
 	const isLoading = $derived(
 		notificationsQuery.isPending && notifications.length === 0
 	);
@@ -78,9 +88,19 @@
 		loadError = error instanceof Error ? error.message : fallback;
 	}
 
-	function syncDerivedStateFromNotifications() {
-		cursorMs = deriveCursorMs(notifications, cursorMs);
-		unreadCount = countUnreadNotifications(notifications);
+	function setNotificationCache(
+		updater: (
+			current: NotificationListOutput | undefined
+		) => NotificationListOutput | undefined
+	) {
+		queryClient.setQueryData<NotificationListOutput>(
+			notificationsQueryKey,
+			updater
+		);
+	}
+
+	function syncCursorFromNotifications(items: InAppNotificationItem[]) {
+		cursorMs = deriveCursorMs(items, cursorMs);
 	}
 
 	function closeStream() {
@@ -100,7 +120,7 @@
 
 		streamState = "connecting";
 		stopStream = consumeEventIterator(
-			client.notifications.streamMe({
+			orpc.notifications.streamMe.call({
 				limit: 20,
 				since: cursorMs > 0 ? cursorMs : undefined,
 			}),
@@ -116,8 +136,10 @@
 
 					if (event.kind === "snapshot" && event.scope === "me") {
 						const items = event.items as InAppNotificationItem[];
-						notifications = mergeNotificationItems(notifications, items);
-						syncDerivedStateFromNotifications();
+						setNotificationCache((current) =>
+							mergeNotificationList(current, items)
+						);
+						syncCursorFromNotifications(items);
 						if (event.since > 0) {
 							cursorMs = Math.max(cursorMs, event.since);
 						}
@@ -135,11 +157,9 @@
 	}
 
 	function markLocallyViewed(notificationIds: string[]) {
-		notifications = markNotificationsViewedLocally(
-			notifications,
-			notificationIds
+		setNotificationCache((current) =>
+			markNotificationListViewedLocally(current, notificationIds)
 		);
-		unreadCount = countUnreadNotifications(notifications);
 	}
 
 	function markAllAsViewed() {
@@ -174,7 +194,11 @@
 		isOpen = true;
 		loadError = null;
 		try {
-			await notificationsQuery.refetch();
+			await queryClient.fetchQuery(
+				orpc.notifications.listMe.queryOptions({
+					input: notificationsQueryInput,
+				})
+			);
 		} catch (error) {
 			setLoadError(error, "Failed to load notifications");
 		}
@@ -223,9 +247,8 @@
 		closeStream();
 		isOpen = false;
 		loadError = null;
-		notifications = [];
-		unreadCount = 0;
 		cursorMs = 0;
+		queryClient.removeQueries({ queryKey: notificationsQueryKey, exact: true });
 	}
 
 	$effect(() => {
@@ -246,14 +269,7 @@
 			return;
 		}
 
-		const nextNotifications = sortNotificationsByDeliveredAtDesc(
-			response.items
-		);
-		const nextCursorMs = deriveCursorMs(nextNotifications);
-
-		notifications = nextNotifications;
-		unreadCount = response.unread;
-		cursorMs = nextCursorMs;
+		syncCursorFromNotifications(response.items);
 		loadError = null;
 	});
 

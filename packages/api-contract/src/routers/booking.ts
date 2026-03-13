@@ -1,5 +1,11 @@
 import { oc } from "@orpc/contract";
 import z from "zod";
+import {
+	createCollectionOutputSchema,
+	createOffsetPageInputSchema,
+	optionalTrimmedString,
+	sortDirectionSchema,
+} from "../contracts/shared";
 
 const bookingOutput = z.object({
 	id: z.string(),
@@ -48,6 +54,40 @@ const bookingOutput = z.object({
 	updatedAt: z.string().datetime(),
 });
 
+const bookingListSortBySchema = z.enum([
+	"created_at",
+	"starts_at",
+	"ends_at",
+	"status",
+]);
+
+const bookingListFilterSchema = z.object({
+	listingId: z.string().optional(),
+	paymentStatus: bookingOutput.shape.paymentStatus.optional(),
+	source: bookingOutput.shape.source.optional(),
+	status: bookingOutput.shape.status.optional(),
+});
+
+const listOrgBookingsInputSchema = z.object({
+	filter: bookingListFilterSchema.optional(),
+	page: createOffsetPageInputSchema({
+		defaultLimit: 50,
+		maxLimit: 200,
+	}).default({
+		limit: 50,
+		offset: 0,
+	}),
+	search: optionalTrimmedString(200),
+	sort: z
+		.object({
+			by: bookingListSortBySchema,
+			dir: sortDirectionSchema,
+		})
+		.optional(),
+});
+
+const listOrgBookingsOutputSchema = createCollectionOutputSchema(bookingOutput);
+
 export const bookingContract = {
 	create: oc
 		.route({ tags: ["Booking"], summary: "Create a booking for an available slot" })
@@ -64,21 +104,15 @@ export const bookingContract = {
 				notes: z.string().optional(),
 				specialRequests: z.string().optional(),
 				currency: z.string().optional(),
+				discountCode: z.string().min(1).max(64).optional(),
 			}),
 		)
 		.output(bookingOutput),
 
 	listOrgBookings: oc
 		.route({ tags: ["Booking"], summary: "List bookings in the active organization" })
-		.input(
-			z.object({
-				listingId: z.string().optional(),
-				status: z.string().optional(),
-				limit: z.number().int().min(1).max(200).optional(),
-				offset: z.number().int().min(0).optional(),
-			}),
-		)
-		.output(z.array(bookingOutput)),
+		.input(listOrgBookingsInputSchema)
+		.output(listOrgBookingsOutputSchema),
 
 	getBooking: oc
 		.route({ tags: ["Booking"], summary: "Get a single booking by ID" })
@@ -103,6 +137,21 @@ export const bookingContract = {
 				]),
 				cancellationReason: z.string().optional(),
 				cancelledByUserId: z.string().optional(),
+			}),
+		)
+		.output(bookingOutput),
+
+	updateSchedule: oc
+		.route({
+			tags: ["Booking"],
+			summary: "Update the scheduled time window for a booking",
+		})
+		.input(
+			z.object({
+				id: z.string(),
+				startsAt: z.string().datetime(),
+				endsAt: z.string().datetime(),
+				timezone: z.string().optional(),
 			}),
 		)
 		.output(bookingOutput),

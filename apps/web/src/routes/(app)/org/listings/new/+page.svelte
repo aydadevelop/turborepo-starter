@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { createQuery } from "@tanstack/svelte-query";
-	import { createMutation } from "@tanstack/svelte-query";
+	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { goto } from "$app/navigation";
 	import { orpc, queryClient } from "$lib/orpc";
+	import type { OrpcInputs } from "$lib/orpc-types";
 	import ListingEditorForm from "../../../../../components/org/ListingEditorForm.svelte";
 
-	const availableListingTypesQuery = createQuery(() =>
-		orpc.listing.listAvailableTypes.queryOptions({
+	const createEditorStateQuery = createQuery(() =>
+		orpc.listing.getCreateEditorState.queryOptions({
 			input: {},
 		})
 	);
@@ -19,39 +19,29 @@
 			},
 		})
 	);
-
-	function handleSubmit(input: {
-		listingTypeSlug: string;
-		name: string;
-		slug: string;
-		timezone: string;
-		description?: string;
-		metadata?: Record<string, unknown>;
-	}) {
-		createListingMutation.mutate(input);
-	}
 </script>
 
-<svelte:head>
-	<title>Create listing</title>
-</svelte:head>
+<svelte:head> <title>Create listing</title> </svelte:head>
 
 <div class="mx-auto max-w-3xl space-y-4">
 	<div class="space-y-1">
 		<h2 class="text-2xl font-semibold tracking-tight">New listing</h2>
 		<p class="text-sm text-muted-foreground">
-			Add a listing to your organization’s catalog and prepare it for publication.
+			Add a listing to your organization’s catalog and prepare it for
+			publication.
 		</p>
 	</div>
 
-	{#if availableListingTypesQuery.isPending}
+	{#if createEditorStateQuery.isPending}
 		<div class="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
-			Loading listing types...
+			Loading listing editor...
 		</div>
-	{:else if availableListingTypesQuery.isError}
-		<div class="rounded-lg border border-destructive bg-card p-6 text-sm text-destructive">
-			{availableListingTypesQuery.error?.message ??
-				"Failed to load available listing types."}
+	{:else if createEditorStateQuery.isError}
+		<div
+			class="rounded-lg border border-destructive bg-card p-6 text-sm text-destructive"
+		>
+			{createEditorStateQuery.error?.message ??
+				"Failed to load listing editor state."}
 		</div>
 	{:else}
 		<ListingEditorForm
@@ -59,8 +49,13 @@
 			submitLabel="Create listing"
 			pending={createListingMutation.isPending}
 			errorMessage={createListingMutation.error?.message ?? null}
-			listingTypeOptions={availableListingTypesQuery.data.items}
-			onSubmit={handleSubmit}
+			initialValue={{
+				timezone: createEditorStateQuery.data.defaults.timezone,
+			}}
+			listingTypeOptions={createEditorStateQuery.data.listingTypes.items}
+			onSubmit={async (input: OrpcInputs["listing"]["create"]) => {
+				await createListingMutation.mutateAsync(input);
+			}}
 		/>
 	{/if}
 </div>

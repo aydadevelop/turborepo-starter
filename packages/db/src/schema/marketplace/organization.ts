@@ -5,14 +5,28 @@ import {
 	index,
 	integer,
 	jsonb,
+	pgEnum,
 	pgTable,
 	text,
 	timestamp,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-import { organization } from "../auth";
+import { organization, user } from "../auth";
 import { timestamps } from "../columns";
+
+export const listingServiceFamilyValues = ["boat_rent", "excursions"] as const;
+export type ListingServiceFamily = (typeof listingServiceFamilyValues)[number];
+export const organizationManualOverrideScopeValues = [
+	"organization",
+	"listing",
+] as const;
+export type OrganizationManualOverrideScope =
+	(typeof organizationManualOverrideScopeValues)[number];
+export const organizationManualOverrideScopeEnum = pgEnum(
+	"organization_manual_override_scope",
+	organizationManualOverrideScopeValues
+);
 
 export const organizationSettings = pgTable(
 	"organization_settings",
@@ -47,9 +61,9 @@ export const organizationSettings = pgTable(
 	},
 	(table) => [
 		uniqueIndex("organization_settings_uq_organization_id").on(
-			table.organizationId,
+			table.organizationId
 		),
-	],
+	]
 );
 
 export const organizationOnboarding = pgTable(
@@ -59,15 +73,9 @@ export const organizationOnboarding = pgTable(
 		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organization.id, { onDelete: "cascade" }),
-		paymentConfigured: boolean("payment_configured")
-			.notNull()
-			.default(false),
-		calendarConnected: boolean("calendar_connected")
-			.notNull()
-			.default(false),
-		listingPublished: boolean("listing_published")
-			.notNull()
-			.default(false),
+		paymentConfigured: boolean("payment_configured").notNull().default(false),
+		calendarConnected: boolean("calendar_connected").notNull().default(false),
+		listingPublished: boolean("listing_published").notNull().default(false),
 		isComplete: boolean("is_complete").notNull().default(false),
 		completedAt: timestamp("completed_at", {
 			withTimezone: true,
@@ -83,10 +91,43 @@ export const organizationOnboarding = pgTable(
 	},
 	(table) => [
 		uniqueIndex("organization_onboarding_uq_organization_id").on(
-			table.organizationId,
+			table.organizationId
 		),
 		index("organization_onboarding_ix_is_complete").on(table.isComplete),
-	],
+	]
+);
+
+export const organizationManualOverride = pgTable(
+	"organization_manual_override",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		scopeType: organizationManualOverrideScopeEnum("scope_type")
+			.notNull()
+			.default("organization"),
+		scopeKey: text("scope_key"),
+		code: text("code").notNull(),
+		title: text("title").notNull(),
+		note: text("note"),
+		isActive: boolean("is_active").notNull().default(true),
+		createdByUserId: text("created_by_user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		resolvedByUserId: text("resolved_by_user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		resolvedAt: timestamp("resolved_at", { withTimezone: true, mode: "date" }),
+		...timestamps,
+	},
+	(table) => [
+		index("organization_manual_override_ix_organization_id").on(
+			table.organizationId
+		),
+		index("organization_manual_override_ix_is_active").on(table.isActive),
+		index("organization_manual_override_ix_scope_type").on(table.scopeType),
+	]
 );
 
 export const listingTypeConfig = pgTable(
@@ -94,6 +135,10 @@ export const listingTypeConfig = pgTable(
 	{
 		id: text("id").primaryKey(),
 		slug: text("slug").notNull(),
+		serviceFamily: text("service_family")
+			.$type<ListingServiceFamily>()
+			.notNull()
+			.default("boat_rent"),
 		label: text("label").notNull(),
 		icon: text("icon"),
 		metadataJsonSchema: jsonb("metadata_json_schema")
@@ -106,7 +151,7 @@ export const listingTypeConfig = pgTable(
 		sortOrder: integer("sort_order").notNull().default(0),
 		...timestamps,
 	},
-	(table) => [uniqueIndex("listing_type_config_uq_slug").on(table.slug)],
+	(table) => [uniqueIndex("listing_type_config_uq_slug").on(table.slug)]
 );
 
 export const organizationListingType = pgTable(
@@ -125,16 +170,16 @@ export const organizationListingType = pgTable(
 	},
 	(table) => [
 		index("organization_listing_type_ix_organization_id").on(
-			table.organizationId,
+			table.organizationId
 		),
 		uniqueIndex("organization_listing_type_uq_org_slug").on(
 			table.organizationId,
-			table.listingTypeSlug,
+			table.listingTypeSlug
 		),
 		uniqueIndex("organization_listing_type_uq_default")
 			.on(table.organizationId)
 			.where(sql`${table.isDefault} = true`),
-	],
+	]
 );
 
 export const listingLocation = pgTable(
@@ -154,5 +199,5 @@ export const listingLocation = pgTable(
 	},
 	(table) => [
 		index("listing_location_ix_organization_id").on(table.organizationId),
-	],
+	]
 );

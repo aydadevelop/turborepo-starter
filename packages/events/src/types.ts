@@ -9,20 +9,39 @@ export interface DomainEventMap {
 		bookingId: string;
 		contactDetails: Record<string, unknown>;
 	};
+	"booking:schedule-updated": {
+		bookingId: string;
+		startsAt: string;
+		endsAt: string;
+		timezone: string | null;
+	};
 	"booking:created": {
 		bookingId: string;
 		listingId: string;
 		customerId: string;
 	};
+	"calendar:organization-connection-readiness-changed": {
+		connectionId: string;
+		isReady: boolean;
+	};
 	"calendar:sync-requested": { bookingId: string; calendarId: string };
 	"dispute:opened": { disputeId: string; bookingId: string };
 	"dispute:resolved": { disputeId: string; resolution: string };
+	"listing:organization-publication-readiness-changed": {
+		isReady: boolean;
+		listingId: string;
+		publicationId: string | null;
+	};
 	"payment:captured": {
 		bookingId: string;
 		paymentId: string;
 		amountKopeks: number;
 	};
 	"payment:failed": { bookingId: string; paymentId: string; error: string };
+	"payment:organization-config-readiness-changed": {
+		configId: string;
+		isReady: boolean;
+	};
 	"support:inbound-processed": {
 		inboundMessageId: string;
 		messageId: string;

@@ -1,5 +1,10 @@
-import type { db } from "@my-app/db";
-import type { listingCalendarConnection } from "@my-app/db/schema/availability";
+import type { relations } from "@my-app/db/relations";
+import type {
+	listingCalendarConnection,
+	organizationCalendarAccount,
+	organizationCalendarSource,
+} from "@my-app/db/schema/availability";
+import type { PgAsyncDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 // ─── Provider types ──────────────────────────────────────────────────────────
 
@@ -49,6 +54,11 @@ export interface CalendarConnectionConfig {
 	calendarId: string;
 }
 
+export interface CalendarAccountConfig {
+	provider: CalendarAdapterProvider;
+	credentials: Record<string, unknown>;
+}
+
 /** A busy time interval returned by listBusySlots. */
 export interface BusySlot {
 	startsAt: Date;
@@ -56,9 +66,41 @@ export interface BusySlot {
 	externalEventId?: string;
 }
 
-export type Db = typeof db;
+export type Db = PgAsyncDatabase<
+	PgQueryResultHKT,
+	Record<string, never>,
+	typeof relations
+>;
 export type CalendarConnectionRow =
 	typeof listingCalendarConnection.$inferSelect;
+export type CalendarAccountRow =
+	typeof organizationCalendarAccount.$inferSelect;
+export type CalendarSourceRow =
+	typeof organizationCalendarSource.$inferSelect;
+
+export interface CalendarSourcePresentation {
+	externalCalendarId: string;
+	name: string;
+	timezone?: string | null;
+	isPrimary?: boolean;
+	isHidden?: boolean;
+	metadata?: Record<string, unknown> | null;
+}
+
+export interface CalendarWorkspaceState {
+	accountCount: number;
+	connectedAccountCount: number;
+	accounts: CalendarAccountRow[];
+	sourceCount: number;
+	activeSourceCount: number;
+	sources: CalendarSourceRow[];
+	activeConnectionCount: number;
+	connections: CalendarConnectionRow[];
+	hasConnectedCalendar: boolean;
+	hasPrimaryConnection: boolean;
+	primaryConnectionId: string | null;
+	providers: CalendarAdapterProvider[];
+}
 
 // ─── Adapter interface ────────────────────────────────────────────────────────
 
@@ -85,6 +127,10 @@ export interface CalendarAdapter {
 		eventId: string,
 		config: CalendarConnectionConfig,
 	): Promise<void>;
+
+	listCalendars(
+		config: CalendarAccountConfig,
+	): Promise<CalendarSourcePresentation[]>;
 
 	listBusySlots(
 		calendarId: string,

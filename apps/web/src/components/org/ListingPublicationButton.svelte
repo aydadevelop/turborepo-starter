@@ -13,16 +13,22 @@
 
 	const publishMutation = createMutation(() =>
 		orpc.listing.publish.mutationOptions({
-			onSuccess: () => {
+			onSuccess: async () => {
 				queryClient.invalidateQueries({ queryKey: orpc.listing.key() });
+				await queryClient.invalidateQueries({
+					queryKey: orpc.organization.key(),
+				});
 			},
 		})
 	);
 
 	const unpublishMutation = createMutation(() =>
 		orpc.listing.unpublish.mutationOptions({
-			onSuccess: () => {
+			onSuccess: async () => {
 				queryClient.invalidateQueries({ queryKey: orpc.listing.key() });
+				await queryClient.invalidateQueries({
+					queryKey: orpc.organization.key(),
+				});
 			},
 		})
 	);

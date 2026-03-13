@@ -2,26 +2,30 @@ import { organization } from "@my-app/db/schema/auth";
 import {
 	listing,
 	listingAsset,
+	listingBoatRentProfile,
+	listingExcursionProfile,
 	listingPublication,
 	listingTypeConfig,
 } from "@my-app/db/schema/marketplace";
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import {
-	LISTING_PUBLIC_STORAGE_PROVIDER,
 	createFakeStorageProvider,
+	LISTING_PUBLIC_STORAGE_PROVIDER,
 	registerStorageProvider,
 	resetStorageProviderRegistry,
 } from "@my-app/storage";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
-	searchPublishedListings,
 	getPublishedListing,
+	searchPublishedListings,
 } from "../storefront-service";
 
 const ORG_ID = "sf-test-org";
 const LISTING_TYPE_SLUG = "sf-listing-type";
+const EXCURSION_TYPE_SLUG = "sf-excursion-type";
 const LISTING_ID = "sf-listing-1";
+const EXCURSION_ID = "sf-listing-excursion";
 const UNPUBLISHED_ID = "sf-listing-unpublished";
 const ASSET_KEY = "images/primary.jpg";
 const ASSET_URL = `https://media.example.test/${LISTING_PUBLIC_STORAGE_PROVIDER}/${ASSET_KEY}`;
@@ -40,6 +44,15 @@ const testDbState = bootstrapTestDatabase({
 			metadataJsonSchema: {},
 			isActive: true,
 			sortOrder: 0,
+		});
+		await db.insert(listingTypeConfig).values({
+			id: crypto.randomUUID(),
+			slug: EXCURSION_TYPE_SLUG,
+			label: "Excursion Type",
+			metadataJsonSchema: {},
+			isActive: true,
+			sortOrder: 1,
+			serviceFamily: "excursions",
 		});
 
 		// Published listing
@@ -73,6 +86,51 @@ const testDbState = bootstrapTestDatabase({
 			isPrimary: true,
 			sortOrder: 0,
 		});
+		await db.insert(listingBoatRentProfile).values({
+			listingId: LISTING_ID,
+			organizationId: ORG_ID,
+			capacity: 12,
+			captainMode: "captain_optional",
+			basePort: "Sochi Marine Station",
+			departureArea: "Imeretinskaya Bay",
+			fuelPolicy: "charged_by_usage",
+			depositRequired: true,
+			instantBookAllowed: false,
+		});
+
+		// Published excursion listing
+		await db.insert(listing).values({
+			id: EXCURSION_ID,
+			organizationId: ORG_ID,
+			listingTypeSlug: EXCURSION_TYPE_SLUG,
+			name: "Historic Walk",
+			slug: "historic-walk",
+			description: "Guided city-center excursion",
+			isActive: true,
+			status: "active",
+			timezone: "UTC",
+		});
+		await db.insert(listingPublication).values({
+			id: crypto.randomUUID(),
+			listingId: EXCURSION_ID,
+			organizationId: ORG_ID,
+			channelType: "platform_marketplace",
+			isActive: true,
+			visibility: "public",
+			merchantType: "platform",
+		});
+		await db.insert(listingExcursionProfile).values({
+			listingId: EXCURSION_ID,
+			organizationId: ORG_ID,
+			meetingPoint: "Central fountain",
+			durationMinutes: 180,
+			groupFormat: "both",
+			maxGroupSize: 12,
+			primaryLanguage: "English",
+			ticketsIncluded: true,
+			childFriendly: true,
+			instantBookAllowed: true,
+		});
 
 		// Unpublished listing (no listingPublication)
 		await db.insert(listing).values({
@@ -96,7 +154,7 @@ beforeAll(() => {
 		createFakeStorageProvider({
 			providerId: LISTING_PUBLIC_STORAGE_PROVIDER,
 			publicBaseUrl: `https://media.example.test/${LISTING_PUBLIC_STORAGE_PROVIDER}`,
-		}),
+		})
 	);
 });
 
@@ -109,9 +167,11 @@ describe("searchPublishedListings", () => {
 		const db = testDbState.db as unknown as Db;
 		const result = await searchPublishedListings({}, db);
 
-		expect(result.items.length).toBe(1);
-		expect(result.items[0]?.id).toBe(LISTING_ID);
-		expect(result.total).toBe(1);
+		expect(result.items.length).toBe(2);
+		expect(result.items.map((item) => item.id)).toEqual(
+			expect.arrayContaining([LISTING_ID, EXCURSION_ID])
+		);
+		expect(result.total).toBe(2);
 	});
 
 	it("includes primary image url from listingAsset", async () => {
@@ -125,7 +185,7 @@ describe("searchPublishedListings", () => {
 		const db = testDbState.db as unknown as Db;
 		const result = await searchPublishedListings(
 			{ type: LISTING_TYPE_SLUG },
-			db,
+			db
 		);
 		expect(result.items.length).toBe(1);
 
@@ -149,6 +209,25 @@ describe("searchPublishedListings", () => {
 		const ids = result.items.map((i) => i.id);
 		expect(ids).not.toContain(UNPUBLISHED_ID);
 	});
+
+	it("returns typed excursion summaries for excursion listings", async () => {
+		const db = testDbState.db as unknown as Db;
+		const result = await searchPublishedListings(
+			{ type: EXCURSION_TYPE_SLUG },
+			db
+		);
+
+		expect(result.items).toHaveLength(1);
+		expect(result.items[0]?.excursionSummary).toMatchObject({
+			meetingPoint: "Central fountain",
+			durationMinutes: 180,
+			durationLabel: "3 hours",
+			groupFormat: "both",
+			groupFormatLabel: "Private or group",
+			primaryLanguage: "English",
+			ticketsIncluded: true,
+		});
+	});
 });
 
 describe("getPublishedListing", () => {
@@ -158,20 +237,55 @@ describe("getPublishedListing", () => {
 
 		expect(item.id).toBe(LISTING_ID);
 		expect(item.name).toBe("Ocean Retreat");
+		expect(item.listingTypeLabel).toBe("Test Type");
+		expect(item.serviceFamily).toBe("boat_rent");
+		expect(item.serviceFamilyPolicy).toMatchObject({
+			key: "boat_rent",
+			customerPresentation: {
+				bookingMode: "request",
+				customerFocus: "asset",
+				reviewsMode: "standard",
+			},
+		});
+		expect(item.boatRentSummary).toMatchObject({
+			capacity: 12,
+			captainMode: "captain_optional",
+			captainModeLabel: "Captain optional",
+			basePort: "Sochi Marine Station",
+			departureArea: "Imeretinskaya Bay",
+			fuelPolicyLabel: "Fuel charged by usage",
+		});
 		expect(item.primaryImageUrl).toBe(ASSET_URL);
 	});
 
 	it("throws NOT_FOUND for an unpublished listing", async () => {
 		const db = testDbState.db as unknown as Db;
-		await expect(
-			getPublishedListing(UNPUBLISHED_ID, db),
-		).rejects.toThrow("NOT_FOUND");
+		await expect(getPublishedListing(UNPUBLISHED_ID, db)).rejects.toThrow(
+			"NOT_FOUND"
+		);
+	});
+
+	it("returns excursion detail for a published excursion listing", async () => {
+		const db = testDbState.db as unknown as Db;
+		const item = await getPublishedListing(EXCURSION_ID, db);
+
+		expect(item.serviceFamily).toBe("excursions");
+		expect(item.excursionSummary).toMatchObject({
+			meetingPoint: "Central fountain",
+			durationMinutes: 180,
+			durationLabel: "3 hours",
+			groupFormatLabel: "Private or group",
+			maxGroupSize: 12,
+			primaryLanguage: "English",
+			ticketsIncluded: true,
+			childFriendly: true,
+		});
 	});
 
 	it("throws NOT_FOUND for a non-existent listing", async () => {
 		const db = testDbState.db as unknown as Db;
-		await expect(
-			getPublishedListing("does-not-exist", db),
-		).rejects.toThrow("NOT_FOUND");
+		await expect(getPublishedListing("does-not-exist", db)).rejects.toThrow(
+			"NOT_FOUND"
+		);
 	});
 });

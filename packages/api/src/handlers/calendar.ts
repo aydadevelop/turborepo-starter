@@ -1,18 +1,28 @@
-import { ORPCError } from "@orpc/server";
-import { db } from "@my-app/db";
 import {
-	connectCalendar,
-	disconnectCalendar,
-	listCalendarConnections,
+	type CalendarAccountRow,
 	type CalendarConnectionRow,
+	type CalendarSourceRow,
+	attachCalendarSourceToListing,
+	connectCalendar,
+	connectOrganizationCalendarAccount,
+	disconnectOrganizationCalendarAccount,
+	disconnectCalendar,
+	getCalendarWorkspaceState,
+	listCalendarConnections,
+	listOrganizationCalendarAccounts,
+	listOrganizationCalendarSources,
+	refreshOrganizationCalendarSources,
 } from "@my-app/calendar";
-import { recalculateOrganizationOnboarding } from "../services/organization-onboarding";
+import { db } from "@my-app/db";
+import { ORPCError } from "@orpc/server";
 import { organizationPermissionProcedure } from "../index";
 
 const formatConnection = (row: CalendarConnectionRow) => ({
 	id: row.id,
 	listingId: row.listingId,
 	organizationId: row.organizationId,
+	calendarAccountId: row.calendarAccountId ?? null,
+	calendarSourceId: row.calendarSourceId ?? null,
 	provider: row.provider,
 	externalCalendarId: row.externalCalendarId ?? null,
 	syncStatus: row.syncStatus,
@@ -26,7 +36,114 @@ const formatConnection = (row: CalendarConnectionRow) => ({
 	updatedAt: row.updatedAt.toISOString(),
 });
 
+const formatSource = (row: CalendarSourceRow) => ({
+	id: row.id,
+	organizationId: row.organizationId,
+	calendarAccountId: row.calendarAccountId,
+	provider: row.provider,
+	externalCalendarId: row.externalCalendarId,
+	name: row.name,
+	timezone: row.timezone ?? null,
+	isPrimary: row.isPrimary,
+	isHidden: row.isHidden,
+	isActive: row.isActive,
+	lastDiscoveredAt: row.lastDiscoveredAt.toISOString(),
+	createdAt: row.createdAt.toISOString(),
+	updatedAt: row.updatedAt.toISOString(),
+});
+
+const formatAccount = (row: CalendarAccountRow) => ({
+	id: row.id,
+	organizationId: row.organizationId,
+	provider: row.provider,
+	externalAccountId: row.externalAccountId,
+	accountEmail: row.accountEmail ?? null,
+	displayName: row.displayName ?? null,
+	status: row.status,
+	lastSyncedAt: row.lastSyncedAt?.toISOString() ?? null,
+	lastError: row.lastError ?? null,
+	createdAt: row.createdAt.toISOString(),
+	updatedAt: row.updatedAt.toISOString(),
+});
+
 export const calendarRouter = {
+	connectAccount: organizationPermissionProcedure({
+		availability: ["create"],
+	}).calendar.connectAccount.handler(async ({ context, input }) => {
+		const row = await connectOrganizationCalendarAccount(
+			{
+				organizationId: context.activeMembership.organizationId,
+				provider: input.provider,
+				externalAccountId: input.externalAccountId,
+				accountEmail: input.accountEmail,
+				displayName: input.displayName,
+				createdByUserId: context.session?.user?.id,
+			},
+			db
+		);
+
+		return formatAccount(row);
+	}),
+
+	disconnectAccount: organizationPermissionProcedure({
+		availability: ["update"],
+	}).calendar.disconnectAccount.handler(async ({ context, input }) => {
+		try {
+			await disconnectOrganizationCalendarAccount(
+				input.accountId,
+				context.activeMembership.organizationId,
+				db
+			);
+			return { success: true };
+		} catch (error) {
+			if (error instanceof Error && error.message === "NOT_FOUND") {
+				throw new ORPCError("NOT_FOUND");
+			}
+			throw error;
+		}
+	}),
+
+	listAccounts: organizationPermissionProcedure({
+		availability: ["read"],
+	}).calendar.listAccounts.handler(async ({ context }) => {
+		const rows = await listOrganizationCalendarAccounts(
+			context.activeMembership.organizationId,
+			db
+		);
+
+		return rows.map(formatAccount);
+	}),
+
+	refreshAccountSources: organizationPermissionProcedure({
+		availability: ["update"],
+	}).calendar.refreshAccountSources.handler(async ({ context, input }) => {
+		try {
+			const rows = await refreshOrganizationCalendarSources(
+				input.accountId,
+				context.activeMembership.organizationId,
+				db
+			);
+			return rows.map(formatSource);
+		} catch (error) {
+			if (error instanceof Error && error.message === "NOT_FOUND") {
+				throw new ORPCError("NOT_FOUND");
+			}
+			throw error;
+		}
+	}),
+
+	listSources: organizationPermissionProcedure({
+		availability: ["read"],
+	}).calendar.listSources.handler(async ({ context, input }) => {
+		const rows = await listOrganizationCalendarSources(
+			context.activeMembership.organizationId,
+			db,
+			input.accountId
+		);
+
+		return rows.map(formatSource);
+	}),
+
 	connect: organizationPermissionProcedure({
 		availability: ["create"],
 	}).calendar.connect.handler(async ({ context, input }) => {
@@ -40,10 +157,36 @@ export const calendarRouter = {
 					createdByUserId: context.session?.user?.id,
 				},
 				db,
+				{
+					actorUserId: context.session?.user?.id ?? undefined,
+					eventBus: context.eventBus,
+				}
 			);
-			await recalculateOrganizationOnboarding(
-				context.activeMembership.organizationId,
+			return formatConnection(row);
+		} catch (error) {
+			if (error instanceof Error && error.message === "NOT_FOUND") {
+				throw new ORPCError("NOT_FOUND");
+			}
+			throw error;
+		}
+	}),
+
+	attachSource: organizationPermissionProcedure({
+		availability: ["create"],
+	}).calendar.attachSource.handler(async ({ context, input }) => {
+		try {
+			const row = await attachCalendarSourceToListing(
+				{
+					listingId: input.listingId,
+					organizationId: context.activeMembership.organizationId,
+					sourceId: input.sourceId,
+					createdByUserId: context.session?.user?.id,
+				},
 				db,
+				{
+					actorUserId: context.session?.user?.id ?? undefined,
+					eventBus: context.eventBus,
+				}
 			);
 			return formatConnection(row);
 		} catch (error) {
@@ -62,10 +205,10 @@ export const calendarRouter = {
 				input.connectionId,
 				context.activeMembership.organizationId,
 				db,
-			);
-			await recalculateOrganizationOnboarding(
-				context.activeMembership.organizationId,
-				db,
+				{
+					actorUserId: context.session?.user?.id ?? undefined,
+					eventBus: context.eventBus,
+				}
 			);
 			return { success: true };
 		} catch (error) {
@@ -83,9 +226,32 @@ export const calendarRouter = {
 			const rows = await listCalendarConnections(
 				input.listingId,
 				context.activeMembership.organizationId,
-				db,
+				db
 			);
 			return rows.map(formatConnection);
+		} catch (error) {
+			if (error instanceof Error && error.message === "NOT_FOUND") {
+				throw new ORPCError("NOT_FOUND");
+			}
+			throw error;
+		}
+	}),
+
+	getWorkspaceState: organizationPermissionProcedure({
+		availability: ["read"],
+	}).calendar.getWorkspaceState.handler(async ({ context, input }) => {
+		try {
+			const state = await getCalendarWorkspaceState(
+				input.listingId,
+				context.activeMembership.organizationId,
+				db
+			);
+			return {
+				...state,
+				accounts: state.accounts.map(formatAccount),
+				sources: state.sources.map(formatSource),
+				connections: state.connections.map(formatConnection),
+			};
 		} catch (error) {
 			if (error instanceof Error && error.message === "NOT_FOUND") {
 				throw new ORPCError("NOT_FOUND");

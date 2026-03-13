@@ -1,9 +1,11 @@
 import type {
+	CalendarAccountConfig,
 	BusySlot,
 	CalendarAdapter,
 	CalendarConnectionConfig,
 	CalendarEventInput,
 	CalendarEventPresentation,
+	CalendarSourcePresentation,
 } from "./types";
 
 const DEFAULT_EVENTS_SCOPE =
@@ -17,6 +19,20 @@ interface GoogleServiceAccountCredentials {
 	private_key: string;
 	private_key_id?: string;
 	token_uri?: string;
+}
+
+interface GoogleOAuthClientConfig {
+	clientId: string;
+	clientSecret: string;
+	tokenUri?: string;
+}
+
+interface GoogleOAuthCredentials {
+	accessToken?: string;
+	accountEmail?: string | null;
+	expiresAt?: number | string | null;
+	externalAccountId?: string | null;
+	refreshToken?: string | null;
 }
 
 interface GoogleTokenResponse {
@@ -45,6 +61,17 @@ interface GoogleFreeBusyResponse {
 			errors?: Array<{ reason?: string; message?: string }>;
 		}
 	>;
+}
+
+interface GoogleCalendarListResponse {
+	items?: Array<{
+		id: string;
+		summary?: string;
+		timeZone?: string;
+		primary?: boolean;
+		hidden?: boolean;
+		description?: string;
+	}>;
 }
 
 export class GoogleCalendarApiError extends Error {
@@ -78,6 +105,7 @@ export class GoogleCalendarApiError extends Error {
  */
 export class GoogleCalendarAdapter implements CalendarAdapter {
 	private readonly serviceAccountKey: GoogleServiceAccountCredentials;
+	private readonly oauthClient: GoogleOAuthClientConfig | null;
 	private readonly eventsScope: string;
 	private readonly freeBusyScope: string;
 	private readonly fetchImpl: typeof fetch;
@@ -87,7 +115,10 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 		{ accessToken: string; expiresAt: number }
 	>();
 
-	constructor(serviceAccountKey: Record<string, unknown>) {
+	constructor(
+		serviceAccountKey: Record<string, unknown>,
+		oauthClient?: GoogleOAuthClientConfig | null
+	) {
 		if (
 			!(serviceAccountKey.client_email && serviceAccountKey.private_key)
 		) {
@@ -100,6 +131,7 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 			this.serviceAccountKey =
 				serviceAccountKey as unknown as GoogleServiceAccountCredentials;
 		}
+		this.oauthClient = oauthClient ?? null;
 		this.eventsScope = DEFAULT_EVENTS_SCOPE;
 		this.freeBusyScope = DEFAULT_FREEBUSY_SCOPE;
 		this.fetchImpl = (...args) => fetch(...args);
@@ -176,6 +208,31 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 		}
 	}
 
+	async listCalendars(
+		config: CalendarAccountConfig,
+	): Promise<CalendarSourcePresentation[]> {
+		const credentials = this.resolveCredentials(config);
+		const response =
+			await this.requestGoogleWithCredentials<GoogleCalendarListResponse>(
+				{
+					url: "https://www.googleapis.com/calendar/v3/users/me/calendarList",
+					method: "GET",
+				},
+				credentials,
+			);
+
+		return (response.items ?? []).map((item) => ({
+			externalCalendarId: item.id,
+			name: item.summary?.trim() || item.id,
+			timezone: item.timeZone ?? null,
+			isPrimary: item.primary ?? false,
+			isHidden: item.hidden ?? false,
+			metadata: item.description
+				? { description: item.description }
+				: null,
+		}));
+	}
+
 	async listBusySlots(
 		calendarId: string,
 		from: Date,
@@ -224,10 +281,13 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 	// ─── Private helpers ────────────────────────────────────────────────────
 
 	private resolveCredentials(
-		config: CalendarConnectionConfig,
-	): GoogleServiceAccountCredentials {
+		config: CalendarAccountConfig | CalendarConnectionConfig,
+	): GoogleOAuthCredentials | GoogleServiceAccountCredentials {
 		if (config.credentials?.client_email && config.credentials?.private_key) {
 			return config.credentials as unknown as GoogleServiceAccountCredentials;
+		}
+		if (config.credentials?.refreshToken || config.credentials?.accessToken) {
+			return config.credentials as unknown as GoogleOAuthCredentials;
 		}
 		return this.serviceAccountKey;
 	}
@@ -261,7 +321,7 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 
 	private async requestGoogleWithCredentials<T>(
 		params: { url: string; method: string; body?: string; freeBusy?: boolean },
-		credentials: GoogleServiceAccountCredentials,
+		credentials: GoogleOAuthCredentials | GoogleServiceAccountCredentials,
 	): Promise<T> {
 		const scope = params.freeBusy ? this.freeBusyScope : this.eventsScope;
 		const accessToken = await this.getAccessToken(scope, credentials);
@@ -315,8 +375,12 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 
 	private async getAccessToken(
 		scope: string,
-		credentials: GoogleServiceAccountCredentials,
+		credentials: GoogleOAuthCredentials | GoogleServiceAccountCredentials,
 	): Promise<string> {
+		if (this.isOAuthCredentials(credentials)) {
+			return this.getOAuthAccessToken(scope, credentials);
+		}
+
 		const cacheKey = `${credentials.client_email}:${scope}`;
 		const cached = this.accessTokenCache.get(cacheKey);
 		const nowMs = Date.now();
@@ -350,6 +414,90 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 			expiresAt,
 		});
 		return tokenPayload.access_token;
+	}
+
+	private async getOAuthAccessToken(
+		scope: string,
+		credentials: GoogleOAuthCredentials
+	): Promise<string> {
+		const cacheKey = `oauth:${credentials.externalAccountId ?? credentials.accountEmail ?? credentials.refreshToken ?? "default"}:${scope}`;
+		const cached = this.accessTokenCache.get(cacheKey);
+		const nowMs = Date.now();
+		if (cached && cached.expiresAt - nowMs > 30_000) {
+			return cached.accessToken;
+		}
+
+		const expiresAt = this.parseExpiresAt(credentials.expiresAt);
+		if (
+			credentials.accessToken &&
+			expiresAt !== null &&
+			expiresAt - nowMs > 30_000
+		) {
+			this.accessTokenCache.set(cacheKey, {
+				accessToken: credentials.accessToken,
+				expiresAt,
+			});
+			return credentials.accessToken;
+		}
+
+		if (!credentials.refreshToken) {
+			throw new Error("GOOGLE_CALENDAR_OAUTH_MISSING_REFRESH_TOKEN");
+		}
+		if (!this.oauthClient?.clientId || !this.oauthClient.clientSecret) {
+			throw new Error("GOOGLE_CALENDAR_OAUTH_CLIENT_NOT_CONFIGURED");
+		}
+
+		const body = new URLSearchParams();
+		body.set("client_id", this.oauthClient.clientId);
+		body.set("client_secret", this.oauthClient.clientSecret);
+		body.set("grant_type", "refresh_token");
+		body.set("refresh_token", credentials.refreshToken);
+
+		const response = await this.fetchWithTimeout(
+			this.oauthClient.tokenUri ?? DEFAULT_TOKEN_URI,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+				body: body.toString(),
+			}
+		);
+
+		if (!response.ok) {
+			const responseBody = await response.text();
+			throw new Error(
+				`GOOGLE_CALENDAR_OAUTH_REFRESH_ERROR: ${response.status} ${response.statusText}: ${responseBody}`
+			);
+		}
+
+		const tokenPayload = (await response.json()) as GoogleTokenResponse;
+		const refreshedExpiresAt = nowMs + tokenPayload.expires_in * 1000;
+		this.accessTokenCache.set(cacheKey, {
+			accessToken: tokenPayload.access_token,
+			expiresAt: refreshedExpiresAt,
+		});
+		return tokenPayload.access_token;
+	}
+
+	private isOAuthCredentials(
+		credentials: GoogleOAuthCredentials | GoogleServiceAccountCredentials
+	): credentials is GoogleOAuthCredentials {
+		return !("client_email" in credentials && "private_key" in credentials);
+	}
+
+	private parseExpiresAt(value: GoogleOAuthCredentials["expiresAt"]): number | null {
+		if (typeof value === "number" && Number.isFinite(value)) {
+			return value;
+		}
+		if (typeof value === "string" && value.length > 0) {
+			const numeric = Number(value);
+			if (Number.isFinite(numeric)) {
+				return numeric;
+			}
+
+			const timestamp = Date.parse(value);
+			return Number.isNaN(timestamp) ? null : timestamp;
+		}
+		return null;
 	}
 
 	private async createSignedJwt(

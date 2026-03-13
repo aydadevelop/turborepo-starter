@@ -1,6 +1,9 @@
 import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
-import { listingPricingProfile } from "@my-app/db/schema/marketplace";
-import type { Db, PricingProfileRow } from "./types";
+import {
+	listingPricingProfile,
+	listingPricingRule,
+} from "@my-app/db/schema/marketplace";
+import type { Db, PricingProfileRow, ResolvedPricingContext } from "./types";
 
 /**
  * Find the active pricing profile for a listing at a given start time.
@@ -44,4 +47,40 @@ export const resolveActivePricingProfile = async (
 	}
 
 	return activeProfile;
+};
+
+export const resolveDefaultPricingContext = async (
+	listingId: string,
+	db: Db,
+): Promise<ResolvedPricingContext | null> => {
+	const [profile] = await db
+		.select()
+		.from(listingPricingProfile)
+		.where(
+			and(
+				eq(listingPricingProfile.listingId, listingId),
+				eq(listingPricingProfile.isDefault, true),
+				isNull(listingPricingProfile.archivedAt),
+			),
+		)
+		.limit(1);
+
+	if (!profile) {
+		return null;
+	}
+
+	const rules = await db
+		.select()
+		.from(listingPricingRule)
+		.where(
+			and(
+				eq(listingPricingRule.pricingProfileId, profile.id),
+				eq(listingPricingRule.isActive, true),
+			),
+		);
+
+	return {
+		profile,
+		rules,
+	};
 };

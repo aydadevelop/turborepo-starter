@@ -1,3 +1,4 @@
+import "./telemetry"; // must be first — initialises OTel SDK
 import { serve } from "@hono/node-server";
 import { NOTIFICATION_QUEUE, startBoss, stopBoss } from "@my-app/queue";
 import { registerWorker } from "@my-app/queue/worker";

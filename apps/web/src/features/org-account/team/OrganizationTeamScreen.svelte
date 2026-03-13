@@ -1,13 +1,5 @@
 <script lang="ts">
-	import { Badge } from "@my-app/ui/components/badge";
 	import { Button } from "@my-app/ui/components/button";
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle,
-	} from "@my-app/ui/components/card";
 	import {
 		Content as DialogContent,
 		Description as DialogDescription,
@@ -20,20 +12,21 @@
 		Option as NativeSelectOption,
 		Root as NativeSelectRoot,
 	} from "@my-app/ui/components/native-select";
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow,
-	} from "@my-app/ui/components/table";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { authClient } from "$lib/auth-client";
+	import ResourceBadgeCell from "../../../components/operator/ResourceBadgeCell.svelte";
+	import ResourceTable from "../../../components/operator/ResourceTable.svelte";
+	import {
+		createColumnHelper,
+		renderComponent,
+		type ColumnDef,
+	} from "../../../components/operator/resource-table";
+	import SurfaceCard from "../../../components/operator/SurfaceCard.svelte";
 	import { queryClient } from "$lib/orpc";
 	import { fullOrganizationQueryOptions } from "$lib/query-options";
 	import ConfirmActionDialog from "../../../components/admin/ConfirmActionDialog.svelte";
-	import { formatOrgAccountError } from "../shared/errors";
+	import { createConfirmAction } from "$lib/confirm-action.svelte";
+	import { formatMutationError } from "$lib/mutation-result";
 	import {
 		getMembershipInvalidationKeys,
 		invalidateQueryKeys,
@@ -48,13 +41,12 @@
 		removeOrganizationMember,
 		updateOrganizationMemberRole,
 	} from "./mutations";
+	import OrganizationInvitationActionsCell from "./OrganizationInvitationActionsCell.svelte";
+	import OrganizationTeamMemberActionsCell from "./OrganizationTeamMemberActionsCell.svelte";
 
 	const fullOrgQuery = createQuery(() => fullOrganizationQueryOptions());
 
-	let removeDialogOpen = $state(false);
-	let removeMemberId = $state<string | null>(null);
-	let removeMemberName = $state("");
-	let removeError = $state<string | null>(null);
+	const removeAction = createConfirmAction<string>();
 
 	let roleDialogOpen = $state(false);
 	let roleMemberId = $state<string | null>(null);
@@ -133,6 +125,125 @@
 			(invitation) => invitation.status === "pending"
 		)
 	);
+
+	type MemberRow = {
+		id: string;
+		role: string;
+		user?: {
+			name?: string | null;
+			email?: string | null;
+		} | null;
+	};
+
+	type InvitationRow = {
+		id: string;
+		email: string;
+		role?: string | null;
+		status?: string | null;
+	};
+
+	const memberColumnHelper = createColumnHelper<MemberRow>();
+	const invitationColumnHelper = createColumnHelper<InvitationRow>();
+
+	const memberColumns: ColumnDef<MemberRow, any>[] = [
+		memberColumnHelper.accessor((member) => member.user?.name ?? "—", {
+			id: "name",
+			header: "Name",
+			meta: {
+				cellClass: "font-medium",
+			},
+		}),
+		memberColumnHelper.accessor((member) => member.user?.email ?? "—", {
+			id: "email",
+			header: "Email",
+			meta: {
+				cellClass: "text-muted-foreground",
+			},
+		}),
+		memberColumnHelper.display({
+			id: "role",
+			header: "Role",
+			cell: ({ row }) =>
+				renderComponent(ResourceBadgeCell, {
+					label: row.original.role,
+					variant: getOrgRoleBadgeVariant(row.original.role),
+				}),
+		}),
+		memberColumnHelper.display({
+			id: "actions",
+			header: "Actions",
+			meta: {
+				headerClass: "w-40",
+			},
+			cell: ({ row }) =>
+				renderComponent(OrganizationTeamMemberActionsCell, {
+					onChangeRole: () => {
+						roleMemberId = row.original.id;
+						roleMemberName =
+							row.original.user?.name ?? row.original.user?.email ?? "member";
+						nextRole = row.original.role as OrgRole;
+						roleError = null;
+						roleDialogOpen = true;
+					},
+					onRemove: () => {
+						removeAction.request(
+							row.original.id,
+							row.original.user?.name ?? row.original.user?.email ?? "member",
+						);
+					},
+				}),
+		}),
+	];
+
+	const pendingInvitationColumns: ColumnDef<InvitationRow, any>[] = [
+		invitationColumnHelper.accessor("email", {
+			header: "Email",
+			meta: {
+				cellClass: "font-medium",
+			},
+		}),
+		invitationColumnHelper.display({
+			id: "role",
+			header: "Role",
+			cell: ({ row }) =>
+				renderComponent(ResourceBadgeCell, {
+					label: row.original.role ?? "member",
+					variant: "secondary",
+				}),
+		}),
+		invitationColumnHelper.display({
+			id: "actions",
+			header: "Actions",
+			meta: {
+				headerClass: "w-24",
+			},
+			cell: ({ row }) =>
+				renderComponent(OrganizationInvitationActionsCell, {
+					pending:
+						cancelInvitation.isPending &&
+						pendingInvitationId === row.original.id,
+					onCancel: () => {
+						pendingInvitationId = row.original.id;
+						invitationError = null;
+						cancelInvitation.mutate(
+							{ invitationId: row.original.id },
+							{
+								onSuccess: () => {
+									pendingInvitationId = null;
+								},
+								onError: (error) => {
+									pendingInvitationId = null;
+									invitationError = formatMutationError(
+										error,
+										"Failed to cancel invitation."
+									);
+								},
+							}
+						);
+					},
+				}),
+		}),
+	];
 </script>
 
 <div class="space-y-4">
@@ -143,177 +254,59 @@
 	{:else if fullOrgQuery.data}
 		{@const org = fullOrgQuery.data}
 
-		<Card>
-			<CardHeader>
-				<CardTitle data-testid="org-team-members-title">
+		<SurfaceCard
+			title={`Members (${org.members?.length ?? 0})`}
+			description="Manage team members and their roles."
+		>
+			{#snippet children()}
+				<div data-testid="org-team-members-title" class="sr-only">
 					Members ({org.members?.length ?? 0})
-				</CardTitle>
-				<CardDescription>Manage team members and their roles.</CardDescription>
-			</CardHeader>
-			<CardContent class="p-0">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Name</TableHead>
-							<TableHead>Email</TableHead>
-							<TableHead>Role</TableHead>
-							<TableHead class="w-40">Actions</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{#each org.members ?? [] as member (member.id)}
-							<TableRow>
-								<TableCell class="font-medium">
-									{member.user?.name ?? "—"}
-								</TableCell>
-								<TableCell
-									class="text-muted-foreground"
-									data-testid={`org-member-email-${member.userId}`}
-								>
-									{member.user?.email ?? "—"}
-								</TableCell>
-								<TableCell>
-									<Badge variant={getOrgRoleBadgeVariant(member.role)}>
-										{member.role}
-									</Badge>
-								</TableCell>
-								<TableCell>
-									<div class="flex gap-1">
-										<Button
-											variant="outline"
-											size="sm"
-											onclick={() => {
-												roleMemberId = member.id;
-												roleMemberName =
-													member.user?.name ?? member.user?.email ?? "member";
-												nextRole = member.role as OrgRole;
-												roleError = null;
-												roleDialogOpen = true;
-											}}
-										>
-											Role
-										</Button>
-										<Button
-											variant="outline"
-											size="sm"
-											onclick={() => {
-												removeMemberId = member.id;
-												removeMemberName =
-													member.user?.name ?? member.user?.email ?? "member";
-												removeError = null;
-												removeDialogOpen = true;
-											}}
-										>
-											Remove
-										</Button>
-									</div>
-								</TableCell>
-							</TableRow>
-						{:else}
-							<TableRow>
-								<TableCell
-									colspan={4}
-									class="text-center text-muted-foreground"
-								>
-									No members.
-								</TableCell>
-							</TableRow>
-						{/each}
-					</TableBody>
-				</Table>
-			</CardContent>
-		</Card>
+				</div>
+				<ResourceTable
+					data={(org.members ?? []) as MemberRow[]}
+					columns={memberColumns}
+					getRowId={(member) => member.id}
+					emptyMessage="No members."
+				/>
+			{/snippet}
+		</SurfaceCard>
 
 		{#if pendingInvitations.length > 0}
-			<Card>
-				<CardHeader>
-					<CardTitle
-						>Pending Invitations ({pendingInvitations.length})</CardTitle
-					>
-				</CardHeader>
-				<CardContent class="space-y-3 p-0">
+			<SurfaceCard title={`Pending Invitations (${pendingInvitations.length})`}>
+				{#snippet children()}
+					<div class="space-y-3">
 					{#if invitationError}
-						<p class="px-6 pt-4 text-sm text-destructive">{invitationError}</p>
+						<p class="text-sm text-destructive">{invitationError}</p>
 					{/if}
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>Email</TableHead>
-								<TableHead>Role</TableHead>
-								<TableHead class="w-24">Actions</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{#each pendingInvitations as invitation (invitation.id)}
-								<TableRow>
-									<TableCell class="font-medium">{invitation.email}</TableCell>
-									<TableCell>
-										<Badge variant="secondary">
-											{invitation.role ?? "member"}
-										</Badge>
-									</TableCell>
-									<TableCell>
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={cancelInvitation.isPending &&
-												pendingInvitationId === invitation.id}
-											onclick={() => {
-												pendingInvitationId = invitation.id;
-												invitationError = null;
-												cancelInvitation.mutate(
-													{ invitationId: invitation.id },
-													{
-														onSuccess: () => {
-															pendingInvitationId = null;
-														},
-														onError: (error) => {
-															pendingInvitationId = null;
-															invitationError = formatOrgAccountError(
-																error,
-																"Failed to cancel invitation."
-															);
-														},
-													}
-												);
-											}}
-										>
-											{#if cancelInvitation.isPending && pendingInvitationId === invitation.id}
-												Cancelling...
-											{:else}
-												Cancel
-											{/if}
-										</Button>
-									</TableCell>
-								</TableRow>
-							{/each}
-						</TableBody>
-					</Table>
-				</CardContent>
-			</Card>
+					<ResourceTable
+						data={pendingInvitations as InvitationRow[]}
+						columns={pendingInvitationColumns}
+						getRowId={(invitation) => invitation.id}
+						emptyMessage="No pending invitations."
+					/>
+					</div>
+				{/snippet}
+			</SurfaceCard>
 		{/if}
 	{/if}
 </div>
 
 <ConfirmActionDialog
-	bind:open={removeDialogOpen}
+	bind:open={removeAction.open}
 	title="Remove Member"
-	description={`Remove ${removeMemberName} from this organization?`}
+	description={`Remove ${removeAction.targetLabel} from this organization?`}
 	confirmLabel="Remove"
 	pendingLabel="Removing..."
 	pending={removeMember.isPending}
-	errorMessage={removeError}
+	errorMessage={removeAction.error}
 	onConfirm={() => {
-		if (!removeMemberId) return;
+		if (!removeAction.targetId) return;
 		removeMember.mutate(
-			{ memberId: removeMemberId },
+			{ memberId: removeAction.targetId },
 			{
-				onSuccess: () => {
-					removeDialogOpen = false;
-					removeMemberId = null;
-				},
+				onSuccess: () => removeAction.close(),
 				onError: (error) => {
-					removeError = formatOrgAccountError(error, "Failed to remove member.");
+					removeAction.fail(formatMutationError(error, "Failed to remove member."));
 				},
 			}
 		);
@@ -363,7 +356,7 @@
 								roleMemberId = null;
 							},
 							onError: (error) => {
-								roleError = formatOrgAccountError(error, "Failed to change role.");
+								roleError = formatMutationError(error, "Failed to change role.");
 							},
 						}
 					);

@@ -7,10 +7,11 @@ import {
 	hasOrganizationPermission,
 	type OrganizationPermission,
 } from "./organization";
+import { tracingMiddleware } from "@my-app/telemetry/tracing";
 
 export const o = implement(appContract).$context<Context>();
 
-export const publicProcedure = o;
+export const publicProcedure = o.use(tracingMiddleware);
 
 const getSessionUser = (context: Context) => {
 	const user = context.session?.user as

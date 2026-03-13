@@ -96,6 +96,8 @@ apps/web/src/lib/orpc    — Browser/SSR client (@orpc/client + TanStack Query)
 - Browser client: `createORPCClient(appContract)` with a fetch link that sends credentials.
 - SSR client: same contract, different instantiation in SvelteKit `load()` that reads the session token from `locals` and sets the `Authorization` header explicitly — see Known Seams §4.
 - TanStack Query options factories live in `src/lib/orpc.ts`, not in page components.
+- Web infers network-owned request/response types from the root oRPC client or root contract only, via a single local facade such as `src/lib/orpc-types.ts`.
+- Web uses oRPC-generated query and mutation helpers for all server-state access, including `queryOptions`, `mutationOptions`, `call`, `key`, and `queryKey`.
 
 ---
 
@@ -164,6 +166,8 @@ Handlers that call plain domain services pass `db` and `ctx.organizationId` indi
 | Domain packages never import from api or api-contract | Prevents circular dependency; keeps domain packages independently deployable |
 | `WorkflowContext` is the only bridge from transport to workflow/domain | Stable, testable interface; prevents ad-hoc context threading |
 | Client TanStack Query options factories live in orpc.ts | Prevents query options from leaking into Svelte page components |
+| Web never imports leaf-router type aliases from `packages/api-contract` | Frontend network types must stay rooted in the shared contract/client, not ad-hoc router exports |
+| Web never hand-builds TanStack Query keys for oRPC procedures | Prevents cache-key drift; use `orpc.*.key()` / `queryKey()` helpers instead |
 
 ---
 

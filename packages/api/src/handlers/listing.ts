@@ -1,18 +1,21 @@
 import {
 	createListing,
+	getCreateListingEditorState,
 	getListing,
+	getListingAssetWorkspaceState,
+	getListingWorkspaceState,
 	isCatalogErrorCode,
 	type ListingRow,
 	listAvailableListingTypes,
 	listListings,
-	publishListing,
-	unpublishListing,
+	publishListingWorkflow,
+	unpublishListingWorkflow,
 	updateListing,
 } from "@my-app/catalog";
 import { db } from "@my-app/db";
 import { ORPCError } from "@orpc/server";
+import { buildWorkflowContext } from "../context";
 import { organizationPermissionProcedure } from "../index";
-import { recalculateOrganizationOnboarding } from "../services/organization-onboarding";
 
 const formatListing = (row: ListingRow) => ({
 	...row,
@@ -40,6 +43,12 @@ const throwListingRouterError = (error: unknown): never => {
 	if (isCatalogErrorCode(error, "LISTING_TYPE_NOT_ENABLED")) {
 		throw new ORPCError("PRECONDITION_FAILED", {
 			message: "Listing type is not enabled for this organization",
+		});
+	}
+
+	if (isCatalogErrorCode(error, "LISTING_FAMILY_DETAILS_MISMATCH")) {
+		throw new ORPCError("BAD_REQUEST", {
+			message: "Service-family details do not match the selected listing type",
 		});
 	}
 
@@ -102,24 +111,80 @@ export const listingRouter = {
 		}
 	}),
 
+	getWorkspaceState: organizationPermissionProcedure({
+		listing: ["read"],
+	}).listing.getWorkspaceState.handler(async ({ context, input }) => {
+		try {
+			const state = await getListingWorkspaceState(
+				input.id,
+				context.activeMembership.organizationId,
+				db
+			);
+
+			return {
+				boatRentProfile: state.boatRentProfile,
+				excursionProfile: state.excursionProfile,
+				listing: formatListing(state.listing),
+				listingType: state.listingType,
+				publication: state.publication,
+				serviceFamilyPolicy: state.serviceFamilyPolicy,
+			};
+		} catch (error) {
+			return throwListingRouterError(error);
+		}
+	}),
+
+	getAssetWorkspaceState: organizationPermissionProcedure({
+		listing: ["read"],
+	}).listing.getAssetWorkspaceState.handler(async ({ context, input }) => {
+		try {
+			return await getListingAssetWorkspaceState(
+				input.id,
+				context.activeMembership.organizationId,
+				db
+			);
+		} catch (error) {
+			return throwListingRouterError(error);
+		}
+	}),
+
 	list: organizationPermissionProcedure({
 		listing: ["read"],
 	}).listing.list.handler(async ({ context, input }) => {
-		const items = await listListings(
+		const result = await listListings(
 			{
+				filter: input.filter,
 				organizationId: context.activeMembership.organizationId,
-				limit: input.limit,
-				offset: input.offset,
+				page: input.page,
+				search: input.search,
+				sort: input.sort,
 			},
 			db
 		);
-		return { items: items.map(formatListing), total: items.length };
+		return {
+			items: result.items.map(formatListing),
+			page: {
+				limit: input.page.limit,
+				offset: input.page.offset,
+				total: result.total,
+				hasMore: input.page.offset + result.items.length < result.total,
+			},
+		};
 	}),
 
 	listAvailableTypes: organizationPermissionProcedure({
 		listing: ["read"],
-	}).listing.listAvailableTypes.handler(async ({ context }) => {
+	}).listing.listAvailableTypes.handler(({ context }) => {
 		return listAvailableListingTypes(
+			context.activeMembership.organizationId,
+			db
+		);
+	}),
+
+	getCreateEditorState: organizationPermissionProcedure({
+		listing: ["read"],
+	}).listing.getCreateEditorState.handler(({ context }) => {
+		return getCreateListingEditorState(
 			context.activeMembership.organizationId,
 			db
 		);
@@ -129,18 +194,19 @@ export const listingRouter = {
 		listing: ["update"],
 	}).listing.publish.handler(async ({ context, input }) => {
 		try {
-			const { listing: row } = await publishListing(
+			const result = await publishListingWorkflow(db).execute(
 				{
 					listingId: input.id,
 					organizationId: context.activeMembership.organizationId,
 					channelType: input.channelType ?? undefined,
 				},
-				db
+				buildWorkflowContext(context, `listing:publish:${input.id}`)
 			);
-			await recalculateOrganizationOnboarding(
-				context.activeMembership.organizationId,
-				db
-			);
+			if (!result.success) {
+				return throwListingRouterError(result.error);
+			}
+
+			const { listing: row } = result.output;
 			return formatListing(row);
 		} catch (error) {
 			return throwListingRouterError(error);
@@ -151,15 +217,18 @@ export const listingRouter = {
 		listing: ["update"],
 	}).listing.unpublish.handler(async ({ context, input }) => {
 		try {
-			const row = await unpublishListing(
-				input.id,
-				context.activeMembership.organizationId,
-				db
+			const result = await unpublishListingWorkflow(db).execute(
+				{
+					listingId: input.id,
+					organizationId: context.activeMembership.organizationId,
+				},
+				buildWorkflowContext(context, `listing:unpublish:${input.id}`)
 			);
-			await recalculateOrganizationOnboarding(
-				context.activeMembership.organizationId,
-				db
-			);
+			if (!result.success) {
+				return throwListingRouterError(result.error);
+			}
+
+			const { listing: row } = result.output;
 			return formatListing(row);
 		} catch (error) {
 			return throwListingRouterError(error);

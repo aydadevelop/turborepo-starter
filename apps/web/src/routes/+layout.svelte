@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { QueryClientProvider } from "@tanstack/svelte-query";
+	import { Toaster } from "@my-app/ui/components/sonner";
 	import { browser } from "$app/environment";
 	import { page } from "$app/state";
+	import { queryClient } from "$lib/orpc";
 	import "../app.css";
 
-	const { children } = $props();
+const { children } = $props();
 
 	const PUBLIC_HEADER_PATHS = new Set(["/", "/login"]);
 
@@ -26,8 +29,11 @@
 	});
 </script>
 
-{#if browser && isPublicHeaderPath && PublicAppHeader}
-	<PublicAppHeader />
-{/if}
+<QueryClientProvider client={queryClient}>
+	<Toaster />
+	{#if browser && isPublicHeaderPath && PublicAppHeader}
+		<PublicAppHeader />
+	{/if}
 
-{@render children()}
+	{@render children()}
+</QueryClientProvider>

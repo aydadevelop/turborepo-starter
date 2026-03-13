@@ -1,13 +1,12 @@
-import { notificationsPusher } from "@my-app/notifications/pusher";
-import { ORPCError } from "@orpc/server";
 import { db } from "@my-app/db";
+import { notificationsPusher } from "@my-app/notifications/pusher";
 import {
 	connectPaymentProvider,
-	getPaymentWebhookAdapter,
 	getOrgPaymentConfig,
+	getPaymentWebhookAdapter,
 	reconcilePaymentWebhook,
 } from "@my-app/payment";
-import { recalculateOrganizationOnboarding } from "../services/organization-onboarding";
+import { ORPCError } from "@orpc/server";
 
 import { organizationPermissionProcedure, publicProcedure } from "../index";
 
@@ -95,10 +94,10 @@ export const paymentsRouter = {
 				encryptedCredentials: input.encryptedCredentials,
 			},
 			db,
-		);
-		await recalculateOrganizationOnboarding(
-			context.activeMembership.organizationId,
-			db,
+			{
+				actorUserId: context.session?.user?.id ?? undefined,
+				eventBus: context.eventBus,
+			}
 		);
 		return {
 			...row,
@@ -113,9 +112,11 @@ export const paymentsRouter = {
 	}).payments.getOrgConfig.handler(async ({ context }) => {
 		const row = await getOrgPaymentConfig(
 			context.activeMembership.organizationId,
-			db,
+			db
 		);
-		if (!row) return null;
+		if (!row) {
+			return null;
+		}
 		return {
 			...row,
 			publicKey: row.publicKey ?? null,
@@ -125,15 +126,17 @@ export const paymentsRouter = {
 	}),
 
 	receiveWebhook: publicProcedure.payments.receiveWebhook.handler(
-		async ({ input }) => {
+		async ({ context, input }) => {
 			try {
 				const result = await reconcilePaymentWebhook(
 					input.endpointId,
 					input.webhookType,
 					input.payload,
 					db,
+					{
+						eventBus: context.eventBus,
+					}
 				);
-				await recalculateOrganizationOnboarding(result.organizationId, db);
 				return {
 					processed: result.processed,
 					idempotent: result.idempotent,
@@ -147,6 +150,6 @@ export const paymentsRouter = {
 				}
 				throw e;
 			}
-		},
+		}
 	),
 };

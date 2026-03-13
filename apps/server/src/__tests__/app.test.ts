@@ -41,6 +41,12 @@ vi.mock("../routes/assets", () => {
 	};
 });
 
+vi.mock("../routes/calendar-oauth", () => {
+	return {
+		calendarOauthRoutes: new Hono(),
+	};
+});
+
 vi.mock("../routes/support-email-intake", () => {
 	return {
 		supportEmailIntakeRoutes: new Hono(),

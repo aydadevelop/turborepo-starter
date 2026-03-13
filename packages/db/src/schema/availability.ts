@@ -39,6 +39,12 @@ export const calendarConnectionSyncStatusValues = [
 	"disabled",
 ] as const;
 
+export const calendarAccountStatusValues = [
+	"connected",
+	"error",
+	"disconnected",
+] as const;
+
 export const availabilityBlockSourceValues = [
 	"manual",
 	"calendar",
@@ -59,6 +65,10 @@ export const calendarProviderEnum = pgEnum(
 export const calendarConnectionSyncStatusEnum = pgEnum(
 	"calendar_connection_sync_status",
 	calendarConnectionSyncStatusValues
+);
+export const calendarAccountStatusEnum = pgEnum(
+	"calendar_account_status",
+	calendarAccountStatusValues
 );
 export const availabilityBlockSourceEnum = pgEnum(
 	"availability_block_source",
@@ -217,6 +227,91 @@ export const listingMinimumDurationRule = pgTable(
 );
 
 /** External calendar connections for bi-directional sync (Google, Outlook, iCal). */
+export const organizationCalendarAccount = pgTable(
+	"organization_calendar_account",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		provider: calendarProviderEnum("provider").notNull(),
+		externalAccountId: text("external_account_id").notNull(),
+		accountEmail: text("account_email"),
+		displayName: text("display_name"),
+		status: calendarAccountStatusEnum("status")
+			.notNull()
+			.default("connected"),
+		providerMetadata: jsonb("provider_metadata").$type<Record<string, unknown>>(),
+		lastSyncedAt: timestamp("last_synced_at", {
+			withTimezone: true,
+			mode: "date",
+		}),
+		lastError: text("last_error"),
+		createdByUserId: text("created_by_user_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		...timestamps,
+	},
+	(table) => [
+		index("organization_calendar_account_ix_organization_id").on(
+			table.organizationId
+		),
+		index("organization_calendar_account_ix_provider").on(table.provider),
+		index("organization_calendar_account_ix_status").on(table.status),
+		uniqueIndex("organization_calendar_account_uq_org_provider_external").on(
+			table.organizationId,
+			table.provider,
+			table.externalAccountId
+		),
+	]
+);
+
+/** Calendars discovered from a connected provider account and available for attachment. */
+export const organizationCalendarSource = pgTable(
+	"organization_calendar_source",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		calendarAccountId: text("calendar_account_id")
+			.notNull()
+			.references(() => organizationCalendarAccount.id, {
+				onDelete: "cascade",
+			}),
+		provider: calendarProviderEnum("provider").notNull(),
+		externalCalendarId: text("external_calendar_id").notNull(),
+		name: text("name").notNull(),
+		timezone: text("timezone"),
+		isPrimary: boolean("is_primary").notNull().default(false),
+		isHidden: boolean("is_hidden").notNull().default(false),
+		isActive: boolean("is_active").notNull().default(true),
+		sourceMetadata: jsonb("source_metadata").$type<Record<string, unknown>>(),
+		lastDiscoveredAt: timestamp("last_discovered_at", {
+			withTimezone: true,
+			mode: "date",
+		})
+			.notNull()
+			.default(sql`now()`),
+		...timestamps,
+	},
+	(table) => [
+		index("organization_calendar_source_ix_organization_id").on(
+			table.organizationId
+		),
+		index("organization_calendar_source_ix_calendar_account_id").on(
+			table.calendarAccountId
+		),
+		index("organization_calendar_source_ix_provider").on(table.provider),
+		index("organization_calendar_source_ix_is_active").on(table.isActive),
+		uniqueIndex("organization_calendar_source_uq_account_external").on(
+			table.calendarAccountId,
+			table.externalCalendarId
+		),
+	]
+);
+
+/** External calendar connections for bi-directional sync (Google, Outlook, iCal). */
 export const listingCalendarConnection = pgTable(
 	"listing_calendar_connection",
 	{
@@ -227,6 +322,14 @@ export const listingCalendarConnection = pgTable(
 		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organization.id, { onDelete: "cascade" }),
+		calendarAccountId: text("calendar_account_id").references(
+			() => organizationCalendarAccount.id,
+			{ onDelete: "set null" }
+		),
+		calendarSourceId: text("calendar_source_id").references(
+			() => organizationCalendarSource.id,
+			{ onDelete: "set null" }
+		),
 		provider: calendarProviderEnum("provider").notNull(),
 		externalCalendarId: text("external_calendar_id"),
 		syncToken: text("sync_token"),
@@ -256,6 +359,12 @@ export const listingCalendarConnection = pgTable(
 		index("listing_calendar_connection_ix_listing_id").on(table.listingId),
 		index("listing_calendar_connection_ix_organization_id").on(
 			table.organizationId
+		),
+		index("listing_calendar_connection_ix_calendar_account_id").on(
+			table.calendarAccountId
+		),
+		index("listing_calendar_connection_ix_calendar_source_id").on(
+			table.calendarSourceId
 		),
 		index("listing_calendar_connection_ix_sync_status").on(table.syncStatus),
 		uniqueIndex("listing_calendar_connection_uq_primary_listing")

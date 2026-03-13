@@ -49,6 +49,7 @@ Business and platform:
 - [organization-owner.md](./organization-owner.md)
 - [platform-operations-and-moderation.md](./platform-operations-and-moderation.md)
 - [customer-support-agent.md](./customer-support-agent.md)
+- [product-builder.md](./product-builder.md)
 
 ## Core Rule
 
@@ -60,6 +61,7 @@ Examples:
 - providers think in `can I publish`, `can I manage dates/prices`, `what do I need to confirm`, `why is this unavailable`
 - org owners think in `what businesses can I run here`, `is the org ready`, `who can manage what`
 - operations think in `what is risky`, `what is broken`, `what needs intervention`
+- product builders think in `what problem are we solving`, `what role are we serving`, `what makes this easier to ship, sell, trust, and learn from`
 
 ## Session Output Template
 

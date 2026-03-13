@@ -257,21 +257,28 @@ describe("support routes", () => {
 			]);
 
 		const result = await callRpc("/rpc/support/listOrgTickets", {
-			priority: "high",
-			source: "web",
-			customerUserId: CUSTOMER_USER_ID,
-			onlyUnassigned: true,
-			onlyOverdue: true,
+			filter: {
+				priority: "high",
+				source: "web",
+				customerUserId: CUSTOMER_USER_ID,
+				onlyUnassigned: true,
+				onlyOverdue: true,
+			},
 		});
 
 		expect(result.status).toBe(200);
-		expect(result.body).toMatchObject([
-			{
-				id: "ticket-filter-1",
-				priority: "high",
-				source: "web",
+		expect(result.body).toMatchObject({
+			items: [
+				{
+					id: "ticket-filter-1",
+					priority: "high",
+					source: "web",
+				},
+			],
+			page: {
+				total: 1,
 			},
-		]);
+		});
 	});
 
 	it("returns operator-visible thread data and updates ticket lifecycle fields", async () => {

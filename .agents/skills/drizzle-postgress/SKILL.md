@@ -100,6 +100,26 @@ PostgreSQL is a **transactional, MVCC-based database** and the **system of recor
 - Always compare **estimated rows vs actual rows** when reading an execution plan.
 - Optimize selectivity before heavy operators: pre-filter before JSONB, BM25, or vector search.
 
+### Index naming — PostgreSQL 63-char limit
+
+PostgreSQL silently truncates identifiers to **63 bytes**. When a Drizzle index name exceeds 63 chars:
+
+- PostgreSQL stores the truncated name (e.g. `booking_discount_application_ix_discount_code_id_customer_user_`)
+- Drizzle-kit always sees the full name in schema vs the truncated name in the DB and treats it as a **rename**, prompting interactively on every `drizzle-kit push`.
+- `--force` skips the prompt but the mismatch persists until the name is fixed in the schema.
+
+**Fix**: shorten the schema name so it is ≤ 63 characters.
+
+```ts
+// BAD  (65 chars — truncated by PG, causes drizzle-kit rename prompt every push)
+index("booking_discount_application_ix_discount_code_id_customer_user_id")
+
+// GOOD (≤ 63 chars)
+index("booking_discount_application_ix_code_id_customer")
+```
+
+After renaming in the schema, drop the old truncated index in the DB and re-run `drizzle-kit push --force` to create the clean name. Subsequent pushes will report `No changes detected`.
+
 ## Extensions and specialization
 
 - General PostgreSQL + Drizzle modeling stays in this skill.

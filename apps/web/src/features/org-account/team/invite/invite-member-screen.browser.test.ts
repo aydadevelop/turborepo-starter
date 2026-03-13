@@ -54,6 +54,7 @@ test("submits an invite through the feature screen contract", async () => {
 		page.getByLabelText("Email address"),
 		"captain@example.com"
 	);
+	await expect(document.body).toMatchScreenshot("invite-member-screen");
 	await userEvent.click(page.getByRole("button", { name: MANAGER_BUTTON }));
 	await userEvent.click(page.getByRole("button", { name: "Send Invitation" }));
 

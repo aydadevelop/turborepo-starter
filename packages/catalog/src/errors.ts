@@ -1,6 +1,7 @@
 import { DrizzleQueryError } from "drizzle-orm/errors";
 
 export const CATALOG_ERROR_CODES = {
+	listingFamilyDetailsMismatch: "LISTING_FAMILY_DETAILS_MISMATCH",
 	listingSlugConflict: "LISTING_SLUG_CONFLICT",
 	listingTypeInactive: "LISTING_TYPE_INACTIVE",
 	listingTypeNotEnabled: "LISTING_TYPE_NOT_ENABLED",

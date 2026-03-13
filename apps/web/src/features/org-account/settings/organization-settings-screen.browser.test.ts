@@ -80,6 +80,7 @@ test("seeds organization values from queries and submits changes", async () => {
 
 	await expect.element(page.getByLabelText("Name")).toHaveValue("Alpha Marine");
 	await expect.element(page.getByLabelText("Slug")).toHaveValue("alpha-marine");
+	await expect(document.body).toMatchScreenshot("organization-settings-screen");
 
 	await userEvent.fill(page.getByLabelText("Name"), "North Star Charters");
 	await userEvent.fill(page.getByLabelText("Slug"), "north-star-charters");

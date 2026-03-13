@@ -1,8 +1,11 @@
 import { organization } from "@my-app/db/schema/auth";
 import {
+	listingBoatRentProfile,
+	listingExcursionProfile,
 	listingPublication,
 	listingTypeConfig,
 	organizationListingType,
+	organizationSettings,
 } from "@my-app/db/schema/marketplace";
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import { and, eq } from "drizzle-orm";
@@ -10,7 +13,9 @@ import { describe, expect, it } from "vitest";
 
 import {
 	createListing,
+	getCreateListingEditorState,
 	getListing,
+	getListingWorkspaceState,
 	listAvailableListingTypes,
 	listListings,
 	updateListing,
@@ -19,17 +24,29 @@ import { publishListing, unpublishListing } from "../publication-service";
 
 const ORG_ID = "test-org-1";
 const LISTING_TYPE_SLUG = "test-listing-type";
+const EXCURSION_TYPE_SLUG = "test-excursion-type";
 
 const testDbState = bootstrapTestDatabase({
 	seed: async (db: TestDatabase) => {
-		await db.insert(listingTypeConfig).values({
-			id: crypto.randomUUID(),
-			slug: LISTING_TYPE_SLUG,
-			label: "Test Type",
-			metadataJsonSchema: {},
-			isActive: true,
-			sortOrder: 0,
-		});
+		await db.insert(listingTypeConfig).values([
+			{
+				id: crypto.randomUUID(),
+				slug: LISTING_TYPE_SLUG,
+				label: "Test Type",
+				metadataJsonSchema: {},
+				isActive: true,
+				sortOrder: 0,
+			},
+			{
+				id: crypto.randomUUID(),
+				slug: EXCURSION_TYPE_SLUG,
+				label: "Excursion Type",
+				metadataJsonSchema: {},
+				isActive: true,
+				sortOrder: 1,
+				serviceFamily: "excursions",
+			},
+		]);
 		await db.insert(organization).values({
 			id: ORG_ID,
 			name: "Test Org",
@@ -75,6 +92,85 @@ describe("createListing", () => {
 
 		expect(row.description).toBe("A fine listing");
 		expect(row.metadata).toEqual({ capacity: 10 });
+	});
+
+	it("creates a typed boat-rent profile for boat-rent listings", async () => {
+		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
+		const row = await createListing(
+			makeInput({
+				slug: "boat-rent-profile",
+				serviceFamilyDetails: {
+					boatRent: {
+						capacity: 12,
+						captainMode: "captain_optional",
+						basePort: "Sochi Marine Station",
+						departureArea: "Imeretinskaya Bay",
+						fuelPolicy: "charged_by_usage",
+						depositRequired: true,
+						instantBookAllowed: false,
+					},
+				},
+			}),
+			db
+		);
+
+		const [profile] = await db
+			.select()
+			.from(listingBoatRentProfile)
+			.where(eq(listingBoatRentProfile.listingId, row.id))
+			.limit(1);
+
+		expect(profile).toMatchObject({
+			listingId: row.id,
+			capacity: 12,
+			captainMode: "captain_optional",
+			basePort: "Sochi Marine Station",
+			departureArea: "Imeretinskaya Bay",
+			fuelPolicy: "charged_by_usage",
+			depositRequired: true,
+			instantBookAllowed: false,
+		});
+	});
+
+	it("creates a typed excursion profile for excursion listings", async () => {
+		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
+		const row = await createListing(
+			makeInput({
+				slug: "excursion-profile",
+				listingTypeSlug: EXCURSION_TYPE_SLUG,
+				serviceFamilyDetails: {
+					excursion: {
+						meetingPoint: "Central fountain",
+						durationMinutes: 180,
+						groupFormat: "both",
+						maxGroupSize: 12,
+						primaryLanguage: "English",
+						ticketsIncluded: true,
+						childFriendly: true,
+						instantBookAllowed: true,
+					},
+				},
+			}),
+			db
+		);
+
+		const [profile] = await db
+			.select()
+			.from(listingExcursionProfile)
+			.where(eq(listingExcursionProfile.listingId, row.id))
+			.limit(1);
+
+		expect(profile).toMatchObject({
+			listingId: row.id,
+			meetingPoint: "Central fountain",
+			durationMinutes: 180,
+			groupFormat: "both",
+			maxGroupSize: 12,
+			primaryLanguage: "English",
+			ticketsIncluded: true,
+			childFriendly: true,
+			instantBookAllowed: true,
+		});
 	});
 
 	it("throws LISTING_TYPE_NOT_FOUND for an unknown listing type", async () => {
@@ -175,15 +271,40 @@ describe("listAvailableListingTypes", () => {
 		const result = await listAvailableListingTypes(ORG_ID, db);
 
 		expect(result.defaultValue).toBeNull();
-		expect(result.items).toEqual([
-			{
-				icon: null,
-				isDefault: false,
-				label: "Test Type",
-				metadataJsonSchema: {},
-				value: LISTING_TYPE_SLUG,
-			},
-		]);
+		expect(result.items).toEqual(
+			expect.arrayContaining([
+				{
+					defaultAmenityKeys: [],
+					icon: null,
+					isDefault: false,
+					label: "Test Type",
+					metadataJsonSchema: {},
+					requiredFields: [],
+					serviceFamily: "boat_rent",
+					serviceFamilyPolicy: expect.objectContaining({
+						key: "boat_rent",
+						availabilityMode: "duration",
+					}),
+					supportedPricingModels: [],
+					value: LISTING_TYPE_SLUG,
+				},
+				{
+					defaultAmenityKeys: [],
+					icon: null,
+					isDefault: false,
+					label: "Excursion Type",
+					metadataJsonSchema: {},
+					requiredFields: [],
+					serviceFamily: "excursions",
+					serviceFamilyPolicy: expect.objectContaining({
+						key: "excursions",
+						availabilityMode: "schedule",
+					}),
+					supportedPricingModels: [],
+					value: EXCURSION_TYPE_SLUG,
+				},
+			])
+		);
 	});
 
 	it("returns only active org-enabled listing types and exposes the default", async () => {
@@ -247,20 +368,73 @@ describe("listAvailableListingTypes", () => {
 		expect(result.defaultValue).toBe(defaultSlug);
 		expect(result.items).toEqual([
 			{
+				defaultAmenityKeys: [],
 				icon: null,
 				isDefault: true,
 				label: "Default Type",
 				metadataJsonSchema: {},
+				requiredFields: [],
+				serviceFamily: "boat_rent",
+				serviceFamilyPolicy: expect.objectContaining({
+					key: "boat_rent",
+					customerPresentation: expect.objectContaining({
+						bookingMode: "request",
+					}),
+				}),
+				supportedPricingModels: [],
 				value: defaultSlug,
 			},
 			{
+				defaultAmenityKeys: [],
 				icon: null,
 				isDefault: false,
 				label: "Extra Type",
 				metadataJsonSchema: {},
+				requiredFields: [],
+				serviceFamily: "boat_rent",
+				serviceFamilyPolicy: expect.objectContaining({
+					key: "boat_rent",
+				}),
+				supportedPricingModels: [],
 				value: extraSlug,
 			},
 		]);
+	});
+});
+
+describe("getCreateListingEditorState", () => {
+	it("returns org defaults together with family-aware listing types", async () => {
+		const db = testDbState.db as unknown as Parameters<
+			typeof getCreateListingEditorState
+		>[1];
+
+		await db.insert(organizationSettings).values({
+			id: crypto.randomUUID(),
+			organizationId: ORG_ID,
+			timezone: "Europe/Moscow",
+		});
+
+		await db.update(listingTypeConfig).set({
+			requiredFields: ["name", "slug", "timezone"],
+			supportedPricingModels: ["hourly", "package"],
+			defaultAmenityKeys: ["captain"],
+		});
+
+		const result = await getCreateListingEditorState(ORG_ID, db);
+
+		expect(result.defaults.timezone).toBe("Europe/Moscow");
+		expect(result.listingTypes.items[0]).toMatchObject({
+			value: LISTING_TYPE_SLUG,
+			serviceFamily: "boat_rent",
+			requiredFields: ["name", "slug", "timezone"],
+			supportedPricingModels: ["hourly", "package"],
+			defaultAmenityKeys: ["captain"],
+			serviceFamilyPolicy: {
+				profileEditor: expect.objectContaining({
+					title: "Boat rent profile",
+				}),
+			},
+		});
 	});
 });
 
@@ -281,6 +455,92 @@ describe("updateListing", () => {
 
 		expect(updated.name).toBe("Updated Name");
 		expect(updated.description).toBe("Updated desc");
+	});
+
+	it("updates typed boat-rent profile fields", async () => {
+		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
+		const created = await createListing(
+			makeInput({ slug: "boat-rent-update" }),
+			db
+		);
+
+		await updateListing(
+			{
+				id: created.id,
+				organizationId: ORG_ID,
+				serviceFamilyDetails: {
+					boatRent: {
+						capacity: 14,
+						basePort: "Novorossiysk Marina",
+						departureArea: "Tsemess Bay",
+						captainMode: "captained_only",
+						fuelPolicy: "included",
+						depositRequired: false,
+						instantBookAllowed: true,
+					},
+				},
+			},
+			db
+		);
+
+		const [profile] = await db
+			.select()
+			.from(listingBoatRentProfile)
+			.where(eq(listingBoatRentProfile.listingId, created.id))
+			.limit(1);
+
+		expect(profile).toMatchObject({
+			capacity: 14,
+			basePort: "Novorossiysk Marina",
+			departureArea: "Tsemess Bay",
+			instantBookAllowed: true,
+		});
+	});
+
+	it("updates typed excursion profile fields", async () => {
+		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
+		const created = await createListing(
+			makeInput({
+				slug: "excursion-update",
+				listingTypeSlug: EXCURSION_TYPE_SLUG,
+			}),
+			db
+		);
+
+		await updateListing(
+			{
+				id: created.id,
+				organizationId: ORG_ID,
+				serviceFamilyDetails: {
+					excursion: {
+						meetingPoint: "Opera square",
+						durationMinutes: 150,
+						groupFormat: "private",
+						maxGroupSize: 8,
+						primaryLanguage: "Russian",
+						ticketsIncluded: false,
+						childFriendly: false,
+						instantBookAllowed: false,
+					},
+				},
+			},
+			db
+		);
+
+		const [profile] = await db
+			.select()
+			.from(listingExcursionProfile)
+			.where(eq(listingExcursionProfile.listingId, created.id))
+			.limit(1);
+
+		expect(profile).toMatchObject({
+			meetingPoint: "Opera square",
+			durationMinutes: 150,
+			groupFormat: "private",
+			maxGroupSize: 8,
+			primaryLanguage: "Russian",
+			instantBookAllowed: false,
+		});
 	});
 
 	it("throws NOT_FOUND for wrong org", async () => {
@@ -307,10 +567,32 @@ describe("listListings", () => {
 
 		const results = await listListings({ organizationId: ORG_ID }, db);
 
-		expect(results.length).toBeGreaterThanOrEqual(2);
-		const names = results.map((r) => r.name);
+		expect(results.items.length).toBeGreaterThanOrEqual(2);
+		expect(results.total).toBeGreaterThanOrEqual(2);
+		const names = results.items.map((r) => r.name);
 		expect(names).toContain("Alpha");
 		expect(names).toContain("Beta");
+	});
+
+	it("applies search and sort to the listing collection", async () => {
+		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
+		await createListing(makeInput({ slug: "sunset-cruise", name: "Sunset Cruise" }), db);
+		await createListing(makeInput({ slug: "harbor-tour", name: "Harbor Tour" }), db);
+
+		const results = await listListings(
+			{
+				organizationId: ORG_ID,
+				search: "tour",
+				sort: {
+					by: "name",
+					dir: "asc",
+				},
+			},
+			db
+		);
+
+		expect(results.total).toBeGreaterThanOrEqual(1);
+		expect(results.items.map((item) => item.name)).toEqual(["Harbor Tour"]);
 	});
 });
 
@@ -328,6 +610,92 @@ describe("getListing", () => {
 		await expect(getListing("nonexistent-id", ORG_ID, db)).rejects.toThrow(
 			"NOT_FOUND"
 		);
+	});
+});
+
+describe("getListingWorkspaceState", () => {
+	it("returns listing, type config, and publication state together", async () => {
+		const db = testDbState.db as unknown as Parameters<
+			typeof getListingWorkspaceState
+		>[2];
+		const created = await createListing(
+			makeInput({ slug: "workspace-state" }),
+			db
+		);
+
+		await publishListing(
+			{
+				listingId: created.id,
+				organizationId: ORG_ID,
+			},
+			db
+		);
+
+		const state = await getListingWorkspaceState(created.id, ORG_ID, db);
+
+		expect(state.listing.id).toBe(created.id);
+		expect(state.listingType).toMatchObject({
+			value: LISTING_TYPE_SLUG,
+			serviceFamily: "boat_rent",
+		});
+		expect(state.boatRentProfile).toMatchObject({
+			listingId: created.id,
+			captainMode: "captained_only",
+			fuelPolicy: "included",
+			depositRequired: false,
+			instantBookAllowed: false,
+		});
+		expect(state.publication).toEqual({
+			activePublicationCount: 1,
+			isPublished: true,
+			requiresReview: true,
+		});
+		expect(state.excursionProfile).toBeNull();
+	});
+
+	it("returns excursion workspace state for excursion listings", async () => {
+		const db = testDbState.db as unknown as Parameters<
+			typeof getListingWorkspaceState
+		>[2];
+		const created = await createListing(
+			makeInput({
+				slug: "excursion-workspace-state",
+				listingTypeSlug: EXCURSION_TYPE_SLUG,
+				serviceFamilyDetails: {
+					excursion: {
+						meetingPoint: "Central fountain",
+						durationMinutes: 180,
+						groupFormat: "both",
+						maxGroupSize: 12,
+						primaryLanguage: "English",
+						ticketsIncluded: true,
+						childFriendly: true,
+						instantBookAllowed: true,
+					},
+				},
+			}),
+			db
+		);
+
+		const state = await getListingWorkspaceState(created.id, ORG_ID, db);
+
+		expect(state.listingType).toMatchObject({
+			value: EXCURSION_TYPE_SLUG,
+			serviceFamily: "excursions",
+		});
+		expect(state.boatRentProfile).toBeNull();
+		expect(state.excursionProfile).toMatchObject({
+			listingId: created.id,
+			meetingPoint: "Central fountain",
+			durationMinutes: 180,
+			groupFormat: "both",
+			maxGroupSize: 12,
+			primaryLanguage: "English",
+		});
+		expect(state.serviceFamilyPolicy).toMatchObject({
+			key: "excursions",
+			availabilityMode: "schedule",
+		});
 	});
 });
 

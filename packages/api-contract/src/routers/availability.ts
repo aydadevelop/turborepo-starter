@@ -38,6 +38,16 @@ const availabilityExceptionOutput = z.object({
 	updatedAt: z.string().datetime(),
 });
 
+const availabilityWorkspaceStateOutput = z.object({
+	activeBlockCount: z.number().int(),
+	activeRuleCount: z.number().int(),
+	blocks: z.array(availabilityBlockOutput),
+	exceptionCount: z.number().int(),
+	exceptions: z.array(availabilityExceptionOutput),
+	hasAvailability: z.boolean(),
+	rules: z.array(availabilityRuleOutput),
+});
+
 export const availabilityContract = {
 	addRule: oc
 		.route({ tags: ["Availability"], summary: "Add recurring availability rule" })
@@ -60,6 +70,11 @@ export const availabilityContract = {
 		.route({ tags: ["Availability"], summary: "List availability rules" })
 		.input(z.object({ listingId: z.string() }))
 		.output(z.array(availabilityRuleOutput)),
+
+	getWorkspaceState: oc
+		.route({ tags: ["Availability"], summary: "Get availability workspace state" })
+		.input(z.object({ listingId: z.string() }))
+		.output(availabilityWorkspaceStateOutput),
 
 	addBlock: oc
 		.route({ tags: ["Availability"], summary: "Add availability block" })

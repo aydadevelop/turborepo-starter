@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import { config as dotenvConfig } from "dotenv";
 import path from "node:path";
@@ -149,10 +149,10 @@ const runCommand = (command, args) =>
 const main = async () => {
 	const { ensureDb, services } = parseArgs(process.argv.slice(2));
 
-	dotenvConfig({ path: path.resolve(repoRoot, ".env"), override: false });
-	dotenvConfig({ path: path.resolve(repoRoot, ".env.e2e"), override: true });
+	// Bun auto-loads .env and .env.test when NODE_ENV=test.
+	// Only need dotenv for the web-specific override file.
 	dotenvConfig({
-		path: path.resolve(repoRoot, "apps/web/.env.e2e"),
+		path: path.resolve(repoRoot, "apps/web/.env.test"),
 		override: true,
 	});
 

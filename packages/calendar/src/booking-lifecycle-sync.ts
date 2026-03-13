@@ -1,14 +1,13 @@
 import { eq } from "drizzle-orm";
-import type { db } from "@my-app/db";
 import {
 	bookingCalendarLink,
+	organizationCalendarAccount,
 	listingCalendarConnection,
 } from "@my-app/db/schema/availability";
 import { booking } from "@my-app/db/schema/marketplace";
 import { registerEventPusher } from "@my-app/events";
 import { getCalendarAdapter } from "./adapter-registry";
-
-type Db = typeof db;
+import type { Db } from "./types";
 
 /**
  * Register event handlers that keep external calendars in sync with
@@ -42,6 +41,14 @@ export function registerBookingLifecycleSync(db: Db): void {
 			await syncOnContactUpdated(data.bookingId, data.contactDetails, db);
 			return;
 		}
+
+		if (event.type === "booking:schedule-updated") {
+			await syncOnBookingScheduleUpdated(
+				(event.data as { bookingId: string }).bookingId,
+				db,
+			);
+			return;
+		}
 	});
 }
 
@@ -58,11 +65,7 @@ async function syncOnBookingConfirmed(
 	if (!connection || !connection.externalCalendarId) return;
 
 	const adapter = getCalendarAdapter(connection.provider);
-	const config = {
-		provider: connection.provider,
-		credentials: {},
-		calendarId: connection.externalCalendarId,
-	};
+	const config = await buildConnectionConfig(connection, db);
 
 	try {
 		const presentation = await adapter.createEvent(
@@ -131,11 +134,7 @@ async function syncOnBookingCancelled(
 	if (!connection || !connection.externalCalendarId) return;
 
 	const adapter = getCalendarAdapter(connection.provider);
-	const config = {
-		provider: connection.provider,
-		credentials: {},
-		calendarId: connection.externalCalendarId,
-	};
+	const config = await buildConnectionConfig(connection, db);
 
 	try {
 		await adapter.deleteEvent(link.providerEventId, config);
@@ -175,11 +174,7 @@ async function syncOnContactUpdated(
 	if (!connection || !connection.externalCalendarId) return;
 
 	const adapter = getCalendarAdapter(connection.provider);
-	const config = {
-		provider: connection.provider,
-		credentials: {},
-		calendarId: connection.externalCalendarId,
-	};
+	const config = await buildConnectionConfig(connection, db);
 
 	try {
 		await adapter.updateEvent(
@@ -196,6 +191,61 @@ async function syncOnContactUpdated(
 	} catch (error) {
 		console.error(
 			`[calendar-sync] Failed to update event for booking ${bookingId}:`,
+			error,
+		);
+	}
+}
+
+async function syncOnBookingScheduleUpdated(
+	bookingId: string,
+	db: Db,
+): Promise<void> {
+	const linkRows = await db
+		.select()
+		.from(bookingCalendarLink)
+		.where(eq(bookingCalendarLink.bookingId, bookingId))
+		.limit(1);
+
+	const link = linkRows[0];
+	if (!link || !link.providerEventId || !link.calendarConnectionId) return;
+
+	const connectionRows = await db
+		.select()
+		.from(listingCalendarConnection)
+		.where(eq(listingCalendarConnection.id, link.calendarConnectionId))
+		.limit(1);
+
+	const connection = connectionRows[0];
+	if (!connection || !connection.externalCalendarId) return;
+
+	const bookingRow = await fetchBooking(bookingId, db);
+	if (!bookingRow) return;
+
+	const adapter = getCalendarAdapter(connection.provider);
+	const config = await buildConnectionConfig(connection, db);
+
+	try {
+		const presentation = await adapter.updateEvent(
+			link.providerEventId,
+			{
+				startsAt: bookingRow.startsAt,
+				endsAt: bookingRow.endsAt,
+				timezone: bookingRow.timezone ?? "UTC",
+				description: buildEventDescription(bookingRow),
+			},
+			config,
+		);
+		await db
+			.update(bookingCalendarLink)
+			.set({
+				syncError: null,
+				lastSyncedAt: presentation.syncedAt,
+				updatedAt: new Date(),
+			})
+			.where(eq(bookingCalendarLink.bookingId, bookingId));
+	} catch (error) {
+		console.error(
+			`[calendar-sync] Failed to update event schedule for booking ${bookingId}:`,
 			error,
 		);
 	}
@@ -222,6 +272,43 @@ async function fetchActiveConnection(listingId: string, db: Db) {
 		.where(eq(listingCalendarConnection.listingId, listingId))
 		.limit(1);
 	return rows[0] ?? null;
+}
+
+async function buildConnectionConfig(
+	connection: Pick<
+		typeof listingCalendarConnection.$inferSelect,
+		"calendarAccountId" | "externalCalendarId" | "provider"
+	>,
+	db: Db,
+) {
+	if (!connection.externalCalendarId) {
+		throw new Error("CALENDAR_CONNECTION_NO_EXTERNAL_ID");
+	}
+
+	let credentials: Record<string, unknown> = {};
+	if (connection.calendarAccountId) {
+		const [account] = await db
+			.select()
+			.from(organizationCalendarAccount)
+			.where(eq(organizationCalendarAccount.id, connection.calendarAccountId))
+			.limit(1);
+
+		const metadata = account?.providerMetadata;
+		if (metadata && typeof metadata === "object") {
+			const nestedCredentials = (metadata as { credentials?: unknown }).credentials;
+			if (nestedCredentials && typeof nestedCredentials === "object") {
+				credentials = nestedCredentials as Record<string, unknown>;
+			} else {
+				credentials = metadata as Record<string, unknown>;
+			}
+		}
+	}
+
+	return {
+		provider: connection.provider,
+		credentials,
+		calendarId: connection.externalCalendarId,
+	};
 }
 
 function buildEventDescription(

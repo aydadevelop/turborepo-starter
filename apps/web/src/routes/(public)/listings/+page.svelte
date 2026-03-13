@@ -28,9 +28,7 @@
 	}
 </script>
 
-<svelte:head>
-	<title>Browse Listings</title>
-</svelte:head>
+<svelte:head> <title>Browse Listings</title> </svelte:head>
 
 <div class="mx-auto max-w-6xl px-4 py-8">
 	<h1 class="mb-6 text-3xl font-bold">Browse Listings</h1>
@@ -43,14 +41,14 @@
 			bind:value={keyword}
 			oninput={updateUrl}
 			class="rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-		/>
+		>
 		<input
 			type="text"
 			placeholder="Type slug..."
 			bind:value={typeFilter}
 			oninput={updateUrl}
 			class="rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-		/>
+		>
 	</div>
 
 	{#if listingsQuery.isPending}
@@ -75,21 +73,72 @@
 					href="/listings/{item.id}"
 					class="block rounded-lg border p-4 transition-shadow hover:shadow-md"
 				>
-						{#if item.primaryImageUrl}
-							<img
-								src={item.primaryImageUrl}
-								alt={item.name}
-								class="mb-3 h-40 w-full rounded object-cover"
-							/>
+					{#if item.primaryImageUrl}
+						<img
+							src={item.primaryImageUrl}
+							alt={item.name}
+							class="mb-3 h-40 w-full rounded object-cover"
+						>
 					{/if}
-					<span class="mb-1 inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-						{item.listingTypeSlug}
-					</span>
+					<div class="mb-2 flex flex-wrap gap-2">
+						<span
+							class="inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+						>
+							{item.listingTypeLabel}
+						</span>
+						<span
+							class="inline-block rounded bg-gray-50 px-2 py-0.5 text-xs text-gray-500"
+						>
+							{item.serviceFamilyPolicy.label}
+						</span>
+						<span
+							class="inline-block rounded bg-gray-50 px-2 py-0.5 text-xs text-gray-500"
+						>
+							{item.serviceFamilyPolicy.customerPresentation.bookingMode === "request"
+								? "Request booking"
+								: "Instant booking"}
+						</span>
+						{#if item.boatRentSummary?.capacity}
+							<span
+								class="inline-block rounded bg-gray-50 px-2 py-0.5 text-xs text-gray-500"
+							>
+								Up to {item.boatRentSummary.capacity} guests
+							</span>
+						{/if}
+						{#if item.boatRentSummary?.departureArea}
+							<span
+								class="inline-block rounded bg-gray-50 px-2 py-0.5 text-xs text-gray-500"
+							>
+								{item.boatRentSummary.departureArea}
+							</span>
+						{/if}
+						{#if item.excursionSummary?.durationLabel}
+							<span
+								class="inline-block rounded bg-gray-50 px-2 py-0.5 text-xs text-gray-500"
+							>
+								{item.excursionSummary.durationLabel}
+							</span>
+						{/if}
+						{#if item.excursionSummary?.groupFormatLabel}
+							<span
+								class="inline-block rounded bg-gray-50 px-2 py-0.5 text-xs text-gray-500"
+							>
+								{item.excursionSummary.groupFormatLabel}
+							</span>
+						{/if}
+						{#if item.excursionSummary?.primaryLanguage}
+							<span
+								class="inline-block rounded bg-gray-50 px-2 py-0.5 text-xs text-gray-500"
+							>
+								{item.excursionSummary.primaryLanguage}
+							</span>
+						{/if}
+					</div>
 					<h2 class="text-lg font-semibold">{item.name}</h2>
 					{#if item.description}
 						<p class="mt-1 text-sm text-gray-600">
 							{item.description.length > 150
-								? item.description.slice(0, 150) + "…"
+								? `${item.description.slice(0, 150)}…`
 								: item.description}
 						</p>
 					{/if}
@@ -97,7 +146,9 @@
 			{/each}
 		</div>
 		<p class="mt-4 text-sm text-gray-500">
-			{listingsQuery.data?.total ?? 0} listing{listingsQuery.data?.total === 1 ? "" : "s"} found
+			{listingsQuery.data?.total ?? 0}
+			listing{listingsQuery.data?.total === 1 ? "" : "s"}
+			found
 		</p>
 	{/if}
 </div>

@@ -20,5 +20,8 @@ export default defineConfig(async () => {
 
 	return {
 		plugins,
+		ssr: {
+			noExternal: ["svelte-sonner"],
+		},
 	};
 });

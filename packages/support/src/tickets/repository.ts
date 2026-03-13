@@ -1,9 +1,22 @@
 import { supportTicket } from "@my-app/db/schema/support";
-import { and, asc, eq, isNotNull, isNull, lt, or } from "drizzle-orm";
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	ilike,
+	isNotNull,
+	isNull,
+	lt,
+	or,
+} from "drizzle-orm";
 import type {
+	CustomerSupportTicketListInput,
 	Db,
-	ListCustomerTicketsFilter,
 	ListOrgTicketsFilter,
+	SupportTicketCollectionResult,
+	SupportTicketListInput,
 	SupportTicketInsert,
 	SupportTicketRow,
 } from "../shared/types";
@@ -58,11 +71,13 @@ export async function findTicketForCustomer(
 	return row ?? null;
 }
 
-export function listOrganizationTickets(
+export async function listOrganizationTickets(
 	organizationId: string,
-	filter: ListOrgTicketsFilter,
+	input: SupportTicketListInput<ListOrgTicketsFilter>,
 	db: Db
-): Promise<SupportTicketRow[]> {
+): Promise<SupportTicketCollectionResult> {
+	const filter = input.filter ?? {};
+	const page = input.page ?? { limit: 50, offset: 0 };
 	const conditions = [eq(supportTicket.organizationId, organizationId)];
 
 	if (filter.status) {
@@ -103,47 +118,112 @@ export function listOrganizationTickets(
 		}
 	}
 
-	const query = db
-		.select()
-		.from(supportTicket)
-		.where(and(...conditions))
-		.orderBy(asc(supportTicket.createdAt));
-
-	if (filter.limit !== undefined) {
-		query.limit(filter.limit);
-	}
-	if (filter.offset !== undefined) {
-		query.offset(filter.offset);
+	if (input.search) {
+		conditions.push(
+			or(
+				ilike(supportTicket.subject, `%${input.search}%`),
+				ilike(supportTicket.description, `%${input.search}%`),
+			)!,
+		);
 	}
 
-	return query;
+	const orderBy =
+		input.sort?.by === "updated_at"
+			? input.sort.dir === "asc"
+				? asc(supportTicket.updatedAt)
+				: desc(supportTicket.updatedAt)
+			: input.sort?.by === "due_at"
+				? input.sort.dir === "asc"
+					? asc(supportTicket.dueAt)
+					: desc(supportTicket.dueAt)
+				: input.sort?.by === "priority"
+					? input.sort.dir === "asc"
+						? asc(supportTicket.priority)
+						: desc(supportTicket.priority)
+					: input.sort?.by === "status"
+						? input.sort.dir === "asc"
+							? asc(supportTicket.status)
+							: desc(supportTicket.status)
+						: input.sort?.dir === "asc"
+							? asc(supportTicket.createdAt)
+							: desc(supportTicket.createdAt);
+
+	const [items, countResult] = await Promise.all([
+		db
+			.select()
+			.from(supportTicket)
+			.where(and(...conditions))
+			.orderBy(orderBy)
+			.limit(page.limit)
+			.offset(page.offset),
+		db
+			.select({ total: count() })
+			.from(supportTicket)
+			.where(and(...conditions)),
+	]);
+
+	return {
+		items,
+		total: countResult[0]?.total ?? 0,
+	};
 }
 
-export function listCustomerOwnedTickets(
+export async function listCustomerOwnedTickets(
 	customerUserId: string,
-	filter: ListCustomerTicketsFilter,
+	input: CustomerSupportTicketListInput,
 	db: Db
-): Promise<SupportTicketRow[]> {
+): Promise<SupportTicketCollectionResult> {
+	const filter = input.filter ?? {};
+	const page = input.page ?? { limit: 50, offset: 0 };
 	const conditions = [eq(supportTicket.customerUserId, customerUserId)];
 
 	if (filter.bookingId) {
 		conditions.push(eq(supportTicket.bookingId, filter.bookingId));
 	}
-
-	const query = db
-		.select()
-		.from(supportTicket)
-		.where(and(...conditions))
-		.orderBy(asc(supportTicket.createdAt));
-
-	if (filter.limit !== undefined) {
-		query.limit(filter.limit);
-	}
-	if (filter.offset !== undefined) {
-		query.offset(filter.offset);
+	if (filter.status) {
+		conditions.push(eq(supportTicket.status, filter.status));
 	}
 
-	return query;
+	if (input.search) {
+		conditions.push(
+			or(
+				ilike(supportTicket.subject, `%${input.search}%`),
+				ilike(supportTicket.description, `%${input.search}%`),
+			)!,
+		);
+	}
+
+	const orderBy =
+		input.sort?.by === "updated_at"
+			? input.sort.dir === "asc"
+				? asc(supportTicket.updatedAt)
+				: desc(supportTicket.updatedAt)
+			: input.sort?.by === "status"
+				? input.sort.dir === "asc"
+					? asc(supportTicket.status)
+					: desc(supportTicket.status)
+				: input.sort?.dir === "asc"
+					? asc(supportTicket.createdAt)
+					: desc(supportTicket.createdAt);
+
+	const [items, countResult] = await Promise.all([
+		db
+			.select()
+			.from(supportTicket)
+			.where(and(...conditions))
+			.orderBy(orderBy)
+			.limit(page.limit)
+			.offset(page.offset),
+		db
+			.select({ total: count() })
+			.from(supportTicket)
+			.where(and(...conditions)),
+	]);
+
+	return {
+		items,
+		total: countResult[0]?.total ?? 0,
+	};
 }
 
 export async function updateTicket(

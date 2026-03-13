@@ -42,6 +42,22 @@ const quoteBreakdownOutput = z.object({
 	totalCents: z.number().int(),
 });
 
+const pricingWorkspaceStateOutput = z.object({
+	currencies: z.array(z.string()),
+	defaultProfileId: z.string().nullable(),
+	hasPricing: z.boolean(),
+	profileRuleSummaries: z.array(
+		z.object({
+			profileId: z.string(),
+			totalRuleCount: z.number().int(),
+			activeRuleCount: z.number().int(),
+		}),
+	),
+	profiles: z.array(pricingProfileOutput),
+	totalActiveRuleCount: z.number().int(),
+	totalRuleCount: z.number().int(),
+});
+
 export const pricingContract = {
 	createProfile: oc
 		.route({ tags: ["Pricing"], summary: "Create pricing profile" })
@@ -77,6 +93,11 @@ export const pricingContract = {
 		.route({ tags: ["Pricing"], summary: "List pricing profiles" })
 		.input(z.object({ listingId: z.string() }))
 		.output(z.array(pricingProfileOutput)),
+
+	getWorkspaceState: oc
+		.route({ tags: ["Pricing"], summary: "Get pricing workspace state for a listing" })
+		.input(z.object({ listingId: z.string() }))
+		.output(pricingWorkspaceStateOutput),
 
 	addRule: oc
 		.route({ tags: ["Pricing"], summary: "Add pricing rule" })

@@ -1,0 +1,105 @@
+// Grafana Alloy configuration
+// Replaces promtail. Handles:
+//   1. Log collection from Docker containers → Loki
+//   2. Docker container resource metrics (cAdvisor) → Prometheus
+//
+// App service /metrics scraping and postgres-exporter are still handled by
+// prometheus.yml directly (no overlap here).
+
+// ── Log collection ─────────────────────────────────────────────────────────
+
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+}
+
+discovery.relabel "docker_logs" {
+  // targets is empty — we only export relabel_rules for loki.source.docker
+  targets = []
+
+  // Map Docker compose service name → compose_service label (matches alert rules)
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+
+  // Strip leading slash from container name (e.g. /myapp-server-1 → myapp-server-1)
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  // Preserve stdout / stderr stream label
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
+
+  // Drop Alloy's own logs to avoid a feedback loop
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "alloy"
+    action        = "drop"
+  }
+}
+
+loki.source.docker "default" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  forward_to    = [loki.write.local.receiver]
+  relabel_rules = discovery.relabel.docker_logs.rules
+  labels        = {}
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+// ── Continuous profiling via eBPF ─────────────────────────────────────────
+// Profiles ALL Docker containers at the kernel level — no SDK required,
+// runtime-agnostic, works with Bun's JavaScriptCore.
+//
+// pyroscope.ebpf discovers processes itself via /proc and auto-labels
+// each profile with its container's service_name via cgroup → Docker metadata.
+// Filter by Service (server | assistant | notifications) in Pyroscope UI.
+//
+// What you get in flames:
+//   • C/C++ frames: JSC interpreter, libuv, OpenSSL, native addons
+//   • On Linux (VPS): JS symbol names if Bun exposes /proc/PID/maps
+//   • On macOS Docker Desktop: Linux VM kernel frames (useful for hotspot detection)
+
+pyroscope.ebpf "docker_processes" {
+  forward_to       = [pyroscope.write.local.receiver]
+  collect_interval = "15s"
+  sample_rate      = 97  // prime avoids phase-locking with periodic events
+}
+
+pyroscope.write "local" {
+  endpoint {
+    url = "http://pyroscope:4040"
+  }
+}
+
+// ── Docker container resource metrics (cAdvisor) ───────────────────────────
+// Provides per-container CPU, memory, network I/O, and disk I/O metrics.
+// These complement the app-level /metrics scraped by prometheus.yml.
+
+prometheus.exporter.cadvisor "docker" {
+  docker_host      = "unix:///var/run/docker.sock"
+  storage_duration = "5m"
+}
+
+prometheus.scrape "cadvisor" {
+  targets         = prometheus.exporter.cadvisor.docker.targets
+  forward_to      = [prometheus.remote_write.local.receiver]
+  scrape_interval = "15s"
+}
+
+prometheus.remote_write "local" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}

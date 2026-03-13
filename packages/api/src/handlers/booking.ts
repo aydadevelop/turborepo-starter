@@ -8,12 +8,14 @@ import {
 	listOrgBookings,
 	listOrgCancellationRequests,
 	requestCancellation,
+	updateBookingSchedule,
 	updateBookingStatus,
 	type BookingRow,
 	type CancellationReasonCode,
 	type CancellationRequestRow,
 	processCancellationWorkflow,
 } from "@my-app/booking";
+import { getPromotionErrorLabel, isPromotionErrorCode } from "@my-app/promotions";
 
 import { buildWorkflowContext } from "../context";
 import { organizationPermissionProcedure, protectedProcedure } from "../index";
@@ -66,6 +68,7 @@ export const bookingRouter = {
 					notes: input.notes,
 					specialRequests: input.specialRequests,
 					currency: input.currency,
+					discountCode: input.discountCode,
 					source: "web",
 					customerUserId,
 					createdByUserId: customerUserId,
@@ -79,6 +82,11 @@ export const bookingRouter = {
 				if (e.message === "NO_PRICING_PROFILE") throw new ORPCError("PRECONDITION_FAILED", { message: "No pricing profile for this listing" });
 				if (e.message === "PUBLICATION_ORG_MISMATCH") throw new ORPCError("PRECONDITION_FAILED", { message: "Listing publication is misconfigured" });
 				if (e.message === "NOT_FOUND") throw new ORPCError("NOT_FOUND", { message: "Listing is not bookable" });
+				if (isPromotionErrorCode(e.message)) {
+					throw new ORPCError("BAD_REQUEST", {
+						message: getPromotionErrorLabel(e.message),
+					});
+				}
 			}
 			throw e;
 		}
@@ -87,18 +95,25 @@ export const bookingRouter = {
 	listOrgBookings: organizationPermissionProcedure({
 		booking: ["read"],
 	}).booking.listOrgBookings.handler(async ({ context, input }) => {
-		const rows = await listOrgBookings(
+		const result = await listOrgBookings(
 			context.activeMembership.organizationId,
 			{
-				listingId: input.listingId,
-				// biome-ignore lint/suspicious/noExplicitAny: status comes as string from input
-				status: input.status as any,
-				limit: input.limit,
-				offset: input.offset,
+				filter: input.filter,
+				page: input.page,
+				search: input.search,
+				sort: input.sort,
 			},
 			db,
 		);
-		return rows.map(formatBooking);
+		return {
+			items: result.items.map(formatBooking),
+			page: {
+				limit: input.page.limit,
+				offset: input.page.offset,
+				total: result.total,
+				hasMore: input.page.offset + result.items.length < result.total,
+			},
+		};
 	}),
 
 	getBooking: organizationPermissionProcedure({
@@ -137,6 +152,48 @@ export const bookingRouter = {
 			if (e instanceof Error) {
 				if (e.message === "NOT_FOUND") throw new ORPCError("NOT_FOUND");
 				if (e.message === "INVALID_TRANSITION") throw new ORPCError("BAD_REQUEST", { message: "Invalid booking status transition" });
+			}
+			throw e;
+		}
+	}),
+
+	updateSchedule: organizationPermissionProcedure({
+		booking: ["update"],
+	}).booking.updateSchedule.handler(async ({ context, input }) => {
+		try {
+			const row = await updateBookingSchedule(
+				{
+					id: input.id,
+					organizationId: context.activeMembership.organizationId,
+					startsAt: new Date(input.startsAt),
+					endsAt: new Date(input.endsAt),
+					timezone: input.timezone,
+					workflowContext: buildWorkflowContext(
+						context,
+						`booking:schedule-updated:${input.id}:${input.startsAt}:${input.endsAt}`
+					),
+				},
+				db,
+			);
+
+			return formatBooking(row);
+		} catch (e) {
+			if (e instanceof Error) {
+				if (e.message === "NOT_FOUND") throw new ORPCError("NOT_FOUND");
+				if (e.message === "INVALID_STATE") {
+					throw new ORPCError("BAD_REQUEST", {
+						message: "Booking cannot be rescheduled in its current state",
+					});
+				}
+				if (
+					e.message === "BOOKING_OVERLAP: Listing is already booked for the selected time range" ||
+					e.message ===
+						"AVAILABILITY_BLOCK_OVERLAP: Listing is unavailable for the selected time range"
+				) {
+					throw new ORPCError("CONFLICT", {
+						message: "Selected booking window is unavailable",
+					});
+				}
 			}
 			throw e;
 		}

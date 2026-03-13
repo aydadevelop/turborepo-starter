@@ -23,6 +23,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // cases, while live-ingress tests below wire the real CloudPayments adapter to
 // a PGlite-backed database.
 
+vi.mock("@my-app/env/server", () => {
+	return {
+		env: {
+			CORS_ORIGIN: "http://localhost:5173",
+			BETTER_AUTH_SECRET: "test-secret-123456",
+			SERVER_URL: "http://localhost:3000",
+			BETTER_AUTH_URL: "http://localhost:3000/api/auth",
+			CLOUDPAYMENTS_PUBLIC_ID: "pk_live_route",
+			CLOUDPAYMENTS_API_SECRET: "api_secret_live_route",
+		},
+	};
+});
+
 const ORG_ID = "server-webhook-org-1";
 const PROVIDER_CONFIG_ID = "server-webhook-provider-config-1";
 const WEBHOOK_ENDPOINT_ID = "server-webhook-endpoint-1";

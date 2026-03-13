@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
 	boolean,
+	check,
 	index,
 	integer,
 	jsonb,
@@ -164,6 +165,24 @@ export const bookingDiscountCode = pgTable(
 			table.organizationId,
 			table.code,
 		),
+		check(
+			"booking_discount_code_ck_positive_values",
+			sql`${table.discountValue} > 0
+				and ${table.minimumSubtotalCents} >= 0
+				and (${table.maxDiscountCents} is null or ${table.maxDiscountCents} > 0)
+				and (${table.usageLimit} is null or ${table.usageLimit} > 0)
+				and (${table.perCustomerLimit} is null or ${table.perCustomerLimit} > 0)
+				and ${table.usageCount} >= 0`,
+		),
+		check(
+			"booking_discount_code_ck_type_range",
+			sql`(${table.discountType} = 'percentage' and ${table.discountValue} between 1 and 100)
+				or (${table.discountType} = 'fixed_cents' and ${table.discountValue} > 0)`,
+		),
+		check(
+			"booking_discount_code_ck_valid_window",
+			sql`${table.validFrom} is null or ${table.validTo} is null or ${table.validTo} > ${table.validFrom}`,
+		),
 	],
 );
 
@@ -181,6 +200,8 @@ export const bookingDiscountApplication = pgTable(
 			onDelete: "set null",
 		}),
 		code: text("code").notNull(),
+		discountType: discountTypeEnum("discount_type"),
+		discountValue: integer("discount_value"),
 		appliedAmountCents: integer("applied_amount_cents").notNull(),
 		...timestamps,
 	},
@@ -189,8 +210,15 @@ export const bookingDiscountApplication = pgTable(
 		index("booking_discount_application_ix_discount_code_id").on(
 			table.discountCodeId,
 		),
+		index(
+			"booking_discount_application_ix_code_id_customer",
+		).on(table.discountCodeId, table.customerUserId),
 		uniqueIndex("booking_discount_application_uq_booking_id").on(
 			table.bookingId,
+		),
+		check(
+			"booking_discount_application_ck_applied_amount",
+			sql`${table.appliedAmountCents} >= 0`,
 		),
 	],
 );

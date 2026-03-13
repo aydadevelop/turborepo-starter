@@ -19,6 +19,8 @@ groups:
         noDataState: Alerting
         execErrState: Error
         for: 5m
+        notification_settings:
+          receiver: ops-telegram
         labels:
           severity: critical
           compose_service: server
@@ -47,24 +49,29 @@ groups:
                   type: query
 
       # ── Assistant service down ─────────────────────────────────────────────
+      # Low-traffic service — only fires if truly dead, not just quiet.
+      # noDataState=OK: silence is normal for this service (night, idle periods).
+      # Uses 30m window so occasional logs don't trigger a false positive.
       - uid: alert-assistant-down
         title: "assistant: no logs (service may be down)"
         condition: threshold
-        noDataState: Alerting
+        noDataState: OK
         execErrState: Error
         for: 5m
+        notification_settings:
+          receiver: ops-telegram
         labels:
           severity: warning
           compose_service: assistant
         annotations:
-          summary: "assistant container has not emitted logs in 5 min"
+          summary: "assistant container has not emitted logs in 30 min"
           runbook: "ssh deploy@VPS 'cd /srv/app && docker compose logs assistant --tail 50'"
         data:
           - refId: log_count
-            relativeTimeRange: { from: 300, to: 0 }
+            relativeTimeRange: { from: 1800, to: 0 }
             datasourceUid: loki
             model:
-              expr: 'count_over_time({compose_service="assistant"}[5m])'
+              expr: 'count_over_time({compose_service="assistant"}[30m])'
               queryType: range
               refId: log_count
           - refId: threshold
@@ -81,23 +88,28 @@ groups:
                   type: query
 
       # ── Notifications service down ─────────────────────────────────────────
+      # Low-traffic service — only fires if truly dead, not just quiet.
+      # noDataState=OK: silence is normal for this service (night, idle periods).
+      # Uses 30m window so occasional logs don't trigger a false positive.
       - uid: alert-notifications-down
         title: "notifications: no logs (service may be down)"
         condition: threshold
-        noDataState: Alerting
+        noDataState: OK
         execErrState: Error
         for: 5m
+        notification_settings:
+          receiver: ops-telegram
         labels:
           severity: warning
           compose_service: notifications
         annotations:
-          summary: "notifications container has not emitted logs in 5 min"
+          summary: "notifications container has not emitted logs in 30 min"
         data:
           - refId: log_count
-            relativeTimeRange: { from: 300, to: 0 }
+            relativeTimeRange: { from: 1800, to: 0 }
             datasourceUid: loki
             model:
-              expr: 'count_over_time({compose_service="notifications"}[5m])'
+              expr: 'count_over_time({compose_service="notifications"}[30m])'
               queryType: range
               refId: log_count
           - refId: threshold
@@ -120,6 +132,8 @@ groups:
         noDataState: Alerting
         execErrState: Error
         for: 5m
+        notification_settings:
+          receiver: ops-telegram
         labels:
           severity: critical
           compose_service: web
@@ -158,6 +172,8 @@ groups:
         noDataState: OK
         execErrState: Error
         for: 5m
+        notification_settings:
+          receiver: ops-telegram
         labels:
           severity: warning
         annotations:

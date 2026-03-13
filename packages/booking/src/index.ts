@@ -5,6 +5,7 @@ export * from "./cancellation-service";
 export * from "./action-policy";
 export * from "./overlap";
 export * from "./slots";
+export * from "./public-surface";
 export * from "./availability/index";
 export * from "./cancellation/index";
 export * from "./disputes/index";

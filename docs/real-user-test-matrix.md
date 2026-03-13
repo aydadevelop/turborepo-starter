@@ -2,7 +2,11 @@
 
 **Status:** Proposed  
 **Date:** 2026-03-11  
-**Related:** [ADR-005](./ADR/005-orpc_api_boundary.md), [ADR-009](./ADR/009_seed_bootstrap_and_scenario_fixtures.md), [ADR-014](./ADR/014_admin_surface_composition_and_resource_descriptors.md)
+**Related:** [ADR-005](./ADR/005-orpc_api_boundary.md), [ADR-009](./ADR/009_seed_bootstrap_and_scenario_fixtures.md), [ADR-014](./ADR/014_admin_surface_composition_and_resource_descriptors.md), [Functionality Matrix](./functionality-matrix.md)
+
+Focused performance runbook:
+
+- [Booking Surface Performance Verification](./booking-surface-performance-verification.md)
 
 ## Purpose
 
@@ -68,6 +72,7 @@ If we later add a richer route-shell harness, the stylesheet should still be loa
 |---|---|---|---|
 | DB constraints, indexes, triggers, exclusion rules | `L1` in `packages/db` | `L3` only when the user can trigger it through a real flow | Source of truth stays in the DB lane |
 | Domain service rules | `L1` in owning package | `L0` for helper policies | Example: pricing calculation, cancellation policy, support status transitions |
+| Query-budget guardrails for composed read models | `L1` in owning package | real Postgres replay when query shape changes materially | Example: public booking surface query-count ceiling |
 | oRPC handler behavior | `L1` in `packages/api` | `L2` for the screen that consumes it | Contract and error mapping should be proven without a browser first |
 | Auth-client-backed org/account flows | `L2` in `apps/web` | `L3` for end-to-end auth/session behavior | UI module should be testable with mocked auth seams |
 | Resource forms and dialogs | `L2` | `L0` submit helper tests | Browser Mode is the default lane here |

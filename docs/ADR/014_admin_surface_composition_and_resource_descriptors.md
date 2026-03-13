@@ -251,6 +251,56 @@ Do not introduce Superforms as the default mutation architecture for org/admin s
 
 Superforms remains an optional tool for future action-native routes, not the baseline here.
 
+### 9a. Shared form and section shells are preferred over repeated local markup
+
+For org/admin/operator SPA surfaces:
+
+- use TanStack Form for non-trivial forms
+- use shared field shells for repeated label, description, and error rendering
+- use shared section-card shells for repeated title, description, action, and content scaffolding
+
+Current baseline examples live in:
+
+- `apps/web/src/components/operator/FormFieldShell.svelte`
+- `apps/web/src/components/operator/SurfaceCard.svelte`
+
+These shells are intentionally small. They are presentation helpers, not a schema-driven form engine.
+
+They should be used to remove repeated layout code in authored forms such as:
+
+- organization settings
+- member invite
+- future pricing, availability, and moderation editors
+
+### 9b. `ResourceTable` wraps TanStack Table as the default admin/operator table primitive
+
+For table-heavy admin/operator surfaces:
+
+- use one shared `ResourceTable` component as the app-level primitive
+- `ResourceTable` is powered by TanStack Table internally
+- feature modules and routes still own:
+  - query wiring
+  - row DTO shape
+  - column definitions
+  - row-specific actions
+- shared table concerns move into `ResourceTable`:
+  - header/body rendering
+  - loading/error/empty states
+  - pagination/footer placement patterns
+  - consistent styling and responsive behavior
+
+This keeps TanStack Table complexity out of every page while preserving one consistent operator/admin surface.
+
+### 9c. TanStack Table is not used directly from every page by default
+
+- feature modules should prefer the shared `ResourceTable` wrapper over raw TanStack Table setup
+- direct TanStack Table usage is acceptable only when a surface needs behavior the shared wrapper does not yet support
+
+### 9d. Manual shadcn table composition remains acceptable for simple non-resource layouts
+
+- not every repeated list must become a `ResourceTable`
+- card lists and lightweight non-tabular layouts can stay manual when that is the clearer UI
+
 ### 10. Better Auth-owned surfaces are a temporary backend exception, not a frontend exception
 
 Where the source of truth still lives behind Better Auth client APIs, the surface may continue using `authClient`.
@@ -309,6 +359,21 @@ For non-trivial resource editors:
 - keep zod schemas in feature `schema.ts`
 - call raw `client` or wrapped `authClient` inside a pure TypeScript submit adapter
 - run invalidation through a feature `invalidations.ts`
+
+The reuse boundary is:
+
+- oRPC/root-client types define the wire contract
+- backend editor/bootstrap state defines allowed fields, defaults, and capabilities
+- each resource editor still owns a local form module:
+  - `schema.ts`
+  - `defaults.ts`
+  - `submit.ts`
+  - optional mapper/helpers
+
+We do not generate full operator forms directly from oRPC or DB schemas. The
+contract defines the transport boundary, not the UI state model. Real screens
+still need local form concerns such as string inputs for numeric fields,
+conditional sections, advanced JSON escape hatches, and submit mapping.
 
 Why:
 

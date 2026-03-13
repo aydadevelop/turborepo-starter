@@ -1,9 +1,9 @@
-# ADR-003: Missing Extractions from `full-stack-cf-app`
+# ADR-003: Remaining Capability Gaps from `full-stack-cf-app`
 
 **Date:** 2026-03-10
 **Status:** Active
 **Authors:** Platform Team
-**Related:** [ADR-001: Legacy Extraction Plan](./001_legacy-extraction.md) | [ADR-002: Architecture Patterns](./002_architecture-patterns.md)
+**Related:** [ADR-001: Legacy Extraction Plan](./001_legacy-extraction.md) | [ADR-002: Architecture Patterns](./002_architecture-patterns.md) | [ADR-010: Schema Modernization Constitution](./010_schema_modernization_constitution.md) | [ADR-011: Organization Overlay and Readiness Projection](./011_organization_overlay_and_readiness_projection.md)
 
 ---
 
@@ -11,31 +11,50 @@
 
 1. [Context](#context)
 2. [Gap Analysis — Current State vs. ADR-001 Targets](#gap-analysis--current-state-vs-adr-001-targets)
-3. [1. Missing Packages (New Packages Required)](#1-missing-packages-new-packages-required)
+3. [Alignment With Current Product Goals](#alignment-with-current-product-goals)
+4. [1. Capability Gaps](#1-capability-gaps)
    - [1.1 packages/calendar](#11-packagescalendar)
-   - [1.2 packages/messaging](#12-packagesmessaging)
-   - [1.3 packages/disputes](#13-packagesdisputes)
-4. [2. Gaps in Existing Packages](#2-gaps-in-existing-packages)
+   - [1.2 channel integrations and messaging](#12-channel-integrations-and-messaging)
+   - [1.3 disputes and cancellation policy](#13-disputes-and-cancellation-policy)
+5. [2. Gaps in Existing Packages](#2-gaps-in-existing-packages)
    - [2.1 packages/booking](#21-packagesbooking)
    - [2.2 packages/pricing](#22-packagespricing)
    - [2.3 packages/catalog](#23-packagescatalog)
-5. [3. Missing API Layer](#3-missing-api-layer)
+6. [3. Missing API Layer](#3-missing-api-layer)
    - [3.1 packages/api — Missing Handlers](#31-packagesapi--missing-handlers)
    - [3.2 packages/api — Missing Library Module](#32-packagesapi--missing-library-module)
    - [3.3 packages/api-contract — Missing Route Contracts](#33-packagesapi-contract--missing-route-contracts)
-6. [4. Missing App Layer](#4-missing-app-layer)
+7. [4. Missing App Layer](#4-missing-app-layer)
    - [4.1 apps/server — Missing Routes and Queue Consumers](#41-appsserver--missing-routes-and-queue-consumers)
-7. [5. Extraction Priority Table](#5-extraction-priority-table)
-8. [Consequences](#consequences)
-9. [6. Skill Alignment Notes](#6-skill-alignment-notes)
+8. [5. Priority Reset](#5-priority-reset)
+9. [Consequences](#consequences)
+10. [6. Skill Alignment Notes](#6-skill-alignment-notes)
 
 ---
 
 ## Context
 
-ADR-001 defined the full extraction inventory from `full-stack-cf-app` into this turborepo. Phases 01–05 have been completed, bringing the foundational packages (`packages/events`, `packages/workflows`, `packages/db`, `packages/auth`, `packages/notifications`), and the first wave of domain packages (`packages/booking`, `packages/pricing`, `packages/catalog`, `packages/availability`, `packages/payment`, `packages/support`) online.
+ADR-001 defined the full extraction inventory from `full-stack-cf-app` into this turborepo. That extraction-first framing was useful early, but parts of it are now stale.
 
-This ADR records the **remaining gap**: modules that exist in `legacy/full-stack-cf-app/packages/api/src/` and `legacy/full-stack-cf-app/apps/server/src/` that have **not yet been extracted** into the turborepo target. It serves as the authoritative checklist for Phase 06 and beyond.
+Current repo truth differs from the original ADR-003 assumptions:
+
+- `packages/calendar` now exists
+- `packages/disputes` was intentionally merged into `packages/booking` under ADR-008
+- `packages/support` remains a top-level capability
+- the repo now has season-focused product documents that change what "important gap" means:
+  - [Season 2026 Target State](../season-2026-target-state.md)
+  - [Season 2026 Product Builder Brief](../season-2026-product-builder-brief.md)
+  - [Boat Rent Model Testing Matrix](../boat-rent-model-testing-matrix.md)
+
+So this ADR should no longer be read as:
+
+> create every originally planned package and achieve full legacy parity.
+
+It should now be read as:
+
+> preserve the useful inventory of missing capability slices, but prioritize them according to the current model: operator OS, minimal customer truth surface, assisted conversion, reliability, service-family extension, and completion of the Medusa-like module/overlay/read-model layer before heavier businessization.
+
+This ADR records the **remaining capability gap**: important behavior from `legacy/full-stack-cf-app` that has not yet been absorbed into the new system in the right place. It serves as the authoritative inventory, but not every listed gap has equal season priority and not every useful legacy behavior should be copied literally.
 
 Source paths below are relative to `legacy/full-stack-cf-app/`.
 
@@ -53,22 +72,117 @@ Source paths below are relative to `legacy/full-stack-cf-app/`.
 | `packages/booking` (core) | ✅ Partial — missing sub-services (see §2.1) |
 | `packages/pricing` (core) | ✅ Partial — missing pricing-profile (see §2.2) |
 | `packages/catalog` (core) | ✅ Partial — missing sub-resources (see §2.3) |
-| `packages/availability` | ✅ Done |
-| `packages/payment` (webhook adapters) | ✅ Done (`packages/api/payments/webhooks/`) |
+| `packages/availability` | superseded — merged into `packages/booking` |
+| `packages/payment` (webhook adapters) | ✅ Done (`packages/payment/src/webhooks`) |
 | `packages/support` | ✅ Done |
-| `packages/calendar` | ❌ Missing |
-| `packages/messaging` | ❌ Missing |
-| `packages/disputes` | ❌ Missing |
+| `packages/calendar` | ✅ Done |
+| `packages/messaging` | ❌ Missing as a generic package; channel capability remains open |
+| `packages/disputes` | superseded — merged into `packages/booking` |
 | Admin handlers in `packages/api` | ❌ Partial |
-| Helpdesk + intake handlers in `packages/api` | ❌ Missing |
-| Boat sub-resource handlers | ❌ Missing |
-| Calendar + booking lifecycle routes in `apps/server` | ❌ Missing |
+| Helpdesk + intake handlers in `packages/api` | ⚠ partial — support exists, seasonal channel intake is incomplete |
+| Boat/listing sub-resource handlers | ⚠ partial |
+| Calendar + booking lifecycle routes in `apps/server` | ⚠ partial |
+
+## Alignment With Current Product Goals
+
+The season and product-builder documents reset the priority rules.
+
+The highest-value gaps are the ones that support:
+
+1. one org/operator OS that covers the real 90 percent
+2. a minimal customer truth surface
+3. service-family extension and Medusa-style overlay/read-model completion
+4. assisted conversion and lead handling
+5. reliability under live-season pressure
+
+For the current season, this should be read with one extra rule:
+
+- `boat_rent` is the near-season wedge and therefore the first family whose operator OS, customer truth surface, and reliability gaps must be closed
+- `excursions` should reuse the same completed abstraction layer rather than pulling the repo back toward boat-only shortcuts
+
+This means the repo should **not** optimize for:
+
+- recreating every legacy package boundary
+- full parity with old boat-only frontend flows
+- generic messaging abstractions before the active channels are known
+
+This ADR therefore re-ranks the inventory into:
+
+- `keep now`
+- `keep but narrow`
+- `defer`
+
+### Keep now
+
+- module-owned operator and customer read models
+- marketplace overlay state: readiness, publication, moderation, distribution
+- service-family policy and variant extension surfaces
+- booking integrity and checkout/payment lifecycle
+- calendar lifecycle reliability and test coverage
+- operator-facing listing/boat management subresources
+- minimal public/customer read models and pages
+- channel intake and delivery only for the channels that matter this season
+
+### Keep but narrow
+
+- support/helpdesk beyond the current ticket/message foundation
+- media and approval workflows beyond what is needed for real publication quality
+- affiliate and landing concerns beyond the immediate grouped-page and attribution needs
+
+### Defer
+
+- generic `packages/messaging` if the active season channels can be handled in a smaller capability slice first
+- secondary calendar providers until real supply requires them
+- exact legacy frontend parity and mini-app parity
+
+### Abstraction-first reading rule
+
+The main Medusa-like gap in this repo is no longer primitive infrastructure. The primitives already exist:
+
+- domain packages
+- provider registries
+- domain events
+- workflows
+- thin oRPC transport
+
+What is still incomplete is the layer on top of those primitives:
+
+- service-family-aware product models
+- marketplace overlay state
+- module-owned operator/customer read models
+- workflow-owned main business flows
+- extension surfaces for future family-specific configuration
+
+So when this ADR says a gap is high priority, read it as:
+
+> finish the model and abstraction shape that lets the business surfaces be composed cleanly later.
+
+not:
+
+> recreate every old endpoint or package boundary first.
+
+## Implemented Since The Priority Reset
+
+The first abstraction wave behind the updated priorities has already shipped.
+
+Implemented:
+
+- `listing_type_config` now has a first-class `serviceFamily` field, which starts the service-family model instead of leaving category behavior implicit
+- the first overlay capability now exists as [`packages/organization`](/Users/d/Documents/Projects/turborepo-alchemy/packages/organization)
+- onboarding/readiness projection ownership moved out of `packages/api`
+- payment, calendar, and listing publication now emit readiness events that feed the overlay projector
+
+This does **not** close the P0 gap set. It means two of the highest-priority abstractions are now started and should be extended from the new seams instead of being reimplemented elsewhere.
 
 ---
 
-## 1. Missing Packages (New Packages Required)
+## 1. Capability Gaps
 
 ### 1.1 `packages/calendar`
+
+Status note:
+
+The package now exists. The remaining calendar gap is no longer package creation. The real gap is lifecycle completion, reliability, workflow ownership, and test depth under production-like conditions.
 
 **Source:** `packages/api/src/calendar/` (all directories)
 
@@ -99,7 +213,7 @@ This is a fully developed, self-contained calendar integration layer with a clea
 
 ---
 
-### 1.2 `packages/messaging`
+### 1.2 channel integrations and messaging
 
 **Source:** `packages/api/src/channels/` (all files)
 
@@ -114,7 +228,28 @@ A multi-channel outbound/inbound adapter registry with concrete implementations 
 | `channels/defaults.ts` | — | Default channel configuration and fallback chains |
 | `channels/telegram-queue-strategy.ts` | — | Telegram-specific queue strategy — uses `packages/queue` for rate-limited delivery |
 
-**Design constraints for extraction:**
+Current interpretation:
+
+Do not read this as a mandatory order to create a broad `packages/messaging` package immediately.
+
+The real season question is:
+
+> which inbound and outbound channels matter enough now to justify a dedicated capability slice?
+
+For the current model, this should likely start with only the active channel set:
+
+- Telegram
+- Avito
+- email intake where needed
+
+and stay closely tied to:
+
+- assisted conversion
+- support intake
+- lead routing
+- future assistant flow packs with explicit flow context
+
+**Design constraints for extraction if/when promoted to a package:**
 - The adapter registry is the only import; calling code never imports a concrete adapter directly.
 - Telegram delivery must remain queue-backed (`packages/queue` / pg-boss) to respect Telegram's rate limits.
 - Inbound normalization (converting raw Telegram/Avito webhook payloads to internal `ChannelMessage`) stays in the adapter, not in the handler.
@@ -125,11 +260,13 @@ A multi-channel outbound/inbound adapter registry with concrete implementations 
 
 ---
 
-### 1.3 `packages/disputes`
+### 1.3 disputes and cancellation policy
 
 **Source:** `packages/api/src/routers/booking/cancellation/` and `packages/api/src/routers/booking/dispute.ts` and `packages/api/src/routers/booking/refund.ts`
 
-ADR-001 designated a `packages/disputes` package for cancellation flows and dispute processing. Currently, only a basic `cancellation-service.ts` and `cancellation-reasons.ts` exist in `packages/booking`. The sophisticated cancellation policy engine, policy templates, and dispute/refund flows have not been extracted.
+ADR-001 designated a `packages/disputes` package for cancellation flows and dispute processing. ADR-008 later intentionally merged this concern into `packages/booking`.
+
+So the real gap is not a missing package. The real gap is missing depth inside booking-owned cancellation, dispute, and refund flows, plus explicit workflow ownership for exception paths.
 
 | Legacy File | Size | Target Export |
 |---|---|---|
@@ -204,13 +341,26 @@ The current package covers listing CRUD, publication, and storefront browsing. T
 
 All six modules belong in `packages/catalog` because they are pure listing-management concerns with no booking logic.
 
+These subresources should also be read as the first concrete operator-workspace slices, not just CRUD gaps:
+
+- merchandising
+- availability and minimum-duration controls
+- location/departure management
+- media and trust-building inputs
+
 ---
 
 ## 3. Missing API Layer
 
 ### 3.1 `packages/api` — Missing Handlers
 
-The following thin oRPC router files exist in the legacy `packages/api/src/routers/` but have no equivalent in the turborepo `packages/api/src/handlers/`:
+The following thin oRPC router files exist in the legacy `packages/api/src/routers/` but have no equivalent in the turborepo `packages/api/src/handlers/`.
+
+These should not be interpreted as "add thin handlers first and figure out the model later". The preferred order is:
+
+1. finish the owning domain service or read model
+2. add the contract
+3. add the thin handler as the final transport adapter
 
 **Booking sub-handlers:**
 
@@ -295,39 +445,36 @@ The turborepo `apps/server` already has `routes/payment-webhook.ts` and `queues/
 
 ---
 
-## 5. Extraction Priority Table
+## 5. Priority Reset
 
-| Priority | Item | Target Package / App | Depends On |
+| Priority | Item | Why it matters now | Target Package / App |
 |---|---|---|---|
-| **P0** | `action-policy.ts`, `slots.ts`, `overlap.ts` | `packages/booking` | none (pure functions) |
-| **P0** | `pricing-profile.ts` | `packages/pricing` | `packages/db` |
-| **P0** | `packages/calendar` — all files | `packages/calendar` (new) | `packages/db`, `packages/events` |
-| **P1** | `packages/messaging` — all files | `packages/messaging` (new) | `packages/db`, `packages/events`, `packages/queue`, `packages/support` |
-| **P1** | `packages/disputes` — cancellation policy + dispute | `packages/disputes` (new) | `packages/booking`, `packages/payment`, `packages/events`, `packages/workflows` |
-| **P1** | `expiration.ts`, `checkout-read-model.ts`, `availability-ranking.ts` | `packages/booking` | `packages/pricing`, `packages/queue` |
-| **P1** | `discount/resolution.ts`, `affiliate.ts` | `packages/booking` | `packages/db`, `packages/events` |
-| **P1** | Catalog sub-resources (amenity, asset, dock, min-duration, access, calendar-lifecycle) | `packages/catalog` | `packages/db`, `packages/calendar` |
-| **P2** | Missing booking sub-handlers + discount/affiliate/refund/shift contracts | `packages/api`, `packages/api-contract` | all domain packages above |
-| **P2** | Missing boat sub-resource handlers + contracts | `packages/api`, `packages/api-contract` | `packages/catalog`, `packages/calendar` |
-| **P2** | Missing admin handlers (boats, bookings, fee-config, support) | `packages/api`, `packages/api-contract` | all domain packages |
-| **P2** | Helpdesk + intake handlers + contracts | `packages/api`, `packages/api-contract` | `packages/messaging`, `packages/support` |
-| **P2** | `booking-notification-recipients.ts` | `packages/api/src/lib/` | `packages/db` |
-| **P3** | Calendar routes + booking lifecycle consumer | `apps/server` | `packages/calendar`, `packages/booking`, `packages/queue` |
+| **P0** | service-family model, category variants, and backend-owned editor/read state | started: `serviceFamily` now exists on `listing_type_config`; category variants and service-family-aware editor/read models still need to be completed | `packages/catalog`, `packages/api-contract`, `packages/api`, `apps/web` |
+| **P0** | marketplace overlay state: readiness, publication, moderation, distribution, manual override | started: `packages/organization` now owns onboarding/readiness; the rest of the overlay state still needs to move there | `packages/organization`, `packages/api-contract`, `apps/web` |
+| **P0** | operator OS subresources: assets, amenities, docks/locations, min-duration, calendar controls, pricing surfaces | org panel must cover the real 90 percent | `packages/catalog`, `packages/booking`, `packages/pricing`, `packages/api`, `apps/web` |
+| **P0** | minimal customer truth surface | admin config must be testable from the traveler side | `packages/api-contract`, `packages/api`, `apps/web` |
+| **P1** | payment-intent lifecycle, reserve/capture/refund semantics, expiration/clearance | live booking trust and operator confidence | `packages/payment`, `packages/booking`, `packages/api` |
+| **P1** | calendar lifecycle e2e: watch -> push -> sync -> conflict detection | boat-rent wedge depends on reliable calendar truth | `packages/calendar`, `apps/server`, `packages/booking` |
+| **P1** | booking-owned cancellation/dispute/refund policy depth | real exception handling, not package purity | `packages/booking`, `packages/payment`, `packages/workflows` |
+| **P1** | channel intake/delivery for active season channels only | assisted conversion and lead routing | `packages/api`, `packages/support`, optional future `packages/messaging` |
+| **P2** | media/upload hardening and publication-quality review flow | trust and publishability | `packages/catalog`, `packages/storage`, `apps/web` |
+| **P2** | assistant flow context and curated tool surfaces | tools can be generated later, but flows need stable context and explicit boundaries | `packages/assistant`, `packages/api-contract`, `packages/api` |
+| **P2** | admin override and manual intervention surfaces | handle the real 10 percent without code churn | `packages/api-contract`, `packages/api`, `apps/web`, `packages/support` |
+| **P3** | affiliate/landing attribution beyond immediate grouped pages | useful, but not core before the operator OS is real | `packages/api`, `apps/web` |
+| **P3** | secondary providers and broader channel abstraction | extension work after the near-season core is stable | future capability slices |
 
 ---
 
 ## Consequences
 
 **Positive:**
-- This ADR closes the documentation gap created by phases 01–05 progressing without a recorded inventory of what remains.
-- Phases 06+ now have a canonical source for backlog items — no need to diff the legacy repo manually during planning.
-- P0 items (action-policy, slots, overlap, pricing-profile, packages/calendar) unblock the booking and availability search flows that are still using the legacy API in production.
+- This ADR keeps the useful extraction inventory, but no longer confuses package parity with season priority.
+- It aligns the remaining work with the current model: operator OS, minimal customer truth surface, service-family extension, assisted conversion, and marketplace overlay completion.
+- It supports the Medusa-style direction already accepted in ADR-002, ADR-008, and ADR-011: finish overlay/read-model/module shape before heavier businessization.
 
 **Risks:**
-- `packages/calendar` contains the full Google Calendar OAuth flow. The redirect URI and token storage must be validated against the new domain before the extraction is considered done.
-- `packages/messaging` has five live channel adapters. Avito and Sputnik channel credentials must be re-provisioned for the new deployment and tested end-to-end before turning off the legacy server.
-- `CancellationPolicyService` (519 lines) contains financial logic for refund splits. It must be ported with its full integration test suite (`__tests__/booking-cancellation.integration.test.ts`) before any production use.
-- The booking lifecycle queue consumer in `apps/server` must be started after `packages/calendar` is live — starting it earlier will emit calendar events with no registered adapter and silently drop them.
+- If read only as an extraction checklist, teams may still chase stale package boundaries instead of the actual product bottlenecks.
+- If the repo keeps the abstractions but does not finish operator/customer read models, it will remain technically clean but commercially generic.
 
 ---
 
@@ -398,4 +545,3 @@ registerCalendarProvider(createGoogleCalendarProvider({
 ```
 
 This must happen **before** any calendar event pusher fires — i.e., before the event bus receives its first `booking:confirmed`.
-

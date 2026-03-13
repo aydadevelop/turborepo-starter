@@ -11,12 +11,17 @@ import {
 } from "@my-app/db/test";
 import { describe, expect, it } from "vitest";
 
-import { calculateQuote } from "../quote-service";
+import {
+	calculateQuote,
+	calculateQuoteFromResolvedPricing,
+} from "../quote-service";
+import { resolveDefaultPricingContext } from "../pricing-profile";
 import type { Db } from "../types";
 
 const ORG_ID = "pricing-org-1";
 const LISTING_ID = "pricing-listing-1";
 const LISTING_ID_NO_PROFILE = "pricing-listing-no-profile";
+const LISTING_ID_PRELOADED = "pricing-listing-preloaded";
 
 const testDbState = bootstrapTestDatabase({
 	seed: async (db: TestDatabase) => {
@@ -43,6 +48,13 @@ const testDbState = bootstrapTestDatabase({
 				listingTypeSlug: "test-type",
 				name: "No Profile",
 				slug: "no-profile",
+			},
+			{
+				id: LISTING_ID_PRELOADED,
+				organizationId: ORG_ID,
+				listingTypeSlug: "test-type",
+				name: "Preloaded Profile",
+				slug: "preloaded-profile",
 			},
 		]);
 	},
@@ -80,6 +92,60 @@ describe("calculateQuote", () => {
 		expect(quote.totalCents).toBe(23100);
 		expect(quote.currency).toBe("USD");
 		expect(quote.profileId).toBe("profile-base");
+	});
+
+	it("matches async quote calculation when profile and rules are preloaded", async () => {
+		const db = getDb();
+		await db.insert(listingPricingProfile).values({
+			id: "profile-preloaded",
+			listingId: LISTING_ID_PRELOADED,
+			name: "Preloaded",
+			currency: "USD",
+			baseHourlyPriceCents: 15_000,
+			serviceFeeBps: 500,
+			taxBps: 1000,
+			isDefault: true,
+		});
+		await db.insert(listingPricingRule).values({
+			id: "rule-preloaded",
+			listingId: LISTING_ID_PRELOADED,
+			pricingProfileId: "profile-preloaded",
+			name: "Passenger uplift",
+			ruleType: "passengerCount",
+			conditionJson: { minPassengers: 4 },
+			adjustmentType: "flat_cents",
+			adjustmentValue: 2_000,
+			priority: 1,
+			isActive: true,
+		});
+
+		const startsAt = new Date("2026-06-02T10:00:00Z");
+		const endsAt = new Date("2026-06-02T12:00:00Z");
+
+		const asyncQuote = await calculateQuote(
+			{ listingId: LISTING_ID_PRELOADED, startsAt, endsAt, passengers: 4 },
+			db,
+		);
+
+		const context = await resolveDefaultPricingContext(LISTING_ID_PRELOADED, db);
+		if (!context) {
+			throw new Error("Expected resolved pricing context");
+		}
+
+		const preloadedQuote = calculateQuoteFromResolvedPricing(
+			{ listingId: LISTING_ID_PRELOADED, startsAt, endsAt, passengers: 4 },
+			context,
+		);
+
+		expect(preloadedQuote).toEqual(asyncQuote);
+	});
+
+	it("returns null when no default pricing profile exists", async () => {
+		const db = getDb();
+
+		await expect(
+			resolveDefaultPricingContext(LISTING_ID_NO_PROFILE, db),
+		).resolves.toBeNull();
 	});
 
 	it("applies dayOfWeek percent rule (20% markup) correctly", async () => {

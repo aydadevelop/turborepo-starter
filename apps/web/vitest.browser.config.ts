@@ -1,10 +1,11 @@
 import { sharedConfig } from "@my-app/vitest-config";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { playwright } from "@vitest/browser-playwright";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-	plugins: [sveltekit()],
+	plugins: [tailwindcss(), sveltekit()],
 	test: {
 		...sharedConfig.test,
 		include: ["src/**/*.browser.{test,spec}.{js,ts}"],

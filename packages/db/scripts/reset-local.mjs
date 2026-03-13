@@ -20,11 +20,12 @@ const main = async () => {
 	await client.connect();
 
 	try {
-		await client.query("DROP SCHEMA public CASCADE");
+		await client.query("DROP SCHEMA IF EXISTS public CASCADE");
+		await client.query("DROP SCHEMA IF EXISTS drizzle CASCADE");
 		await client.query("CREATE SCHEMA public");
 		await client.query("GRANT ALL ON SCHEMA public TO postgres");
 		await client.query("GRANT ALL ON SCHEMA public TO public");
-		console.log("Public schema wiped and recreated.");
+		console.log("Public and drizzle schemas wiped and recreated.");
 		console.log("Run `bun run db:migrate` to apply the baseline migration.");
 	} finally {
 		await client.end();

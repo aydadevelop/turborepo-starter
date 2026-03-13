@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { QueryClientProvider } from "@tanstack/svelte-query";
 	import { dev } from "$app/environment";
-	import { queryClient } from "$lib/orpc";
 	import Header from "../../components/Header.svelte";
 	import OrgGuard from "../../components/OrgGuard.svelte";
 
@@ -26,14 +24,12 @@
 	});
 </script>
 
-<QueryClientProvider client={queryClient}>
-	<OrgGuard>
-		<div class="grid h-svh grid-rows-[auto_1fr]">
-			<Header />
-			<main class="overflow-y-auto">{@render pageChildren()}</main>
-		</div>
-	</OrgGuard>
-	{#if dev && QueryDevtools}
-		<QueryDevtools />
-	{/if}
-</QueryClientProvider>
+<OrgGuard>
+	<div class="grid h-svh grid-rows-[auto_1fr]">
+		<Header />
+		<main class="overflow-y-auto">{@render pageChildren()}</main>
+	</div>
+</OrgGuard>
+{#if dev && QueryDevtools}
+	<QueryDevtools />
+{/if}

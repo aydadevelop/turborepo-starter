@@ -17,6 +17,10 @@ declare global {
 			EMAIL_FROM_ADDRESS?: string;
 			EMAIL_FROM_NAME?: string;
 			EMAIL_REPLY_TO?: string;
+			GOOGLE_CALENDAR_CREDENTIALS_JSON?: string;
+			GOOGLE_CLIENT_ID?: string;
+			GOOGLE_CLIENT_SECRET?: string;
+			GOOGLE_SERVICE_ACCOUNT_KEY?: string;
 			OPEN_ROUTER_API_KEY?: string;
 			POLAR_ACCESS_TOKEN?: string;
 			POLAR_PRODUCT_ID?: string;

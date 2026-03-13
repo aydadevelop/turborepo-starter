@@ -4,7 +4,11 @@
 	import { Input } from "@my-app/ui/components/input";
 	import { Label } from "@my-app/ui/components/label";
 	import { Textarea } from "@my-app/ui/components/textarea";
-	import { createMutation, createQuery } from "@tanstack/svelte-query";
+	import {
+		createMutation,
+		createQuery,
+		skipToken,
+	} from "@tanstack/svelte-query";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
@@ -77,40 +81,28 @@
 
 	const quoteQuery = createQuery(() => {
 		const input = bookingSlotInput;
-		if (!input) {
-			return {
-				queryKey: ["pricing", "quote", "disabled", listingId],
-				queryFn: async () => null,
-				enabled: false,
-			};
-		}
-
 		return orpc.pricing.getQuote.queryOptions({
-			input: {
-				listingId: input.listingId,
-				startsAt: input.startsAt,
-				endsAt: input.endsAt,
-				passengers: input.passengers,
-			},
+			input: input
+				? {
+						listingId: input.listingId,
+						startsAt: input.startsAt,
+						endsAt: input.endsAt,
+						passengers: input.passengers,
+					}
+				: skipToken,
 		});
 	});
 
 	const slotQuery = createQuery(() => {
 		const input = bookingSlotInput;
-		if (!input) {
-			return {
-				queryKey: ["availability", "check-slot", "disabled", listingId],
-				queryFn: async () => null,
-				enabled: false,
-			};
-		}
-
 		return orpc.availability.checkSlot.queryOptions({
-			input: {
-				listingId: input.listingId,
-				startsAt: input.startsAt,
-				endsAt: input.endsAt,
-			},
+			input: input
+				? {
+						listingId: input.listingId,
+						startsAt: input.startsAt,
+						endsAt: input.endsAt,
+					}
+				: skipToken,
 		});
 	});
 

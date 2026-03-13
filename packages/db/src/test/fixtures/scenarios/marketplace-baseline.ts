@@ -58,6 +58,7 @@ export const seedMarketplaceBaselineScenario = async (
 	const listingType = await createListingTypeConfigFixture(db, {
 		id: MARKETPLACE_IDS.listingTypeSlug,
 		slug: MARKETPLACE_IDS.listingTypeSlug,
+		serviceFamily: "boat_rent",
 		label: "Vessel",
 		metadataJsonSchema: { type: "object", properties: {} },
 		isActive: true,

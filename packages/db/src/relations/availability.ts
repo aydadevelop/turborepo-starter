@@ -3,6 +3,41 @@ import { defineRelationsPart } from "drizzle-orm";
 import * as schema from "../schema";
 
 export const availabilityRelations = defineRelationsPart(schema, (r) => ({
+	organizationCalendarAccount: {
+		organization: r.one.organization({
+			from: r.organizationCalendarAccount.organizationId,
+			to: r.organization.id,
+		}),
+		createdByUser: r.one.user({
+			from: r.organizationCalendarAccount.createdByUserId,
+			to: r.user.id,
+			alias: "calendar_account_creator",
+		}),
+		listingConnections: r.many.listingCalendarConnection({
+			from: r.organizationCalendarAccount.id,
+			to: r.listingCalendarConnection.calendarAccountId,
+		}),
+		sources: r.many.organizationCalendarSource({
+			from: r.organizationCalendarAccount.id,
+			to: r.organizationCalendarSource.calendarAccountId,
+		}),
+	},
+
+	organizationCalendarSource: {
+		organization: r.one.organization({
+			from: r.organizationCalendarSource.organizationId,
+			to: r.organization.id,
+		}),
+		calendarAccount: r.one.organizationCalendarAccount({
+			from: r.organizationCalendarSource.calendarAccountId,
+			to: r.organizationCalendarAccount.id,
+		}),
+		listingConnections: r.many.listingCalendarConnection({
+			from: r.organizationCalendarSource.id,
+			to: r.listingCalendarConnection.calendarSourceId,
+		}),
+	},
+
 	listingAvailabilityRule: {
 		listing: r.one.listing({
 			from: r.listingAvailabilityRule.listingId,
@@ -53,6 +88,14 @@ export const availabilityRelations = defineRelationsPart(schema, (r) => ({
 		organization: r.one.organization({
 			from: r.listingCalendarConnection.organizationId,
 			to: r.organization.id,
+		}),
+		calendarAccount: r.one.organizationCalendarAccount({
+			from: r.listingCalendarConnection.calendarAccountId,
+			to: r.organizationCalendarAccount.id,
+		}),
+		calendarSource: r.one.organizationCalendarSource({
+			from: r.listingCalendarConnection.calendarSourceId,
+			to: r.organizationCalendarSource.id,
 		}),
 		createdByUser: r.one.user({
 			from: r.listingCalendarConnection.createdByUserId,

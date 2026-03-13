@@ -9,3 +9,11 @@ datasources:
     isDefault: true
     version: 1
     editable: false
+    jsonData:
+      derivedFields:
+        # Extract trace ID from structured JSON logs (OTel format: "traceId":"<hex>")
+        - name: TraceID
+          matcherRegex: '"traceId":"([a-f0-9]+)"'
+          url: '${__value.raw}'
+          datasourceUid: tempo
+          urlDisplayLabel: View Trace

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Badge } from "@my-app/ui/components/badge";
 	import { Button } from "@my-app/ui/components/button";
-	import { Card, CardContent } from "@my-app/ui/components/card";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { authClient } from "$lib/auth-client";
 	import { queryClient } from "$lib/orpc";
+	import SurfaceCard from "../../../components/operator/SurfaceCard.svelte";
 	import { userInvitationsQueryOptions } from "$lib/query-options";
 	import { formatOrgAccountError } from "../shared/errors";
 	import {
@@ -98,113 +98,119 @@
 {:else}
 	<div class="max-w-xl space-y-4">
 		{#if pendingInvitations.length > 0}
-			<div class="space-y-3">
-				<h2 class="text-sm font-medium text-muted-foreground">Pending</h2>
-				{#each pendingInvitations as invitation (invitation.id)}
-					<Card>
-						<CardContent
-							class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
-						>
-							<div class="space-y-1">
-								<p class="font-medium">
-									{invitation.organizationName ?? "Organization"}
-								</p>
-								<div
-									class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
-								>
-									<span>Role:</span>
-									<Badge variant="secondary">
-										{invitation.role ?? "member"}
-									</Badge>
-									{#if invitation.expiresAt}
-										<span>
-											&middot; Expires {formatDate(invitation.expiresAt)}
-										</span>
-									{/if}
+			<SurfaceCard
+				title="Pending invitations"
+				description="Outstanding organization invites that still need your response."
+			>
+				{#snippet children()}
+					<div class="space-y-3">
+						{#each pendingInvitations as invitation (invitation.id)}
+							<div class="rounded-lg border p-4">
+								<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+									<div class="space-y-1">
+										<p class="font-medium">
+											{invitation.organizationName ?? "Organization"}
+										</p>
+										<div
+											class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+										>
+											<span>Role:</span>
+											<Badge variant="secondary">
+												{invitation.role ?? "member"}
+											</Badge>
+											{#if invitation.expiresAt}
+												<span>
+													&middot; Expires {formatDate(invitation.expiresAt)}
+												</span>
+											{/if}
+										</div>
+									</div>
+									<div class="flex gap-2">
+										<Button
+											size="sm"
+											disabled={pendingId === invitation.id &&
+												(acceptInvitation.isPending || rejectInvitation.isPending)}
+											onclick={() => {
+												pendingId = invitation.id;
+												errorMessage = null;
+												acceptInvitation.mutate(
+													{ invitationId: invitation.id },
+													{
+														onSuccess: () => {
+															pendingId = null;
+														},
+														onError: (error) => {
+															pendingId = null;
+															errorMessage = formatOrgAccountError(
+																error,
+																"Failed to accept invitation."
+															);
+														},
+													}
+												);
+											}}
+										>
+											{#if pendingId === invitation.id && acceptInvitation.isPending}
+												Accepting...
+											{:else}
+												Accept
+											{/if}
+										</Button>
+										<Button
+											variant="outline"
+											size="sm"
+											disabled={pendingId === invitation.id &&
+												(acceptInvitation.isPending || rejectInvitation.isPending)}
+											onclick={() => {
+												pendingId = invitation.id;
+												errorMessage = null;
+												rejectInvitation.mutate(
+													{ invitationId: invitation.id },
+													{
+														onSuccess: () => {
+															pendingId = null;
+														},
+														onError: (error) => {
+															pendingId = null;
+															errorMessage = formatOrgAccountError(
+																error,
+																"Failed to reject invitation."
+															);
+														},
+													}
+												);
+											}}
+										>
+											{#if pendingId === invitation.id && rejectInvitation.isPending}
+												Rejecting...
+											{:else}
+												Reject
+											{/if}
+										</Button>
+									</div>
 								</div>
 							</div>
-							<div class="flex gap-2">
-								<Button
-									size="sm"
-									disabled={pendingId === invitation.id &&
-										(acceptInvitation.isPending || rejectInvitation.isPending)}
-									onclick={() => {
-										pendingId = invitation.id;
-										errorMessage = null;
-										acceptInvitation.mutate(
-											{ invitationId: invitation.id },
-											{
-												onSuccess: () => {
-													pendingId = null;
-												},
-												onError: (error) => {
-													pendingId = null;
-													errorMessage = formatOrgAccountError(
-														error,
-														"Failed to accept invitation."
-													);
-												},
-											}
-										);
-									}}
-								>
-									{#if pendingId === invitation.id && acceptInvitation.isPending}
-										Accepting...
-									{:else}
-										Accept
-									{/if}
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									disabled={pendingId === invitation.id &&
-										(acceptInvitation.isPending || rejectInvitation.isPending)}
-									onclick={() => {
-										pendingId = invitation.id;
-										errorMessage = null;
-										rejectInvitation.mutate(
-											{ invitationId: invitation.id },
-											{
-												onSuccess: () => {
-													pendingId = null;
-												},
-												onError: (error) => {
-													pendingId = null;
-													errorMessage = formatOrgAccountError(
-														error,
-														"Failed to reject invitation."
-													);
-												},
-											}
-										);
-									}}
-								>
-									{#if pendingId === invitation.id && rejectInvitation.isPending}
-										Rejecting...
-									{:else}
-										Reject
-									{/if}
-								</Button>
-							</div>
-						</CardContent>
-					</Card>
-				{/each}
-			</div>
+						{/each}
+					</div>
+				{/snippet}
+			</SurfaceCard>
 		{:else}
-			<Card>
-				<CardContent class="p-6 text-center text-muted-foreground">
-					No pending invitations.
-				</CardContent>
-			</Card>
+			<SurfaceCard title="Pending invitations">
+				{#snippet children()}
+					<p class="text-center text-muted-foreground">No pending invitations.</p>
+				{/snippet}
+			</SurfaceCard>
 		{/if}
 
 		{#if pastInvitations.length > 0}
-			<div>
-				<h2 class="mb-3 text-sm font-medium text-muted-foreground">Past</h2>
-				<div class="space-y-2">
-					{#each pastInvitations as invitation (invitation.id)}
-						<Card>
-							<CardContent class="flex items-center justify-between p-4">
+			<SurfaceCard
+				title="Past invitations"
+				description="Historical invitation responses."
+			>
+				{#snippet children()}
+					<div class="space-y-2">
+						{#each pastInvitations as invitation (invitation.id)}
+							<div class="flex items-center justify-between rounded-lg border p-4">
 								<div class="space-y-1">
 									<p class="text-sm font-medium">
 										{invitation.organizationName ?? "Organization"}
@@ -218,11 +224,11 @@
 								>
 									{invitation.status}
 								</Badge>
-							</CardContent>
-						</Card>
-					{/each}
-				</div>
-			</div>
+							</div>
+						{/each}
+					</div>
+				{/snippet}
+			</SurfaceCard>
 		{/if}
 	</div>
 {/if}

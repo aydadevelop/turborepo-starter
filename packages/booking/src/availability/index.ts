@@ -2,6 +2,7 @@ export type {
 	AvailabilityBlockRow,
 	AvailabilityExceptionRow,
 	AvailabilityRuleRow,
+	AvailabilityWorkspaceState,
 	CreateAvailabilityBlockInput,
 	CreateAvailabilityExceptionInput,
 	CreateAvailabilityRuleInput,
@@ -17,3 +18,4 @@ export {
 	deleteAvailabilityRule,
 	listAvailabilityRules,
 } from "./availability-service";
+export { getAvailabilityWorkspaceState as getListingAvailabilityWorkspaceState } from "./workspace-state";

@@ -5,6 +5,7 @@ import {
 	addTicketMessage,
 	assignTicket,
 	createSupportTicket,
+	getOperatorSupportSummary,
 	getCustomerTicketThread,
 	getOperatorTicketThread,
 	getTicket,
@@ -226,23 +227,25 @@ export const supportRouter = {
 	listOrgTickets: organizationPermissionProcedure({
 		support: ["read"],
 	}).support.listOrgTickets.handler(async ({ context, input }) => {
-		const tickets = await listOrgTickets(
+		const result = await listOrgTickets(
 			context.activeMembership.organizationId,
 			{
-				status: input.status,
-				priority: input.priority,
-				source: input.source,
-				bookingId: input.bookingId,
-				assignedToUserId: input.assignedToUserId,
-				customerUserId: input.customerUserId,
-				onlyUnassigned: input.onlyUnassigned,
-				onlyOverdue: input.onlyOverdue,
-				limit: input.limit,
-				offset: input.offset,
+				filter: input.filter,
+				page: input.page,
+				search: input.search,
+				sort: input.sort,
 			},
 			db
 		);
-		return tickets.map(formatOperatorTicket);
+		return {
+			items: result.items.map(formatOperatorTicket),
+			page: {
+				limit: input.page.limit,
+				offset: input.page.offset,
+				total: result.total,
+				hasMore: input.page.offset + result.items.length < result.total,
+			},
+		};
 	}),
 
 	getTicketThread: organizationPermissionProcedure({
@@ -261,6 +264,15 @@ export const supportRouter = {
 		} catch (e) {
 			return throwSupportNotFound(e);
 		}
+	}),
+
+	getOperatorSummary: organizationPermissionProcedure({
+		support: ["read"],
+	}).support.getOperatorSummary.handler(async ({ context }) => {
+		return getOperatorSupportSummary(
+			context.activeMembership.organizationId,
+			db
+		);
 	}),
 
 	assignTicket: organizationPermissionProcedure({
@@ -340,16 +352,25 @@ export const supportRouter = {
 	listMyTickets: protectedProcedure.support.listMyTickets.handler(
 		async ({ context, input }) => {
 			const customerUserId = getRequiredSessionUserId(context);
-			const tickets = await listCustomerTickets(
+			const result = await listCustomerTickets(
 				customerUserId,
 				{
-					bookingId: input.bookingId,
-					limit: input.limit,
-					offset: input.offset,
+					filter: input.filter,
+					page: input.page,
+					search: input.search,
+					sort: input.sort,
 				},
 				db
 			);
-			return tickets.map(formatCustomerTicket);
+			return {
+				items: result.items.map(formatCustomerTicket),
+				page: {
+					limit: input.page.limit,
+					offset: input.page.offset,
+					total: result.total,
+					hasMore: input.page.offset + result.items.length < result.total,
+				},
+			};
 		}
 	),
 

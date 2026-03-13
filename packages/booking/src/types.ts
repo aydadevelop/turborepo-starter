@@ -22,6 +22,7 @@ export interface CreateBookingInput {
 	customerUserId?: string;
 	createdByUserId?: string;
 	currency?: string;
+	discountCode?: string;
 }
 
 export interface UpdateBookingStatusInput {
@@ -43,11 +44,38 @@ export interface UpdateBookingStatusInput {
 	workflowContext?: WorkflowContext;
 }
 
+export interface UpdateBookingScheduleInput {
+	id: string;
+	organizationId: string;
+	startsAt: Date;
+	endsAt: Date;
+	timezone?: string | null;
+	workflowContext?: WorkflowContext;
+}
+
 export interface ListOrgBookingsFilter {
 	listingId?: string;
+	paymentStatus?: BookingRow["paymentStatus"];
+	source?: BookingRow["source"];
 	status?: BookingRow["status"];
-	limit?: number;
-	offset?: number;
+}
+
+export interface ListOrgBookingsInput {
+	filter?: ListOrgBookingsFilter;
+	page?: {
+		limit: number;
+		offset: number;
+	};
+	search?: string;
+	sort?: {
+		by: "created_at" | "starts_at" | "ends_at" | "status";
+		dir: "asc" | "desc";
+	};
+}
+
+export interface BookingCollectionResult {
+	items: BookingRow[];
+	total: number;
 }
 
 export interface CancellationEvidence {
@@ -83,4 +111,100 @@ export interface RequestCancellationInput {
 	reason?: string;
 	reasonCode?: CancellationReasonCode;
 	evidence?: CancellationEvidence[];
+}
+
+export interface PublicBookingSurfaceInput {
+	listingId: string;
+	date: string;
+	durationMinutes: number;
+	passengers?: number;
+	discountCode?: string;
+}
+
+export type PublicBookingSlotStatus =
+	| "available"
+	| "blocked"
+	| "notice_too_short"
+	| "minimum_duration_not_met";
+
+export interface PublicBookingSlotDiscountPreview {
+	code: string;
+	status: "applied" | "invalid";
+	reasonCode:
+		| "PROMOTION_CODE_NOT_FOUND"
+		| "PROMOTION_CODE_INACTIVE"
+		| "PROMOTION_CODE_NOT_STARTED"
+		| "PROMOTION_CODE_EXPIRED"
+		| "PROMOTION_CODE_LISTING_MISMATCH"
+		| "PROMOTION_CODE_USAGE_LIMIT_REACHED"
+		| "PROMOTION_CODE_CUSTOMER_LIMIT_REACHED"
+		| "PROMOTION_CODE_MINIMUM_SUBTOTAL_NOT_MET"
+		| null;
+	reasonLabel: string | null;
+	appliedAmountCents: number;
+	discountedSubtotalCents: number | null;
+	discountedServiceFeeCents: number | null;
+	discountedTaxCents: number | null;
+	discountedTotalCents: number | null;
+}
+
+export interface PublicBookingSlotQuote {
+	listingId: string;
+	profileId: string;
+	currency: string;
+	durationMinutes: number;
+	baseCents: number;
+	adjustmentCents: number;
+	subtotalCents: number;
+	serviceFeeCents: number;
+	taxCents: number;
+	totalCents: number;
+	hasSpecialPricing: boolean;
+	discountPreview: PublicBookingSlotDiscountPreview | null;
+}
+
+export interface PublicBookingSurfaceSlot {
+	blockReason: string | null;
+	blockSource:
+		| "booking"
+		| "manual"
+		| "calendar"
+		| "maintenance"
+		| "system"
+		| null;
+	endsAt: string;
+	endsAtLabel: string;
+	minimumDurationMinutes: number;
+	quote: PublicBookingSlotQuote | null;
+	startsAt: string;
+	startsAtLabel: string;
+	status: PublicBookingSlotStatus;
+	statusLabel: string;
+}
+
+export interface PublicBookingSurfaceSummary {
+	availableSlotCount: number;
+	blockedSlotCount: number;
+	minimumDurationSlotCount: number;
+	noticeTooShortSlotCount: number;
+	specialPricedSlotCount: number;
+	totalSlotCount: number;
+}
+
+export interface PublicBookingSurface {
+	currency: string | null;
+	date: string;
+	durationOptionsMinutes: number[];
+	listingId: string;
+	minimumDurationMinutes: number;
+	minimumNoticeMinutes: number;
+	passengers: number | null;
+	pricingConfigured: boolean;
+	requestedDurationMinutes: number;
+	requestedDiscountCode: string | null;
+	serviceFamily: "boat_rent";
+	slotStepMinutes: number;
+	slots: PublicBookingSurfaceSlot[];
+	summary: PublicBookingSurfaceSummary;
+	timezone: string;
 }

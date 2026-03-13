@@ -57,6 +57,16 @@ export const authRelations = defineRelationsPart(schema, (r) => ({
 			to: r.listingReview.reviewerUserId,
 			alias: "review_reviewer",
 		}),
+		listingModerationActions: r.many.listingModerationAudit({
+			from: r.user.id,
+			to: r.listingModerationAudit.actedByUserId,
+			alias: "listing_moderation_actor",
+		}),
+		createdCalendarAccounts: r.many.organizationCalendarAccount({
+			from: r.user.id,
+			to: r.organizationCalendarAccount.createdByUserId,
+			alias: "calendar_account_creator",
+		}),
 		affiliateReferrals: r.many.affiliateReferral({
 			from: r.user.id,
 			to: r.affiliateReferral.affiliateUserId,
@@ -163,6 +173,14 @@ export const authRelations = defineRelationsPart(schema, (r) => ({
 			from: r.organization.id,
 			to: r.listing.organizationId,
 		}),
+		boatRentProfiles: r.many.listingBoatRentProfile({
+			from: r.organization.id,
+			to: r.listingBoatRentProfile.organizationId,
+		}),
+		excursionProfiles: r.many.listingExcursionProfile({
+			from: r.organization.id,
+			to: r.listingExcursionProfile.organizationId,
+		}),
 		paymentConfigs: r.many.organizationPaymentConfig({
 			from: r.organization.id,
 			to: r.organizationPaymentConfig.organizationId,
@@ -212,6 +230,18 @@ export const authRelations = defineRelationsPart(schema, (r) => ({
 		listingReviews: r.many.listingReview({
 			from: r.organization.id,
 			to: r.listingReview.organizationId,
+		}),
+		listingModerationAuditEntries: r.many.listingModerationAudit({
+			from: r.organization.id,
+			to: r.listingModerationAudit.organizationId,
+		}),
+		calendarAccounts: r.many.organizationCalendarAccount({
+			from: r.organization.id,
+			to: r.organizationCalendarAccount.organizationId,
+		}),
+		calendarSources: r.many.organizationCalendarSource({
+			from: r.organization.id,
+			to: r.organizationCalendarSource.organizationId,
 		}),
 		calendarConnections: r.many.listingCalendarConnection({
 			from: r.organization.id,

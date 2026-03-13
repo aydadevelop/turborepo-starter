@@ -71,9 +71,9 @@ export const getPlaywrightRuntimeEnv = (): PlaywrightRuntimeEnv => {
 	}
 
 	loadEnvFiles([
-		path.resolve(__dirname, ".env.e2e"),
-		path.resolve(repoRoot, ".env.e2e"),
-		path.resolve(repoRoot, "apps/web/.env.e2e"),
+		path.resolve(__dirname, ".env.test"),
+		path.resolve(repoRoot, ".env.test"),
+		path.resolve(repoRoot, "apps/web/.env.test"),
 	]);
 
 	const baseURL = readStringEnv("PLAYWRIGHT_BASE_URL", DEFAULTS.baseURL);

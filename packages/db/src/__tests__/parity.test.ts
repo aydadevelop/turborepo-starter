@@ -42,9 +42,15 @@ const PHASE_1_BASELINE_TABLES = [
 	"listingAvailabilityBlock",
 	"listingAvailabilityException",
 	"listingAvailabilityRule",
+	// Added in 03-12: typed boat-rent family profile state
+	"listingBoatRentProfile",
+	// Added in 03-12: typed excursions family profile state
+	"listingExcursionProfile",
 	"listingCalendarConnection",
 	"listingLocation",
 	"listingMinimumDurationRule",
+	// Added in 03-12: persistent moderation audit trail for listing approvals
+	"listingModerationAudit",
 	"listingPricingProfile",
 	"listingPricingRule",
 	"listingPublication",
@@ -59,7 +65,10 @@ const PHASE_1_BASELINE_TABLES = [
 	"notificationIntent",
 	"notificationPreference",
 	"organization",
+	"organizationCalendarAccount",
+	"organizationCalendarSource",
 	"organizationListingType",
+	"organizationManualOverride",
 	"organizationOnboarding",
 	"organizationPaymentConfig",
 	"organizationSettings",
@@ -102,6 +111,6 @@ describe("Schema parity: Phase 1 baseline", () => {
 			inputs: [null as null],
 			legacyFn: (_input) => PHASE_1_BASELINE_TABLES,
 			extractedFn: (_input) => getExportedTableNames(),
-		}),
+		})
 	);
 });

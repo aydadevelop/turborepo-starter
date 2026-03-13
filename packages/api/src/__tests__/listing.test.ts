@@ -16,9 +16,11 @@ import { organization, user } from "@my-app/db/schema/auth";
 import {
 	listingTypeConfig,
 	organizationListingType,
+	organizationSettings,
 } from "@my-app/db/schema/marketplace";
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import { RPCHandler } from "@orpc/server/fetch";
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Context } from "../context";
 import { appRouter } from "../handlers/index";
@@ -26,6 +28,7 @@ import { appRouter } from "../handlers/index";
 const ORG_ID = "api-listing-org-1";
 const USER_ID = "api-listing-user-1";
 const ACTIVE_TYPE_SLUG = "api-listing-type-active";
+const EXCURSION_TYPE_SLUG = "api-listing-type-excursion";
 const INACTIVE_TYPE_SLUG = "api-listing-type-inactive";
 const ENABLED_TYPE_SLUG = "api-listing-type-enabled";
 const DISABLED_TYPE_SLUG = "api-listing-type-disabled";
@@ -68,6 +71,17 @@ const dbState = bootstrapTestDatabase({
 				metadataJsonSchema: {},
 				isActive: false,
 				sortOrder: 1,
+				createdAt: NOW,
+				updatedAt: NOW,
+			},
+			{
+				id: EXCURSION_TYPE_SLUG,
+				slug: EXCURSION_TYPE_SLUG,
+				label: "Excursion Type",
+				metadataJsonSchema: {},
+				isActive: true,
+				sortOrder: 1,
+				serviceFamily: "excursions",
 				createdAt: NOW,
 				updatedAt: NOW,
 			},
@@ -234,6 +248,33 @@ describe("listing create RPC errors", () => {
 			code: "BAD_REQUEST",
 		});
 	});
+
+	it("creates typed excursion family details through the listing RPC", async () => {
+		const result = await callRpc("/rpc/listing/create", {
+			listingTypeSlug: EXCURSION_TYPE_SLUG,
+			name: "Historic Walk",
+			slug: "historic-walk",
+			description: "guided tour",
+			serviceFamilyDetails: {
+				excursion: {
+					meetingPoint: "Central fountain",
+					durationMinutes: 180,
+					groupFormat: "both",
+					maxGroupSize: 12,
+					primaryLanguage: "English",
+					ticketsIncluded: true,
+					childFriendly: true,
+					instantBookAllowed: true,
+				},
+			},
+		});
+
+		expect(result.status).toBe(200);
+		expect(result.body).toMatchObject({
+			listingTypeSlug: EXCURSION_TYPE_SLUG,
+			name: "Historic Walk",
+		});
+	});
 });
 
 describe("listing type option RPCs", () => {
@@ -248,67 +289,114 @@ describe("listing type option RPCs", () => {
 		const body = result.body as {
 			defaultValue: string | null;
 			items: Array<{
+				defaultAmenityKeys: string[];
 				icon: string | null;
 				isDefault: boolean;
 				label: string;
 				metadataJsonSchema: Record<string, unknown>;
+				requiredFields: string[];
+				serviceFamily: "boat_rent" | "excursions";
+				supportedPricingModels: string[];
 				value: string;
 			}>;
 		};
 
 		expect(body.defaultValue).toBeNull();
-		expect(body.items).toEqual([
-			{
-				icon: null,
-				isDefault: false,
-				label: "Active Type",
-				metadataJsonSchema: {},
-				value: ACTIVE_TYPE_SLUG,
-			},
-			{
-				icon: null,
-				isDefault: false,
-				label: "Enabled Type",
-				metadataJsonSchema: {},
-				value: ENABLED_TYPE_SLUG,
-			},
-			{
-				icon: null,
-				isDefault: false,
-				label: "Disabled Type",
-				metadataJsonSchema: {},
-				value: DISABLED_TYPE_SLUG,
-			},
-		]);
+		expect(body.items).toEqual(
+			expect.arrayContaining([
+				{
+					defaultAmenityKeys: [],
+					icon: null,
+					isDefault: false,
+					label: "Active Type",
+					metadataJsonSchema: {},
+					requiredFields: [],
+					serviceFamily: "boat_rent",
+					serviceFamilyPolicy: expect.objectContaining({
+						key: "boat_rent",
+						availabilityMode: "duration",
+					}),
+					supportedPricingModels: [],
+					value: ACTIVE_TYPE_SLUG,
+				},
+				{
+					defaultAmenityKeys: [],
+					icon: null,
+					isDefault: false,
+					label: "Enabled Type",
+					metadataJsonSchema: {},
+					requiredFields: [],
+					serviceFamily: "boat_rent",
+					serviceFamilyPolicy: expect.objectContaining({
+						key: "boat_rent",
+						availabilityMode: "duration",
+					}),
+					supportedPricingModels: [],
+					value: ENABLED_TYPE_SLUG,
+				},
+				{
+					defaultAmenityKeys: [],
+					icon: null,
+					isDefault: false,
+					label: "Excursion Type",
+					metadataJsonSchema: {},
+					requiredFields: [],
+					serviceFamily: "excursions",
+					serviceFamilyPolicy: expect.objectContaining({
+						key: "excursions",
+						availabilityMode: "schedule",
+					}),
+					supportedPricingModels: [],
+					value: EXCURSION_TYPE_SLUG,
+				},
+				{
+					defaultAmenityKeys: [],
+					icon: null,
+					isDefault: false,
+					label: "Disabled Type",
+					metadataJsonSchema: {},
+					requiredFields: [],
+					serviceFamily: "boat_rent",
+					serviceFamilyPolicy: expect.objectContaining({
+						key: "boat_rent",
+						availabilityMode: "duration",
+					}),
+					supportedPricingModels: [],
+					value: DISABLED_TYPE_SLUG,
+				},
+			])
+		);
 	});
 
 	it("returns only active org-enabled types and exposes the default value", async () => {
-		await getDb().insert(organizationListingType).values([
-			{
-				id: crypto.randomUUID(),
-				organizationId: ORG_ID,
-				listingTypeSlug: ENABLED_TYPE_SLUG,
-				isDefault: true,
-				createdAt: NOW,
-				updatedAt: NOW,
-			},
-			{
-				id: crypto.randomUUID(),
-				organizationId: ORG_ID,
-				listingTypeSlug: DISABLED_TYPE_SLUG,
-				isDefault: false,
-				createdAt: NOW,
-				updatedAt: NOW,
-			},
-			{
-				id: crypto.randomUUID(),
-				organizationId: ORG_ID,
-				listingTypeSlug: INACTIVE_TYPE_SLUG,
-				isDefault: false,
-				createdAt: NOW,
-				updatedAt: NOW,
-			},
-		]);
+		await getDb()
+			.insert(organizationListingType)
+			.values([
+				{
+					id: crypto.randomUUID(),
+					organizationId: ORG_ID,
+					listingTypeSlug: ENABLED_TYPE_SLUG,
+					isDefault: true,
+					createdAt: NOW,
+					updatedAt: NOW,
+				},
+				{
+					id: crypto.randomUUID(),
+					organizationId: ORG_ID,
+					listingTypeSlug: DISABLED_TYPE_SLUG,
+					isDefault: false,
+					createdAt: NOW,
+					updatedAt: NOW,
+				},
+				{
+					id: crypto.randomUUID(),
+					organizationId: ORG_ID,
+					listingTypeSlug: INACTIVE_TYPE_SLUG,
+					isDefault: false,
+					createdAt: NOW,
+					updatedAt: NOW,
+				},
+			]);
 
 		const result = await callRpc("/rpc/listing/listAvailableTypes", {});
 
@@ -320,15 +408,194 @@ describe("listing type option RPCs", () => {
 					value: ENABLED_TYPE_SLUG,
 					label: "Enabled Type",
 					isDefault: true,
+					defaultAmenityKeys: [],
 					metadataJsonSchema: {},
+					requiredFields: [],
+					serviceFamily: "boat_rent",
+					serviceFamilyPolicy: expect.objectContaining({
+						key: "boat_rent",
+					}),
+					supportedPricingModels: [],
 				},
 				{
 					value: DISABLED_TYPE_SLUG,
 					label: "Disabled Type",
 					isDefault: false,
+					defaultAmenityKeys: [],
 					metadataJsonSchema: {},
+					requiredFields: [],
+					serviceFamily: "boat_rent",
+					supportedPricingModels: [],
 				},
 			],
+		});
+	});
+
+	it("returns backend-owned create editor defaults and family-aware listing type rules", async () => {
+		await getDb().insert(organizationSettings).values({
+			id: crypto.randomUUID(),
+			organizationId: ORG_ID,
+			timezone: "Europe/Moscow",
+			createdAt: NOW,
+			updatedAt: NOW,
+		});
+
+		await getDb()
+			.update(listingTypeConfig)
+			.set({
+				requiredFields: ["name", "slug", "timezone"],
+				supportedPricingModels: ["hourly"],
+				defaultAmenityKeys: ["captain"],
+			})
+			.where(eq(listingTypeConfig.slug, ACTIVE_TYPE_SLUG));
+
+		const result = await callRpc("/rpc/listing/getCreateEditorState", {});
+
+		expect(result.status).toBe(200);
+		expect(result.body).toMatchObject({
+			defaults: {
+				timezone: "Europe/Moscow",
+			},
+		});
+		expect(
+			(
+				result.body as {
+					listingTypes: { items: Record<string, unknown>[] };
+				}
+			).listingTypes.items
+		).toContainEqual(
+			expect.objectContaining({
+				value: ACTIVE_TYPE_SLUG,
+				serviceFamily: "boat_rent",
+				requiredFields: ["name", "slug", "timezone"],
+				supportedPricingModels: ["hourly"],
+				defaultAmenityKeys: ["captain"],
+				serviceFamilyPolicy: expect.objectContaining({
+					key: "boat_rent",
+					profileEditor: expect.objectContaining({
+						title: "Boat rent profile",
+					}),
+					customerPresentation: expect.objectContaining({
+						bookingMode: "request",
+					}),
+				}),
+			})
+		);
+	});
+});
+
+describe("listing workspace RPC", () => {
+	beforeEach(() => {
+		getDb();
+	});
+
+	it("returns backend-owned workspace state for listing editing", async () => {
+		const created = await callRpc("/rpc/listing/create", {
+			listingTypeSlug: ACTIVE_TYPE_SLUG,
+			name: "Workspace Listing",
+			slug: "workspace-listing",
+			description: "workspace",
+			serviceFamilyDetails: {
+				boatRent: {
+					capacity: 10,
+					captainMode: "captained_only",
+					basePort: "Sochi Marine Station",
+					departureArea: "Imeretinskaya Bay",
+					fuelPolicy: "included",
+					depositRequired: true,
+					instantBookAllowed: false,
+				},
+			},
+		});
+
+		const listingId = (created.body as { id: string }).id;
+		const published = await callRpc("/rpc/listing/publish", {
+			id: listingId,
+		});
+		expect(published.status).toBe(200);
+
+		const result = await callRpc("/rpc/listing/getWorkspaceState", {
+			id: listingId,
+		});
+
+		expect(result.status).toBe(200);
+		expect(result.body).toMatchObject({
+			listing: {
+				id: listingId,
+				listingTypeSlug: ACTIVE_TYPE_SLUG,
+				name: "Workspace Listing",
+			},
+			listingType: {
+				value: ACTIVE_TYPE_SLUG,
+				serviceFamily: "boat_rent",
+			},
+			boatRentProfile: {
+				listingId,
+				capacity: 10,
+				basePort: "Sochi Marine Station",
+				departureArea: "Imeretinskaya Bay",
+				depositRequired: true,
+			},
+			serviceFamilyPolicy: {
+				key: "boat_rent",
+				availabilityMode: "duration",
+			},
+			publication: {
+				activePublicationCount: 1,
+				isPublished: true,
+				requiresReview: true,
+			},
+		});
+	});
+
+	it("returns typed excursion workspace state for excursion listings", async () => {
+		const created = await callRpc("/rpc/listing/create", {
+			listingTypeSlug: EXCURSION_TYPE_SLUG,
+			name: "Historic Walk",
+			slug: "historic-walk-workspace",
+			description: "guided tour",
+			serviceFamilyDetails: {
+				excursion: {
+					meetingPoint: "Central fountain",
+					durationMinutes: 180,
+					groupFormat: "both",
+					maxGroupSize: 12,
+					primaryLanguage: "English",
+					ticketsIncluded: true,
+					childFriendly: true,
+					instantBookAllowed: true,
+				},
+			},
+		});
+
+		const listingId = (created.body as { id: string }).id;
+		const result = await callRpc("/rpc/listing/getWorkspaceState", {
+			id: listingId,
+		});
+
+		expect(result.status).toBe(200);
+		expect(result.body).toMatchObject({
+			listing: {
+				id: listingId,
+				listingTypeSlug: EXCURSION_TYPE_SLUG,
+				name: "Historic Walk",
+			},
+			listingType: {
+				value: EXCURSION_TYPE_SLUG,
+				serviceFamily: "excursions",
+			},
+			excursionProfile: {
+				listingId,
+				meetingPoint: "Central fountain",
+				durationMinutes: 180,
+				groupFormat: "both",
+				maxGroupSize: 12,
+				primaryLanguage: "English",
+			},
+			serviceFamilyPolicy: {
+				key: "excursions",
+				availabilityMode: "schedule",
+			},
 		});
 	});
 });

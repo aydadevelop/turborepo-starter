@@ -7,11 +7,13 @@ import {
 import { buildTicketStatusPatch } from "../shared/status";
 import type {
 	AssignTicketInput,
+	CustomerSupportTicketListInput,
 	CreateSupportTicketInput,
 	Db,
-	ListCustomerTicketsFilter,
 	ListOrgTicketsFilter,
 	SupportActorContext,
+	SupportTicketCollectionResult,
+	SupportTicketListInput,
 	SupportTicketRow,
 	UpdateTicketDueAtInput,
 	UpdateTicketPriorityInput,
@@ -70,18 +72,18 @@ export function getCustomerTicket(
 
 export function listOrgTickets(
 	organizationId: string,
-	filter: ListOrgTicketsFilter,
+	input: SupportTicketListInput<ListOrgTicketsFilter>,
 	db: Db
-): Promise<SupportTicketRow[]> {
-	return listOrganizationTickets(organizationId, filter, db);
+): Promise<SupportTicketCollectionResult> {
+	return listOrganizationTickets(organizationId, input, db);
 }
 
 export function listCustomerTickets(
 	customerUserId: string,
-	filter: ListCustomerTicketsFilter,
+	input: CustomerSupportTicketListInput,
 	db: Db
-): Promise<SupportTicketRow[]> {
-	return listCustomerOwnedTickets(customerUserId, filter, db);
+): Promise<SupportTicketCollectionResult> {
+	return listCustomerOwnedTickets(customerUserId, input, db);
 }
 
 export async function assignTicket(

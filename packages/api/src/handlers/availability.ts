@@ -8,6 +8,7 @@ import {
 	deleteAvailabilityBlock,
 	deleteAvailabilityException,
 	deleteAvailabilityRule,
+	getListingAvailabilityWorkspaceState,
 	listAvailabilityRules,
 	type AvailabilityBlockRow,
 	type AvailabilityExceptionRow,
@@ -78,6 +79,22 @@ export const availabilityRouter = {
 			db,
 		);
 		return rows.map(formatRule);
+	}),
+
+	getWorkspaceState: organizationPermissionProcedure({
+		availability: ["read"],
+	}).availability.getWorkspaceState.handler(async ({ context, input }) => {
+		const state = await getListingAvailabilityWorkspaceState(
+			input.listingId,
+			context.activeMembership.organizationId,
+			db,
+		);
+		return {
+			...state,
+			rules: state.rules.map(formatRule),
+			blocks: state.blocks.map(formatBlock),
+			exceptions: state.exceptions.map(formatException),
+		};
 	}),
 
 	addBlock: organizationPermissionProcedure({

@@ -13,23 +13,30 @@ vi.mock("@my-app/db", () => ({
 }));
 
 import { organization, user } from "@my-app/db/schema/auth";
-import { listingCalendarConnection } from "@my-app/db/schema/availability";
+import {
+	listingCalendarConnection,
+	organizationCalendarAccount,
+	organizationCalendarSource,
+} from "@my-app/db/schema/availability";
 import {
 	listing,
 	listingPublication,
 	listingTypeConfig,
 	paymentProviderConfig,
 } from "@my-app/db/schema/marketplace";
+import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import {
-	bootstrapTestDatabase,
-	type TestDatabase,
-} from "@my-app/db/test";
+	clearCalendarAdapterRegistry,
+	FakeCalendarAdapter,
+	registerCalendarAdapter,
+} from "@my-app/calendar";
+import { clearEventPushers } from "@my-app/events";
+import { registerOrganizationOverlayProjector } from "@my-app/organization";
 import { RPCHandler } from "@orpc/server/fetch";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { appRouter } from "../handlers/index";
 import type { Context } from "../context";
+import { appRouter } from "../handlers/index";
 
 const ORG_ID = "api-onboarding-org-1";
 const OTHER_ORG_ID = "api-onboarding-org-2";
@@ -124,9 +131,7 @@ const getDb = () => {
 
 const rpcHandler = new RPCHandler(appRouter);
 
-const createRpcContext = (
-	overrides: Partial<Context> = {},
-): Context => ({
+const createRpcContext = (overrides: Partial<Context> = {}): Context => ({
 	activeMembership: {
 		organizationId: ORG_ID,
 		role: "org_owner",
@@ -158,7 +163,7 @@ const createRpcContext = (
 const callRpc = async (
 	path: string,
 	json: unknown,
-	contextOverrides: Partial<Context> = {},
+	contextOverrides: Partial<Context> = {}
 ): Promise<{ status: number; body: unknown }> => {
 	const request = new Request(`http://example.test${path}`, {
 		method: "POST",
@@ -173,7 +178,7 @@ const callRpc = async (
 		context: createRpcContext(contextOverrides),
 	});
 
-	if (!result.matched || !result.response) {
+	if (!(result.matched && result.response)) {
 		throw new Error(`RPC request did not match ${path}`);
 	}
 
@@ -187,14 +192,19 @@ const callRpc = async (
 
 describe("organization onboarding + calendar routes", () => {
 	beforeEach(() => {
-		getDb();
+		const db = getDb();
+		clearEventPushers();
+		clearCalendarAdapterRegistry();
+		registerCalendarAdapter("google", new FakeCalendarAdapter());
+		registerOrganizationOverlayProjector(
+			db as unknown as Parameters<
+				typeof registerOrganizationOverlayProjector
+			>[0]
+		);
 	});
 
 	it("persists onboarding state as payment, calendar, and publication become ready", async () => {
-		const initial = await callRpc(
-			"/rpc/organization/getOnboardingStatus",
-			{},
-		);
+		const initial = await callRpc("/rpc/organization/getOnboardingStatus", {});
 		expect(initial.status).toBe(200);
 		expect(initial.body).toMatchObject({
 			organizationId: ORG_ID,
@@ -220,7 +230,7 @@ describe("organization onboarding + calendar routes", () => {
 			endpointId: providerConfig.webhookEndpointId,
 			webhookType: "check",
 			payload: {
-				TransactionId: 12345,
+				TransactionId: 12_345,
 			},
 		});
 		expect(paymentReady.status).toBe(200);
@@ -238,10 +248,7 @@ describe("organization onboarding + calendar routes", () => {
 		});
 		expect(publishedListing.status).toBe(200);
 
-		const complete = await callRpc(
-			"/rpc/organization/getOnboardingStatus",
-			{},
-		);
+		const complete = await callRpc("/rpc/organization/getOnboardingStatus", {});
 		expect(complete.status).toBe(200);
 		expect(complete.body).toMatchObject({
 			organizationId: ORG_ID,
@@ -251,7 +258,7 @@ describe("organization onboarding + calendar routes", () => {
 			isComplete: true,
 		});
 		expect(
-			(complete.body as { completedAt: string | null }).completedAt,
+			(complete.body as { completedAt: string | null }).completedAt
 		).not.toBeNull();
 
 		const listConnections = await callRpc("/rpc/calendar/listConnections", {
@@ -275,7 +282,7 @@ describe("organization onboarding + calendar routes", () => {
 
 		const incomplete = await callRpc(
 			"/rpc/organization/getOnboardingStatus",
-			{},
+			{}
 		);
 		expect(incomplete.status).toBe(200);
 		expect(incomplete.body).toMatchObject({
@@ -306,6 +313,151 @@ describe("organization onboarding + calendar routes", () => {
 		expect(result.status).toBe(404);
 	});
 
+	it("manages organization calendar accounts and exposes them through calendar workspace state", async () => {
+		const connectedAccount = await callRpc("/rpc/calendar/connectAccount", {
+			provider: "google",
+			externalAccountId: "google-account-1",
+			accountEmail: "fleet@example.com",
+			displayName: "Fleet Calendar",
+		});
+		expect(connectedAccount.status).toBe(200);
+		const account = connectedAccount.body as { id: string };
+
+		const listedAccounts = await callRpc("/rpc/calendar/listAccounts", {});
+		expect(listedAccounts.status).toBe(200);
+		expect(listedAccounts.body).toMatchObject([
+			{
+				id: account.id,
+				provider: "google",
+				accountEmail: "fleet@example.com",
+				status: "connected",
+			},
+		]);
+
+		await callRpc("/rpc/calendar/connect", {
+			listingId: LISTING_ID,
+			provider: "google",
+			calendarId: "calendar-1",
+		});
+
+		const workspace = await callRpc("/rpc/calendar/getWorkspaceState", {
+			listingId: LISTING_ID,
+		});
+		expect(workspace.status).toBe(200);
+		expect(workspace.body).toMatchObject({
+			accountCount: 1,
+			connectedAccountCount: 1,
+			accounts: [
+				{
+					id: account.id,
+					provider: "google",
+					displayName: "Fleet Calendar",
+				},
+			],
+			activeConnectionCount: 1,
+		});
+
+		const disconnected = await callRpc("/rpc/calendar/disconnectAccount", {
+			accountId: account.id,
+		});
+		expect(disconnected.status).toBe(200);
+		expect(disconnected.body).toEqual({ success: true });
+
+		const listedAfterDisconnect = await callRpc("/rpc/calendar/listAccounts", {});
+		expect(listedAfterDisconnect.status).toBe(200);
+		expect(listedAfterDisconnect.body).toMatchObject([
+			{
+				id: account.id,
+				status: "disconnected",
+			},
+		]);
+	});
+
+	it("refreshes discovered account sources and attaches them to a listing", async () => {
+		const db = getDb();
+
+		await db.insert(organizationCalendarAccount).values({
+			id: "calendar-account-1",
+			organizationId: ORG_ID,
+			provider: "google",
+			externalAccountId: "google-account-1",
+			accountEmail: "fleet@example.com",
+			displayName: "Fleet Calendar",
+			status: "connected",
+			providerMetadata: {
+				credentials: {
+					sources: [
+						{
+							externalCalendarId: "calendar-primary",
+							name: "Primary fleet calendar",
+							timezone: "Europe/Moscow",
+							isPrimary: true,
+						},
+						{
+							externalCalendarId: "calendar-backup",
+							name: "Backup fleet calendar",
+							timezone: "Europe/Moscow",
+							isPrimary: false,
+						},
+					],
+				},
+			},
+			createdAt: NOW,
+			updatedAt: NOW,
+		});
+
+		const refreshed = await callRpc("/rpc/calendar/refreshAccountSources", {
+			accountId: "calendar-account-1",
+		});
+		expect(refreshed.status).toBe(200);
+		expect(refreshed.body).toMatchObject([
+			{
+				calendarAccountId: "calendar-account-1",
+				externalCalendarId: "calendar-primary",
+				name: "Primary fleet calendar",
+			},
+			{
+				calendarAccountId: "calendar-account-1",
+				externalCalendarId: "calendar-backup",
+				name: "Backup fleet calendar",
+			},
+		]);
+
+		const listed = await callRpc("/rpc/calendar/listSources", {});
+		expect(listed.status).toBe(200);
+		const [firstSource] = listed.body as Array<{ id: string }>;
+		expect(firstSource).toBeDefined();
+
+		const attached = await callRpc("/rpc/calendar/attachSource", {
+			listingId: LISTING_ID,
+			sourceId: firstSource!.id,
+		});
+		expect(attached.status).toBe(200);
+		expect(attached.body).toMatchObject({
+			listingId: LISTING_ID,
+			organizationId: ORG_ID,
+			calendarAccountId: "calendar-account-1",
+			calendarSourceId: firstSource!.id,
+			provider: "google",
+			isActive: true,
+		});
+
+		const [persistedSource] = await db
+			.select()
+			.from(organizationCalendarSource)
+			.where(eq(organizationCalendarSource.id, firstSource!.id))
+			.limit(1);
+		expect(persistedSource?.organizationId).toBe(ORG_ID);
+
+		const [persistedConnection] = await db
+			.select()
+			.from(listingCalendarConnection)
+			.where(eq(listingCalendarConnection.calendarSourceId, firstSource!.id))
+			.limit(1);
+		expect(persistedConnection?.listingId).toBe(LISTING_ID);
+		expect(persistedConnection?.calendarAccountId).toBe("calendar-account-1");
+	});
+
 	it("creates the expected publication row when onboarding completes", async () => {
 		await callRpc("/rpc/listing/publish", { id: LISTING_ID });
 
@@ -316,5 +468,110 @@ describe("organization onboarding + calendar routes", () => {
 
 		expect(publications).toHaveLength(1);
 		expect(publications[0]?.organizationId).toBe(ORG_ID);
+	});
+
+	it("returns overlay publishing summary for the active organization", async () => {
+		await callRpc("/rpc/listing/publish", { id: LISTING_ID });
+
+		const result = await callRpc("/rpc/organization/getOverlaySummary", {});
+
+		expect(result.status).toBe(200);
+		expect(result.body).toMatchObject({
+			onboarding: {
+				organizationId: ORG_ID,
+				listingPublished: true,
+			},
+			publishing: {
+				totalListingCount: 1,
+				draftListingCount: 0,
+				publishedListingCount: 1,
+				unpublishedListingCount: 0,
+				activePublicationCount: 1,
+				reviewPendingCount: 1,
+			},
+			distribution: {
+				marketplacePublicationCount: 1,
+				ownSitePublicationCount: 0,
+				listingsWithoutPublicationCount: 0,
+			},
+			moderation: {
+				reviewPendingCount: 1,
+				approvedListingCount: 0,
+				unapprovedActiveListingCount: 1,
+			},
+			manualOverrides: {
+				activeCount: 0,
+			},
+		});
+	});
+
+	it("exposes moderation and distribution actions through the organization router", async () => {
+		const approved = await callRpc("/rpc/organization/approveListing", {
+			listingId: LISTING_ID,
+			note: "Approved for marketplace launch",
+		});
+		expect(approved.status).toBe(200);
+		expect(approved.body).toMatchObject({
+			listingId: LISTING_ID,
+			isApproved: true,
+		});
+		expect(
+			(approved.body as { approvedAt: string | null }).approvedAt
+		).not.toBeNull();
+
+		const published = await callRpc("/rpc/organization/publishListingToChannel", {
+			listingId: LISTING_ID,
+			channelType: "own_site",
+		});
+		expect(published.status).toBe(200);
+		expect(published.body).toEqual({
+			listingId: LISTING_ID,
+			activeChannels: ["own_site"],
+			activePublicationCount: 1,
+			isPublished: true,
+		});
+
+		const unpublished = await callRpc("/rpc/organization/unpublishListing", {
+			listingId: LISTING_ID,
+		});
+		expect(unpublished.status).toBe(200);
+		expect(unpublished.body).toEqual({
+			listingId: LISTING_ID,
+			activeChannels: [],
+			activePublicationCount: 0,
+			isPublished: false,
+		});
+
+		const cleared = await callRpc("/rpc/organization/clearListingApproval", {
+			listingId: LISTING_ID,
+			note: "Cleared after listing content changed",
+		});
+		expect(cleared.status).toBe(200);
+		expect(cleared.body).toEqual({
+			listingId: LISTING_ID,
+			approvedAt: null,
+			isApproved: false,
+		});
+
+		const audit = await callRpc("/rpc/organization/getListingModerationAudit", {
+			listingId: LISTING_ID,
+		});
+		expect(audit.status).toBe(200);
+		expect(audit.body).toMatchObject([
+			{
+				listingId: LISTING_ID,
+				action: "approval_cleared",
+				actedByUserId: USER_ID,
+				actedByDisplayName: "API Onboarding User",
+				note: "Cleared after listing content changed",
+			},
+			{
+				listingId: LISTING_ID,
+				action: "approved",
+				actedByUserId: USER_ID,
+				actedByDisplayName: "API Onboarding User",
+				note: "Approved for marketplace launch",
+			},
+		]);
 	});
 });

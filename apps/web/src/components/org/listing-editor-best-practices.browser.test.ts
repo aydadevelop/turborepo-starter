@@ -18,8 +18,16 @@ test("keeps governed fields primary and raw metadata hidden by default", async (
 	await expect.element(page.getByLabelText("Slug")).toBeVisible();
 	await expect.element(page.getByLabelText("Description")).toBeVisible();
 	await expect
-		.element(page.getByText("Advanced metadata"))
+		.element(page.getByText("Service family: Boat rent"))
 		.toBeVisible();
+	await expect
+		.element(
+			page.getByText("Required fields for this type: name, slug, timezone")
+		)
+		.toBeVisible();
+	await expect.element(page.getByLabelText("Capacity")).toBeVisible();
+	await expect.element(page.getByLabelText("Captain policy")).toBeVisible();
+	await expect.element(page.getByText("Advanced metadata")).toBeVisible();
 	await expect
 		.element(
 			page.getByText(
@@ -27,9 +35,10 @@ test("keeps governed fields primary and raw metadata hidden by default", async (
 			)
 		)
 		.toBeVisible();
-	await expect
-		.element(page.getByLabelText("Metadata JSON"))
-		.not.toBeVisible();
+	await expect.element(page.getByLabelText("Metadata JSON")).not.toBeVisible();
+	await expect(document.body).toMatchScreenshot(
+		"listing-editor-best-practices-default"
+	);
 
 	await userEvent.click(page.getByRole("button", { name: "Edit JSON" }));
 
@@ -41,11 +50,35 @@ test("keeps governed fields primary and raw metadata hidden by default", async (
 			)
 		)
 		.toBeVisible();
+	await expect.element(page.getByText("Boat rent profile")).toBeVisible();
+	await expect(document.body).toMatchScreenshot(
+		"listing-editor-best-practices-advanced-json"
+	);
 });
 
-test.todo(
-	"replaces raw metadata JSON with listing-type-specific typed fields for the default create path"
-);
+test("switches to typed excursion fields instead of falling back to generic metadata for excursions", async () => {
+	renderComponent(ListingEditorForm, {
+		mode: "create",
+		submitLabel: "Create listing",
+		onSubmit: () => Promise.resolve(),
+		listingTypeOptions,
+	});
+
+	await userEvent.click(page.getByLabelText("Listing type"));
+	await userEvent.click(page.getByRole("option", { name: "Walking tour" }));
+
+	await expect
+		.element(page.getByText("Service family: Excursions"))
+		.toBeVisible();
+	await expect.element(page.getByLabelText("Meeting point")).toBeVisible();
+	await expect.element(page.getByLabelText("Duration (minutes)")).toBeVisible();
+	await expect.element(page.getByLabelText("Group format")).toBeVisible();
+	await expect.element(page.getByLabelText("Primary language")).toBeVisible();
+	await expect.element(page.getByText("Excursion profile")).toBeVisible();
+	await expect(document.body).toMatchScreenshot(
+		"listing-editor-best-practices-excursion"
+	);
+});
 
 test.todo(
 	"shows readiness and moderation state in the listing workspace before publish actions are available"

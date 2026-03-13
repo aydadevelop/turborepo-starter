@@ -1,123 +1,106 @@
 <script lang="ts">
-	import { Badge } from "@my-app/ui/components/badge";
-	import { Button } from "@my-app/ui/components/button";
-	import * as Card from "@my-app/ui/components/card";
-	import { Input } from "@my-app/ui/components/input";
-	import * as Table from "@my-app/ui/components/table";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { resolve } from "$app/paths";
+	import DataTable from "../../../../components/operator/DataTable.svelte";
+	import { createDataTableState } from "../../../../components/operator/data-table-state.svelte";
+	import ResourceBadgeCell from "../../../../components/operator/ResourceBadgeCell.svelte";
+	import ResourceLinkCell from "../../../../components/operator/ResourceLinkCell.svelte";
+	import {
+		createColumnHelper,
+		renderComponent,
+		type ColumnDef,
+	} from "../../../../components/operator/resource-table";
+	import SurfaceCard from "../../../../components/operator/SurfaceCard.svelte";
+	import Text from "../../../../components/operator/Text.svelte";
 	import { orpc } from "$lib/orpc";
 
-	let search = $state("");
-	let currentOffset = $state(0);
-	const limit = 20;
+	const table = createDataTableState({ limit: 20 });
 
 	const orgsQuery = createQuery(() =>
 		orpc.admin.organizations.listOrgs.queryOptions({
-			input: { limit, offset: currentOffset, search: search || undefined },
+			input: {
+				limit: table.pagination.limit,
+				offset: table.pagination.offset,
+				search: table.search.value || undefined,
+			},
 		})
 	);
 
-	const totalPages = $derived(
-		Math.max(1, Math.ceil((orgsQuery.data?.total ?? 0) / limit))
-	);
-	const currentPage = $derived(Math.floor(currentOffset / limit) + 1);
+	$effect(() => {
+		table.pagination.totalItems = orgsQuery.data?.total ?? 0;
+	});
+
+	type OrganizationRow = {
+		id: string;
+		name: string;
+		slug: string;
+		logo: string | null;
+		metadata: string | null;
+		createdAt: Date;
+	};
+
+	const columnHelper = createColumnHelper<OrganizationRow>();
+
+	const columns: ColumnDef<OrganizationRow, any>[] = [
+		columnHelper.accessor("name", {
+			header: "Name",
+			meta: {
+				cellClass: "font-medium",
+			},
+		}),
+		columnHelper.display({
+			id: "slug",
+			header: "Slug",
+			cell: ({ row }) =>
+				renderComponent(ResourceBadgeCell, {
+					label: row.original.slug,
+					variant: "secondary",
+				}),
+		}),
+		columnHelper.accessor(
+			(org) => new Date(org.createdAt).toLocaleDateString(),
+			{
+				id: "createdAt",
+				header: "Created",
+				meta: {
+					cellClass: "text-muted-foreground text-sm",
+				},
+			}
+		),
+		columnHelper.display({
+			id: "actions",
+			header: "Actions",
+			meta: {
+				headerClass: "w-24",
+			},
+			cell: ({ row }) =>
+				renderComponent(ResourceLinkCell, {
+					href: resolve(`/admin/organizations/${row.original.id}`),
+					label: "View",
+				}),
+		}),
+	];
 </script>
 
 <div class="space-y-4">
-	<div class="flex items-center justify-between">
-		<h2 class="text-xl font-semibold">Organizations</h2>
-	</div>
+	<Text variant="heading" as="h2">Organizations</Text>
 
-	<div class="flex gap-2">
-		<Input
-			placeholder="Search by name or slug..."
-			value={search}
-			oninput={(e) => {
-				search = (e.target as HTMLInputElement).value;
-				currentOffset = 0;
-			}}
-			class="max-w-sm"
-		/>
-	</div>
-
-	<Card.Root>
-		<Card.Content class="p-0">
-			{#if orgsQuery.isPending}
-				<p class="p-4 text-sm text-muted-foreground">Loading...</p>
-			{:else if orgsQuery.isError}
-				<p class="p-4 text-sm text-destructive">
-					Failed to load organizations.
-				</p>
-			{:else}
-				<Table.Root>
-					<Table.Header>
-						<Table.Row>
-							<Table.Head>Name</Table.Head>
-							<Table.Head>Slug</Table.Head>
-							<Table.Head>Created</Table.Head>
-							<Table.Head class="w-24">Actions</Table.Head>
-						</Table.Row>
-					</Table.Header>
-					<Table.Body>
-						{#each orgsQuery.data?.items ?? [] as org (org.id)}
-							<Table.Row>
-								<Table.Cell class="font-medium">{org.name}</Table.Cell>
-								<Table.Cell>
-									<Badge variant="secondary">{org.slug}</Badge>
-								</Table.Cell>
-								<Table.Cell class="text-muted-foreground text-sm">
-									{new Date(org.createdAt).toLocaleDateString()}
-								</Table.Cell>
-								<Table.Cell>
-									<a
-										href={resolve(`/admin/organizations/${org.id}`)}
-										class="text-sm text-primary hover:underline"
-									>
-										View
-									</a>
-								</Table.Cell>
-							</Table.Row>
-						{:else}
-							<Table.Row>
-								<Table.Cell
-									colspan={4}
-									class="text-center text-muted-foreground"
-								>
-									No organizations found.
-								</Table.Cell>
-							</Table.Row>
-						{/each}
-					</Table.Body>
-				</Table.Root>
-			{/if}
-		</Card.Content>
-	</Card.Root>
-
-	{#if totalPages > 1}
-		<div class="flex items-center justify-between">
-			<p class="text-sm text-muted-foreground">
-				Page {currentPage} of {totalPages} ({orgsQuery.data?.total ?? 0}
-				total)
-			</p>
-			<div class="flex gap-2">
-				<Button
-					variant="outline"
-					size="sm"
-					disabled={currentOffset === 0}
-					onclick={() => { currentOffset = Math.max(0, currentOffset - limit); }}
-				>
-					Previous
-				</Button>
-				<Button
-					variant="outline"
-					size="sm"
-					disabled={currentPage >= totalPages}
-					onclick={() => { currentOffset = currentOffset + limit; }}
-				>
-					Next
-				</Button>
-			</div>
-		</div>
-	{/if}
+	<SurfaceCard title="Organization list" contentClass="pt-0">
+		{#snippet children()}
+			<DataTable
+				data={(orgsQuery.data?.items ?? []) as OrganizationRow[]}
+				{columns}
+				getRowId={(org) => org.id}
+				loading={orgsQuery.isPending}
+				errorMessage={orgsQuery.isError
+					? "Failed to load organizations."
+					: null}
+				emptyMessage="No organizations found."
+				search={table.search}
+				searchPlaceholder="Search by name or slug..."
+				pagination={table.pagination}
+				itemLabel="organizations"
+			/>
+		{/snippet}
+	</SurfaceCard>
 </div>

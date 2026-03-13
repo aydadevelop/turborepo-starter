@@ -5,6 +5,7 @@ import {
 	createPricingProfile,
 	createPricingRule,
 	deletePricingRule,
+	getPricingWorkspaceState,
 	listPricingProfiles,
 	updatePricingProfile,
 	type PricingProfileRow,
@@ -68,6 +69,20 @@ export const pricingRouter = {
 			db,
 		);
 		return rows.map(formatProfile);
+	}),
+
+	getWorkspaceState: organizationPermissionProcedure({
+		pricing: ["read"],
+	}).pricing.getWorkspaceState.handler(async ({ context, input }) => {
+		const state = await getPricingWorkspaceState(
+			input.listingId,
+			context.activeMembership.organizationId,
+			db,
+		);
+		return {
+			...state,
+			profiles: state.profiles.map(formatProfile),
+		};
 	}),
 
 	addRule: organizationPermissionProcedure({

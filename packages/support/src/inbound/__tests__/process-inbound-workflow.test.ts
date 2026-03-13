@@ -85,7 +85,7 @@ describe("inbound workflow", () => {
 
 		const tickets = await listOrgTickets(ORG_ID, {}, getDb());
 		expect(second.ticket.id).toBe(first.ticket.id);
-		expect(tickets).toHaveLength(1);
+		expect(tickets.items).toHaveLength(1);
 	});
 
 	it("rejects duplicate inbound dedupe keys", async () => {

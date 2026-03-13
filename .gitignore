@@ -13,7 +13,9 @@ build
 !/scripts/
 !/scripts/measure-type-graph.mjs
 !/scripts/sync-secrets.sh
-
+__screenshots__/
+.vitest-attachments
+output/
 # Environment variables
 .env
 .env.*
@@ -21,7 +23,7 @@ build
 !infra/.env.1gb.example
 # Env management templates (gitignored — contain real values)
 # tracked: .env.example only
-!apps/web/.env.e2e
+!apps/web/.env.test
 !packages/infra/.env.e2e
 .dev.vars
 

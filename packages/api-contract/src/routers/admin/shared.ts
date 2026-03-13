@@ -1,8 +1,9 @@
 import z from "zod";
+import { createOffsetPageInputSchema } from "../../contracts/shared";
 
-export const paginationInput = z.object({
-	limit: z.number().int().min(1).max(100).default(50),
-	offset: z.number().int().min(0).default(0),
+export const paginationInput = createOffsetPageInputSchema({
+	defaultLimit: 50,
+	maxLimit: 100,
 });
 
 export const paginatedOutput = <T extends z.ZodTypeAny>(itemSchema: T) =>

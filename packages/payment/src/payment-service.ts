@@ -1,10 +1,11 @@
-import { and, eq, sql } from "drizzle-orm";
 import {
 	booking,
 	bookingPaymentAttempt,
 	organizationPaymentConfig,
 	paymentWebhookEvent,
 } from "@my-app/db/schema/marketplace";
+import type { EventBus } from "@my-app/events";
+import { and, eq, sql } from "drizzle-orm";
 import type {
 	ConnectPaymentProviderInput,
 	Db,
@@ -12,9 +13,37 @@ import type {
 	ReconcileWebhookResult,
 } from "./types";
 
+interface PaymentMutationContext {
+	actorUserId?: string;
+	eventBus?: EventBus;
+}
+
+const emitPaymentConfigReadinessChanged = async (
+	organizationId: string,
+	configId: string,
+	isReady: boolean,
+	context?: PaymentMutationContext
+): Promise<void> => {
+	if (!context?.eventBus) {
+		return;
+	}
+
+	await context.eventBus.emit({
+		type: "payment:organization-config-readiness-changed",
+		organizationId,
+		actorUserId: context.actorUserId,
+		idempotencyKey: `payment:readiness:${organizationId}:${configId}:${isReady ? "ready" : "not-ready"}`,
+		data: {
+			configId,
+			isReady,
+		},
+	});
+};
+
 export async function connectPaymentProvider(
 	input: ConnectPaymentProviderInput,
 	db: Db,
+	context?: PaymentMutationContext
 ): Promise<OrgPaymentConfigRow> {
 	const webhookEndpointId = crypto.randomUUID();
 	const id = crypto.randomUUID();
@@ -46,12 +75,23 @@ export async function connectPaymentProvider(
 		})
 		.returning();
 
-	return row!;
+	if (!row) {
+		throw new Error("UPSERT_FAILED");
+	}
+
+	await emitPaymentConfigReadinessChanged(
+		input.organizationId,
+		row.id,
+		false,
+		context
+	);
+
+	return row;
 }
 
 export async function getOrgPaymentConfig(
 	organizationId: string,
-	db: Db,
+	db: Db
 ): Promise<OrgPaymentConfigRow | null> {
 	const [row] = await db
 		.select()
@@ -67,6 +107,7 @@ export async function reconcilePaymentWebhook(
 	webhookType: string,
 	payload: Record<string, unknown>,
 	db: Db,
+	context?: PaymentMutationContext
 ): Promise<ReconcileWebhookResult> {
 	// 1. Verify endpoint belongs to a known org config
 	const [config] = await db
@@ -90,8 +131,8 @@ export async function reconcilePaymentWebhook(
 		.where(
 			and(
 				eq(paymentWebhookEvent.requestSignature, idempotencyKey),
-				eq(paymentWebhookEvent.status, "processed"),
-			),
+				eq(paymentWebhookEvent.status, "processed")
+			)
 		)
 		.limit(1);
 
@@ -174,7 +215,7 @@ export async function reconcilePaymentWebhook(
 				amountCents: 0,
 				currency: "RUB",
 				failureReason: String(
-					payload.ReasonCode ?? payload.Reason ?? "unknown",
+					payload.ReasonCode ?? payload.Reason ?? "unknown"
 				),
 			})
 			.onConflictDoUpdate({
@@ -185,7 +226,7 @@ export async function reconcilePaymentWebhook(
 				set: {
 					status: "failed",
 					failureReason: String(
-						payload.ReasonCode ?? payload.Reason ?? "unknown",
+						payload.ReasonCode ?? payload.Reason ?? "unknown"
 					),
 					updatedAt: sql`now()`,
 				},
@@ -227,6 +268,13 @@ export async function reconcilePaymentWebhook(
 				updatedAt: sql`now()`,
 			})
 			.where(eq(organizationPaymentConfig.id, config.id));
+
+		await emitPaymentConfigReadinessChanged(
+			config.organizationId,
+			config.id,
+			true,
+			context
+		);
 	}
 
 	return {

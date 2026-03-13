@@ -1,5 +1,11 @@
 import { oc } from "@orpc/contract";
 import z from "zod";
+import {
+	createCollectionOutputSchema,
+	createOffsetPageInputSchema,
+	optionalTrimmedString,
+	sortDirectionSchema,
+} from "../contracts/shared";
 
 const supportTicketStatus = z.enum([
 	"open",
@@ -74,6 +80,17 @@ const operatorMessageOutput = customerMessageOutput.extend({
 	inboundMessageId: z.string().nullable(),
 });
 
+const operatorSummaryOutput = z.object({
+	closedCount: z.number().int(),
+	escalatedCount: z.number().int(),
+	openCount: z.number().int(),
+	overdueCount: z.number().int(),
+	pendingCustomerCount: z.number().int(),
+	pendingOperatorCount: z.number().int(),
+	resolvedCount: z.number().int(),
+	unassignedCount: z.number().int(),
+});
+
 const createTicketInputSchema = z.object({
 	bookingId: z.string().optional(),
 	customerUserId: z.string().optional(),
@@ -95,16 +112,69 @@ const getTicketInputSchema = z.object({
 });
 
 const listTicketsInputSchema = z.object({
-	status: supportTicketStatus.optional(),
-	priority: supportTicketPriority.optional(),
-	source: supportTicketSource.optional(),
 	bookingId: z.string().optional(),
 	assignedToUserId: z.string().optional(),
 	customerUserId: z.string().optional(),
 	onlyUnassigned: z.boolean().optional(),
 	onlyOverdue: z.boolean().optional(),
-	limit: z.number().int().min(1).max(200).optional(),
-	offset: z.number().int().min(0).optional(),
+	priority: supportTicketPriority.optional(),
+	source: supportTicketSource.optional(),
+	status: supportTicketStatus.optional(),
+});
+
+const supportOperatorSortBySchema = z.enum([
+	"created_at",
+	"updated_at",
+	"due_at",
+	"priority",
+	"status",
+]);
+
+const supportCustomerSortBySchema = z.enum([
+	"created_at",
+	"updated_at",
+	"status",
+]);
+
+const listOrgTicketsInputSchema = z.object({
+	filter: listTicketsInputSchema.optional(),
+	page: createOffsetPageInputSchema({
+		defaultLimit: 50,
+		maxLimit: 200,
+	}).default({
+		limit: 50,
+		offset: 0,
+	}),
+	search: optionalTrimmedString(200),
+	sort: z
+		.object({
+			by: supportOperatorSortBySchema,
+			dir: sortDirectionSchema,
+		})
+		.optional(),
+});
+
+const listMyTicketsInputSchema = z.object({
+	filter: z
+		.object({
+			bookingId: z.string().optional(),
+			status: supportTicketStatus.optional(),
+		})
+		.optional(),
+	page: createOffsetPageInputSchema({
+		defaultLimit: 50,
+		maxLimit: 200,
+	}).default({
+		limit: 50,
+		offset: 0,
+	}),
+	search: optionalTrimmedString(200),
+	sort: z
+		.object({
+			by: supportCustomerSortBySchema,
+			dir: sortDirectionSchema,
+		})
+		.optional(),
 });
 
 const assignTicketInputSchema = z.object({
@@ -163,8 +233,8 @@ export const supportContract = {
 			description:
 				"Return paginated support tickets for the active organization.",
 		})
-		.input(listTicketsInputSchema)
-		.output(z.array(operatorTicketOutput)),
+		.input(listOrgTicketsInputSchema)
+		.output(createCollectionOutputSchema(operatorTicketOutput)),
 
 	getTicketThread: oc
 		.route({
@@ -180,6 +250,16 @@ export const supportContract = {
 				messages: z.array(operatorMessageOutput),
 			})
 		),
+
+	getOperatorSummary: oc
+		.route({
+			tags: ["Support"],
+			summary: "Get operator summary",
+			description:
+				"Return aggregated ticket counts for operator-facing support workflows.",
+		})
+		.input(z.object({}))
+		.output(operatorSummaryOutput),
 
 	assignTicket: oc
 		.route({
@@ -226,14 +306,8 @@ export const supportContract = {
 			description:
 				"Returns support tickets where the caller is the customerUserId. Scoped to the authenticated user only.",
 		})
-		.input(
-			z.object({
-				bookingId: z.string().optional(),
-				limit: z.number().int().min(1).max(200).optional(),
-				offset: z.number().int().min(0).optional(),
-			})
-		)
-		.output(z.array(customerTicketOutput)),
+		.input(listMyTicketsInputSchema)
+		.output(createCollectionOutputSchema(customerTicketOutput)),
 
 	getMyTicket: oc
 		.route({

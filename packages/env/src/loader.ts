@@ -3,7 +3,8 @@ import { config } from "dotenv";
 
 /**
  * Load .env files in priority order (first match wins for each key).
- * Works in both Node.js and Bun — uses dotenv so no runtime branching needed.
+ * Used by Playwright (Node.js) for custom env file loading.
+ * Bun runtime handles .env loading natively — this is only for Node.js contexts.
  */
 export const loadEnvFiles = (files: string[]): void => {
 	for (const file of files) {

@@ -1,44 +1,31 @@
-import type { QueryClient } from "@tanstack/svelte-query";
-import { orpc } from "$lib/orpc";
-import { queryKeys } from "$lib/query-keys";
+import { invalidationKeys } from "$lib/invalidation";
 
-export type InvalidationKey = readonly unknown[];
+export {
+	type InvalidationKey,
+	invalidateQueryKeys,
+	invalidationKeys,
+} from "$lib/invalidation";
 
-export function getOrganizationStructureInvalidationKeys(): InvalidationKey[] {
-	return [
-		queryKeys.org.root,
-		queryKeys.org.full,
-		queryKeys.organizations.all,
-		orpc.canManageOrganization.key(),
-	];
-}
+/**
+ * @deprecated Use `invalidationKeys.organizationStructure()` from `$lib/invalidation`.
+ */
+export const getOrganizationStructureInvalidationKeys = () =>
+	invalidationKeys.organizationStructure();
 
-export function getMembershipInvalidationKeys(): InvalidationKey[] {
-	return [
-		...getOrganizationStructureInvalidationKeys(),
-		queryKeys.invitations.all,
-	];
-}
+/**
+ * @deprecated Use `invalidationKeys.membership()` from `$lib/invalidation`.
+ */
+export const getMembershipInvalidationKeys = () =>
+	invalidationKeys.membership();
 
-export function getInvitationListInvalidationKeys(): InvalidationKey[] {
-	return [queryKeys.invitations.all];
-}
+/**
+ * @deprecated Use `invalidationKeys.invitations()` from `$lib/invalidation`.
+ */
+export const getInvitationListInvalidationKeys = () =>
+	invalidationKeys.invitations();
 
-export function getOrgSwitcherInvalidationKeys(): InvalidationKey[] {
-	return [
-		...getOrganizationStructureInvalidationKeys(),
-		orpc.listing.key(),
-		orpc.notifications.key(),
-		orpc.todo.key(),
-		queryKeys.assistant.root,
-	];
-}
-
-export async function invalidateQueryKeys(
-	queryClient: QueryClient,
-	keys: readonly InvalidationKey[]
-): Promise<void> {
-	await Promise.all(
-		keys.map((queryKey) => queryClient.invalidateQueries({ queryKey }))
-	);
-}
+/**
+ * @deprecated Use `invalidationKeys.orgSwitcher()` from `$lib/invalidation`.
+ */
+export const getOrgSwitcherInvalidationKeys = () =>
+	invalidationKeys.orgSwitcher();

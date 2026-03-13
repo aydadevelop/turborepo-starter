@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * ensure-db.mjs — Start PostgreSQL via Docker Compose and wait until it's ready.
  * Called automatically before `bun dev`.
@@ -47,7 +47,7 @@ function isDockerRunning() {
 
 function startPostgres() {
 	log("Starting PostgreSQL...");
-	execSync("docker compose up -d db", {
+	execSync("docker compose --profile infra up -d db", {
 		stdio: "inherit",
 	});
 }
@@ -166,7 +166,7 @@ if (bootstrapPlaywrightDatabase()) {
 	log("Skipping schema push (PLAYWRIGHT_SKIP_SEED=1).");
 } else {
 	log("Pushing database schema...");
-	execSync("bunx drizzle-kit push --config drizzle.config.dev.ts", {
+	execSync("bunx drizzle-kit push --config drizzle.config.dev.ts --force", {
 		cwd: new URL("../packages/db", import.meta.url).pathname,
 		stdio: "inherit",
 	});

@@ -14,6 +14,16 @@ export type AvailabilityBlockRow =
 export type AvailabilityExceptionRow =
 	typeof listingAvailabilityException.$inferSelect;
 
+export interface AvailabilityWorkspaceState {
+	activeBlockCount: number;
+	activeRuleCount: number;
+	blocks: AvailabilityBlockRow[];
+	exceptionCount: number;
+	exceptions: AvailabilityExceptionRow[];
+	hasAvailability: boolean;
+	rules: AvailabilityRuleRow[];
+}
+
 export interface CreateAvailabilityRuleInput {
 	listingId: string;
 	organizationId: string;

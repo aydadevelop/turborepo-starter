@@ -123,6 +123,25 @@ export const reviewStatusValues = [
 	"hidden",
 	"flagged",
 ] as const;
+export const listingModerationActionValues = [
+	"approved",
+	"approval_cleared",
+] as const;
+export const listingBoatRentCaptainModeValues = [
+	"captained_only",
+	"self_drive_only",
+	"captain_optional",
+] as const;
+export const listingBoatRentFuelPolicyValues = [
+	"included",
+	"charged_by_usage",
+	"return_same_level",
+] as const;
+export const listingExcursionGroupFormatValues = [
+	"group",
+	"private",
+	"both",
+] as const;
 export const listingAssetKindValues = ["image", "document", "other"] as const;
 export const storageAccessValues = ["public", "private"] as const;
 export const cancellationRequestStatusValues = [
@@ -200,6 +219,22 @@ export const paymentAdjustmentStatusEnum = pgEnum(
 export const disputeStatusEnum = pgEnum("dispute_status", disputeStatusValues);
 export const refundStatusEnum = pgEnum("refund_status", refundStatusValues);
 export const reviewStatusEnum = pgEnum("review_status", reviewStatusValues);
+export const listingModerationActionEnum = pgEnum(
+	"listing_moderation_action",
+	listingModerationActionValues,
+);
+export const listingBoatRentCaptainModeEnum = pgEnum(
+	"listing_boat_rent_captain_mode",
+	listingBoatRentCaptainModeValues,
+);
+export const listingBoatRentFuelPolicyEnum = pgEnum(
+	"listing_boat_rent_fuel_policy",
+	listingBoatRentFuelPolicyValues,
+);
+export const listingExcursionGroupFormatEnum = pgEnum(
+	"listing_excursion_group_format",
+	listingExcursionGroupFormatValues,
+);
 export const listingAssetKindEnum = pgEnum(
 	"listing_asset_kind",
 	listingAssetKindValues,

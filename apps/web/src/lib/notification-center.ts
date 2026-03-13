@@ -1,14 +1,7 @@
-export type NotificationSeverity = "info" | "success" | "warning" | "error";
-
-export interface InAppNotificationItem {
-	body: string | null;
-	ctaUrl: string | null;
-	deliveredAt: string;
-	id: string;
-	severity: NotificationSeverity;
-	title: string;
-	viewedAt: string | null;
-}
+import type {
+	InAppNotificationItem,
+	NotificationListOutput,
+} from "$lib/orpc-types";
 
 export type NotificationStreamState =
 	| "idle"
@@ -70,6 +63,17 @@ export const mergeNotificationItems = (
 	);
 };
 
+export const mergeNotificationList = (
+	current: NotificationListOutput | undefined,
+	incoming: InAppNotificationItem[]
+): NotificationListOutput => {
+	const items = mergeNotificationItems(current?.items ?? [], incoming);
+	return {
+		items,
+		unread: countUnreadNotifications(items),
+	};
+};
+
 export const markNotificationsViewedLocally = (
 	items: InAppNotificationItem[],
 	notificationIds: string[],
@@ -89,6 +93,28 @@ export const markNotificationsViewedLocally = (
 			viewedAt: viewedAtIso,
 		};
 	});
+};
+
+export const markNotificationListViewedLocally = (
+	current: NotificationListOutput | undefined,
+	notificationIds: string[],
+	viewedAtIso = new Date().toISOString()
+): NotificationListOutput | undefined => {
+	if (!current) {
+		return current;
+	}
+
+	const items = markNotificationsViewedLocally(
+		current.items,
+		notificationIds,
+		viewedAtIso
+	);
+
+	return {
+		...current,
+		items,
+		unread: countUnreadNotifications(items),
+	};
 };
 
 export const formatNotificationDateTime = (value: string) => {

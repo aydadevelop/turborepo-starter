@@ -1,8 +1,16 @@
 # Docker Compose for local development and VPS deployment
 # Usage:
-#   docker compose up -d        # start all services
-#   docker compose up -d db     # start only Postgres
-#   docker compose logs -f      # follow logs
+#   docker compose up -d                          # start all services
+#   docker compose --profile infra up -d          # db + seaweedfs + smtp only
+#   docker compose --profile observability up -d  # infra + observability stack
+#   docker compose --profile apps up -d           # all (infra + obs + apps)
+#   docker compose up -d db                       # single service
+#   docker compose logs -f                        # follow logs
+#
+# Profiles:
+#   infra        — db, seaweedfs, smtp-server (always required)
+#   observability — loki, grafana, alloy, tempo, prometheus, pyroscope, postgres-exporter
+#   apps         — server, assistant, notifications, web
 #
 # ── Observability (Loki + Grafana) ───────────────────────────────────────────
 # Install the Loki Docker log driver ONCE on your VPS before first deploy:
@@ -11,23 +19,29 @@
 #   LOKI_URL=http://loki:3100/loki/api/v1/push
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Reusable log-driver fragment — YAML-merge into any app service with <<: *loki-logging
+# Reusable local log-driver fragment — avoids requiring the Loki Docker plugin
 x-loki-logging: &loki-logging
   logging:
-    driver: loki
-    options:
-      loki-url: "${LOKI_URL:-http://loki:3100/loki/api/v1/push}"
-      loki-retries: "3"
-      loki-batch-size: "400"
+    driver: json-file
+    options: {}
 
 services:
   db:
+    profiles: [infra, observability, apps]
     image: pgvector/pgvector:pg18
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: myapp
+      # Enable pg_stat_statements for query-level latency metrics
+      POSTGRES_INITDB_ARGS: ""
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
     ports:
       - "5432:5432"
     volumes:
@@ -39,9 +53,10 @@ services:
       retries: 5
 
   seaweedfs:
+    profiles: [infra, observability, apps]
     image: chrislusf/seaweedfs:4.17
     restart: unless-stopped
-    command: ["weed", "mini", "-dir=/data"]
+    command: ["mini", "-dir=/data"]
     environment:
       AWS_ACCESS_KEY_ID: ${STORAGE_S3_ACCESS_KEY_ID:-seaweedfs-access-key}
       AWS_SECRET_ACCESS_KEY: ${STORAGE_S3_SECRET_ACCESS_KEY:-seaweedfs-secret-key}
@@ -59,25 +74,30 @@ services:
       start_period: 15s
 
   seaweedfs-init:
-    image: amazon/aws-cli:2
+    profiles: [infra, observability, apps]
+    image: amazon/aws-cli:2.34.8
     restart: "no"
     environment:
       AWS_ACCESS_KEY_ID: ${STORAGE_S3_ACCESS_KEY_ID:-seaweedfs-access-key}
       AWS_SECRET_ACCESS_KEY: ${STORAGE_S3_SECRET_ACCESS_KEY:-seaweedfs-secret-key}
       AWS_EC2_METADATA_DISABLED: "true"
       STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET:-listing-public-v1}
-    entrypoint: ["/bin/sh", "-lc"]
-    command: >
-      until aws --endpoint-url http://seaweedfs:8333 s3api list-buckets >/dev/null 2>&1; do
-        sleep 2;
-      done;
-      aws --endpoint-url http://seaweedfs:8333 s3api head-bucket --bucket "$STORAGE_S3_BUCKET" >/dev/null 2>&1 ||
-      aws --endpoint-url http://seaweedfs:8333 s3api create-bucket --bucket "$STORAGE_S3_BUCKET";
+    entrypoint: []
+    command:
+      - /bin/sh
+      - -c
+      - |
+        until aws --endpoint-url http://seaweedfs:8333 s3api list-buckets >/dev/null 2>&1; do
+          sleep 2;
+        done;
+        aws --endpoint-url http://seaweedfs:8333 s3api head-bucket --bucket "$$STORAGE_S3_BUCKET" >/dev/null 2>&1 ||
+        aws --endpoint-url http://seaweedfs:8333 s3api create-bucket --bucket "$$STORAGE_S3_BUCKET";
     depends_on:
       seaweedfs:
         condition: service_healthy
 
   server:
+    profiles: [apps]
     <<: *loki-logging
     build:
       context: .
@@ -103,6 +123,11 @@ services:
       STORAGE_S3_SECRET_ACCESS_KEY: ${STORAGE_S3_SECRET_ACCESS_KEY:-seaweedfs-secret-key}
       STORAGE_S3_FORCE_PATH_STYLE: ${STORAGE_S3_FORCE_PATH_STYLE:-1}
       STORAGE_SIGNED_URL_TTL_SECONDS: ${STORAGE_SIGNED_URL_TTL_SECONDS:-900}
+      # OpenTelemetry — traces to Tempo (override any via .env)
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4318}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_METRICS_EXPORTER: ${OTEL_METRICS_EXPORTER:-none}
+      OTEL_LOG_LEVEL: ${OTEL_LOG_LEVEL:-warn}
     depends_on:
       db:
         condition: service_healthy
@@ -118,6 +143,7 @@ services:
       start_period: 15s
 
   assistant:
+    profiles: [apps]
     <<: *loki-logging
     build:
       context: .
@@ -133,6 +159,11 @@ services:
       PORT: 3001
       DATABASE_URL: postgresql://postgres:postgres@db:5432/myapp
       SERVER_URL: http://server:3000
+      # OpenTelemetry — traces to Tempo (override any via .env)
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4318}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_METRICS_EXPORTER: ${OTEL_METRICS_EXPORTER:-none}
+      OTEL_LOG_LEVEL: ${OTEL_LOG_LEVEL:-warn}
     depends_on:
       db:
         condition: service_healthy
@@ -146,6 +177,7 @@ services:
       start_period: 15s
 
   notifications:
+    profiles: [apps]
     <<: *loki-logging
     build:
       context: .
@@ -171,6 +203,11 @@ services:
       SMTP_IGNORE_TLS: ${SMTP_IGNORE_TLS:-1}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+      # OpenTelemetry — traces to Tempo (override any via .env)
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4318}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_METRICS_EXPORTER: ${OTEL_METRICS_EXPORTER:-none}
+      OTEL_LOG_LEVEL: ${OTEL_LOG_LEVEL:-warn}
     depends_on:
       db:
         condition: service_healthy
@@ -186,6 +223,7 @@ services:
       start_period: 15s
 
   web:
+    profiles: [apps]
     <<: *loki-logging
     build:
       context: .
@@ -197,7 +235,7 @@ services:
     env_file: .env
     environment:
       PORT: 3000
-      ORIGIN: ${CORS_ORIGIN:-http://localhost:3003}
+      ORIGIN: ${WEB_ORIGIN:-http://localhost:3003}
       # SSR fetches stay on the internal Docker network — never leave the host:
       INTERNAL_SERVER_URL: http://server:3000
       INTERNAL_ASSISTANT_URL: http://assistant:3001
@@ -213,6 +251,7 @@ services:
 
   # ── Mail (dev only — captures all outgoing emails, never relays) ─────────
   smtp-server:
+    profiles: [infra, observability, apps]
     image: rnwood/smtp4dev:v3
     restart: unless-stopped
     ports:
@@ -231,6 +270,7 @@ services:
 
   # ── Observability ─────────────────────────────────────────────────────────
   loki:
+    profiles: [observability, apps]
     image: grafana/loki:3.4.2
     restart: unless-stopped
     ports:
@@ -246,7 +286,8 @@ services:
       start_period: 10s
 
   grafana:
-    image: grafana/grafana:11.6.0
+    profiles: [observability, apps]
+    image: grafana/grafana:12.4.1
     restart: unless-stopped
     ports:
       - "${GRAFANA_PORT:-3110}:3000"
@@ -254,24 +295,132 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-change-me}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+      # Log noise reduction: silence verbose internal schedulers at info level
+      GF_LOG_FILTERS: "dashboard-service:warn,ngalert.sender.router:warn,tsdb.loki:warn"
       # Alerting
       GF_ALERTING_ENABLED: "true"
       GF_UNIFIED_ALERTING_ENABLED: "true"
       # Telegram contact point (set in .env)
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      # Grafana-specific Telegram alert groups
+      GRAFANA_TELEGRAM_BOT_TOKEN: ${GRAFANA_TELEGRAM_BOT_TOKEN:-}
+      GRAFANA_TELEGRAM_DEV_CHAT_ID: ${GRAFANA_TELEGRAM_DEV_CHAT_ID:-}
+      GRAFANA_TELEGRAM_PROD_CHAT_ID: ${GRAFANA_TELEGRAM_PROD_CHAT_ID:-}
       GRAFANA_ALERT_EMAIL: ${GRAFANA_ALERT_EMAIL:-ops@localhost}
       # SMTP (uses smtp4dev in dev; override in prod .env for real relay)
       GF_SMTP_ENABLED: "true"
       GF_SMTP_HOST: ${SMTP_HOST:-smtp-server}:${SMTP_PORT:-25}
-      GF_SMTP_FROM_ADDRESS: ${SMTP_FROM:-grafana@localhost}
+      GF_SMTP_FROM_ADDRESS: ${SMTP_FROM:-grafana@smtp-server.local}
       GF_SMTP_FROM_NAME: "Grafana Alerts"
       GF_SMTP_SKIP_VERIFY: "true"   # smtp4dev has no TLS; disable in prod if relay requires it
     volumes:
       - grafana_data:/var/lib/grafana
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/etc/grafana/dashboards:ro
     depends_on:
       loki:
+        condition: service_healthy
+
+  alloy:
+    profiles: [observability, apps]
+    image: grafana/alloy:latest
+    restart: unless-stopped
+    # Alloy UI available at http://localhost:12345 for live config/pipeline debug
+    ports:
+      - "127.0.0.1:12345:12345"
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+    # eBPF profiling: privileged grants kernel probe access;
+    # pid:host lets Alloy see all container processes via /proc.
+    # On macOS Docker Desktop: pyroscope.ebpf starts in error state (kallsyms
+    # restricted) but logs/metrics/cAdvisor continue working. See docs/dev.md.
+    # On Linux VPS: run once on host: sysctl -w kernel.kptr_restrict=0 && sysctl -w kernel.perf_event_paranoid=-1
+    privileged: true
+    pid: host
+    volumes:
+      - ./infra/grafana/alloy.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro   # cgroup → container ID resolution
+      - /var/lib/docker:/var/lib/docker:ro  # cAdvisor container layer metadata
+    depends_on:
+      loki:
+        condition: service_healthy
+
+  tempo:
+    profiles: [observability, apps]
+    image: grafana/tempo:2.7.2
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./infra/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "127.0.0.1:3200:3200"   # Tempo HTTP / query frontend
+      - "127.0.0.1:4317:4317"   # OTLP gRPC receiver
+      - "127.0.0.1:4318:4318"   # OTLP HTTP receiver
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3200/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  prometheus:
+    profiles: [observability, apps]
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.enable-remote-write-receiver
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pyroscope:
+    profiles: [observability, apps]
+    image: grafana/pyroscope:latest
+    restart: unless-stopped
+    command: ["--log.level=warn"]
+    ports:
+      - "127.0.0.1:4040:4040"
+    volumes:
+      - pyroscope_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:4040/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Exports PostgreSQL metrics to Prometheus.
+  # Enables query latency, connection pool, table bloat, and lock monitoring.
+  # pg_stat_statements must be enabled in postgres (loaded below via POSTGRES_INITDB_ARGS).
+  postgres-exporter:
+    profiles: [observability, apps]
+    image: prometheuscommunity/postgres-exporter:latest
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@db:5432/myapp?sslmode=disable"
+      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
+    ports:
+      - "127.0.0.1:9187:9187"
+    depends_on:
+      db:
         condition: service_healthy
 
 volumes:
@@ -279,6 +428,9 @@ volumes:
   seaweedfs_data:
   loki_data:
   grafana_data:
+  tempo_data:
+  prometheus_data:
+  pyroscope_data:
 
 # ── Observability access ──────────────────────────────────────────────────────
 # Grafana: http://<vps-ip>:3110  (admin / ${GRAFANA_PASSWORD:-change-me})

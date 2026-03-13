@@ -35,6 +35,14 @@ export const fetchFullOrganization = async () => {
 	return data;
 };
 
+export const fetchLinkedAccounts = async () => {
+	const { data, error } = await authClient.listAccounts();
+	if (error) {
+		throw error;
+	}
+	return data ?? [];
+};
+
 // ── Option builders (pass `enabled` from caller) ──────
 
 interface Extra {
@@ -66,5 +74,14 @@ export const fullOrganizationQueryOptions = (extra?: Extra) =>
 		queryKey: queryKeys.org.full,
 		queryFn: fetchFullOrganization,
 		staleTime: 30_000,
+		...extra,
+	});
+
+export const linkedAccountsQueryOptions = (extra?: Extra) =>
+	queryOptions({
+		queryKey: queryKeys.linkedAccounts.all,
+		queryFn: fetchLinkedAccounts,
+		staleTime: 30_000,
+		retry: false,
 		...extra,
 	});

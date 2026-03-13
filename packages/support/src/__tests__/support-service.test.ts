@@ -11,8 +11,8 @@ import {
 	listCustomerTickets,
 	listOrgTickets,
 	listTicketMessages,
-} from "../support-service";
-import type { Db } from "../types";
+} from "..";
+import type { Db } from "../shared/types";
 
 const ORG_ID = "sup-org-1";
 const OTHER_ORG_ID = "sup-org-2";
@@ -130,12 +130,52 @@ describe("listOrgTickets", () => {
 			getDb(),
 		);
 
-		const rows = await listOrgTickets(ORG_ID, { bookingId: BOOKING_ID }, getDb());
+		const result = await listOrgTickets(
+			ORG_ID,
+			{ filter: { bookingId: BOOKING_ID } },
+			getDb(),
+		);
 
-		expect(rows.length).toBeGreaterThanOrEqual(1);
-		for (const row of rows) {
+		expect(result.items.length).toBeGreaterThanOrEqual(1);
+		for (const row of result.items) {
 			expect(row.bookingId).toBe(BOOKING_ID);
 		}
+	});
+
+	it("applies search and sort to organization tickets", async () => {
+		await createSupportTicket(
+			{
+				organizationId: ORG_ID,
+				subject: "Harbor pickup issue",
+				priority: "urgent",
+			},
+			getDb(),
+		);
+		await createSupportTicket(
+			{
+				organizationId: ORG_ID,
+				subject: "Cabin photo request",
+				priority: "low",
+			},
+			getDb(),
+		);
+
+		const result = await listOrgTickets(
+			ORG_ID,
+			{
+				search: "pickup",
+				sort: {
+					by: "priority",
+					dir: "desc",
+				},
+			},
+			getDb(),
+		);
+
+		expect(result.total).toBe(1);
+		expect(result.items.map((row) => row.subject)).toEqual([
+			"Harbor pickup issue",
+		]);
 	});
 });
 
@@ -156,20 +196,20 @@ describe("listCustomerTickets", () => {
 			getDb(),
 		);
 
-		const rows = await listCustomerTickets(CUSTOMER_USER_ID, {}, getDb());
+		const result = await listCustomerTickets(CUSTOMER_USER_ID, {}, getDb());
 
-		expect(rows.length).toBeGreaterThanOrEqual(1);
-		const found = rows.find((r) => r.id === ticket.id);
+		expect(result.items.length).toBeGreaterThanOrEqual(1);
+		const found = result.items.find((r) => r.id === ticket.id);
 		expect(found).toBeDefined();
-		for (const row of rows) {
+		for (const row of result.items) {
 			expect(row.customerUserId).toBe(CUSTOMER_USER_ID);
 		}
 	});
 
 	it("does not return tickets belonging to other customers", async () => {
-		const rows = await listCustomerTickets(OTHER_CUSTOMER_USER_ID, {}, getDb());
+		const result = await listCustomerTickets(OTHER_CUSTOMER_USER_ID, {}, getDb());
 
-		for (const row of rows) {
+		for (const row of result.items) {
 			expect(row.customerUserId).toBe(OTHER_CUSTOMER_USER_ID);
 		}
 	});
@@ -180,10 +220,14 @@ describe("listCustomerTickets", () => {
 			getDb(),
 		);
 
-		const rows = await listCustomerTickets(CUSTOMER_USER_ID, { bookingId: BOOKING_ID }, getDb());
+		const result = await listCustomerTickets(
+			CUSTOMER_USER_ID,
+			{ filter: { bookingId: BOOKING_ID } },
+			getDb(),
+		);
 
-		expect(rows.length).toBeGreaterThanOrEqual(1);
-		for (const row of rows) {
+		expect(result.items.length).toBeGreaterThanOrEqual(1);
+		for (const row of result.items) {
 			expect(row.bookingId).toBe(BOOKING_ID);
 		}
 	});

@@ -1,7 +1,7 @@
 # ADR-011: Organization Overlay and Readiness Projection
 
 **Date:** 2026-03-11
-**Status:** Proposed
+**Status:** Active
 **Authors:** Platform Team
 **Related:** [ADR-002: Architecture Patterns](./002_architecture-patterns.md), [ADR-004: Event Bus Migration & Related Wiring](./004_event-bus-migration.md), [ADR-005: oRPC API Boundary](./005-orpc_api_boundary.md), [ADR-008: Workspace Consolidation Constitution](./008_workspace_consolidation_constitution.md)
 
@@ -47,41 +47,51 @@ Its repo structure adds explicit marketplace modules such as:
 
 It also models seller onboarding as a recomputed cross-capability state and uses workflows plus link tables to connect marketplace actors to core commerce entities.
 
-### What is already emerging in this repo
+### What is already implemented in this repo
 
-This repo now has the first real marketplace-overlay read model:
+This repo now has the first real marketplace-overlay capability:
 
-- `organization_onboarding` exists in [`packages/db/src/schema/marketplace.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/db/src/schema/marketplace.ts)
-- onboarding is exposed through [`packages/api/src/handlers/organization.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/api/src/handlers/organization.ts)
-- onboarding is recalculated by [`packages/api/src/services/organization-onboarding.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/api/src/services/organization-onboarding.ts)
+- `organization_onboarding` persists as a DB projection row
+- the overlay package now exists at [`packages/organization`](/Users/d/Documents/Projects/turborepo-alchemy/packages/organization)
+- onboarding reads are exposed through [`packages/api/src/handlers/organization.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/api/src/handlers/organization.ts)
+- the projector is registered from [`apps/server/src/bootstrap.ts`](/Users/d/Documents/Projects/turborepo-alchemy/apps/server/src/bootstrap.ts)
 
-The current recalculation rule is:
+The first event-driven projection rule is also implemented:
 
-- payment changes call recalc from [`packages/api/src/handlers/payments.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/api/src/handlers/payments.ts)
-- calendar changes call recalc from [`packages/api/src/handlers/calendar.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/api/src/handlers/calendar.ts)
-- listing publication changes call recalc from [`packages/api/src/handlers/listing.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/api/src/handlers/listing.ts)
+- payment emits readiness events from [`packages/payment/src/payment-service.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/payment/src/payment-service.ts)
+- calendar emits readiness events from [`packages/calendar/src/use-cases.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/calendar/src/use-cases.ts)
+- listing publication emits readiness events from [`packages/catalog/src/publication-service.ts`](/Users/d/Documents/Projects/turborepo-alchemy/packages/catalog/src/publication-service.ts)
+- the organization overlay projector consumes those events and updates the persisted projection
 
-This works, but it violates the architecture we already accepted:
+This ADR therefore no longer describes a missing refactor inside `packages/api`. It defines the overlay rule that has now started shipping and should be extended instead of bypassed.
 
-- `packages/api` is a composition package per ADR-008, not the owner of a marketplace capability
-- handlers are supposed to stay thin per ADR-002 and ADR-005
-- cross-capability side effects are supposed to flow through events, not handler fan-out
+The newer discovery and season documents make the gap broader than onboarding:
 
-If we do not define a rule now, future marketplace overlay concerns will accumulate in `packages/api` the same way:
+- [Season 2026 Target State](../season-2026-target-state.md)
+- [Season 2026 Product Builder Brief](../season-2026-product-builder-brief.md)
+- [Boat Rent Model Testing Matrix](../boat-rent-model-testing-matrix.md)
+- [Product Discovery Playbook](../product-discovery-playbook.md)
 
-- org readiness
-- approval queues
-- payout readiness
-- merchant compliance state
-- "can publish" / "can accept bookings" gates
+They all point to the same requirement:
 
-That would recreate a Medusa-shaped architecture at the edges, but keep Mercur-style marketplace state trapped in the transport layer.
+> before turning the platform into owner tools, assistant flows, or channel products, finish the model and abstraction layer that makes those surfaces composable.
+
+So this ADR should be read as the first marketplace-overlay constitution, not as a narrow one-table onboarding fix.
+
+In current product terms, that means:
+
+- make `boat_rent` the first fully shaped service-family consumer of the overlay
+- keep the overlay generic enough that `excursions` can attach next without reworking the same cross-capability state model again
 
 ---
 
 ## Decision
 
-We introduce a dedicated **organization overlay capability**. Its first responsibility is the persisted onboarding/readiness projection.
+We introduce a dedicated **organization overlay capability**. Its first shipped responsibility is the persisted onboarding/readiness projection, but its architectural role is broader:
+
+- own cross-capability org and marketplace overlay state
+- publish operator-facing and customer-facing overlay read models
+- provide the first explicit layer where service-family-aware policy can attach above shared commerce primitives
 
 The target package is:
 
@@ -89,7 +99,13 @@ The target package is:
 
 This package does **not** own Better Auth's organization membership model. Auth membership stays in `packages/auth` and the Better Auth plugin tables. `packages/organization` owns **org-level marketplace state derived from multiple capability packages**.
 
-### 1. `organization_onboarding` becomes a projection owned by the organization package
+This package is the beginning of the overlay layer that Medusa-style architecture needs in this repo:
+
+- the shared core stays in domain packages such as booking, pricing, catalog, payment, calendar, support
+- the overlay layer owns readiness, publication, moderation, distribution, and operator-facing aggregate state
+- service-family and variant policy may still live in the owning domain package initially, but the overlay package owns the cross-capability projection and gating state built from them
+
+### 1. `organization_onboarding` is a projection owned by the organization package
 
 `organization_onboarding` is a persisted read model, not handler glue and not a free-floating SQL helper.
 
@@ -101,31 +117,45 @@ It represents the current org readiness state derived from:
 
 Future org-level readiness flags extend the same overlay package, not `packages/api`.
 
+The same rule applies to the next overlay states that are already implied by the product goals:
+
+- publication readiness
+- moderation readiness
+- distribution/channel readiness
+- operator dashboard blockers
+- manual override state for the 10 percent that should not require code changes
+
 ### 2. Projection updates are event-driven
 
 The organization package updates its projection from domain events emitted by the source capabilities.
 
-The first event set should cover at least:
+The first shipped event set covers:
 
-- payment configuration became valid / invalid / inactive
-- calendar connection became active / inactive
-- listing publication became active / inactive
+- payment configuration readiness transitions
+- calendar connection readiness transitions
+- listing publication readiness transitions
 
-Exact event names can be finalized during implementation, but the rule is fixed:
+The current event names are:
+
+- `payment:organization-config-readiness-changed`
+- `calendar:organization-connection-readiness-changed`
+- `listing:organization-publication-readiness-changed`
+
+The rule is fixed:
 
 - source capability owns the event
 - organization package owns the derived projection
 - API handlers do not manually fan out recalculation calls
 
-### 3. Recalculation logic moves out of `packages/api`
+### 3. Recalculation logic does not live in `packages/api`
 
-`recalculateOrganizationOnboarding(...)` is organization-domain logic and must not remain in `packages/api/src/services`.
+`recalculateOrganizationOnboarding(...)` is organization-domain logic and no longer belongs in `packages/api/src/services`.
 
-After this ADR is implemented:
+After this first wave:
 
 - `packages/api` handlers call the owning domain service and return typed results
-- `packages/organization` registers event subscribers at server bootstrap
-- the subscriber recalculates or incrementally updates the projection
+- `packages/organization` registers its projector at server bootstrap
+- source capabilities emit readiness events instead of handlers manually triggering recalc
 
 This restores the accepted layering:
 
@@ -144,7 +174,7 @@ That gives us:
 - deterministic backfills after migrations
 - a repair path when new readiness criteria are introduced
 
-The package must expose:
+The package now exposes:
 
 - `getOrganizationOnboardingStatus(organizationId)`
 - `recalculateOrganizationOnboarding(organizationId)` as an internal repair/backfill primitive
@@ -168,14 +198,50 @@ Examples that should follow this pattern later:
 - merchant compliance state
 - request queue summaries
 - operator dashboard counters
+- service-family-specific readiness gates surfaced through a shared overlay shape
+- channel/distribution readiness for widgets, microsites, and demand-generation surfaces
+
+### 6. This package is overlay-first, not membership-first
+
+The organization package should not become a dumping ground for "anything org-related".
+
+It owns:
+
+- cross-capability overlay state
+- derived operator/customer projections
+- gating and readiness checks
+- repair/backfill routines for those projections
+
+It does not own:
+
+- Better Auth membership and invitations
+- raw listing configuration
+- raw pricing rules
+- raw booking lifecycle
+- raw payment provider logic
+
+Those stay in their source modules. The overlay package composes their outcomes.
+
+### 7. This is the first step toward module-owned product surfaces
+
+The purpose of this ADR is not only to move a recalculation function out of `packages/api`.
+
+It is to establish the first real place where the repo can attach the missing Medusa-like abstraction layer:
+
+- module-owned operator read models
+- module-owned customer truth surfaces
+- cross-capability gating
+- service-family-aware state without collapsing everything into generic metadata
+
+This ADR does not finish service-family policy by itself, but it creates the overlay seam those policies need.
 
 The repo should add these under `packages/organization` until there is a proven need to split a separate capability package under the ADR-008 constitution rule.
 
 ---
 
-## Package Shape
+## Current Package Shape
 
-Target structure:
+Current structure:
 
 ```text
 packages/organization/
@@ -211,12 +277,14 @@ Responsibilities:
 - gives the repo its first explicit marketplace overlay capability, which is the part Mercur adds on top of Medusa primitives
 - removes manual recalc fan-out from handlers
 - creates a reusable pattern for future org-level projections
+- creates the first clean seam for service-family-aware gating and operator OS state
 
 ### Costs
 
 - requires new domain events in source capabilities
-- requires moving the current onboarding logic into a new package
 - adds one more capability package to the workspace
+- requires discipline so the package stays an overlay package instead of absorbing source-domain CRUD
+- adds one more place where composition bootstrapping must stay intentional
 
 Per ADR-008, this package is justified because it satisfies multiple admission criteria:
 
@@ -226,15 +294,23 @@ Per ADR-008, this package is justified because it satisfies multiple admission c
 
 ---
 
-## Implementation Plan
+## Implementation Status
 
-1. Create `packages/organization` and move onboarding read-model code there.
-2. Add explicit readiness events to `@my-app/events` for payment, calendar, and publication transitions.
-3. Emit those events from `packages/payment`, `packages/calendar`, and `packages/catalog`.
-4. Register the onboarding projector from `apps/server/src/bootstrap.ts`.
-5. Remove direct `recalculateOrganizationOnboarding(...)` calls from API handlers.
-6. Keep a repair/backfill function for migrations and tests.
-7. Add package-level tests for projector behavior and idempotent recomputation.
+Implemented in the first wave:
+
+1. `packages/organization` was created and onboarding read-model code moved there.
+2. Explicit readiness events were added to `@my-app/events` for payment, calendar, and publication transitions.
+3. Those events are emitted from `packages/payment`, `packages/calendar`, and `packages/catalog`.
+4. The onboarding projector is registered from `apps/server/src/bootstrap.ts`.
+5. Direct `recalculateOrganizationOnboarding(...)` fan-out was removed from API handlers.
+6. Package-level tests were added for onboarding reads and recomputation behavior.
+
+Next wave:
+
+1. Extend the overlay beyond onboarding into publication and moderation state.
+2. Add operator-facing blocker/readiness aggregates needed by the org panel.
+3. Add manual override notes/state for the real 10 percent that should not require code changes.
+4. Start attaching service-family-aware overlay gates above shared commerce primitives.
 
 ---
 
@@ -264,13 +340,11 @@ The repo does not yet have enough overlay concerns implemented to justify a very
 
 Medusa gave this repo the right primitives. Mercur shows the next layer: marketplace overlay modules that own cross-capability operator state.
 
-This repo has already started that layer with `organization_onboarding`, but it is still wired through `packages/api`.
+This repo has already started that layer and shipped the first overlay capability:
 
-The next ADR should therefore formalize the first overlay capability:
+- `packages/organization` exists
+- onboarding moved there
+- updates flow through domain events
+- handlers stay thin
 
-- create `packages/organization`
-- move onboarding there
-- update it from events
-- keep handlers thin
-
-That is the most direct way to turn the current implementation into a coherent Medusa-core plus Mercur-overlay architecture.
+The remaining work is not to re-argue the package. It is to keep extending the overlay pattern into the next operator-facing states instead of letting them leak back into transport or generic metadata.

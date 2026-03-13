@@ -3,7 +3,7 @@ import { type Component, flushSync, mount, unmount } from "svelte";
 import { page } from "vitest/browser";
 import QueryHarness from "./QueryHarness.svelte";
 
-type BrowserRenderable = Component<Record<string, unknown>>;
+type BrowserRenderable = Component<any>;
 
 const DEFAULT_QUERY_OPTIONS: DefaultOptions = {
 	queries: {
@@ -39,7 +39,7 @@ export const cleanupBrowserMounts = async () => {
 };
 
 export const renderComponent = <Props extends Record<string, unknown>>(
-	component: Component<Props>,
+	component: Component<any>,
 	props: Props
 ) => {
 	const target = document.createElement("div");
@@ -59,7 +59,7 @@ export const renderComponent = <Props extends Record<string, unknown>>(
 };
 
 export const renderWithQueryClient = <Props extends Record<string, unknown>>(
-	component: Component<Props>,
+	component: Component<any>,
 	props?: Props
 ) => {
 	const target = document.createElement("div");

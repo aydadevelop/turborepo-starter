@@ -1,2 +1,0 @@
-ALTER TABLE "support_ticket" ADD COLUMN "closed_by_user_id" text;--> statement-breakpoint
-ALTER TABLE "support_ticket" ADD CONSTRAINT "support_ticket_closed_by_user_id_user_id_fkey" FOREIGN KEY ("closed_by_user_id") REFERENCES "user"("id") ON DELETE SET NULL;

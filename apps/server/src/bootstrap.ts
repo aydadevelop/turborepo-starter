@@ -1,31 +1,38 @@
 import path from "node:path";
-import { db } from "@my-app/db";
-import { env } from "@my-app/env/server";
 import {
 	GoogleCalendarAdapter,
 	registerBookingLifecycleSync,
 	registerCalendarAdapter,
 } from "@my-app/calendar";
+import { db } from "@my-app/db";
+import { env } from "@my-app/env/server";
 import { registerNotificationEventPusher } from "@my-app/notifications/events-bridge";
+import { registerOrganizationOverlayProjector } from "@my-app/organization";
 import {
 	configurePaymentWebhookAdaptersFromEnv,
 	createCloudPaymentsPaymentProvider,
 	registerPaymentProvider,
 } from "@my-app/payment";
 import {
-	LISTING_PUBLIC_STORAGE_PROVIDER,
 	createLocalFileStorageProvider,
 	createS3StorageProvider,
+	LISTING_PUBLIC_STORAGE_PROVIDER,
 	registerStorageProvider,
 } from "@my-app/storage";
 
 let integrationsRegistered = false;
+const TRAILING_SLASHES_RE = /\/+$/;
 
 const parseGoogleServiceAccountKey = (): Record<string, unknown> => {
 	try {
 		return JSON.parse(
-			process.env.GOOGLE_SERVICE_ACCOUNT_KEY ?? "{}",
-		) as Record<string, unknown>;
+			env.GOOGLE_CALENDAR_CREDENTIALS_JSON ||
+				env.GOOGLE_SERVICE_ACCOUNT_KEY ||
+				"{}"
+		) as Record<
+			string,
+			unknown
+		>;
 	} catch {
 		return {};
 	}
@@ -33,7 +40,7 @@ const parseGoogleServiceAccountKey = (): Record<string, unknown> => {
 
 const createListingPublicStorageProvider = () => {
 	if (env.STORAGE_BACKEND === "s3") {
-		const requiredEnv: Array<[string, string]> = [
+		const requiredEnv: [string, string][] = [
 			["STORAGE_S3_BUCKET", env.STORAGE_S3_BUCKET],
 			["STORAGE_S3_ACCESS_KEY_ID", env.STORAGE_S3_ACCESS_KEY_ID],
 			["STORAGE_S3_SECRET_ACCESS_KEY", env.STORAGE_S3_SECRET_ACCESS_KEY],
@@ -44,7 +51,7 @@ const createListingPublicStorageProvider = () => {
 			throw new Error(
 				`Storage backend is configured as s3, but required env vars are missing: ${missing
 					.map(([key]) => key)
-					.join(", ")}`,
+					.join(", ")}`
 			);
 		}
 
@@ -66,7 +73,7 @@ const createListingPublicStorageProvider = () => {
 		baseDir: path.resolve(process.cwd(), env.STORAGE_LOCAL_DIR),
 		publicBaseUrl:
 			env.STORAGE_PUBLIC_BASE_URL ||
-			`${env.SERVER_URL.replace(/\/+$/, "")}/assets/${LISTING_PUBLIC_STORAGE_PROVIDER}`,
+			`${env.SERVER_URL.replace(TRAILING_SLASHES_RE, "")}/assets/${LISTING_PUBLIC_STORAGE_PROVIDER}`,
 	});
 };
 
@@ -77,9 +84,13 @@ export const registerServerIntegrations = (): void => {
 
 	registerCalendarAdapter(
 		"google",
-		new GoogleCalendarAdapter(parseGoogleServiceAccountKey()),
+		new GoogleCalendarAdapter(parseGoogleServiceAccountKey(), {
+			clientId: env.GOOGLE_CLIENT_ID,
+			clientSecret: env.GOOGLE_CLIENT_SECRET,
+		})
 	);
 	registerBookingLifecycleSync(db);
+	registerOrganizationOverlayProjector(db);
 	registerNotificationEventPusher(undefined, db);
 	registerPaymentProvider(createCloudPaymentsPaymentProvider());
 	registerStorageProvider(createListingPublicStorageProvider());

@@ -1,5 +1,6 @@
 import { createContext } from "@my-app/api/context";
 import { appRouter } from "@my-app/api/handlers/index";
+import { log } from "@my-app/telemetry";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { ORPCError, onError } from "@orpc/server";
@@ -11,7 +12,10 @@ const logServerError = (error: unknown) => {
 	if (error instanceof ORPCError && error.status < 500) {
 		return;
 	}
-	console.error(error);
+	log.error("oRPC handler error", {
+		error: error instanceof Error ? error.message : String(error),
+		stack: error instanceof Error ? error.stack : undefined,
+	});
 };
 
 export const apiHandler = new OpenAPIHandler(appRouter, {

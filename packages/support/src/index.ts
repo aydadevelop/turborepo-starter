@@ -32,6 +32,7 @@ export type {
 	SupportActorContext,
 	SupportAttachment,
 	SupportMessageChannel,
+	SupportOperatorSummary,
 	SupportTicketMessageRow,
 	SupportTicketPriority,
 	SupportTicketRow,
@@ -52,3 +53,7 @@ export {
 	updateTicketPriority,
 	updateTicketStatus,
 } from "./tickets/service";
+export {
+	getSupportOperatorSummary,
+	getSupportOperatorSummary as getOperatorSupportSummary,
+} from "./tickets/summary";

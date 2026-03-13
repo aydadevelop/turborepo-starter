@@ -1,10 +1,14 @@
 export type {
 	CalendarAdapter,
+	CalendarAccountRow,
 	CalendarAdapterProvider,
 	CalendarConnectionRow,
 	CalendarConnectionConfig,
+	CalendarAccountConfig,
 	CalendarEventInput,
 	CalendarEventPresentation,
+	CalendarSourcePresentation,
+	CalendarSourceRow,
 	BusySlot,
 } from "./types";
 export {
@@ -15,9 +19,21 @@ export {
 export { FakeCalendarAdapter } from "./fake-adapter";
 export { GoogleCalendarAdapter, GoogleCalendarApiError } from "./google-adapter";
 export {
+	buildGoogleCalendarAccountAuthorizationUrl,
+	exchangeGoogleCalendarOAuthCode,
+	fetchGoogleCalendarAccountProfile,
+} from "./google-oauth";
+export {
 	connectCalendar,
+	connectOrganizationCalendarAccount,
+	attachCalendarSourceToListing,
+	disconnectOrganizationCalendarAccount,
 	disconnectCalendar,
+	listOrganizationCalendarAccounts,
+	listOrganizationCalendarSources,
+	refreshOrganizationCalendarSources,
 	listCalendarConnections,
 	listCalendarBusySlots,
 } from "./use-cases";
+export { getCalendarWorkspaceState } from "./workspace-state";
 export { registerBookingLifecycleSync } from "./booking-lifecycle-sync";

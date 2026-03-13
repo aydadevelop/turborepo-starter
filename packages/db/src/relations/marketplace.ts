@@ -58,6 +58,15 @@ export const marketplaceRelations = defineRelationsPart(schema, (r) => ({
 			to: r.bookingDiscountCode.appliesToListingId,
 		}),
 		reviews: r.many.listingReview(),
+		moderationAuditEntries: r.many.listingModerationAudit(),
+		boatRentProfile: r.one.listingBoatRentProfile({
+			from: r.listing.id,
+			to: r.listingBoatRentProfile.listingId,
+		}),
+		excursionProfile: r.one.listingExcursionProfile({
+			from: r.listing.id,
+			to: r.listingExcursionProfile.listingId,
+		}),
 		availabilityRules: r.many.listingAvailabilityRule({
 			from: r.listing.id,
 			to: r.listingAvailabilityRule.listingId,
@@ -99,6 +108,44 @@ export const marketplaceRelations = defineRelationsPart(schema, (r) => ({
 		listing: r.one.listing({
 			from: r.listingAsset.listingId,
 			to: r.listing.id,
+		}),
+	},
+
+	listingModerationAudit: {
+		organization: r.one.organization({
+			from: r.listingModerationAudit.organizationId,
+			to: r.organization.id,
+		}),
+		listing: r.one.listing({
+			from: r.listingModerationAudit.listingId,
+			to: r.listing.id,
+		}),
+		actedByUser: r.one.user({
+			from: r.listingModerationAudit.actedByUserId,
+			to: r.user.id,
+			alias: "listing_moderation_actor",
+		}),
+	},
+
+	listingBoatRentProfile: {
+		listing: r.one.listing({
+			from: r.listingBoatRentProfile.listingId,
+			to: r.listing.id,
+		}),
+		organization: r.one.organization({
+			from: r.listingBoatRentProfile.organizationId,
+			to: r.organization.id,
+		}),
+	},
+
+	listingExcursionProfile: {
+		listing: r.one.listing({
+			from: r.listingExcursionProfile.listingId,
+			to: r.listing.id,
+		}),
+		organization: r.one.organization({
+			from: r.listingExcursionProfile.organizationId,
+			to: r.organization.id,
 		}),
 	},
 

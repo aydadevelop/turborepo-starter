@@ -101,8 +101,6 @@ export interface ListOrgTicketsFilter {
 	assignedToUserId?: string;
 	bookingId?: string;
 	customerUserId?: string;
-	limit?: number;
-	offset?: number;
 	onlyOverdue?: boolean;
 	onlyUnassigned?: boolean;
 	priority?: SupportTicketPriority;
@@ -112,8 +110,38 @@ export interface ListOrgTicketsFilter {
 
 export interface ListCustomerTicketsFilter {
 	bookingId?: string;
-	limit?: number;
-	offset?: number;
+	status?: SupportTicketStatus;
+}
+
+export interface SupportTicketListInput<TFilter> {
+	filter?: TFilter;
+	page?: {
+		limit: number;
+		offset: number;
+	};
+	search?: string;
+	sort?: {
+		by: "created_at" | "updated_at" | "due_at" | "priority" | "status";
+		dir: "asc" | "desc";
+	};
+}
+
+export interface CustomerSupportTicketListInput {
+	filter?: ListCustomerTicketsFilter;
+	page?: {
+		limit: number;
+		offset: number;
+	};
+	search?: string;
+	sort?: {
+		by: "created_at" | "updated_at" | "status";
+		dir: "asc" | "desc";
+	};
+}
+
+export interface SupportTicketCollectionResult {
+	items: SupportTicketRow[];
+	total: number;
 }
 
 export interface OperatorTicketThread {
@@ -124,6 +152,17 @@ export interface OperatorTicketThread {
 export interface CustomerTicketThread {
 	messages: SupportTicketMessageRow[];
 	ticket: SupportTicketRow;
+}
+
+export interface SupportOperatorSummary {
+	closedCount: number;
+	escalatedCount: number;
+	openCount: number;
+	overdueCount: number;
+	pendingCustomerCount: number;
+	pendingOperatorCount: number;
+	resolvedCount: number;
+	unassignedCount: number;
 }
 
 export interface ProcessInboundSupportIntentInput {
