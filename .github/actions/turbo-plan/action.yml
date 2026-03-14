@@ -17,7 +17,10 @@ runs:
       id: affected
       shell: bash
       run: |
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
+        if [ -n "${DEPLOY_BASE_SHA:-}" ]; then
+          FILT="...[${DEPLOY_BASE_SHA}]"
+          echo "Using last successful deploy base SHA: ${DEPLOY_BASE_SHA}" >&2
+        elif [ "${{ github.event_name }}" = "pull_request" ]; then
           FILT="...[origin/main]"
         else
           if [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then

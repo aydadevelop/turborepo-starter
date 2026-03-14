@@ -33,6 +33,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Restore last successful staging deploy SHA
+        id: deploy-sha-cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/restore@v4
+        with:
+          path: .github/cache/deploy-sha/staging.txt
+          key: deploy-sha-staging-${{ github.sha }}
+          restore-keys: |
+            deploy-sha-staging-
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -45,9 +55,31 @@ jobs:
       - name: Install dependencies
         run: bun install ${{ env.BUN_INSTALL_FLAGS }}
 
+      - name: Resolve deploy comparison base
+        id: deploy-base
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          DEPLOY_SHA_FILE=.github/cache/deploy-sha/staging.txt
+          if [ ! -s "$DEPLOY_SHA_FILE" ]; then
+            echo "No recorded successful staging deploy SHA found; falling back to event.before/origin/main." >&2
+            exit 0
+          fi
+
+          DEPLOY_BASE_SHA=$(tr -d '\n' < "$DEPLOY_SHA_FILE")
+          if ! git rev-parse --verify --quiet "$DEPLOY_BASE_SHA^{commit}" >/dev/null; then
+            echo "Cached staging deploy SHA '$DEPLOY_BASE_SHA' is unavailable in this checkout; falling back to event.before/origin/main." >&2
+            exit 0
+          fi
+
+          echo "sha=$DEPLOY_BASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "Resolved last successful staging deploy SHA: $DEPLOY_BASE_SHA" >&2
+
       - name: Detect affected apps
         id: affected
         uses: ./.github/actions/turbo-plan
+        env:
+          DEPLOY_BASE_SHA: ${{ steps.deploy-base.outputs.sha }}
 
   # ── Job A: Build, Lint, Type Check, Unit Tests ────────────────────────────
   build:
