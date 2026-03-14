@@ -41,6 +41,7 @@ RUN echo '{"type":"module"}' > package.json && \
       '@better-auth/drizzle-adapter@^1.5.0' \
       '@better-auth/passkey@^1.5.0' \
       'better-auth-telegram@^0.3.2' \
+      'drizzle-orm@1.0.0-beta.16-2ffd1a5' \
       'pg@^8.16.0'
 
 ARG APP=server
