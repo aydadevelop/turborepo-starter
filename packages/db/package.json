@@ -37,11 +37,11 @@
 		"test:watch": "vitest --watch"
 	},
 	"dependencies": {
-		"@kubiks/otel-drizzle": "^1.0.0",
+		"@kubiks/otel-drizzle": "^2.1.0",
 		"@opentelemetry/api": "^1.9.0",
 		"better-auth": "^1.5.0",
 		"dotenv": "^17.2.2",
-		"drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+		"drizzle-orm": "1.0.0-beta.18-5ffac6d",
 		"pg": "^8.16.0",
 		"zod": "^4.1.13"
 	},
