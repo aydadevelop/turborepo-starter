@@ -158,6 +158,20 @@
 				await authClient.organization.setActive({
 					organizationId: createdOrganizationId,
 				});
+
+				queryClient.setQueryData(
+					queryKeys.organizations.all,
+					(currentOrganizations: unknown) => {
+						if (
+							Array.isArray(currentOrganizations) &&
+							currentOrganizations.length > 0
+						) {
+							return currentOrganizations;
+						}
+
+						return createdOrganization ? [createdOrganization] : [];
+					}
+				);
 			}
 
 			await Promise.all([
@@ -173,7 +187,11 @@
 			const orgsResult = await authClient.organization.list();
 			queryClient.setQueryData(
 				queryKeys.organizations.all,
-				orgsResult.data ?? []
+				orgsResult.data?.length
+					? orgsResult.data
+					: createdOrganization
+						? [createdOrganization]
+						: []
 			);
 
 			goto(postCreateRedirectPath, { replaceState: true });
