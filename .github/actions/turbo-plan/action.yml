@@ -17,16 +17,24 @@ runs:
       id: affected
       shell: bash
       run: |
+        if [ "${FULL_DEPLOY_FALLBACK:-0}" = "1" ]; then
+          echo "No successful deploy base SHA is available; forcing full deploy matrix." >&2
+          echo 'matrix={"include":[{"app":"server","dockerfile":"Dockerfile"},{"app":"assistant","dockerfile":"Dockerfile"},{"app":"notifications","dockerfile":"Dockerfile"},{"app":"web","dockerfile":"Dockerfile.web"}]}' >> "$GITHUB_OUTPUT"
+          echo 'has_apps=true' >> "$GITHUB_OUTPUT"
+          echo 'run_migrations=true' >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
         if [ -n "${DEPLOY_BASE_SHA:-}" ]; then
           FILT="...[${DEPLOY_BASE_SHA}]"
           echo "Using last successful deploy base SHA: ${DEPLOY_BASE_SHA}" >&2
         elif [ "${{ github.event_name }}" = "pull_request" ]; then
           FILT="...[origin/main]"
         else
-          if [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-            FILT="...[${{ github.event.before }}]"
-          else
-            FILT="...[origin/main]"
-          fi
+          echo "Push deploy planning requires a last successful deploy base SHA; forcing full deploy matrix because none was resolved." >&2
+          echo 'matrix={"include":[{"app":"server","dockerfile":"Dockerfile"},{"app":"assistant","dockerfile":"Dockerfile"},{"app":"notifications","dockerfile":"Dockerfile"},{"app":"web","dockerfile":"Dockerfile.web"}]}' >> "$GITHUB_OUTPUT"
+          echo 'has_apps=true' >> "$GITHUB_OUTPUT"
+          echo 'run_migrations=true' >> "$GITHUB_OUTPUT"
+          exit 0
         fi
         bun run scripts/plan-deploy.ts "$FILT" >> "$GITHUB_OUTPUT"

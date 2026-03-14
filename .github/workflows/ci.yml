@@ -39,9 +39,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .github/cache/deploy-sha/staging.txt
-          key: deploy-sha-staging-${{ github.sha }}
+          key: deploy-sha-v2-staging-${{ github.sha }}
           restore-keys: |
-            deploy-sha-staging-
+            deploy-sha-v2-staging-
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -62,13 +62,15 @@ jobs:
         run: |
           DEPLOY_SHA_FILE=.github/cache/deploy-sha/staging.txt
           if [ ! -s "$DEPLOY_SHA_FILE" ]; then
-            echo "No recorded successful staging deploy SHA found; falling back to event.before/origin/main." >&2
+            echo "No recorded successful staging deploy SHA found; forcing a full deploy plan." >&2
+            echo "force_full=1" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           DEPLOY_BASE_SHA=$(tr -d '\n' < "$DEPLOY_SHA_FILE")
           if ! git rev-parse --verify --quiet "$DEPLOY_BASE_SHA^{commit}" >/dev/null; then
-            echo "Cached staging deploy SHA '$DEPLOY_BASE_SHA' is unavailable in this checkout; falling back to event.before/origin/main." >&2
+            echo "Cached staging deploy SHA '$DEPLOY_BASE_SHA' is unavailable in this checkout; forcing a full deploy plan." >&2
+            echo "force_full=1" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -80,6 +82,7 @@ jobs:
         uses: ./.github/actions/turbo-plan
         env:
           DEPLOY_BASE_SHA: ${{ steps.deploy-base.outputs.sha }}
+          FULL_DEPLOY_FALLBACK: ${{ steps.deploy-base.outputs.force_full }}
 
   # ── Job A: Build, Lint, Type Check, Unit Tests ────────────────────────────
   build:
