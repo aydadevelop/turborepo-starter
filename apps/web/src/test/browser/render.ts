@@ -49,7 +49,7 @@ export const renderComponent = <Props extends Record<string, unknown>>(
 
 	const instance = mount(component as unknown as BrowserRenderable<Props>, {
 		target,
-		props: props as Record<string, unknown>,
+		props,
 	});
 	flushSync();
 
@@ -75,7 +75,8 @@ export const renderWithQueryClient = <Props extends Record<string, unknown>>(
 		target,
 		props: {
 			client,
-			component: component as unknown as BrowserRenderable<Props>,
+			component:
+				component as unknown as BrowserRenderable<Record<string, unknown>>,
 			props: (props ?? {}) as Record<string, unknown>,
 		},
 	});

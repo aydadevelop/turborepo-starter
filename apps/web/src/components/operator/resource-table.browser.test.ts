@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { page } from "vitest/browser";
+import type { Component } from "svelte";
 import { renderComponent } from "../../test/browser/render";
 import ResourceTable from "./ResourceTable.svelte";
 import { type ColumnDef, createColumnHelper } from "./resource-table";
@@ -10,7 +11,19 @@ interface DemoRow {
 	status: string;
 }
 
+interface DemoResourceTableProps {
+	columns: ColumnDef<DemoRow>[];
+	data: DemoRow[];
+	emptyMessage?: string;
+	getRowAttributes?: (row: DemoRow) => Record<string, string | undefined>;
+	getRowId?: (row: DemoRow, index: number) => string;
+	loading?: boolean;
+}
+
 const columnHelper = createColumnHelper<DemoRow>();
+
+const TypedResourceTable =
+	ResourceTable as unknown as Component<DemoResourceTableProps>;
 
 const columns: ColumnDef<DemoRow, unknown>[] = [
 	columnHelper.accessor("name", {
@@ -30,7 +43,7 @@ const data: DemoRow[] = [
 ];
 
 test("renders loading and empty states", async () => {
-	renderComponent(ResourceTable, {
+	renderComponent(TypedResourceTable, {
 		data: [],
 		columns,
 		loading: true,
@@ -40,7 +53,7 @@ test("renders loading and empty states", async () => {
 });
 
 test("renders the empty state when no rows are provided", async () => {
-	renderComponent(ResourceTable, {
+	renderComponent(TypedResourceTable, {
 		data: [],
 		columns,
 		emptyMessage: "No resources found.",
@@ -52,7 +65,7 @@ test("renders the empty state when no rows are provided", async () => {
 });
 
 test("renders rows through the shared table wrapper", async () => {
-	renderComponent(ResourceTable, {
+	renderComponent(TypedResourceTable, {
 		data,
 		columns,
 		getRowId: (row: DemoRow) => row.id,

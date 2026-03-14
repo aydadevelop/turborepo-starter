@@ -7,7 +7,7 @@
     ".": "./shared-styles.css"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.6",
+    "@biomejs/biome": "^2.4.7",
     "tailwindcss": "^4.1.12",
     "ultracite": "^7.2.3"
   }

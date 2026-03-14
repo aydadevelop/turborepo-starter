@@ -16,8 +16,8 @@ export interface ResourceTableColumnMeta {
 export type RowData = TanStackRowData;
 export type ColumnDef<
 	TData extends RowData = RowData,
-	TValue = unknown,
-> = TanStackColumnDef<TData, TValue>;
+	_TValue = unknown,
+> = TanStackColumnDef<TData, any>;
 
 export type ResourceTableRowAttributes = Record<
 	string,

@@ -11,7 +11,7 @@
     "lint:fix": "cd ../.. && biome check --config-path biome.json packages/proxy --write"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.6",
+    "@biomejs/biome": "^2.4.7",
     "@my-app/config": "workspace:*",
     "@ngrok/ngrok": "^1.4.1",
     "@types/http-proxy": "^1.17.14",

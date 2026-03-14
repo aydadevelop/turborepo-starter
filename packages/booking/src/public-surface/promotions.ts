@@ -6,7 +6,7 @@ import {
 } from "@my-app/promotions";
 import type { Db, PublicBookingSlotDiscountPreview } from "../types";
 
-export const preparePromotionContext = (
+export const preparePromotionContext = async (
 	input: {
 		organizationId: string;
 		listingId: string;
@@ -20,7 +20,7 @@ export const preparePromotionContext = (
 		return null;
 	}
 
-	return preparePromotionPreviewContext(
+	return await preparePromotionPreviewContext(
 		{
 			organizationId: input.organizationId,
 			listingId: input.listingId,

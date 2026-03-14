@@ -9,7 +9,9 @@ const toOptionalNumberString = (value: number | null | undefined): string =>
 	value === undefined || value === null ? "" : String(value);
 
 const buildBoatRentDefaults = (
-	boatRentProfile: ListingEditorInitialValue["serviceFamilyDetails"]["boatRent"]
+	boatRentProfile: NonNullable<
+		ListingEditorInitialValue["serviceFamilyDetails"]
+	>["boatRent"]
 ) => ({
 	boatRentCapacity: toOptionalNumberString(boatRentProfile?.capacity),
 	boatRentCaptainMode: boatRentProfile?.captainMode ?? "captained_only",
@@ -21,7 +23,9 @@ const buildBoatRentDefaults = (
 });
 
 const buildExcursionDefaults = (
-	excursionProfile: ListingEditorInitialValue["serviceFamilyDetails"]["excursion"]
+	excursionProfile: NonNullable<
+		ListingEditorInitialValue["serviceFamilyDetails"]
+	>["excursion"]
 ) => ({
 	excursionMeetingPoint: excursionProfile?.meetingPoint ?? "",
 	excursionDurationMinutes: toOptionalNumberString(

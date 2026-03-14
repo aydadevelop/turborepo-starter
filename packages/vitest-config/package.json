@@ -21,7 +21,7 @@
     "vitest": "^4.0.18"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.6",
+    "@biomejs/biome": "^2.4.7",
     "@my-app/config": "workspace:*",
     "tsdown": "^0.21.0",
     "typescript": "^5",

@@ -1,3 +1,5 @@
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
+
 import type { TestDatabase } from "../../index";
 
 export const upsertFixtureById = async <
@@ -5,7 +7,7 @@ export const upsertFixtureById = async <
 	TSelect extends Record<string, unknown>,
 >(
 	db: TestDatabase,
-	table: Parameters<TestDatabase["insert"]>[0] & { id: unknown },
+	table: Parameters<TestDatabase["insert"]>[0] & { id: AnyPgColumn },
 	values: TInsert
 ): Promise<TSelect> => {
 	const rows = (await db
