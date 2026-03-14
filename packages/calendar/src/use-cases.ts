@@ -1,4 +1,5 @@
 import {
+	listingAvailabilityBlock,
 	listingCalendarConnection,
 	organizationCalendarAccount,
 	organizationCalendarSource,
@@ -7,14 +8,72 @@ import { listing } from "@my-app/db/schema/marketplace";
 import type { EventBus } from "@my-app/events";
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { getCalendarAdapter } from "./adapter-registry";
+import {
+	listCalendarWebhookDeadLetters,
+	renewExpiringCalendarWatches,
+	retryFailedCalendarSyncs,
+	startCalendarConnectionWatch,
+	stopCalendarConnectionWatch,
+	syncCalendarConnectionById,
+	syncCalendarConnectionByWebhook,
+	syncCalendarConnectionsByProvider,
+} from "./connection-sync";
+import {
+	getAccountCredentials,
+	getConnectionConfig,
+} from "./connection-config";
+import {
+	createCalendarIngressEvent,
+	finalizeCalendarIngressEvent,
+	getOrganizationCalendarObservability,
+	type CalendarIngressRequestContext,
+	type CalendarIngressEventStatus,
+} from "./observability";
 import type {
 	BusySlot,
 	CalendarAccountRow,
-	CalendarConnectionConfig,
 	CalendarConnectionRow,
 	CalendarSourceRow,
 	Db,
 } from "./types";
+
+const normalizeIngressHeaders = (
+	headers: Headers | Record<string, string | undefined>,
+): Record<string, string> => {
+	if (headers instanceof Headers) {
+		return Object.fromEntries(headers.entries());
+	}
+
+	return Object.fromEntries(
+		Object.entries(headers).filter((entry): entry is [string, string] => {
+			return typeof entry[1] === "string";
+		}),
+	);
+};
+
+const finalizeIngressOutcome = async (
+	db: Db,
+	params: {
+		calendarConnectionId?: string | null;
+		calendarWebhookEventId?: string | null;
+		errorMessage?: string | null;
+		ingressEventId?: string;
+		notification?: import("./types").CalendarWebhookNotification | null;
+		organizationId?: string | null;
+		responseCode: number;
+		status: CalendarIngressEventStatus;
+	},
+) => {
+	const { ingressEventId, ...rest } = params;
+	if (!ingressEventId) {
+		return;
+	}
+
+	await finalizeCalendarIngressEvent(db, {
+		ingressEventId,
+		...rest,
+	});
+};
 
 export interface ConnectCalendarInput {
 	calendarId: string;
@@ -79,53 +138,6 @@ const mergeProviderMetadata = (
 			: {}),
 	};
 };
-
-const getAccountCredentials = (
-	account: Pick<CalendarAccountRow, "providerMetadata">,
-): Record<string, unknown> => {
-	const metadata = account.providerMetadata;
-	if (!metadata || typeof metadata !== "object") {
-		return {};
-	}
-
-	const credentials = (metadata as { credentials?: unknown }).credentials;
-	if (credentials && typeof credentials === "object") {
-		return credentials as Record<string, unknown>;
-	}
-
-	return metadata as Record<string, unknown>;
-};
-
-const getConnectionConfig = async (
-	connection: Pick<
-		CalendarConnectionRow,
-		"calendarAccountId" | "externalCalendarId" | "provider"
-	>,
-	db: Db,
-): Promise<CalendarConnectionConfig> => {
-	if (!connection.externalCalendarId) {
-		throw new Error("CALENDAR_CONNECTION_NO_EXTERNAL_ID");
-	}
-
-	let credentials: Record<string, unknown> = {};
-	if (connection.calendarAccountId) {
-		const [account] = await db
-			.select()
-			.from(organizationCalendarAccount)
-			.where(eq(organizationCalendarAccount.id, connection.calendarAccountId))
-			.limit(1);
-		if (account) {
-			credentials = getAccountCredentials(account);
-		}
-	}
-
-	return {
-		provider: connection.provider,
-		credentials,
-		calendarId: connection.externalCalendarId,
-	};
-};
-
 const emitCalendarReadinessChanged = async (
 	organizationId: string,
 	connectionId: string,
@@ -169,12 +181,112 @@ const verifyListingOwnership = async (
 	}
 };
 
+const getOwnedCalendarConnection = async (
+	connectionId: string,
+	organizationId: string,
+	db: Db,
+): Promise<CalendarConnectionRow> => {
+	const [connection] = await db
+		.select()
+		.from(listingCalendarConnection)
+		.where(
+			and(
+				eq(listingCalendarConnection.id, connectionId),
+				eq(listingCalendarConnection.organizationId, organizationId),
+			),
+		)
+		.limit(1);
+
+	if (!connection) {
+		throw new Error("NOT_FOUND");
+	}
+
+	return connection;
+};
+
+const deactivateImportedCalendarBlocks = async (
+	connectionId: string,
+	db: Db,
+	at: Date,
+): Promise<void> => {
+	await db
+		.update(listingAvailabilityBlock)
+		.set({ isActive: false, updatedAt: at })
+		.where(
+			and(
+				eq(listingAvailabilityBlock.calendarConnectionId, connectionId),
+				eq(listingAvailabilityBlock.source, "calendar"),
+				eq(listingAvailabilityBlock.isActive, true),
+			),
+		);
+};
+
+const stopCalendarWatchBestEffort = async (
+	connection: CalendarConnectionRow,
+	db: Db,
+): Promise<string | null> => {
+	if (!(connection.watchChannelId && connection.watchResourceId)) {
+		return null;
+	}
+
+	const adapter = getCalendarAdapter(connection.provider);
+	if (!adapter.stopWatch) {
+		return null;
+	}
+
+	try {
+		const config = await getConnectionConfig(connection, db);
+		await adapter.stopWatch(
+			{
+				channelId: connection.watchChannelId,
+				resourceId: connection.watchResourceId,
+			},
+			config,
+		);
+		return null;
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		console.error(
+			`[calendar] Failed to stop watch for connection ${connection.id}:`,
+			error,
+		);
+		return message;
+	}
+};
+
 export async function connectCalendar(
 	input: ConnectCalendarInput,
 	db: Db,
 	context?: CalendarMutationContext,
 ): Promise<CalendarConnectionRow> {
 	await verifyListingOwnership(input.listingId, input.organizationId, db);
+
+	const [existing] = await db
+		.select()
+		.from(listingCalendarConnection)
+		.where(
+			and(
+				eq(listingCalendarConnection.listingId, input.listingId),
+				eq(listingCalendarConnection.organizationId, input.organizationId),
+				eq(listingCalendarConnection.provider, input.provider),
+				eq(listingCalendarConnection.externalCalendarId, input.calendarId),
+			),
+		)
+		.limit(1);
+
+	if (existing) {
+		if (existing.isActive && existing.syncStatus !== "disabled") {
+			return existing;
+		}
+
+		return enableCalendarConnection(
+			existing.id,
+			input.organizationId,
+			db,
+			context,
+		);
+	}
+
 	const [row] = await db
 		.insert(listingCalendarConnection)
 		.values({
@@ -233,13 +345,21 @@ export async function attachCalendarSourceToListing(
 				eq(listingCalendarConnection.listingId, input.listingId),
 				eq(listingCalendarConnection.organizationId, input.organizationId),
 				eq(listingCalendarConnection.calendarSourceId, source.id),
-				eq(listingCalendarConnection.isActive, true),
 			),
 		)
 		.limit(1);
 
 	if (existing) {
-		return existing;
+		if (existing.isActive && existing.syncStatus !== "disabled") {
+			return existing;
+		}
+
+		return enableCalendarConnection(
+			existing.id,
+			input.organizationId,
+			db,
+			context,
+		);
 	}
 
 	const [row] = await db
@@ -531,26 +651,41 @@ export async function disconnectCalendar(
 	db: Db,
 	context?: CalendarMutationContext,
 ): Promise<CalendarConnectionRow> {
-	const [connection] = await db
-		.select()
-		.from(listingCalendarConnection)
-		.where(
-			and(
-				eq(listingCalendarConnection.id, connectionId),
-				eq(listingCalendarConnection.organizationId, organizationId),
-			),
-		)
-		.limit(1);
+	return disableCalendarConnection(connectionId, organizationId, db, context);
+}
 
-	if (!connection) {
-		throw new Error("NOT_FOUND");
-	}
+export async function disableCalendarConnection(
+	connectionId: string,
+	organizationId: string,
+	db: Db,
+	context?: CalendarMutationContext,
+): Promise<CalendarConnectionRow> {
+	const connection = await getOwnedCalendarConnection(
+		connectionId,
+		organizationId,
+		db,
+	);
+	const now = new Date();
+	const watchError = await stopCalendarWatchBestEffort(connection, db);
+
+	await deactivateImportedCalendarBlocks(connection.id, db, now);
 
 	const [row] = await db
 		.update(listingCalendarConnection)
-		.set({ isActive: false, updatedAt: new Date() })
-		.where(eq(listingCalendarConnection.id, connectionId))
+		.set({
+			isActive: false,
+			syncStatus: "disabled",
+			syncToken: null,
+			syncRetryCount: 0,
+			watchChannelId: null,
+			watchResourceId: null,
+			watchExpiration: null,
+			lastError: watchError,
+			updatedAt: now,
+		})
+		.where(eq(listingCalendarConnection.id, connection.id))
 		.returning();
+
 	if (!row) {
 		throw new Error("Update failed");
 	}
@@ -558,6 +693,50 @@ export async function disconnectCalendar(
 	await emitCalendarReadinessChanged(organizationId, row.id, false, context);
 
 	return row;
+}
+
+export async function enableCalendarConnection(
+	connectionId: string,
+	organizationId: string,
+	db: Db,
+	context?: CalendarMutationContext,
+): Promise<CalendarConnectionRow> {
+	const connection = await getOwnedCalendarConnection(
+		connectionId,
+		organizationId,
+		db,
+	);
+	const now = new Date();
+
+	const [row] = await db
+		.update(listingCalendarConnection)
+		.set({
+			isActive: true,
+			syncStatus: "idle",
+			syncToken: null,
+			syncRetryCount: 0,
+			lastError: null,
+			updatedAt: now,
+		})
+		.where(eq(listingCalendarConnection.id, connection.id))
+		.returning();
+
+	if (!row) {
+		throw new Error("Update failed");
+	}
+
+	await emitCalendarReadinessChanged(organizationId, row.id, true, context);
+
+	const adapter = getCalendarAdapter(row.provider);
+	if (row.externalCalendarId && adapter.listEvents) {
+		try {
+			await syncCalendarConnectionById(db, row.id, { initialTimeMin: now });
+		} catch {
+			// The connection remains enabled; sync status + lastError already capture the failure.
+		}
+	}
+
+	return getOwnedCalendarConnection(connectionId, organizationId, db);
 }
 
 export async function listCalendarConnections(
@@ -662,3 +841,268 @@ export async function listAllOrgConnections(
 		.from(listingCalendarConnection)
 		.where(eq(listingCalendarConnection.organizationId, organizationId));
 }
+
+export const ingestCalendarWebhook = async (
+	params: {
+		headers: Headers | Record<string, string | undefined>;
+		provider: "google" | "outlook" | "ical" | "manual";
+		request?: CalendarIngressRequestContext;
+		sharedToken?: string;
+	},
+	db: Db,
+): Promise<
+	| { kind: "accepted"; matched: boolean; webhookEventId?: string }
+	| { kind: "adapter_not_configured" }
+	| { kind: "duplicate"; matched: boolean; previousStatus: string | null; webhookEventId: string }
+	| { kind: "missing_headers" }
+	| { kind: "unauthorized" }
+> => {
+	const ingressEvent = params.request
+		? await createCalendarIngressEvent(db, {
+				provider: params.provider,
+				request: {
+					...params.request,
+					headers:
+						params.request.headers ?? normalizeIngressHeaders(params.headers),
+				},
+			})
+		: null;
+
+	const adapter = getCalendarAdapter(params.provider);
+	if (!adapter.parseWebhookNotification) {
+		await finalizeIngressOutcome(db, {
+			ingressEventId: ingressEvent?.id,
+			responseCode: 202,
+			status: "adapter_not_configured",
+		});
+		return { kind: "adapter_not_configured" };
+	}
+
+	const notification = adapter.parseWebhookNotification(params.headers);
+	if (!notification) {
+		await finalizeIngressOutcome(db, {
+			ingressEventId: ingressEvent?.id,
+			responseCode: 202,
+			status: "missing_headers",
+		});
+		return { kind: "missing_headers" };
+	}
+
+	if (params.sharedToken && notification.channelToken !== params.sharedToken) {
+		await finalizeIngressOutcome(db, {
+			ingressEventId: ingressEvent?.id,
+			notification,
+			responseCode: 401,
+			status: "unauthorized",
+		});
+		return { kind: "unauthorized" };
+	}
+
+	let result:
+		| Awaited<ReturnType<typeof syncCalendarConnectionByWebhook>>
+		| undefined;
+
+	try {
+		result = await syncCalendarConnectionByWebhook({
+			db,
+			provider: params.provider,
+			notification,
+		});
+	} catch (error) {
+		await finalizeIngressOutcome(db, {
+			calendarConnectionId: null,
+			errorMessage: error instanceof Error ? error.message : "Unknown error",
+			ingressEventId: ingressEvent?.id,
+			notification,
+			organizationId: null,
+			responseCode: 500,
+			status: "failed",
+		});
+		throw error;
+	}
+
+	if (result.duplicate) {
+		await finalizeIngressOutcome(db, {
+			calendarConnectionId: result.connectionId ?? null,
+			calendarWebhookEventId: result.webhookEventId,
+			ingressEventId: ingressEvent?.id,
+			notification,
+			organizationId: result.organizationId ?? null,
+			responseCode: 200,
+			status: "duplicate",
+		});
+		return {
+			kind: "duplicate",
+			matched: result.matched,
+			previousStatus: result.previousStatus,
+			webhookEventId: result.webhookEventId,
+		};
+	}
+
+	await finalizeIngressOutcome(db, {
+		calendarConnectionId: result.matched ? (result.connectionId ?? null) : null,
+		calendarWebhookEventId:
+			"webhookEventId" in result ? (result.webhookEventId ?? null) : null,
+		ingressEventId: ingressEvent?.id,
+		notification,
+		organizationId: result.matched ? (result.organizationId ?? null) : null,
+		responseCode: 202,
+		status: result.matched ? "accepted" : "unmatched",
+	});
+
+	return {
+		kind: "accepted",
+		matched: result.matched,
+		webhookEventId: "webhookEventId" in result ? result.webhookEventId : undefined,
+	};
+};
+
+export const getOrgCalendarObservability = async (
+	params: {
+		limit?: number;
+		organizationId: string;
+	},
+	db: Db,
+) => {
+	return getOrganizationCalendarObservability(params, db);
+};
+
+export const syncGoogleCalendar = async (db: Db) => {
+	try {
+		const result = await syncCalendarConnectionsByProvider(db, "google");
+		return {
+			kind: "ok" as const,
+			...result,
+		};
+	} catch (error) {
+		console.error("Failed to run Google calendar polling sync", error);
+		return {
+			kind: "error" as const,
+			message: "Failed to run calendar polling sync",
+		};
+	}
+};
+
+export const startGoogleWatch = async (
+	params: {
+		channelToken?: string;
+		connectionId: string;
+		ttlSeconds?: number;
+		webhookUrl: string;
+	},
+	db: Db,
+) => {
+	try {
+		const result = await startCalendarConnectionWatch({
+			connectionId: params.connectionId,
+			channelToken: params.channelToken,
+			ttlSeconds: params.ttlSeconds,
+			webhookUrl: params.webhookUrl,
+			db,
+		});
+
+		syncCalendarConnectionById(db, params.connectionId, {
+			initialTimeMin: new Date(),
+		}).catch((error) => {
+			console.error(
+				`Background sync after watch start failed for ${params.connectionId}`,
+				error,
+			);
+		});
+
+		return { kind: "ok" as const, ...result };
+	} catch (error) {
+		console.error("Failed to start Google calendar watch", error);
+		return {
+			kind: "error" as const,
+			message: "Failed to start calendar watch",
+		};
+	}
+};
+
+export const stopGoogleWatch = async (
+	params: { connectionId: string },
+	db: Db,
+) => {
+	try {
+		const result = await stopCalendarConnectionWatch({
+			connectionId: params.connectionId,
+			db,
+		});
+		return { kind: "ok" as const, ...result };
+	} catch (error) {
+		console.error("Failed to stop Google calendar watch", error);
+		return {
+			kind: "error" as const,
+			message: "Failed to stop calendar watch",
+		};
+	}
+};
+
+export const renewGoogleWatches = async (
+	params: {
+		channelToken?: string;
+		renewBeforeSeconds?: number;
+		ttlSeconds?: number;
+		webhookUrl: string;
+	},
+	db: Db,
+) => {
+	try {
+		const result = await renewExpiringCalendarWatches({
+			provider: "google",
+			channelToken: params.channelToken,
+			renewBeforeSeconds: params.renewBeforeSeconds,
+			ttlSeconds: params.ttlSeconds,
+			webhookUrl: params.webhookUrl,
+			db,
+		});
+		return { kind: "ok" as const, ...result };
+	} catch (error) {
+		console.error("Failed to renew Google calendar watches", error);
+		return {
+			kind: "error" as const,
+			message: "Failed to renew calendar watches",
+		};
+	}
+};
+
+export const listGoogleDeadLetters = async (
+	params: { limit?: number },
+	db: Db,
+) => {
+	try {
+		const items = await listCalendarWebhookDeadLetters({
+			provider: "google",
+			limit: params.limit,
+			db,
+		});
+		return {
+			kind: "ok" as const,
+			total: items.length,
+			items,
+		};
+	} catch (error) {
+		console.error("Failed to list calendar webhook dead letters", error);
+		return {
+			kind: "error" as const,
+			message: "Failed to list calendar webhook dead letters",
+		};
+	}
+};
+
+export const retryFailedGoogleSyncs = async (db: Db) => {
+	try {
+		const result = await retryFailedCalendarSyncs({
+			provider: "google",
+			db,
+		});
+		return { kind: "ok" as const, ...result };
+	} catch (error) {
+		console.error("Failed to retry failed Google calendar syncs", error);
+		return {
+			kind: "error" as const,
+			message: "Failed to retry failed calendar syncs",
+		};
+	}
+};

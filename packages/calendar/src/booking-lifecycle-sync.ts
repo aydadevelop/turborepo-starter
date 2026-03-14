@@ -5,7 +5,7 @@ import {
 } from "@my-app/db/schema/availability";
 import { booking } from "@my-app/db/schema/marketplace";
 import { registerEventPusher } from "@my-app/events";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { getCalendarAdapter } from "./adapter-registry";
 import type { Db } from "./types";
 
@@ -130,13 +130,7 @@ async function syncOnBookingCancelled(
 		return;
 	}
 
-	const connectionRows = await db
-		.select()
-		.from(listingCalendarConnection)
-		.where(eq(listingCalendarConnection.id, link.calendarConnectionId))
-		.limit(1);
-
-	const connection = connectionRows[0];
+	const connection = await fetchUsableConnectionById(link.calendarConnectionId, db);
 	if (!(connection && connection.externalCalendarId)) {
 		return;
 	}
@@ -174,13 +168,7 @@ async function syncOnContactUpdated(
 		return;
 	}
 
-	const connectionRows = await db
-		.select()
-		.from(listingCalendarConnection)
-		.where(eq(listingCalendarConnection.id, link.calendarConnectionId))
-		.limit(1);
-
-	const connection = connectionRows[0];
+	const connection = await fetchUsableConnectionById(link.calendarConnectionId, db);
 	if (!(connection && connection.externalCalendarId)) {
 		return;
 	}
@@ -223,13 +211,7 @@ async function syncOnBookingScheduleUpdated(
 		return;
 	}
 
-	const connectionRows = await db
-		.select()
-		.from(listingCalendarConnection)
-		.where(eq(listingCalendarConnection.id, link.calendarConnectionId))
-		.limit(1);
-
-	const connection = connectionRows[0];
+	const connection = await fetchUsableConnectionById(link.calendarConnectionId, db);
 	if (!(connection && connection.externalCalendarId)) {
 		return;
 	}
@@ -284,8 +266,38 @@ async function fetchActiveConnection(listingId: string, db: Db) {
 	const rows = await db
 		.select()
 		.from(listingCalendarConnection)
-		.where(eq(listingCalendarConnection.listingId, listingId))
+		.where(
+			and(
+				eq(listingCalendarConnection.listingId, listingId),
+				eq(listingCalendarConnection.isActive, true),
+				ne(listingCalendarConnection.syncStatus, "disabled"),
+			),
+		);
+
+	const [preferred] = rows.sort((left, right) => {
+		if (left.isPrimary === right.isPrimary) {
+			return right.updatedAt.getTime() - left.updatedAt.getTime();
+		}
+
+		return left.isPrimary ? -1 : 1;
+	});
+
+	return preferred ?? null;
+}
+
+async function fetchUsableConnectionById(connectionId: string, db: Db) {
+	const rows = await db
+		.select()
+		.from(listingCalendarConnection)
+		.where(
+			and(
+				eq(listingCalendarConnection.id, connectionId),
+				eq(listingCalendarConnection.isActive, true),
+				ne(listingCalendarConnection.syncStatus, "disabled"),
+			),
+		)
 		.limit(1);
+
 	return rows[0] ?? null;
 }
 

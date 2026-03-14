@@ -36,6 +36,8 @@ export const env = createEnv({
 		GOOGLE_SERVICE_ACCOUNT_KEY: z.string().default(""),
 		GOOGLE_CLIENT_ID: z.string().default(""),
 		GOOGLE_CLIENT_SECRET: z.string().default(""),
+		GOOGLE_CALENDAR_WEBHOOK_SHARED_TOKEN: z.string().default(""),
+		CALENDAR_SYNC_TASK_TOKEN: z.string().default(""),
 		STORAGE_BACKEND: z.enum(["local-file", "s3"]).default("local-file"),
 		STORAGE_PUBLIC_BASE_URL: z.string().default(""),
 		STORAGE_LOCAL_DIR: z.string().default("./.data/storage/listing-public-v1"),

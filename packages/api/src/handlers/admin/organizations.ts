@@ -1,9 +1,13 @@
+import { getOrgCalendarObservability } from "@my-app/calendar";
 import { db } from "@my-app/db";
 import { invitation, member, organization, user } from "@my-app/db/schema/auth";
 import { ORPCError } from "@orpc/server";
 import { and, count, desc, eq, inArray, like, or, type SQL } from "drizzle-orm";
 import { buildUpdatePayload } from "../../lib/db-helpers";
 import { adminProcedure } from "../shared/admin";
+
+const formatDate = (value: Date | null | undefined) =>
+	value ? value.toISOString() : null;
 
 export const adminOrganizationsRouter = {
 	listOrgs: adminProcedure.admin.organizations.listOrgs.handler(
@@ -250,4 +254,71 @@ export const adminOrganizationsRouter = {
 			};
 		},
 	),
+
+	getCalendarObservability:
+		adminProcedure.admin.organizations.getCalendarObservability.handler(
+			async ({ input }) => {
+				const state = await getOrgCalendarObservability(
+					{
+						organizationId: input.organizationId,
+						limit: input.limit,
+					},
+					db,
+				);
+
+				return {
+					connections: state.connections.map((row) => ({
+						...row,
+						externalCalendarId: row.externalCalendarId ?? null,
+						listingName: row.listingName ?? null,
+						lastSyncedAt: formatDate(row.lastSyncedAt),
+						lastError: row.lastError ?? null,
+						watchChannelId: row.watchChannelId ?? null,
+						watchResourceId: row.watchResourceId ?? null,
+						watchExpiration: formatDate(row.watchExpiration),
+						createdAt: row.createdAt.toISOString(),
+						updatedAt: row.updatedAt.toISOString(),
+					})),
+					ingressEvents: state.ingressEvents.map((row) => ({
+						...row,
+						organizationId: row.organizationId ?? null,
+						calendarConnectionId: row.calendarConnectionId ?? null,
+						calendarWebhookEventId: row.calendarWebhookEventId ?? null,
+						listingId: row.listingId ?? null,
+						listingName: row.listingName ?? null,
+						host: row.host ?? null,
+						requestId: row.requestId ?? null,
+						traceId: row.traceId ?? null,
+						remoteIp: row.remoteIp ?? null,
+						userAgent: row.userAgent ?? null,
+						providerChannelId: row.providerChannelId ?? null,
+						providerResourceId: row.providerResourceId ?? null,
+						messageNumber: row.messageNumber ?? null,
+						resourceState: row.resourceState ?? null,
+						responseCode: row.responseCode ?? null,
+						errorMessage: row.errorMessage ?? null,
+						receivedAt: row.receivedAt.toISOString(),
+						processedAt: formatDate(row.processedAt),
+						createdAt: row.createdAt.toISOString(),
+						updatedAt: row.updatedAt.toISOString(),
+					})),
+					ingressStatusCounts: state.ingressStatusCounts,
+					webhookEvents: state.webhookEvents.map((row) => ({
+						...row,
+						listingId: row.listingId ?? null,
+						listingName: row.listingName ?? null,
+						providerChannelId: row.providerChannelId ?? null,
+						providerResourceId: row.providerResourceId ?? null,
+						messageNumber: row.messageNumber ?? null,
+						resourceState: row.resourceState ?? null,
+						errorMessage: row.errorMessage ?? null,
+						receivedAt: row.receivedAt.toISOString(),
+						processedAt: formatDate(row.processedAt),
+						createdAt: row.createdAt.toISOString(),
+						updatedAt: row.updatedAt.toISOString(),
+					})),
+					webhookStatusCounts: state.webhookStatusCounts,
+				};
+			},
+		),
 };

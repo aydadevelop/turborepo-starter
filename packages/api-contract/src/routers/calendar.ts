@@ -154,10 +154,29 @@ export const calendarContract = {
 		)
 		.output(calendarConnectionOutputSchema),
 
+	disable: oc
+		.route({
+			tags: ["Calendar"],
+			summary:
+				"Disable a calendar connection so it stops affecting availability and sync",
+		})
+		.input(z.object({ connectionId: z.string() }))
+		.output(calendarConnectionOutputSchema),
+
+	enable: oc
+		.route({
+			tags: ["Calendar"],
+			summary:
+				"Enable a calendar connection and resync future availability from now forward",
+		})
+		.input(z.object({ connectionId: z.string() }))
+		.output(calendarConnectionOutputSchema),
+
 	disconnect: oc
 		.route({
 			tags: ["Calendar"],
-			summary: "Disconnect an external calendar connection",
+			summary:
+				"Legacy alias for disabling an external calendar connection",
 		})
 		.input(z.object({ connectionId: z.string() }))
 		.output(z.object({ success: z.boolean() })),

@@ -8,6 +8,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun scripts/ensure-db.mjs && set -a && . ./.env && set +a && turbo run dev --filter=server --filter=assistant --filter=notifications --filter=web",
+		"dev:public": "bun ./scripts/dev-public-ingress.ts",
+		"dev:public:reuse": "bun ./scripts/dev-public-ingress.ts --reuse-services",
 		"build": "turbo run build",
 		"build:rolldown": "turbo run build:rolldown --filter=web",
 		"lint": "turbo run lint",

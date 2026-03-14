@@ -5,8 +5,10 @@ import {
 	type CalendarSourceRow,
 	connectCalendar,
 	connectOrganizationCalendarAccount,
+	disableCalendarConnection,
 	disconnectCalendar,
 	disconnectOrganizationCalendarAccount,
+	enableCalendarConnection,
 	getCalendarWorkspaceState,
 	getOrgCalendarWorkspaceState,
 	listCalendarConnections,
@@ -183,6 +185,50 @@ export const calendarRouter = {
 					sourceId: input.sourceId,
 					createdByUserId: context.session?.user?.id,
 				},
+				db,
+				{
+					actorUserId: context.session?.user?.id ?? undefined,
+					eventBus: context.eventBus,
+				},
+			);
+			return formatConnection(row);
+		} catch (error) {
+			if (error instanceof Error && error.message === "NOT_FOUND") {
+				throw new ORPCError("NOT_FOUND");
+			}
+			throw error;
+		}
+	}),
+
+	disable: organizationPermissionProcedure({
+		availability: ["update"],
+	}).calendar.disable.handler(async ({ context, input }) => {
+		try {
+			const row = await disableCalendarConnection(
+				input.connectionId,
+				context.activeMembership.organizationId,
+				db,
+				{
+					actorUserId: context.session?.user?.id ?? undefined,
+					eventBus: context.eventBus,
+				},
+			);
+			return formatConnection(row);
+		} catch (error) {
+			if (error instanceof Error && error.message === "NOT_FOUND") {
+				throw new ORPCError("NOT_FOUND");
+			}
+			throw error;
+		}
+	}),
+
+	enable: organizationPermissionProcedure({
+		availability: ["update"],
+	}).calendar.enable.handler(async ({ context, input }) => {
+		try {
+			const row = await enableCalendarConnection(
+				input.connectionId,
+				context.activeMembership.organizationId,
 				db,
 				{
 					actorUserId: context.session?.user?.id ?? undefined,

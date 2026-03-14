@@ -29,6 +29,8 @@ const BOOKING_ID = "cal-sync-booking-1";
 const CALENDAR_ACCOUNT_ID = "cal-sync-account-1";
 const CALENDAR_CONNECTION_ID = "cal-sync-connection-1";
 const CALENDAR_ID = "primary-fake-calendar";
+const SECONDARY_CALENDAR_CONNECTION_ID = "cal-sync-connection-2";
+const SECONDARY_CALENDAR_ID = "secondary-fake-calendar";
 
 beforeEach(() => {
 	clearEventPushers();
@@ -104,6 +106,47 @@ const dbState = bootstrapTestDatabase({
 });
 
 describe("registerBookingLifecycleSync", () => {
+	it("skips disabled primary connections and falls back to another active connection on booking confirmation", async () => {
+		const fakeAdapter = new FakeCalendarAdapter();
+		registerCalendarAdapter("google", fakeAdapter);
+
+		await dbState.db
+			.update(listingCalendarConnection)
+			.set({
+				isActive: false,
+				syncStatus: "disabled",
+				updatedAt: new Date(),
+			})
+			.where(eq(listingCalendarConnection.id, CALENDAR_CONNECTION_ID));
+
+		await dbState.db.insert(listingCalendarConnection).values({
+			id: SECONDARY_CALENDAR_CONNECTION_ID,
+			listingId: LISTING_ID,
+			organizationId: ORG_ID,
+			calendarAccountId: CALENDAR_ACCOUNT_ID,
+			provider: "google",
+			externalCalendarId: SECONDARY_CALENDAR_ID,
+			isPrimary: false,
+			isActive: true,
+			syncStatus: "idle",
+		});
+
+		registerBookingLifecycleSync(dbState.db);
+
+		await emitDomainEvent({
+			type: "booking:confirmed",
+			organizationId: ORG_ID,
+			idempotencyKey: `booking:confirmed:${BOOKING_ID}:fallback`,
+			data: {
+				bookingId: BOOKING_ID,
+				ownerId: ORG_ID,
+			},
+		});
+
+		expect(fakeAdapter.getAllEvents(CALENDAR_ID)).toHaveLength(0);
+		expect(fakeAdapter.getAllEvents(SECONDARY_CALENDAR_ID)).toHaveLength(1);
+	});
+
 	it("updates provider events when a booking schedule changes", async () => {
 		const fakeAdapter = new FakeCalendarAdapter();
 		registerCalendarAdapter("google", fakeAdapter);
@@ -171,5 +214,76 @@ describe("registerBookingLifecycleSync", () => {
 			.where(eq(bookingCalendarLink.bookingId, BOOKING_ID))
 			.limit(1);
 		expect(link?.lastSyncedAt).toBeTruthy();
+	});
+
+	it("does not update provider events for disabled linked connections", async () => {
+		const fakeAdapter = new FakeCalendarAdapter();
+		registerCalendarAdapter("google", fakeAdapter);
+
+		const initialPresentation = await fakeAdapter.createEvent(
+			{
+				title: `Booking ${BOOKING_ID}`,
+				startsAt: new Date("2030-03-12T10:00:00.000Z"),
+				endsAt: new Date("2030-03-12T12:00:00.000Z"),
+				timezone: "UTC",
+				description: "Guest: Example",
+				metadata: { bookingId: BOOKING_ID },
+			},
+			{
+				provider: "google",
+				credentials: {},
+				calendarId: CALENDAR_ID,
+			},
+		);
+
+		await dbState.db.insert(bookingCalendarLink).values({
+			id: crypto.randomUUID(),
+			bookingId: BOOKING_ID,
+			calendarConnectionId: CALENDAR_CONNECTION_ID,
+			provider: "google",
+			providerEventId: initialPresentation.eventId,
+			icalUid: initialPresentation.iCalUid,
+			lastSyncedAt: initialPresentation.syncedAt,
+		});
+
+		await dbState.db
+			.update(listingCalendarConnection)
+			.set({
+				isActive: false,
+				syncStatus: "disabled",
+				updatedAt: new Date(),
+			})
+			.where(eq(listingCalendarConnection.id, CALENDAR_CONNECTION_ID));
+
+		registerBookingLifecycleSync(dbState.db);
+
+		await dbState.db
+			.update(booking)
+			.set({
+				startsAt: new Date("2030-03-12T13:00:00.000Z"),
+				endsAt: new Date("2030-03-12T15:00:00.000Z"),
+				updatedAt: new Date(),
+			})
+			.where(eq(booking.id, BOOKING_ID));
+
+		await emitDomainEvent({
+			type: "booking:schedule-updated",
+			organizationId: ORG_ID,
+			idempotencyKey: `booking:schedule-updated:${BOOKING_ID}:disabled`,
+			data: {
+				bookingId: BOOKING_ID,
+				startsAt: "2030-03-12T13:00:00.000Z",
+				endsAt: "2030-03-12T15:00:00.000Z",
+				timezone: "UTC",
+			},
+		});
+
+		const [event] = fakeAdapter.getAllEvents(CALENDAR_ID);
+		expect(event?.input.startsAt.toISOString()).toBe(
+			"2030-03-12T10:00:00.000Z",
+		);
+		expect(event?.input.endsAt.toISOString()).toBe(
+			"2030-03-12T12:00:00.000Z",
+		);
 	});
 });

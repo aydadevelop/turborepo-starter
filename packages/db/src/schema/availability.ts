@@ -58,6 +58,17 @@ export const calendarWebhookEventStatusValues = [
 	"failed",
 ] as const;
 
+export const calendarIngressEventStatusValues = [
+	"received",
+	"accepted",
+	"duplicate",
+	"unmatched",
+	"missing_headers",
+	"unauthorized",
+	"adapter_not_configured",
+	"failed",
+] as const;
+
 export const calendarProviderEnum = pgEnum(
 	"calendar_provider",
 	calendarProviderValues,
@@ -77,6 +88,10 @@ export const availabilityBlockSourceEnum = pgEnum(
 export const calendarWebhookEventStatusEnum = pgEnum(
 	"calendar_webhook_event_status",
 	calendarWebhookEventStatusValues,
+);
+export const calendarIngressEventStatusEnum = pgEnum(
+	"calendar_ingress_event_status",
+	calendarIngressEventStatusValues,
 );
 
 /** Recurring weekly availability windows per listing (e.g. Mon 9:00–18:00). */
@@ -369,6 +384,57 @@ export const listingCalendarConnection = pgTable(
 		uniqueIndex("listing_calendar_connection_uq_primary_listing")
 			.on(table.listingId)
 			.where(sql`${table.isPrimary} = true and ${table.isActive} = true`),
+	],
+);
+
+/** Raw ingress ledger for calendar-related public callbacks and webhooks. */
+export const calendarIngressEvent = pgTable(
+	"calendar_ingress_event",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id").references(() => organization.id, {
+			onDelete: "set null",
+		}),
+		calendarConnectionId: text("calendar_connection_id").references(
+			() => listingCalendarConnection.id,
+			{ onDelete: "set null" },
+		),
+		calendarWebhookEventId: text("calendar_webhook_event_id"),
+		provider: calendarProviderEnum("provider").notNull(),
+		routePath: text("route_path").notNull(),
+		method: text("method").notNull(),
+		host: text("host"),
+		requestId: text("request_id"),
+		traceId: text("trace_id"),
+		remoteIp: text("remote_ip"),
+		userAgent: text("user_agent"),
+		providerChannelId: text("provider_channel_id"),
+		providerResourceId: text("provider_resource_id"),
+		messageNumber: integer("message_number"),
+		resourceState: text("resource_state"),
+		status: calendarIngressEventStatusEnum("status")
+			.notNull()
+			.default("received"),
+		responseCode: integer("response_code"),
+		errorMessage: text("error_message"),
+		headers: jsonb("headers").$type<Record<string, string>>(),
+		payload: jsonb("payload").$type<Record<string, unknown>>(),
+		receivedAt: timestamp("received_at", { withTimezone: true, mode: "date" })
+			.default(sql`now()`)
+			.notNull(),
+		processedAt: timestamp("processed_at", {
+			withTimezone: true,
+			mode: "date",
+		}),
+		...timestamps,
+	},
+	(table) => [
+		index("calendar_ingress_event_ix_organization_id").on(table.organizationId),
+		index("calendar_ingress_event_ix_connection_id").on(
+			table.calendarConnectionId,
+		),
+		index("calendar_ingress_event_ix_status").on(table.status),
+		index("calendar_ingress_event_ix_received_at").on(table.receivedAt),
 	],
 );
 

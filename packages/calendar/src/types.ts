@@ -1,5 +1,6 @@
 import type { relations } from "@my-app/db/relations";
 import type {
+	calendarIngressEvent,
 	listingCalendarConnection,
 	organizationCalendarAccount,
 	organizationCalendarSource,
@@ -43,6 +44,19 @@ export interface CalendarEventPresentation {
 	version?: string;
 }
 
+export interface CalendarEventSnapshot {
+	description?: string;
+	endsAt?: Date;
+	externalEventId: string;
+	iCalUid?: string;
+	startsAt?: Date;
+	status: "confirmed" | "tentative" | "cancelled" | "unknown";
+	timezone?: string;
+	title?: string;
+	updatedAt?: Date;
+	version?: string;
+}
+
 /**
  * Per-connection configuration passed into adapter methods.
  * Credentials are stored encrypted in the DB and passed in at call time
@@ -66,6 +80,52 @@ export interface BusySlot {
 	startsAt: Date;
 }
 
+export interface CalendarEventsQuery {
+	calendarId: string;
+	maxResults?: number;
+	pageToken?: string;
+	showDeleted?: boolean;
+	singleEvents?: boolean;
+	syncToken?: string;
+	timeMax?: Date;
+	timeMin?: Date;
+}
+
+export interface CalendarEventsResult {
+	events: CalendarEventSnapshot[];
+	nextPageToken?: string;
+	nextSyncToken?: string;
+}
+
+export interface CalendarWatchStartInput {
+	channelId?: string;
+	channelToken?: string;
+	ttlSeconds?: number;
+	webhookUrl: string;
+}
+
+export interface CalendarWatchChannel {
+	channelId: string;
+	expirationAt?: Date;
+	resourceId: string;
+	resourceUri?: string;
+}
+
+export interface CalendarWatchStopInput {
+	channelId: string;
+	resourceId: string;
+}
+
+export interface CalendarWebhookNotification {
+	channelExpiration?: Date;
+	channelId: string;
+	channelToken?: string;
+	messageNumber?: number;
+	resourceId: string;
+	resourceState: string;
+	resourceUri?: string;
+}
+
 export type Db = PgAsyncDatabase<
 	PgQueryResultHKT,
 	Record<string, never>,
@@ -73,6 +133,7 @@ export type Db = PgAsyncDatabase<
 >;
 export type CalendarConnectionRow =
 	typeof listingCalendarConnection.$inferSelect;
+export type CalendarIngressEventRow = typeof calendarIngressEvent.$inferSelect;
 export type CalendarAccountRow =
 	typeof organizationCalendarAccount.$inferSelect;
 export type CalendarSourceRow = typeof organizationCalendarSource.$inferSelect;
@@ -127,9 +188,28 @@ export interface CalendarAdapter {
 		config: CalendarAccountConfig,
 	): Promise<CalendarSourcePresentation[]>;
 
+	listEvents?(
+		query: CalendarEventsQuery,
+		config: CalendarConnectionConfig,
+	): Promise<CalendarEventsResult>;
+
 	updateEvent(
 		eventId: string,
 		input: Partial<CalendarEventInput>,
 		config: CalendarConnectionConfig,
 	): Promise<CalendarEventPresentation>;
+
+	parseWebhookNotification?(
+		headers: Headers | Record<string, string | undefined>,
+	): CalendarWebhookNotification | null;
+
+	startWatch?(
+		input: CalendarWatchStartInput,
+		config: CalendarConnectionConfig,
+	): Promise<CalendarWatchChannel>;
+
+	stopWatch?(
+		input: CalendarWatchStopInput,
+		config: CalendarConnectionConfig,
+	): Promise<void>;
 }

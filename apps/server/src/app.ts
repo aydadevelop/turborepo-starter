@@ -10,7 +10,9 @@ import { registerServerIntegrations } from "./bootstrap";
 import { corsMiddleware } from "./middleware/cors";
 import { assetRoutes } from "./routes/assets";
 import { authRoutes } from "./routes/auth";
+import { calendarInternalRoutes } from "./routes/calendar-internal";
 import { calendarOauthRoutes } from "./routes/calendar-oauth";
+import { calendarWebhookRoutes } from "./routes/calendar-webhook";
 
 import { healthRoutes } from "./routes/health";
 import { paymentWebhookRoutes } from "./routes/payment-webhook";
@@ -51,7 +53,9 @@ app.use("/*", corsMiddleware);
 
 app.route("/assets", assetRoutes);
 app.route("/", authRoutes);
+app.route("/", calendarInternalRoutes);
 app.route("/", calendarOauthRoutes);
+app.route("/", calendarWebhookRoutes);
 app.route("/", paymentWebhookRoutes);
 app.route("/", supportEmailIntakeRoutes);
 app.route("/health", healthRoutes);

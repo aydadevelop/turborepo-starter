@@ -4,7 +4,14 @@ import type {
 	CalendarAdapter,
 	CalendarConnectionConfig,
 	CalendarEventInput,
+	CalendarEventsQuery,
+	CalendarEventsResult,
 	CalendarEventPresentation,
+	CalendarEventSnapshot,
+	CalendarWebhookNotification,
+	CalendarWatchChannel,
+	CalendarWatchStartInput,
+	CalendarWatchStopInput,
 	CalendarSourcePresentation,
 } from "./types";
 
@@ -51,6 +58,19 @@ interface GoogleCalendarEvent {
 	status?: string;
 	summary?: string;
 	updated?: string;
+}
+
+interface GoogleCalendarEventsResponse {
+	items?: GoogleCalendarEvent[];
+	nextPageToken?: string;
+	nextSyncToken?: string;
+}
+
+interface GoogleCalendarWatchResponse {
+	expiration?: string;
+	id: string;
+	resourceId: string;
+	resourceUri?: string;
 }
 
 interface GoogleFreeBusyResponse {
@@ -284,6 +304,143 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 		}));
 	}
 
+	async listEvents(
+		query: CalendarEventsQuery,
+		config: CalendarConnectionConfig,
+	): Promise<CalendarEventsResult> {
+		const credentials = this.resolveCredentials(config);
+		const encodedCalendarId = encodeURIComponent(query.calendarId);
+		const searchParams = new URLSearchParams();
+
+		if (query.syncToken) {
+			searchParams.set("syncToken", query.syncToken);
+		} else {
+			if (query.timeMin) {
+				searchParams.set("timeMin", query.timeMin.toISOString());
+			}
+			if (query.timeMax) {
+				searchParams.set("timeMax", query.timeMax.toISOString());
+			}
+		}
+		if (query.pageToken) {
+			searchParams.set("pageToken", query.pageToken);
+		}
+		searchParams.set("showDeleted", String(query.showDeleted ?? true));
+		searchParams.set("singleEvents", String(query.singleEvents ?? true));
+		if (query.maxResults) {
+			searchParams.set("maxResults", String(query.maxResults));
+		}
+
+		const response =
+			await this.requestGoogleWithCredentials<GoogleCalendarEventsResponse>(
+				{
+					url: `https://www.googleapis.com/calendar/v3/calendars/${encodedCalendarId}/events?${searchParams.toString()}`,
+					method: "GET",
+				},
+				credentials,
+			);
+
+		return {
+			events: (response.items ?? []).map((event) =>
+				this.mapGoogleEventToSnapshot(event),
+			),
+			nextPageToken: response.nextPageToken,
+			nextSyncToken: response.nextSyncToken,
+		};
+	}
+
+	async startWatch(
+		input: CalendarWatchStartInput,
+		config: CalendarConnectionConfig,
+	): Promise<CalendarWatchChannel> {
+		const credentials = this.resolveCredentials(config);
+		const encodedCalendarId = encodeURIComponent(config.calendarId);
+		const payload: Record<string, unknown> = {
+			id: input.channelId ?? crypto.randomUUID(),
+			type: "web_hook",
+			address: input.webhookUrl,
+		};
+
+		if (input.channelToken) {
+			payload.token = input.channelToken;
+		}
+		if (input.ttlSeconds) {
+			payload.params = {
+				ttl: String(input.ttlSeconds),
+			};
+		}
+
+		const response =
+			await this.requestGoogleWithCredentials<GoogleCalendarWatchResponse>(
+				{
+					url: `https://www.googleapis.com/calendar/v3/calendars/${encodedCalendarId}/events/watch`,
+					method: "POST",
+					body: JSON.stringify(payload),
+				},
+				credentials,
+			);
+
+		return {
+			channelId: response.id,
+			resourceId: response.resourceId,
+			resourceUri: response.resourceUri,
+			expirationAt: this.parseGoogleExpiration(response.expiration),
+		};
+	}
+
+	async stopWatch(
+		input: CalendarWatchStopInput,
+		config: CalendarConnectionConfig,
+	): Promise<void> {
+		const credentials = this.resolveCredentials(config);
+		await this.requestGoogleWithCredentials<void>(
+			{
+				url: "https://www.googleapis.com/calendar/v3/channels/stop",
+				method: "POST",
+				body: JSON.stringify({
+					id: input.channelId,
+					resourceId: input.resourceId,
+				}),
+			},
+			credentials,
+		);
+	}
+
+	parseWebhookNotification(
+		headers: Headers | Record<string, string | undefined>,
+	): CalendarWebhookNotification | null {
+		const channelId = this.getHeader(headers, "x-goog-channel-id");
+		const resourceId = this.getHeader(headers, "x-goog-resource-id");
+		const resourceState = this.getHeader(headers, "x-goog-resource-state");
+		if (!(channelId && resourceId && resourceState)) {
+			return null;
+		}
+
+		const messageNumberRaw = this.getHeader(headers, "x-goog-message-number");
+		const messageNumber = messageNumberRaw
+			? Number.parseInt(messageNumberRaw, 10)
+			: undefined;
+		const channelExpirationRaw = this.getHeader(
+			headers,
+			"x-goog-channel-expiration",
+		);
+
+		return {
+			channelId,
+			resourceId,
+			resourceState,
+			messageNumber:
+				messageNumber !== undefined && !Number.isNaN(messageNumber)
+					? messageNumber
+					: undefined,
+			resourceUri: this.getHeader(headers, "x-goog-resource-uri"),
+			channelToken: this.getHeader(headers, "x-goog-channel-token"),
+			channelExpiration: channelExpirationRaw
+				? this.parseDateValue(channelExpirationRaw)
+				: undefined,
+		};
+	}
+
 	// ─── Private helpers ────────────────────────────────────────────────────
 
 	private resolveCredentials(
@@ -319,6 +476,107 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 			payload.attendees = input.attendeeEmails.map((email) => ({ email }));
 		}
 		return payload;
+	}
+
+	private mapGoogleEventToSnapshot(
+		event: GoogleCalendarEvent,
+	): CalendarEventSnapshot {
+		const startsAt = this.parseGoogleDateTime(event.start);
+		const endsAt = this.parseGoogleDateTime(event.end);
+		return {
+			externalEventId: event.id,
+			status: this.parseGoogleEventStatus(event.status),
+			title: event.summary,
+			description: event.description,
+			startsAt: startsAt?.date,
+			endsAt: endsAt?.date,
+			timezone: startsAt?.timezone ?? endsAt?.timezone,
+			iCalUid: event.iCalUID,
+			version: event.etag?.replaceAll('"', ""),
+			updatedAt: this.parseGoogleUpdatedAt(event.updated),
+		};
+	}
+
+	private parseGoogleEventStatus(
+		status: string | undefined,
+	): CalendarEventSnapshot["status"] {
+		if (
+			status === "confirmed" ||
+			status === "tentative" ||
+			status === "cancelled"
+		) {
+			return status;
+		}
+		return "unknown";
+	}
+
+	private parseGoogleDateTime(value?: {
+		date?: string;
+		dateTime?: string;
+		timeZone?: string;
+	}) {
+		if (!value) {
+			return undefined;
+		}
+		if (value.dateTime) {
+			const parsedDateTime = new Date(value.dateTime);
+			if (!Number.isNaN(parsedDateTime.getTime())) {
+				return {
+					date: parsedDateTime,
+					timezone: value.timeZone,
+				};
+			}
+		}
+		if (value.date) {
+			const parsedDate = new Date(`${value.date}T00:00:00.000Z`);
+			if (!Number.isNaN(parsedDate.getTime())) {
+				return {
+					date: parsedDate,
+					timezone: value.timeZone,
+				};
+			}
+		}
+		return undefined;
+	}
+
+	private parseGoogleExpiration(value?: string) {
+		if (!value) {
+			return undefined;
+		}
+		const asNumber = Number(value);
+		if (!Number.isNaN(asNumber) && Number.isFinite(asNumber)) {
+			return new Date(asNumber);
+		}
+		return this.parseDateValue(value);
+	}
+
+	private parseGoogleUpdatedAt(value?: string) {
+		if (!value) {
+			return new Date();
+		}
+		return this.parseDateValue(value) ?? new Date();
+	}
+
+	private parseDateValue(value: string) {
+		const parsedDate = new Date(value);
+		return Number.isNaN(parsedDate.getTime()) ? undefined : parsedDate;
+	}
+
+	private getHeader(
+		headers: Headers | Record<string, string | undefined>,
+		name: string,
+	) {
+		if (headers instanceof Headers) {
+			return headers.get(name) ?? headers.get(name.toLowerCase()) ?? undefined;
+		}
+
+		const lowerName = name.toLowerCase();
+		for (const [headerName, headerValue] of Object.entries(headers)) {
+			if (headerName.toLowerCase() === lowerName) {
+				return headerValue;
+			}
+		}
+		return undefined;
 	}
 
 	private toPresentation(
