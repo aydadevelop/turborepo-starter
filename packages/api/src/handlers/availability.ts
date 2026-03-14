@@ -17,12 +17,12 @@ import { ORPCError } from "@orpc/server";
 
 import { organizationPermissionProcedure, publicProcedure } from "../index";
 
-const rethrowAvailabilityNotFound = (error: unknown): never => {
+const toAvailabilityError = (error: unknown) => {
 	if (error instanceof Error && error.message === "NOT_FOUND") {
-		throw new ORPCError("NOT_FOUND");
+		return new ORPCError("NOT_FOUND");
 	}
 
-	throw error;
+	return error;
 };
 
 const formatRule = (row: AvailabilityRuleRow) => ({
@@ -60,7 +60,7 @@ export const availabilityRouter = {
 			);
 			return formatRule(row);
 		} catch (error) {
-			rethrowAvailabilityNotFound(error);
+			throw toAvailabilityError(error);
 		}
 	}),
 
@@ -93,7 +93,7 @@ export const availabilityRouter = {
 			);
 			return rows.map(formatRule);
 		} catch (error) {
-			rethrowAvailabilityNotFound(error);
+			throw toAvailabilityError(error);
 		}
 	}),
 
@@ -113,7 +113,7 @@ export const availabilityRouter = {
 				exceptions: state.exceptions.map(formatException),
 			};
 		} catch (error) {
-			rethrowAvailabilityNotFound(error);
+			throw toAvailabilityError(error);
 		}
 	}),
 
@@ -133,7 +133,7 @@ export const availabilityRouter = {
 			);
 			return formatBlock(row);
 		} catch (error) {
-			rethrowAvailabilityNotFound(error);
+			throw toAvailabilityError(error);
 		}
 	}),
 
