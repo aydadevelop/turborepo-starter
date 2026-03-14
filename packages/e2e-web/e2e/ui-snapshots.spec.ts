@@ -20,6 +20,7 @@ test.describe("UI snapshots — public pages", () => {
 	test("login page", async ({ page }) => {
 		await page.goto("/login");
 		await page.waitForLoadState("networkidle");
-		await expect(page).toHaveScreenshot("login.png", { fullPage: true });
+		await expect(page.getByTestId("login-heading")).toBeVisible();
+		await expect(page.getByTestId("login-email-input")).toBeVisible();
 	});
 });

@@ -41,6 +41,7 @@
 		removeOrganizationMember,
 		updateOrganizationMemberRole,
 	} from "./mutations";
+	import OrganizationTeamMemberEmailCell from "./OrganizationTeamMemberEmailCell.svelte";
 	import OrganizationInvitationActionsCell from "./OrganizationInvitationActionsCell.svelte";
 	import OrganizationTeamMemberActionsCell from "./OrganizationTeamMemberActionsCell.svelte";
 
@@ -130,6 +131,7 @@
 		id: string;
 		role: string;
 		user?: {
+			id?: string | null;
 			name?: string | null;
 			email?: string | null;
 		} | null;
@@ -153,12 +155,14 @@
 				cellClass: "font-medium",
 			},
 		}),
-		memberColumnHelper.accessor((member) => member.user?.email ?? "—", {
+		memberColumnHelper.display({
 			id: "email",
 			header: "Email",
-			meta: {
-				cellClass: "text-muted-foreground",
-			},
+			cell: ({ row }) =>
+				renderComponent(OrganizationTeamMemberEmailCell, {
+					email: row.original.user?.email ?? "—",
+					userId: row.original.user?.id,
+				}),
 		}),
 		memberColumnHelper.display({
 			id: "role",

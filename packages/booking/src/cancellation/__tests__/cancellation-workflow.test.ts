@@ -303,7 +303,6 @@ describe("processCancellationWorkflow", () => {
 					refundAmountKopeks: 5000,
 				}),
 			}),
-			undefined,
 		);
 		expect(pusher).toHaveBeenCalledTimes(1);
 	});

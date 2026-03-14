@@ -11,6 +11,11 @@ const repoRoot = path.resolve(__dirname, "..");
 const defaults = {
 	projectName: "myapp-e2e",
 	dbPort: "55432",
+	storagePort: "4333",
+	storageMasterPort: "49333",
+	storageAdminPort: "42364",
+	smtpUiPort: "45025",
+	smtpPort: "42525",
 	serverPort: "43100",
 	assistantPort: "43102",
 	notificationsPort: "43101",
@@ -100,6 +105,17 @@ const runCommand = ({ command, args, env, allowFailure = false }) =>
 const main = async () => {
 	const projectName = process.env.E2E_DOCKER_PROJECT ?? defaults.projectName;
 	const dbPort = process.env.E2E_DB_PORT ?? defaults.dbPort;
+	const storagePort =
+		process.env.PLAYWRIGHT_STORAGE_PORT ?? defaults.storagePort;
+	const storageMasterPort =
+		process.env.PLAYWRIGHT_STORAGE_MASTER_PORT ??
+		defaults.storageMasterPort;
+	const storageAdminPort =
+		process.env.PLAYWRIGHT_STORAGE_ADMIN_PORT ?? defaults.storageAdminPort;
+	const smtpUiPort =
+		process.env.PLAYWRIGHT_SMTP4DEV_UI_PORT ?? defaults.smtpUiPort;
+	const smtpPort =
+		process.env.PLAYWRIGHT_SMTP4DEV_SMTP_PORT ?? defaults.smtpPort;
 	const serverPort =
 		process.env.PLAYWRIGHT_SERVER_PORT ?? defaults.serverPort;
 	const assistantPort =
@@ -129,7 +145,18 @@ const main = async () => {
 
 	const composeEnv = {
 		...process.env,
+		COMPOSE_APP_ENV_FILE: ".env.e2e.empty",
+		DB_PORT: dbPort,
 		E2E_DB_PORT: dbPort,
+		STORAGE_PORT: storagePort,
+		SEAWEEDFS_MASTER_PORT: storageMasterPort,
+		SEAWEEDFS_ADMIN_PORT: storageAdminPort,
+		SMTP4DEV_UI_PORT: smtpUiPort,
+		SMTP4DEV_SMTP_PORT: smtpPort,
+		SERVER_PORT: serverPort,
+		ASSISTANT_PORT: assistantPort,
+		NOTIFICATIONS_PORT: notificationsPort,
+		WEB_PORT: webPort,
 		PLAYWRIGHT_SERVER_PORT: serverPort,
 		PLAYWRIGHT_ASSISTANT_PORT: assistantPort,
 		PLAYWRIGHT_NOTIFICATIONS_PORT: notificationsPort,
@@ -284,6 +311,17 @@ const main = async () => {
 				testEnv.PLAYWRIGHT_DATABASE_URL
 			)}`
 		);
+
+		log("Seeding baseline E2E auth and org data into Docker PostgreSQL");
+		await runCommand({
+			command: "bun",
+			args: [
+				"./packages/db/src/e2e/seed.ts",
+				"--database-url",
+				testEnv.PLAYWRIGHT_DATABASE_URL,
+			],
+			env: testEnv,
+		});
 
 		log(`Running Playwright against Docker stack via script "${testScript}"`);
 		await runCommand({

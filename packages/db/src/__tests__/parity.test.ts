@@ -32,6 +32,8 @@ const PHASE_1_BASELINE_TABLES = [
 	"bookingRefund",
 	"bookingShiftRequest",
 	"bookingStaffAssignment",
+	// Added in 03-14: raw ingress ledger for calendar webhook observability
+	"calendarIngressEvent",
 	"calendarWebhookEvent",
 	"cancellationPolicy",
 	"inboundMessage",

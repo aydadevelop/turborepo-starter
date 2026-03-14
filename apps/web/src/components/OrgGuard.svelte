@@ -23,17 +23,26 @@
 	);
 
 	$effect(() => {
+		const onProtectedPath = ORG_REQUIRED_PREFIXES.some((prefix) =>
+			page.url.pathname.startsWith(prefix)
+		);
+
 		// Wait for session to settle.
 		if ($sessionQuery.isPending) return;
-		// Not logged in — other guards handle login redirect.
-		if (!hasAuthenticatedSession($sessionQuery.data)) return;
+		if (!hasAuthenticatedSession($sessionQuery.data)) {
+			if (!onProtectedPath) return;
+
+			const nextPath = `${page.url.pathname}${page.url.search}`;
+			goto(
+				`${resolve("/login")}?next=${encodeURIComponent(nextPath)}`,
+				{ replaceState: true }
+			);
+			return;
+		}
 		// Orgs haven't loaded yet or errored — don't redirect on error to avoid
 		// trapping the user in a redirect loop when the API is down.
 		if (orgsQuery.isPending || orgsQuery.isError) return;
 
-		const onProtectedPath = ORG_REQUIRED_PREFIXES.some((prefix) =>
-			page.url.pathname.startsWith(prefix)
-		);
 		if (!onProtectedPath) return;
 
 		if ((orgsQuery.data?.length ?? 0) === 0) {

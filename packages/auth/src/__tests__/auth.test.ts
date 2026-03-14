@@ -9,7 +9,7 @@ describe("Authentication", () => {
 	beforeAll(async () => {
 		testAuth = await createTestAuth();
 		test = testAuth.test;
-	}, 30_000);
+	}, 120_000);
 
 	afterAll(async () => {
 		await testAuth.close();

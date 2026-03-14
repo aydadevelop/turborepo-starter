@@ -12,15 +12,9 @@
 services:
   db:
     restart: "no"
-    ports: !reset
-      - "${E2E_DB_PORT:-55432}:5432"
 
   seaweedfs:
     restart: "no"
-    ports: !reset
-      - "${PLAYWRIGHT_STORAGE_PORT:-4333}:8333"
-      - "127.0.0.1:${PLAYWRIGHT_STORAGE_MASTER_PORT:-49333}:9333"
-      - "127.0.0.1:${PLAYWRIGHT_STORAGE_ADMIN_PORT:-42364}:23646"
 
   seaweedfs-init:
     restart: "no"
@@ -32,15 +26,9 @@ services:
 
   smtp-server:
     restart: "no"
-    ports: !reset
-      - "127.0.0.1:${PLAYWRIGHT_SMTP4DEV_UI_PORT:-45025}:80"
-      - "127.0.0.1:${PLAYWRIGHT_SMTP4DEV_SMTP_PORT:-42525}:25"
 
   server:
     restart: "no"
-    env_file: !reset []
-    ports:
-      - "${PLAYWRIGHT_SERVER_PORT:-43100}:3000"
     logging:
       driver: json-file
       options: {}
@@ -74,9 +62,6 @@ services:
 
   assistant:
     restart: "no"
-    env_file: !reset []
-    ports:
-      - "${PLAYWRIGHT_ASSISTANT_PORT:-43102}:3001"
     logging:
       driver: json-file
       options: {}
@@ -92,9 +77,6 @@ services:
 
   notifications:
     restart: "no"
-    env_file: !reset []
-    ports:
-      - "${PLAYWRIGHT_NOTIFICATIONS_PORT:-43101}:3002"
     logging:
       driver: json-file
       options: {}
@@ -118,9 +100,6 @@ services:
 
   web:
     restart: "no"
-    env_file: !reset []
-    ports:
-      - "${PLAYWRIGHT_WEB_PORT:-43173}:3000"
     logging:
       driver: json-file
       options: {}

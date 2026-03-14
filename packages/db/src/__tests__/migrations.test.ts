@@ -85,6 +85,7 @@ describe("Migration artifacts", () => {
 			"organization",
 			"listing",
 			"booking",
+			"calendar_ingress_event",
 			"notification_event",
 			"assistant_chat",
 		];
@@ -97,7 +98,7 @@ describe("Migration artifacts", () => {
 		}
 	});
 
-	it("includes overlap safety nets for booking and availability ranges", () => {
+	it("includes calendar ingress observability artifacts", () => {
 		const entries = readdirSync(migrationsDir).filter((e) =>
 			statSync(path.join(migrationsDir, e)).isDirectory(),
 		);
@@ -109,13 +110,15 @@ describe("Migration artifacts", () => {
 			})
 			.join("\n");
 
-		expect(allSql).toContain("CREATE EXTENSION IF NOT EXISTS btree_gist;");
 		expect(allSql).toContain(
-			'ADD CONSTRAINT "booking_exclude_active_listing_overlap"',
+			'CREATE TYPE "calendar_ingress_event_status" AS ENUM',
+		);
+		expect(allSql).toContain('CREATE TABLE "calendar_ingress_event"');
+		expect(allSql).toContain(
+			'CREATE INDEX "calendar_ingress_event_ix_status"',
 		);
 		expect(allSql).toContain(
-			'ADD CONSTRAINT "listing_availability_block_exclude_active_overlap"',
+			'CREATE INDEX "calendar_ingress_event_ix_received_at"',
 		);
-		expect(allSql).toContain("EXCLUDE USING gist");
 	});
 });

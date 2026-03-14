@@ -17,6 +17,14 @@ import { ORPCError } from "@orpc/server";
 
 import { organizationPermissionProcedure, publicProcedure } from "../index";
 
+const rethrowAvailabilityNotFound = (error: unknown): never => {
+	if (error instanceof Error && error.message === "NOT_FOUND") {
+		throw new ORPCError("NOT_FOUND");
+	}
+
+	throw error;
+};
+
 const formatRule = (row: AvailabilityRuleRow) => ({
 	...row,
 	createdAt: row.createdAt.toISOString(),
@@ -42,14 +50,18 @@ export const availabilityRouter = {
 	addRule: organizationPermissionProcedure({
 		availability: ["create"],
 	}).availability.addRule.handler(async ({ context, input }) => {
-		const row = await createAvailabilityRule(
-			{
-				...input,
-				organizationId: context.activeMembership.organizationId,
-			},
-			db,
-		);
-		return formatRule(row);
+		try {
+			const row = await createAvailabilityRule(
+				{
+					...input,
+					organizationId: context.activeMembership.organizationId,
+				},
+				db,
+			);
+			return formatRule(row);
+		} catch (error) {
+			rethrowAvailabilityNotFound(error);
+		}
 	}),
 
 	deleteRule: organizationPermissionProcedure({
@@ -73,44 +85,56 @@ export const availabilityRouter = {
 	listRules: organizationPermissionProcedure({
 		availability: ["read"],
 	}).availability.listRules.handler(async ({ context, input }) => {
-		const rows = await listAvailabilityRules(
-			input.listingId,
-			context.activeMembership.organizationId,
-			db,
-		);
-		return rows.map(formatRule);
+		try {
+			const rows = await listAvailabilityRules(
+				input.listingId,
+				context.activeMembership.organizationId,
+				db,
+			);
+			return rows.map(formatRule);
+		} catch (error) {
+			rethrowAvailabilityNotFound(error);
+		}
 	}),
 
 	getWorkspaceState: organizationPermissionProcedure({
 		availability: ["read"],
 	}).availability.getWorkspaceState.handler(async ({ context, input }) => {
-		const state = await getListingAvailabilityWorkspaceState(
-			input.listingId,
-			context.activeMembership.organizationId,
-			db,
-		);
-		return {
-			...state,
-			rules: state.rules.map(formatRule),
-			blocks: state.blocks.map(formatBlock),
-			exceptions: state.exceptions.map(formatException),
-		};
+		try {
+			const state = await getListingAvailabilityWorkspaceState(
+				input.listingId,
+				context.activeMembership.organizationId,
+				db,
+			);
+			return {
+				...state,
+				rules: state.rules.map(formatRule),
+				blocks: state.blocks.map(formatBlock),
+				exceptions: state.exceptions.map(formatException),
+			};
+		} catch (error) {
+			rethrowAvailabilityNotFound(error);
+		}
 	}),
 
 	addBlock: organizationPermissionProcedure({
 		availability: ["create"],
 	}).availability.addBlock.handler(async ({ context, input }) => {
-		const row = await createAvailabilityBlock(
-			{
-				listingId: input.listingId,
-				organizationId: context.activeMembership.organizationId,
-				startsAt: new Date(input.startsAt),
-				endsAt: new Date(input.endsAt),
-				reason: input.reason,
-			},
-			db,
-		);
-		return formatBlock(row);
+		try {
+			const row = await createAvailabilityBlock(
+				{
+					listingId: input.listingId,
+					organizationId: context.activeMembership.organizationId,
+					startsAt: new Date(input.startsAt),
+					endsAt: new Date(input.endsAt),
+					reason: input.reason,
+				},
+				db,
+			);
+			return formatBlock(row);
+		} catch (error) {
+			rethrowAvailabilityNotFound(error);
+		}
 	}),
 
 	deleteBlock: organizationPermissionProcedure({

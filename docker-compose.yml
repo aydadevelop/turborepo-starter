@@ -43,7 +43,7 @@ services:
       - -c
       - pg_stat_statements.track=all
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:
@@ -112,7 +112,8 @@ services:
     restart: unless-stopped
     ports:
       - "${SERVER_PORT:-3000}:3000"
-    env_file: .env
+    env_file:
+      - ${COMPOSE_APP_ENV_FILE:-.env}
     environment:
       PORT: 3000
       DATABASE_URL: postgresql://postgres:postgres@db:5432/myapp
@@ -164,7 +165,8 @@ services:
     restart: unless-stopped
     ports:
       - "${ASSISTANT_PORT:-3001}:3001"
-    env_file: .env
+    env_file:
+      - ${COMPOSE_APP_ENV_FILE:-.env}
     environment:
       PORT: 3001
       DATABASE_URL: postgresql://postgres:postgres@db:5432/myapp
@@ -204,7 +206,8 @@ services:
     restart: unless-stopped
     ports:
       - "${NOTIFICATIONS_PORT:-3002}:3002"
-    env_file: .env
+    env_file:
+      - ${COMPOSE_APP_ENV_FILE:-.env}
     environment:
       PORT: 3002
       DATABASE_URL: postgresql://postgres:postgres@db:5432/myapp
@@ -254,7 +257,8 @@ services:
     restart: unless-stopped
     ports:
       - "${WEB_PORT:-3003}:3000"
-    env_file: .env
+    env_file:
+      - ${COMPOSE_APP_ENV_FILE:-.env}
     environment:
       PORT: 3000
       ORIGIN: ${WEB_ORIGIN:-http://localhost:3003}
@@ -283,7 +287,7 @@ services:
     image: rnwood/smtp4dev:v3
     restart: unless-stopped
     ports:
-      - "127.0.0.1:5025:80" # web UI — view captured emails at http://localhost:5025
+      - "127.0.0.1:${SMTP4DEV_UI_PORT:-5025}:80" # web UI — view captured emails at http://localhost:5025
       - "127.0.0.1:${SMTP4DEV_SMTP_PORT:-2525}:25" # host-visible SMTP for provider integration tests
     environment:
       ServerOptions__Urls: "http://*:80"

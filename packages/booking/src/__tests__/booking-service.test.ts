@@ -691,7 +691,6 @@ describe("updateBookingStatus", () => {
 					ownerId: BK2_ORG_ID,
 				},
 			},
-			undefined,
 		);
 	});
 
@@ -781,7 +780,6 @@ describe("updateBookingStatus", () => {
 					refundAmountKopeks: 0,
 				},
 			},
-			undefined,
 		);
 	});
 
@@ -964,7 +962,6 @@ describe("updateBookingSchedule", () => {
 					timezone: "UTC",
 				},
 			},
-			undefined,
 		);
 	});
 });
