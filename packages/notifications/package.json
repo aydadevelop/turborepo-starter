@@ -3,28 +3,36 @@
 	"type": "module",
 	"exports": {
 		"./email": {
+			"types": "./dist/email/index.d.ts",
 			"default": "./src/email/index.ts"
 		},
 		"./email/*": {
+			"types": "./dist/email/*.d.ts",
 			"default": "./src/email/*.ts"
 		},
 		"./contracts": {
+			"types": "./dist/contracts.d.ts",
 			"default": "./src/contracts.ts"
 		},
 		"./events-bridge": {
+			"types": "./dist/events-bridge.d.ts",
 			"default": "./src/events-bridge.ts"
 		},
 		"./pusher": {
+			"types": "./dist/pusher.d.ts",
 			"default": "./src/pusher.ts"
 		},
 		"./preferences": {
+			"types": "./dist/preferences.d.ts",
 			"default": "./src/preferences.ts"
 		},
 		"./processor": {
+			"types": "./dist/processor.d.ts",
 			"default": "./src/processor.ts"
 		}
 	},
 	"scripts": {
+		"build-types": "tsc --emitDeclarationOnly -p tsconfig.json",
 		"check-types": "tsc --noEmit -p tsconfig.json",
 		"lint": "cd ../.. && oxlint packages/notifications",
 		"lint:fix": "cd ../.. && oxlint --fix packages/notifications",

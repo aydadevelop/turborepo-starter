@@ -3,28 +3,36 @@
 	"type": "module",
 	"exports": {
 		".": {
+			"types": "./dist/routers/index.d.ts",
 			"default": "./src/routers/index.ts"
 		},
 		"./contracts/support-email-intake": {
+			"types": "./dist/contracts/support-email-intake.d.ts",
 			"default": "./src/contracts/support-email-intake.ts"
 		},
 		"./contracts/recurring-task-queue": {
+			"types": "./dist/contracts/recurring-task-queue.d.ts",
 			"default": "./src/contracts/recurring-task-queue.ts"
 		},
 		"./contracts/shared": {
+			"types": "./dist/contracts/shared.d.ts",
 			"default": "./src/contracts/shared.ts"
 		},
 		"./routers": {
+			"types": "./dist/routers/index.d.ts",
 			"default": "./src/routers/index.ts"
 		},
 		"./routers/*": {
+			"types": "./dist/routers/*.d.ts",
 			"default": "./src/routers/*.ts"
 		},
 		"./routers/admin/*": {
+			"types": "./dist/routers/admin/*.d.ts",
 			"default": "./src/routers/admin/*.ts"
 		}
 	},
 	"scripts": {
+		"build-types": "tsc --emitDeclarationOnly -p tsconfig.json",
 		"check-types": "tsc --noEmit -p tsconfig.json",
 		"lint": "cd ../.. && oxlint packages/api-contract",
 		"lint:fix": "cd ../.. && oxlint --fix packages/api-contract"

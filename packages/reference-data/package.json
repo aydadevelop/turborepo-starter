@@ -5,11 +5,12 @@
 	"type": "module",
 	"exports": {
 		"./timezones": {
-			"types": "./src/timezones.ts",
+			"types": "./dist/timezones.d.ts",
 			"default": "./src/timezones.ts"
 		}
 	},
 	"scripts": {
+		"build-types": "tsc --emitDeclarationOnly -p tsconfig.json",
 		"check-types": "tsc --noEmit -p tsconfig.json",
 		"lint": "cd ../.. && oxlint packages/reference-data",
 		"lint:fix": "cd ../.. && oxlint --fix packages/reference-data"

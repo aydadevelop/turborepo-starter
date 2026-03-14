@@ -6,8 +6,15 @@
 		"sourceMap": true,
 		"outDir": "dist",
 		"composite": true,
-		"strictNullChecks": true
+		"strictNullChecks": true,
+		"rootDir": "src"
 	},
-	"include": ["src", "env.d.ts"],
-	"exclude": ["dist", "node_modules"]
+	"include": [
+		"src",
+		"env.d.ts"
+	],
+	"exclude": [
+		"dist",
+		"node_modules"
+	]
 }

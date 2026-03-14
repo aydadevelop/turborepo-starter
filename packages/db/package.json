@@ -3,15 +3,19 @@
 	"type": "module",
 	"exports": {
 		".": {
+			"types": "./dist/index.d.ts",
 			"default": "./src/index.ts"
 		},
 		"./e2e/*": {
+			"types": "./dist/e2e/*.d.ts",
 			"default": "./src/e2e/*.ts"
 		},
 		"./*": {
+			"types": "./dist/*.d.ts",
 			"default": "./src/*.ts"
 		},
 		"./test": {
+			"types": "./dist/test/index.d.ts",
 			"default": "./src/test/index.ts"
 		}
 	},
@@ -30,6 +34,7 @@
 		"db:snapshot:export": "node ./scripts/export-snapshot.mjs",
 		"db:snapshot:import": "node ./scripts/import-snapshot.mjs",
 		"db:verify:postgres": "node ./scripts/verify-postgres-baseline.mjs",
+		"build-types": "tsc --emitDeclarationOnly -p tsconfig.json",
 		"check-types": "tsc --noEmit -p tsconfig.json",
 		"lint": "cd ../.. && oxlint packages/db",
 		"lint:fix": "cd ../.. && oxlint --fix packages/db",

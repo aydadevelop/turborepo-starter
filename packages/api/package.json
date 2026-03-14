@@ -3,25 +3,32 @@
 	"type": "module",
 	"exports": {
 		".": {
+			"types": "./dist/index.d.ts",
 			"default": "./src/index.ts"
 		},
 		"./*": {
+			"types": "./dist/*.d.ts",
 			"default": "./src/*.ts"
 		},
 		"./tasks/*": {
+			"types": "./dist/tasks/*.d.ts",
 			"default": "./src/tasks/*.ts"
 		},
 		"./services/*": {
+			"types": "./dist/services/*.d.ts",
 			"default": "./src/services/*.ts"
 		},
 		"./handlers": {
+			"types": "./dist/handlers/index.d.ts",
 			"default": "./src/handlers/index.ts"
 		},
 		"./handlers/*": {
+			"types": "./dist/handlers/*.d.ts",
 			"default": "./src/handlers/*.ts"
 		}
 	},
 	"scripts": {
+		"build-types": "tsc --emitDeclarationOnly -p tsconfig.json",
 		"check-types": "tsc --noEmit -p tsconfig.json",
 		"lint": "cd ../.. && oxlint packages/api",
 		"lint:fix": "cd ../.. && oxlint --fix packages/api",

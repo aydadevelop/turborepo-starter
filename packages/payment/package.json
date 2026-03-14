@@ -5,16 +5,20 @@
 	"type": "module",
 	"exports": {
 		".": {
+			"types": "./dist/index.d.ts",
 			"default": "./src/index.ts"
 		},
 		"./webhooks": {
+			"types": "./dist/webhooks/index.d.ts",
 			"default": "./src/webhooks/index.ts"
 		},
 		"./webhooks/*": {
+			"types": "./dist/webhooks/*.d.ts",
 			"default": "./src/webhooks/*.ts"
 		}
 	},
 	"scripts": {
+		"build-types": "tsc --emitDeclarationOnly -p tsconfig.json",
 		"check-types": "tsc --noEmit -p tsconfig.json",
 		"lint": "cd ../.. && oxlint packages/payment",
 		"lint:fix": "cd ../.. && oxlint --fix packages/payment",

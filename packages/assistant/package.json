@@ -3,25 +3,32 @@
 	"type": "module",
 	"exports": {
 		"./tools": {
+			"types": "./dist/tools.d.ts",
 			"default": "./src/tools.ts"
 		},
 		"./router": {
+			"types": "./dist/router.d.ts",
 			"default": "./src/router.ts"
 		},
 		"./contract": {
+			"types": "./dist/contract.d.ts",
 			"default": "./src/contract.ts"
 		},
 		"./context": {
+			"types": "./dist/context.d.ts",
 			"default": "./src/context.ts"
 		},
 		"./system-prompt": {
+			"types": "./dist/system-prompt.d.ts",
 			"default": "./src/system-prompt.ts"
 		},
 		"./transport": {
+			"types": "./dist/transport.d.ts",
 			"default": "./src/transport.ts"
 		}
 	},
 	"scripts": {
+		"build-types": "tsc --emitDeclarationOnly -p tsconfig.json",
 		"check-types": "tsc --noEmit -p tsconfig.json",
 		"lint": "cd ../.. && oxlint packages/assistant",
 		"lint:fix": "cd ../.. && oxlint --fix packages/assistant",

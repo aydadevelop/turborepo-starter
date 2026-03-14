@@ -3,9 +3,13 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/tunnel.ts"
+		".": {
+			"types": "./dist/tunnel.d.ts",
+			"default": "./src/tunnel.ts"
+		}
 	},
 	"scripts": {
+		"build-types": "tsc --emitDeclarationOnly -p tsconfig.json",
 		"check-types": "tsc --noEmit -p tsconfig.json",
 		"lint": "cd ../.. && oxlint packages/proxy",
 		"lint:fix": "cd ../.. && oxlint --fix packages/proxy"

@@ -13,6 +13,7 @@ const IGNORE_DIRS = new Set([
 	"build",
 	"coverage",
 	".svelte-kit",
+	"legacy",
 ]);
 
 const walkTsconfigs = (startDir) => {

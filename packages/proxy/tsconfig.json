@@ -1,9 +1,17 @@
 {
 	"extends": "@my-app/config/tsconfig.base.json",
 	"compilerOptions": {
+		"declaration": true,
+		"declarationMap": true,
+		"composite": true,
 		"outDir": "dist",
 		"strictNullChecks": true,
-		"types": ["node"]
+		"types": [
+			"node"
+		],
+		"rootDir": "src"
 	},
-	"include": ["src"]
+	"include": [
+		"src"
+	]
 }

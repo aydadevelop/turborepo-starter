@@ -3,16 +3,20 @@
 	"type": "module",
 	"exports": {
 		".": {
+			"types": "./dist/index.d.ts",
 			"default": "./src/index.ts"
 		},
 		"./logger": {
+			"types": "./dist/logger.d.ts",
 			"default": "./src/logger.ts"
 		},
 		"./tracing": {
+			"types": "./dist/tracing.d.ts",
 			"default": "./src/tracing.ts"
 		}
 	},
 	"scripts": {
+		"build-types": "tsc --emitDeclarationOnly -p tsconfig.json",
 		"check-types": "tsc --noEmit -p tsconfig.json",
 		"lint": "cd ../.. && oxlint packages/telemetry",
 		"lint:fix": "cd ../.. && oxlint --fix packages/telemetry"

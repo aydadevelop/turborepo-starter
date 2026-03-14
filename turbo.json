@@ -70,7 +70,13 @@
 		"lint:fix": {
 			"cache": false
 		},
-		"check-types": {},
+		"build-types": {
+			"dependsOn": ["^build-types"],
+			"outputs": ["dist/**/*.d.ts", "dist/**/*.d.ts.map", "dist/tsconfig.tsbuildinfo"]
+		},
+		"check-types": {
+			"dependsOn": ["^build-types"]
+		},
 		"test": {
 			"dependsOn": ["^build"]
 		},

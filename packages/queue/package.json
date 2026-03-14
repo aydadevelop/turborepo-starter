@@ -2,9 +2,13 @@
 	"name": "@my-app/queue",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts",
-		"./producer": "./src/producer.ts",
-		"./worker": "./src/worker.ts"
+		".": { "types": "./dist/index.d.ts", "default": "./src/index.ts" },
+		"./producer": { "types": "./dist/producer.d.ts", "default": "./src/producer.ts" },
+		"./worker": { "types": "./dist/worker.d.ts", "default": "./src/worker.ts" }
+	},
+	"scripts": {
+		"build-types": "tsc --emitDeclarationOnly -p tsconfig.json",
+		"check-types": "tsc --noEmit -p tsconfig.json"
 	},
 	"dependencies": {
 		"pg-boss": "^12.14.0"

@@ -4,12 +4,25 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		"./loader": "./src/loader.ts",
-		"./server": "./src/server.ts",
-		"./assistant": "./src/assistant.ts",
-		"./web": "./src/web.ts"
+		"./loader": {
+			"types": "./dist/loader.d.ts",
+			"default": "./src/loader.ts"
+		},
+		"./server": {
+			"types": "./dist/server.d.ts",
+			"default": "./src/server.ts"
+		},
+		"./assistant": {
+			"types": "./dist/assistant.d.ts",
+			"default": "./src/assistant.ts"
+		},
+		"./web": {
+			"types": "./dist/web.d.ts",
+			"default": "./src/web.ts"
+		}
 	},
 	"scripts": {
+		"build-types": "tsc --emitDeclarationOnly -p tsconfig.json",
 		"check-types": "tsc --noEmit -p tsconfig.json",
 		"lint": "cd ../.. && oxlint packages/env",
 		"lint:fix": "cd ../.. && oxlint --fix packages/env"
