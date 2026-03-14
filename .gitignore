@@ -28,6 +28,7 @@ output/
 # tracked: .env.example only
 !apps/web/.env.test
 !packages/infra/.env.e2e
+!.env.e2e.empty
 .dev.vars
 
 # 1gb.ru API credentials & VPS state

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawn } from "node:child_process";
+import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -26,6 +27,19 @@ const defaults = {
 
 const log = (message) => {
 	console.log(`[e2e:docker] ${message}`);
+};
+
+const ensureComposeEnvFile = (filePath) => {
+	if (existsSync(filePath)) {
+		return;
+	}
+
+	writeFileSync(
+		filePath,
+		"# Auto-created by scripts/e2e-docker-compose.mjs for deployment-like E2E runs.\n",
+		"utf8",
+	);
+	log(`Created missing compose env file at ${path.relative(repoRoot, filePath)}`);
 };
 
 const maskConnectionString = (value) =>
@@ -145,7 +159,8 @@ const main = async () => {
 
 	const composeEnv = {
 		...process.env,
-		COMPOSE_APP_ENV_FILE: ".env.e2e.empty",
+		COMPOSE_APP_ENV_FILE:
+			process.env.COMPOSE_APP_ENV_FILE ?? ".env.e2e.empty",
 		DB_PORT: dbPort,
 		E2E_DB_PORT: dbPort,
 		STORAGE_PORT: storagePort,
@@ -198,6 +213,11 @@ const main = async () => {
 	for (const file of extraComposeFiles) {
 		composeBaseArgs.push("-f", file);
 	}
+
+	const composeAppEnvFilePath = path.isAbsolute(composeEnv.COMPOSE_APP_ENV_FILE)
+		? composeEnv.COMPOSE_APP_ENV_FILE
+		: path.resolve(repoRoot, composeEnv.COMPOSE_APP_ENV_FILE);
+	ensureComposeEnvFile(composeAppEnvFilePath);
 
 	const runCompose = (args, allowFailure = false) =>
 		runCommand({

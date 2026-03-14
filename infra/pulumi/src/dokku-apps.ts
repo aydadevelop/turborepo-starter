@@ -1,6 +1,12 @@
 import * as command from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
 
+const shellQuote = (value: pulumi.Input<string>) =>
+	pulumi.output(value).apply((resolved) => {
+		const stringValue = String(resolved ?? "");
+		return `'${stringValue.replace(/'/g, `'\\''`)}'`;
+	});
+
 /** App definition for Dokku */
 interface AppDef {
 	buildArg?: string;
@@ -135,8 +141,6 @@ export class DokkuApps extends pulumi.ComponentResource {
 				buildArg: "notifications",
 				extraEnv: {
 					SERVER_URL: "http://server.web:3000",
-					SMTP_HOST: "smtp",
-					SMTP_PORT: "25",
 				},
 			},
 		];
@@ -251,7 +255,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 			const envString = pulumi
 				.all(
 					Object.entries(mergedEnv).map(([k, v]) =>
-						pulumi.output(v).apply((val) => `${k}=${val}`),
+						shellQuote(v).apply((val) => `${k}=${val}`),
 					),
 				)
 				.apply((pairs) => pairs.join(" "));
@@ -314,6 +318,9 @@ export class DokkuApps extends pulumi.ComponentResource {
 			{ parent: this },
 		);
 
+		const smtpHost = pulumi.output(args.env.SMTP_HOST ?? "smtp");
+		const smtpPort = pulumi.output(args.env.SMTP_PORT ?? "25");
+
 		const grafana = new command.remote.Command(
 			`${name}-grafana`,
 			{
@@ -327,9 +334,9 @@ export class DokkuApps extends pulumi.ComponentResource {
             -e GF_ALERTING_ENABLED=true \
             -e GF_UNIFIED_ALERTING_ENABLED=true \
             -e GF_SMTP_ENABLED=true \
-            -e GF_SMTP_HOST=smtp:25 \
+						-e GF_SMTP_HOST=${pulumi.interpolate`${smtpHost}:${smtpPort}`} \
             -e GF_SMTP_FROM_NAME="Grafana Alerts" \
-            -e GF_SMTP_SKIP_VERIFY=true \
+						-e GF_SMTP_SKIP_VERIFY=true \
             --network dokku \
             grafana/grafana:11.6.0
         fi
