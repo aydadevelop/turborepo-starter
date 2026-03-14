@@ -31,7 +31,7 @@ describe.skipIf(!hasContractEnv)("s3 storage provider contract", () => {
 		});
 	});
 
-	afterAll(async () => {
+	afterAll(() => {
 		if (!provider) {
 			return;
 		}
@@ -64,16 +64,21 @@ describe.skipIf(!hasContractEnv)("s3 storage provider contract", () => {
 
 		expect(signedUpload?.url).toBeTruthy();
 		expect(signedUpload?.headers?.["content-type"]).toBe("text/plain");
+		if (!signedUpload) {
+			throw new Error(
+				"Expected getSignedUploadUrl() to return a signed upload."
+			);
+		}
 
-		const uploadResponse = await fetch(signedUpload!.url, {
+		const uploadResponse = await fetch(signedUpload.url, {
 			method: "PUT",
-			headers: signedUpload!.headers,
+			headers: signedUpload.headers,
 			body: "signed-upload",
 		});
 		expect(uploadResponse.ok).toBe(true);
 
 		const signedDownloadUrl = await provider.getSignedDownloadUrl({
-			key: signedUpload!.key,
+			key: signedUpload.key,
 			access: "private",
 		});
 		const downloadResponse = await fetch(signedDownloadUrl);
@@ -81,7 +86,7 @@ describe.skipIf(!hasContractEnv)("s3 storage provider contract", () => {
 		expect(await downloadResponse.text()).toBe("signed-upload");
 
 		await provider.deleteObject({
-			key: signedUpload!.key,
+			key: signedUpload.key,
 			access: "private",
 		});
 	});

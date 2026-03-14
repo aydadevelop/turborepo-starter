@@ -200,7 +200,9 @@
 						{#if hasTelegram}
 							<Badge variant="secondary">Connected</Badge>
 							{#if telegramUsername}
-								<span class="text-xs text-muted-foreground">@{telegramUsername}</span>
+								<span class="text-xs text-muted-foreground"
+									>@{telegramUsername}</span
+								>
 							{/if}
 						{/if}
 					</div>

@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { renderComponent } from "../../../../test/browser/render";
 import type { PricingWorkspaceState } from "$lib/orpc-types";
+import { renderComponent } from "../../../../test/browser/render";
 import CreatePricingProfileForm from "./CreatePricingProfileForm.svelte";
 
 const pricing: PricingWorkspaceState = {
@@ -15,7 +15,7 @@ const pricing: PricingWorkspaceState = {
 			listingId: "listing-1",
 			name: "Base",
 			currency: "RUB",
-			baseHourlyPriceCents: 120000,
+			baseHourlyPriceCents: 120_000,
 			minimumHours: 2,
 			serviceFeeBps: 0,
 			taxBps: 0,
@@ -36,9 +36,7 @@ test("submits pricing profile values through the section form contract", async (
 		pricing,
 		onSubmit,
 	});
-	await expect(document.body).toMatchScreenshot(
-		"create-pricing-profile-form"
-	);
+	await expect(document.body).toMatchScreenshot("create-pricing-profile-form");
 
 	await userEvent.fill(page.getByLabelText("Profile name"), "Weekend");
 	await userEvent.selectOptions(page.getByLabelText("Currency"), "USD");
@@ -49,13 +47,15 @@ test("submits pricing profile values through the section form contract", async (
 	await userEvent.fill(page.getByLabelText("Minimum hours"), "3");
 	await userEvent.fill(page.getByLabelText("Service fee (bps)"), "500");
 	await userEvent.fill(page.getByLabelText("Tax (bps)"), "2000");
-	await userEvent.click(page.getByRole("button", { name: "Create pricing profile" }));
+	await userEvent.click(
+		page.getByRole("button", { name: "Create pricing profile" })
+	);
 
 	expect(onSubmit).toHaveBeenCalledWith({
 		listingId: "listing-1",
 		name: "Weekend",
 		currency: "USD",
-		baseHourlyPriceCents: 250000,
+		baseHourlyPriceCents: 250_000,
 		minimumHours: 3,
 		serviceFeeBps: 500,
 		taxBps: 2000,

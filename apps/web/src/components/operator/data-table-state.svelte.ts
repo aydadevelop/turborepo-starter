@@ -10,32 +10,32 @@
  */
 
 export interface DataTablePagination {
-	readonly offset: number;
-	readonly limit: number;
 	readonly currentPage: number;
+	readonly hasNext: boolean;
+	readonly hasPrevious: boolean;
+	readonly limit: number;
+	next(): void;
+	readonly offset: number;
+	previous(): void;
+	reset(): void;
 	totalItems: number;
 	readonly totalPages: number;
-	readonly hasPrevious: boolean;
-	readonly hasNext: boolean;
-	previous(): void;
-	next(): void;
-	reset(): void;
 }
 
 export interface DataTableSearch {
-	readonly value: string;
-	set(value: string): void;
 	clear(): void;
+	set(value: string): void;
+	readonly value: string;
 }
 
 export interface DataTableSelection<TId = string> {
-	readonly selected: Set<TId>;
-	readonly count: number;
-	toggle(id: TId): void;
-	select(id: TId): void;
-	deselect(id: TId): void;
 	clear(): void;
+	readonly count: number;
+	deselect(id: TId): void;
 	has(id: TId): boolean;
+	select(id: TId): void;
+	readonly selected: Set<TId>;
+	toggle(id: TId): void;
 	toggleAll(ids: TId[]): void;
 }
 
@@ -88,7 +88,7 @@ export function createDataTableState<TId = string>(options?: {
 			offset = Math.max(0, offset - limit);
 		},
 		next() {
-			offset = offset + limit;
+			offset += limit;
 		},
 		reset() {
 			offset = 0;

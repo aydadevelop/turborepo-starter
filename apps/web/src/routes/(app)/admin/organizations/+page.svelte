@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
 	import { resolve } from "$app/paths";
+	import { orpc } from "$lib/orpc";
 	import DataTable from "../../../../components/operator/DataTable.svelte";
 	import { createDataTableState } from "../../../../components/operator/data-table-state.svelte";
 	import ResourceBadgeCell from "../../../../components/operator/ResourceBadgeCell.svelte";
 	import ResourceLinkCell from "../../../../components/operator/ResourceLinkCell.svelte";
 	import {
+		type ColumnDef,
 		createColumnHelper,
 		renderComponent,
-		type ColumnDef,
 	} from "../../../../components/operator/resource-table";
 	import SurfaceCard from "../../../../components/operator/SurfaceCard.svelte";
 	import Text from "../../../../components/operator/Text.svelte";
-	import { orpc } from "$lib/orpc";
 
 	const table = createDataTableState({ limit: 20 });
 
@@ -41,7 +41,7 @@
 
 	const columnHelper = createColumnHelper<OrganizationRow>();
 
-	const columns: ColumnDef<OrganizationRow, any>[] = [
+	const columns: ColumnDef<OrganizationRow, unknown>[] = [
 		columnHelper.accessor("name", {
 			header: "Name",
 			meta: {

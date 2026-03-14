@@ -16,7 +16,14 @@ const bookingOutput = z.object({
 	merchantPaymentConfigId: z.string().nullable(),
 	customerUserId: z.string().nullable(),
 	createdByUserId: z.string().nullable(),
-	source: z.enum(["manual", "web", "telegram", "partner", "api", "calendar_sync"]),
+	source: z.enum([
+		"manual",
+		"web",
+		"telegram",
+		"partner",
+		"api",
+		"calendar_sync",
+	]),
 	status: z.enum([
 		"pending",
 		"awaiting_payment",
@@ -28,8 +35,21 @@ const bookingOutput = z.object({
 		"no_show",
 		"disputed",
 	]),
-	paymentStatus: z.enum(["unpaid", "pending", "partially_paid", "paid", "refunded", "failed"]),
-	calendarSyncStatus: z.enum(["pending", "linked", "sync_error", "detached", "not_applicable"]),
+	paymentStatus: z.enum([
+		"unpaid",
+		"pending",
+		"partially_paid",
+		"paid",
+		"refunded",
+		"failed",
+	]),
+	calendarSyncStatus: z.enum([
+		"pending",
+		"linked",
+		"sync_error",
+		"detached",
+		"not_applicable",
+	]),
 	startsAt: z.string().datetime(),
 	endsAt: z.string().datetime(),
 	cancelledAt: z.string().datetime().nullable(),
@@ -90,7 +110,10 @@ const listOrgBookingsOutputSchema = createCollectionOutputSchema(bookingOutput);
 
 export const bookingContract = {
 	create: oc
-		.route({ tags: ["Booking"], summary: "Create a booking for an available slot" })
+		.route({
+			tags: ["Booking"],
+			summary: "Create a booking for an available slot",
+		})
 		.input(
 			z.object({
 				listingId: z.string(),
@@ -105,12 +128,15 @@ export const bookingContract = {
 				specialRequests: z.string().optional(),
 				currency: z.string().optional(),
 				discountCode: z.string().min(1).max(64).optional(),
-			}),
+			})
 		)
 		.output(bookingOutput),
 
 	listOrgBookings: oc
-		.route({ tags: ["Booking"], summary: "List bookings in the active organization" })
+		.route({
+			tags: ["Booking"],
+			summary: "List bookings in the active organization",
+		})
 		.input(listOrgBookingsInputSchema)
 		.output(listOrgBookingsOutputSchema),
 
@@ -120,7 +146,10 @@ export const bookingContract = {
 		.output(bookingOutput),
 
 	updateStatus: oc
-		.route({ tags: ["Booking"], summary: "Transition a booking lifecycle status" })
+		.route({
+			tags: ["Booking"],
+			summary: "Transition a booking lifecycle status",
+		})
 		.input(
 			z.object({
 				id: z.string(),
@@ -137,7 +166,7 @@ export const bookingContract = {
 				]),
 				cancellationReason: z.string().optional(),
 				cancelledByUserId: z.string().optional(),
-			}),
+			})
 		)
 		.output(bookingOutput),
 
@@ -152,12 +181,15 @@ export const bookingContract = {
 				startsAt: z.string().datetime(),
 				endsAt: z.string().datetime(),
 				timezone: z.string().optional(),
-			}),
+			})
 		)
 		.output(bookingOutput),
 
 	listMyBookings: oc
-		.route({ tags: ["Booking"], summary: "List the authenticated customer's own bookings" })
+		.route({
+			tags: ["Booking"],
+			summary: "List the authenticated customer's own bookings",
+		})
 		.input(z.object({}))
 		.output(z.array(bookingOutput)),
 
@@ -180,10 +212,10 @@ export const bookingContract = {
 							type: z.enum(["photo", "document", "video", "other"]),
 							url: z.string().url(),
 							description: z.string().optional(),
-						}),
+						})
 					)
 					.optional(),
-			}),
+			})
 		)
 		.output(
 			z.object({
@@ -226,7 +258,7 @@ export const bookingContract = {
 					refundPercent: z.number(),
 					suggestedRefundCents: z.number().int(),
 				}),
-			}),
+			})
 		),
 
 	applyCancellation: oc
@@ -239,13 +271,13 @@ export const bookingContract = {
 		.input(
 			z.object({
 				requestId: z.string(),
-			}),
+			})
 		)
 		.output(
 			z.object({
 				requestId: z.string(),
 				refundId: z.string().nullable(),
-			}),
+			})
 		),
 
 	getActiveCancellationRequest: oc
@@ -282,7 +314,7 @@ export const bookingContract = {
 					createdAt: z.string().datetime(),
 					updatedAt: z.string().datetime(),
 				})
-				.nullable(),
+				.nullable()
 		),
 
 	listCancellationRequests: oc
@@ -318,7 +350,7 @@ export const bookingContract = {
 					requestedAt: z.string().datetime(),
 					createdAt: z.string().datetime(),
 					updatedAt: z.string().datetime(),
-				}),
-			),
+				})
+			)
 		),
 };

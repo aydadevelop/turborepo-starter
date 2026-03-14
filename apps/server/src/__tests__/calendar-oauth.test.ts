@@ -38,9 +38,10 @@ vi.mock("@my-app/db", () => {
 });
 
 vi.mock("@my-app/calendar", async () => {
-	const actual = await vi.importActual<typeof import("@my-app/calendar")>(
-		"@my-app/calendar"
-	);
+	const actual =
+		await vi.importActual<typeof import("@my-app/calendar")>(
+			"@my-app/calendar"
+		);
 	return {
 		...actual,
 		exchangeGoogleCalendarOAuthCode: exchangeGoogleCalendarOAuthCodeMock,
@@ -77,7 +78,7 @@ describe("calendarOauthRoutes", () => {
 			refreshToken: "refresh-token-1",
 			tokenType: "Bearer",
 			scope: "calendar email profile",
-			expiresAt: Date.now() + 3600_000,
+			expiresAt: Date.now() + 3_600_000,
 		});
 		fetchGoogleCalendarAccountProfileMock.mockResolvedValue({
 			accountEmail: "fleet@example.com",
@@ -107,7 +108,10 @@ describe("calendarOauthRoutes", () => {
 		const location = response.headers.get("location");
 		expect(location).toBeTruthy();
 		expect(location).toContain("accounts.google.com/o/oauth2/v2/auth");
-		const redirectUrl = new URL(location!);
+		if (!location) {
+			throw new Error("Expected OAuth redirect location header");
+		}
+		const redirectUrl = new URL(location);
 		expect(redirectUrl.searchParams.get("client_id")).toBe(
 			"test-google-client-id"
 		);
@@ -132,7 +136,12 @@ describe("calendarOauthRoutes", () => {
 			}
 		);
 
-		const startLocation = new URL(startResponse.headers.get("location")!);
+		const startLocationHeader = startResponse.headers.get("location");
+		expect(startLocationHeader).toBeTruthy();
+		if (!startLocationHeader) {
+			throw new Error("Expected OAuth start location header");
+		}
+		const startLocation = new URL(startLocationHeader);
 		const state = startLocation.searchParams.get("state");
 		const cookieHeader = startResponse.headers.get("set-cookie");
 

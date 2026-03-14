@@ -5,10 +5,7 @@ import {
 	listingPublication,
 	listingTypeConfig,
 } from "@my-app/db/schema/marketplace";
-import {
-	bootstrapTestDatabase,
-	type TestDatabase,
-} from "@my-app/db/test";
+import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -74,7 +71,7 @@ describe("createAvailabilityRule", () => {
 				startMinute: 540,
 				endMinute: 1020,
 			},
-			getDb(),
+			getDb()
 		);
 
 		expect(rule.listingId).toBe(LISTING_ID);
@@ -94,8 +91,8 @@ describe("createAvailabilityRule", () => {
 					startMinute: 0,
 					endMinute: 60,
 				},
-				getDb(),
-			),
+				getDb()
+			)
 		).rejects.toThrow("NOT_FOUND");
 	});
 });
@@ -104,23 +101,41 @@ describe("listAvailabilityRules", () => {
 	it("returns rules ordered by dayOfWeek then startMinute", async () => {
 		const db = getDb();
 		await createAvailabilityRule(
-			{ listingId: LISTING_ID, organizationId: ORG_ID, dayOfWeek: 3, startMinute: 600, endMinute: 1080 },
-			db,
+			{
+				listingId: LISTING_ID,
+				organizationId: ORG_ID,
+				dayOfWeek: 3,
+				startMinute: 600,
+				endMinute: 1080,
+			},
+			db
 		);
 		await createAvailabilityRule(
-			{ listingId: LISTING_ID, organizationId: ORG_ID, dayOfWeek: 2, startMinute: 480, endMinute: 960 },
-			db,
+			{
+				listingId: LISTING_ID,
+				organizationId: ORG_ID,
+				dayOfWeek: 2,
+				startMinute: 480,
+				endMinute: 960,
+			},
+			db
 		);
 
 		const rules = await listAvailabilityRules(LISTING_ID, ORG_ID, db);
 		expect(rules.length).toBeGreaterThanOrEqual(2);
 		// Verify ordering: dayOfWeek ascending, then startMinute ascending
 		for (let i = 1; i < rules.length; i++) {
-			const prev = rules[i - 1]!;
-			const curr = rules[i]!;
+			const prev = rules[i - 1];
+			const curr = rules[i];
+			if (!(prev && curr)) {
+				throw new Error(
+					"Expected adjacent availability rules while checking order"
+				);
+			}
 			expect(
 				curr.dayOfWeek > prev.dayOfWeek ||
-					(curr.dayOfWeek === prev.dayOfWeek && curr.startMinute >= prev.startMinute),
+					(curr.dayOfWeek === prev.dayOfWeek &&
+						curr.startMinute >= prev.startMinute)
 			).toBe(true);
 		}
 	});
@@ -130,8 +145,14 @@ describe("deleteAvailabilityRule", () => {
 	it("deletes an existing rule", async () => {
 		const db = getDb();
 		const rule = await createAvailabilityRule(
-			{ listingId: LISTING_ID, organizationId: ORG_ID, dayOfWeek: 5, startMinute: 0, endMinute: 120 },
-			db,
+			{
+				listingId: LISTING_ID,
+				organizationId: ORG_ID,
+				dayOfWeek: 5,
+				startMinute: 0,
+				endMinute: 120,
+			},
+			db
 		);
 		await deleteAvailabilityRule(rule.id, ORG_ID, db);
 
@@ -141,7 +162,7 @@ describe("deleteAvailabilityRule", () => {
 
 	it("throws NOT_FOUND for unknown rule id", async () => {
 		await expect(
-			deleteAvailabilityRule("nonexistent-id", ORG_ID, getDb()),
+			deleteAvailabilityRule("nonexistent-id", ORG_ID, getDb())
 		).rejects.toThrow("NOT_FOUND");
 	});
 });
@@ -154,8 +175,14 @@ describe("createAvailabilityBlock", () => {
 		const endsAt = new Date("2025-09-01T17:00:00Z");
 
 		const block = await createAvailabilityBlock(
-			{ listingId: LISTING_ID, organizationId: ORG_ID, startsAt, endsAt, reason: "Holiday" },
-			getDb(),
+			{
+				listingId: LISTING_ID,
+				organizationId: ORG_ID,
+				startsAt,
+				endsAt,
+				reason: "Holiday",
+			},
+			getDb()
 		);
 
 		expect(block.listingId).toBe(LISTING_ID);
@@ -175,9 +202,11 @@ describe("deleteAvailabilityBlock", () => {
 				startsAt: new Date("2025-10-01T00:00:00Z"),
 				endsAt: new Date("2025-10-02T00:00:00Z"),
 			},
-			db,
+			db
 		);
-		await expect(deleteAvailabilityBlock(block.id, ORG_ID, db)).resolves.toBeUndefined();
+		await expect(
+			deleteAvailabilityBlock(block.id, ORG_ID, db)
+		).resolves.toBeUndefined();
 	});
 });
 
@@ -193,7 +222,7 @@ describe("createAvailabilityException", () => {
 				isAvailable: false,
 				reason: "Christmas",
 			},
-			getDb(),
+			getDb()
 		);
 
 		expect(exc.isAvailable).toBe(false);
@@ -203,14 +232,24 @@ describe("createAvailabilityException", () => {
 	it("throws DUPLICATE_DATE for the same listing+date", async () => {
 		const db = getDb();
 		await createAvailabilityException(
-			{ listingId: LISTING_ID, organizationId: ORG_ID, date: "2025-11-11", isAvailable: false },
-			db,
+			{
+				listingId: LISTING_ID,
+				organizationId: ORG_ID,
+				date: "2025-11-11",
+				isAvailable: false,
+			},
+			db
 		);
 		await expect(
 			createAvailabilityException(
-				{ listingId: LISTING_ID, organizationId: ORG_ID, date: "2025-11-11", isAvailable: true },
-				db,
-			),
+				{
+					listingId: LISTING_ID,
+					organizationId: ORG_ID,
+					date: "2025-11-11",
+					isAvailable: true,
+				},
+				db
+			)
 		).rejects.toThrow("DUPLICATE_DATE");
 	});
 });
@@ -219,10 +258,17 @@ describe("deleteAvailabilityException", () => {
 	it("deletes an existing exception", async () => {
 		const db = getDb();
 		const exc = await createAvailabilityException(
-			{ listingId: LISTING_ID, organizationId: ORG_ID, date: "2025-08-15", isAvailable: false },
-			db,
+			{
+				listingId: LISTING_ID,
+				organizationId: ORG_ID,
+				date: "2025-08-15",
+				isAvailable: false,
+			},
+			db
 		);
-		await expect(deleteAvailabilityException(exc.id, ORG_ID, db)).resolves.toBeUndefined();
+		await expect(
+			deleteAvailabilityException(exc.id, ORG_ID, db)
+		).resolves.toBeUndefined();
 	});
 });
 
@@ -234,7 +280,7 @@ describe("checkSlotAvailable", () => {
 			LISTING_ID,
 			new Date("2026-01-01T10:00:00Z"),
 			new Date("2026-01-01T12:00:00Z"),
-			getDb(),
+			getDb()
 		);
 		expect(available).toBe(true);
 	});
@@ -251,8 +297,8 @@ describe("checkSlotAvailable", () => {
 			status: "confirmed",
 			startsAt: new Date("2026-02-01T09:00:00Z"),
 			endsAt: new Date("2026-02-01T13:00:00Z"),
-			basePriceCents: 10000,
-			totalPriceCents: 10000,
+			basePriceCents: 10_000,
+			totalPriceCents: 10_000,
 			currency: "USD",
 		});
 
@@ -260,7 +306,7 @@ describe("checkSlotAvailable", () => {
 			LISTING_ID,
 			new Date("2026-02-01T11:00:00Z"),
 			new Date("2026-02-01T15:00:00Z"),
-			db,
+			db
 		);
 		expect(available).toBe(false);
 	});
@@ -286,7 +332,7 @@ describe("checkSlotAvailable", () => {
 			LISTING_ID,
 			new Date("2026-03-01T09:00:00Z"),
 			new Date("2026-03-01T12:00:00Z"),
-			db,
+			db
 		);
 		expect(available).toBe(true);
 	});
@@ -299,8 +345,8 @@ describe("assertSlotAvailable", () => {
 				LISTING_ID,
 				new Date("2027-01-01T10:00:00Z"),
 				new Date("2027-01-01T12:00:00Z"),
-				getDb(),
-			),
+				getDb()
+			)
 		).resolves.toBeUndefined();
 	});
 
@@ -313,7 +359,7 @@ describe("assertSlotAvailable", () => {
 				startsAt: new Date("2027-06-01T00:00:00Z"),
 				endsAt: new Date("2027-06-02T00:00:00Z"),
 			},
-			db,
+			db
 		);
 
 		await expect(
@@ -321,8 +367,8 @@ describe("assertSlotAvailable", () => {
 				LISTING_ID,
 				new Date("2027-06-01T10:00:00Z"),
 				new Date("2027-06-01T12:00:00Z"),
-				db,
-			),
+				db
+			)
 		).rejects.toThrow("SLOT_UNAVAILABLE");
 	});
 });

@@ -1,6 +1,7 @@
+// biome-ignore lint/performance/noBarrelFile: Internal storefront service aggregator re-exports storefront module APIs.
 export {
 	getPublishedListing,
-	searchPublishedListings,
 	type StorefrontListInput,
 	type StorefrontListItem,
+	searchPublishedListings,
 } from "./module";

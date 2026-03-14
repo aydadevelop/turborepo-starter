@@ -1,8 +1,8 @@
-import { and, eq } from "drizzle-orm";
-import { Hono } from "hono";
 import { db } from "@my-app/db";
 import { listingAsset } from "@my-app/db/schema/marketplace";
 import { getStorageProvider } from "@my-app/storage";
+import { and, eq } from "drizzle-orm";
+import { Hono } from "hono";
 
 export const assetRoutes = new Hono();
 
@@ -10,7 +10,7 @@ assetRoutes.get("/:providerId/*", async (c) => {
 	const providerId = c.req.param("providerId");
 	const key = c.req.param("*");
 
-	if (!providerId || !key) {
+	if (!(providerId && key)) {
 		return c.json({ error: "Not Found" }, 404);
 	}
 
@@ -25,8 +25,8 @@ assetRoutes.get("/:providerId/*", async (c) => {
 			and(
 				eq(listingAsset.storageProvider, providerId),
 				eq(listingAsset.storageKey, key),
-				eq(listingAsset.access, "public"),
-			),
+				eq(listingAsset.access, "public")
+			)
 		)
 		.limit(1);
 
@@ -34,7 +34,7 @@ assetRoutes.get("/:providerId/*", async (c) => {
 		return c.json({ error: "Not Found" }, 404);
 	}
 
-	let provider;
+	let provider: ReturnType<typeof getStorageProvider>;
 	try {
 		provider = getStorageProvider(providerId);
 	} catch {

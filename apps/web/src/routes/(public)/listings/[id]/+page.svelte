@@ -264,7 +264,10 @@
 					listingName={listing.name}
 				/>
 			{:else}
-				<BookingRequestPanel listingId={listing.id} listingName={listing.name} />
+				<BookingRequestPanel
+					listingId={listing.id}
+					listingName={listing.name}
+				/>
 			{/if}
 		</div>
 	{/if}

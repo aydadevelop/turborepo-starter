@@ -9,13 +9,16 @@ export const CANCELLATION_REASON_CODES = [
 export type CancellationReasonCode = (typeof CANCELLATION_REASON_CODES)[number];
 
 interface ReasonEntry {
-	label: string;
 	allowedActors: Array<"customer" | "manager">;
-	requiresEvidence: boolean;
+	label: string;
 	refundOverride?: Partial<Record<"customer" | "manager", number>>; // 0–100
+	requiresEvidence: boolean;
 }
 
-export const cancellationReasonCatalog: Record<CancellationReasonCode, ReasonEntry> = {
+export const cancellationReasonCatalog: Record<
+	CancellationReasonCode,
+	ReasonEntry
+> = {
 	CUSTOMER_CHANGE_OF_PLANS: {
 		label: "Change of plans",
 		allowedActors: ["customer", "manager"],

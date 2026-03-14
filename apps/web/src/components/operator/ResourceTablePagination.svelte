@@ -27,10 +27,20 @@
 		Page {currentPage} of {totalPages} ({totalItems} {itemLabel})
 	</p>
 	<div class="flex gap-2">
-		<Button variant="outline" size="sm" disabled={previousDisabled} onclick={onPrevious}>
+		<Button
+			variant="outline"
+			size="sm"
+			disabled={previousDisabled}
+			onclick={onPrevious}
+		>
 			Previous
 		</Button>
-		<Button variant="outline" size="sm" disabled={nextDisabled} onclick={onNext}>
+		<Button
+			variant="outline"
+			size="sm"
+			disabled={nextDisabled}
+			onclick={onNext}
+		>
 			Next
 		</Button>
 	</div>

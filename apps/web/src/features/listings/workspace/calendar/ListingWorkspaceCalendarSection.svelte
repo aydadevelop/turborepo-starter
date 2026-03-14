@@ -8,11 +8,9 @@
 		CardHeader,
 		CardTitle,
 	} from "@my-app/ui/components/card";
-	import CalendarAccountSourcesDialog from "./CalendarAccountSourcesDialog.svelte";
-
 	import type { CalendarWorkspaceState } from "$lib/orpc-types";
-
 	import type { ListingWorkspaceCalendarActions } from "../types";
+	import CalendarAccountSourcesDialog from "./CalendarAccountSourcesDialog.svelte";
 
 	let {
 		calendar = null,
@@ -40,7 +38,10 @@
 		new Map((calendar?.sources ?? []).map((source) => [source.id, source.name]))
 	);
 
-	const ACCOUNT_STATUS_VARIANT: Record<string, "default" | "destructive" | "secondary"> = {
+	const ACCOUNT_STATUS_VARIANT: Record<
+		string,
+		"default" | "destructive" | "secondary"
+	> = {
 		connected: "default",
 		error: "destructive",
 		disconnected: "secondary",
@@ -53,7 +54,10 @@
 		disabled: "Disabled",
 	};
 
-	const SYNC_STATUS_VARIANT: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
+	const SYNC_STATUS_VARIANT: Record<
+		string,
+		"default" | "destructive" | "secondary" | "outline"
+	> = {
 		idle: "outline",
 		syncing: "default",
 		error: "destructive",
@@ -65,13 +69,15 @@
 	<CardHeader>
 		<CardTitle class="text-base">Calendar sync</CardTitle>
 		<CardDescription>
-			Connect provider accounts at the organization level, then attach
-			calendars to this listing to block availability.
+			Connect provider accounts at the organization level, then attach calendars
+			to this listing to block availability.
 		</CardDescription>
 	</CardHeader>
 	<CardContent class="space-y-6">
 		<!-- Connect provider CTA -->
-		<div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+		<div
+			class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+		>
 			<div class="space-y-1">
 				<p class="text-sm font-medium">Connect provider account</p>
 				<p class="text-sm text-muted-foreground">
@@ -85,7 +91,6 @@
 				</Button>
 			{/if}
 		</div>
-
 
 		<!-- Organization accounts -->
 		<div class="space-y-3">
@@ -103,7 +108,9 @@
 										account.accountEmail ??
 										account.externalAccountId}
 								</p>
-								<div class="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+								<div
+									class="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
+								>
 									<span>{account.provider}</span>
 									{#if account.accountEmail}
 										<span>·</span>
@@ -112,7 +119,9 @@
 								</div>
 							</div>
 							<div class="flex shrink-0 items-center gap-2">
-								<Badge variant={ACCOUNT_STATUS_VARIANT[account.status] ?? "secondary"}>
+								<Badge
+									variant={ACCOUNT_STATUS_VARIANT[account.status] ?? "secondary"}
+								>
 									{account.status}
 								</Badge>
 							</div>
@@ -128,9 +137,9 @@
 									account.externalAccountId}
 								sources={calendar.sources.filter((source) => source.calendarAccountId === account.id)}
 								{attachedSourceIds}
-								attachingSourceId={attachingSourceId}
-								onRefreshCalendarAccountSources={onRefreshCalendarAccountSources}
-								onAttachCalendarSource={onAttachCalendarSource}
+								{attachingSourceId}
+								{onRefreshCalendarAccountSources}
+								{onAttachCalendarSource}
 								refreshing={refreshingAccountId === account.id}
 							/>
 						</div>
@@ -183,12 +192,16 @@
 							</div>
 						</div>
 						{#if connection.lastError && connection.syncStatus === "error"}
-							<p class="mt-2 text-xs text-destructive">{connection.lastError}</p>
+							<p class="mt-2 text-xs text-destructive">
+								{connection.lastError}
+							</p>
 						{/if}
 					</div>
 				{/each}
 			{:else}
-				<p class="text-sm text-muted-foreground">No calendar connections yet.</p>
+				<p class="text-sm text-muted-foreground">
+					No calendar connections yet.
+				</p>
 			{/if}
 		</div>
 

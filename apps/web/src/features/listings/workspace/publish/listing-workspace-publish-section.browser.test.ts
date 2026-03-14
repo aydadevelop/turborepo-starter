@@ -1,7 +1,10 @@
 import { expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import type {
+	ListingModerationAuditEntry,
+	ListingWorkspaceState,
+} from "$lib/orpc-types";
 import { renderComponent } from "../../../../test/browser/render";
-import type { ListingModerationAuditEntry, ListingWorkspaceState } from "$lib/orpc-types";
 import ListingWorkspacePublishSection from "./ListingWorkspacePublishSection.svelte";
 
 const workspace: ListingWorkspaceState = {
@@ -75,28 +78,44 @@ test("opens moderation and distribution actions in focused dialogs", async () =>
 		onUnpublishListing,
 	});
 
-	await expect.element(page.getByRole("button", { name: "Approve listing" })).toBeVisible();
-	await expect.element(page.getByRole("button", { name: "Publish to channel" })).toBeVisible();
-	await expect.element(page.getByRole("button", { name: "Unpublish all" })).toBeVisible();
+	await expect
+		.element(page.getByRole("button", { name: "Approve listing" }))
+		.toBeVisible();
+	await expect
+		.element(page.getByRole("button", { name: "Publish to channel" }))
+		.toBeVisible();
+	await expect
+		.element(page.getByRole("button", { name: "Unpublish all" }))
+		.toBeVisible();
 	await expect(document.body).toMatchScreenshot(
 		"listing-workspace-publish-section"
 	);
 
 	await userEvent.click(page.getByRole("button", { name: "Approve listing" }));
-	await expect.element(page.getByRole("heading", { name: "Approve listing" })).toBeVisible();
+	await expect
+		.element(page.getByRole("heading", { name: "Approve listing" }))
+		.toBeVisible();
 	await expect.element(page.getByLabelText("Moderation note")).toBeVisible();
 
 	await userEvent.click(page.getByRole("button", { name: "Close" }));
-	await userEvent.click(page.getByRole("button", { name: "Publish to channel" }));
-	await expect.element(page.getByRole("heading", { name: "Publish to channel" })).toBeVisible();
+	await userEvent.click(
+		page.getByRole("button", { name: "Publish to channel" })
+	);
+	await expect
+		.element(page.getByRole("heading", { name: "Publish to channel" }))
+		.toBeVisible();
 	await expect
 		.element(page.getByLabelText("Channel", { exact: true }))
 		.toBeVisible();
 
 	await userEvent.click(page.getByRole("button", { name: "Close" }));
 	await userEvent.click(page.getByRole("button", { name: "Unpublish all" }));
-	await expect.element(page.getByRole("heading", { name: "Unpublish all channels" })).toBeVisible();
+	await expect
+		.element(page.getByRole("heading", { name: "Unpublish all channels" }))
+		.toBeVisible();
 
-	await userEvent.click(page.getByRole("button", { name: "Unpublish all" }).nth(1));
+	await userEvent.click(
+		page.getByRole("button", { name: "Unpublish all" }).nth(1)
+	);
 	expect(onUnpublishListing).toHaveBeenCalledWith("listing-1");
 });

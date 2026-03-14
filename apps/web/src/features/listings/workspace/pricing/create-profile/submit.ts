@@ -5,7 +5,10 @@ import type { CreatePricingProfileFormValues } from "./types";
 
 export type CreatePricingProfileInput = OrpcInputs["pricing"]["createProfile"];
 
-function parsePositiveInteger(value: string, message: string): MutationResult<number> {
+function parsePositiveInteger(
+	value: string,
+	message: string
+): MutationResult<number> {
 	const parsed = Number.parseInt(value.trim(), 10);
 	if (!Number.isInteger(parsed) || parsed <= 0) {
 		return { ok: false, message };

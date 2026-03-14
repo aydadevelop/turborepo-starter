@@ -9,9 +9,69 @@ import type {
 	UpdateListingInput,
 } from "../types";
 
+type ListingCondition =
+	| ReturnType<typeof eq>
+	| NonNullable<ReturnType<typeof or>>;
+
+const buildListingSearchCondition = (search: string) => {
+	const searchCondition = or(
+		ilike(listing.name, `%${search}%`),
+		ilike(listing.slug, `%${search}%`),
+		ilike(listing.description, `%${search}%`)
+	);
+	if (!searchCondition) {
+		throw new Error("Failed to build listing search condition");
+	}
+
+	return searchCondition;
+};
+
+const buildListingConditions = (
+	input: ListListingsInput
+): ListingCondition[] => {
+	const conditions: ListingCondition[] = [
+		eq(listing.organizationId, input.organizationId),
+	];
+	const search = input.search?.trim();
+	const filter = input.filter;
+
+	if (filter?.status) {
+		conditions.push(eq(listing.status, filter.status));
+	}
+	if (filter?.listingTypeSlug) {
+		conditions.push(eq(listing.listingTypeSlug, filter.listingTypeSlug));
+	}
+	if (search) {
+		conditions.push(buildListingSearchCondition(search));
+	}
+	if (filter?.serviceFamily) {
+		conditions.push(eq(listingTypeConfig.serviceFamily, filter.serviceFamily));
+	}
+
+	return conditions;
+};
+
+const resolveListingOrderBy = (sort: ListListingsInput["sort"]) => {
+	const direction = sort?.dir ?? "desc";
+
+	if (sort?.by === "updated_at") {
+		return direction === "asc"
+			? asc(listing.updatedAt)
+			: desc(listing.updatedAt);
+	}
+	if (sort?.by === "name") {
+		return direction === "asc" ? asc(listing.name) : desc(listing.name);
+	}
+	if (sort?.by === "status") {
+		return direction === "asc" ? asc(listing.status) : desc(listing.status);
+	}
+
+	return direction === "asc" ? asc(listing.createdAt) : desc(listing.createdAt);
+};
+
 export async function insertListing(
 	values: ListingInsert,
-	db: Db,
+	db: Db
 ): Promise<ListingRow> {
 	const [row] = await db.insert(listing).values(values).returning();
 	if (!row) {
@@ -24,7 +84,7 @@ export async function insertListing(
 export async function updateListingRow(
 	input: UpdateListingInput,
 	updates: Partial<ListingInsert>,
-	db: Db,
+	db: Db
 ): Promise<ListingRow | null> {
 	const [row] = await db
 		.update(listing)
@@ -32,8 +92,8 @@ export async function updateListingRow(
 		.where(
 			and(
 				eq(listing.id, input.id),
-				eq(listing.organizationId, input.organizationId),
-			),
+				eq(listing.organizationId, input.organizationId)
+			)
 		)
 		.returning();
 
@@ -42,61 +102,21 @@ export async function updateListingRow(
 
 export async function listListingsForOrganization(
 	input: ListListingsInput,
-	db: Db,
+	db: Db
 ): Promise<ListingCollectionResult> {
 	const page = input.page ?? { limit: 20, offset: 0 };
-	const conditions = [eq(listing.organizationId, input.organizationId)];
-	const search = input.search?.trim();
-
-	if (input.filter?.status) {
-		conditions.push(eq(listing.status, input.filter.status));
-	}
-
-	if (input.filter?.listingTypeSlug) {
-		conditions.push(eq(listing.listingTypeSlug, input.filter.listingTypeSlug));
-	}
-
-	if (search) {
-		conditions.push(
-			or(
-				ilike(listing.name, `%${search}%`),
-				ilike(listing.slug, `%${search}%`),
-				ilike(listing.description, `%${search}%`),
-			)!,
-		);
-	}
-
-	const orderBy =
-		input.sort?.by === "updated_at"
-			? input.sort.dir === "asc"
-				? asc(listing.updatedAt)
-				: desc(listing.updatedAt)
-			: input.sort?.by === "name"
-				? input.sort.dir === "asc"
-					? asc(listing.name)
-					: desc(listing.name)
-				: input.sort?.by === "status"
-					? input.sort.dir === "asc"
-						? asc(listing.status)
-						: desc(listing.status)
-					: input.sort?.dir === "asc"
-						? asc(listing.createdAt)
-						: desc(listing.createdAt);
-
+	const conditions = buildListingConditions(input);
+	const orderBy = resolveListingOrderBy(input.sort);
 	const useListingTypeJoin = input.filter?.serviceFamily !== undefined;
 
 	if (useListingTypeJoin) {
-		conditions.push(
-			eq(listingTypeConfig.serviceFamily, input.filter!.serviceFamily!),
-		);
-
 		const [itemsResult, countResult] = await Promise.all([
 			db
 				.select({ row: listing })
 				.from(listing)
 				.innerJoin(
 					listingTypeConfig,
-					eq(listingTypeConfig.slug, listing.listingTypeSlug),
+					eq(listingTypeConfig.slug, listing.listingTypeSlug)
 				)
 				.where(and(...conditions))
 				.orderBy(orderBy)
@@ -107,7 +127,7 @@ export async function listListingsForOrganization(
 				.from(listing)
 				.innerJoin(
 					listingTypeConfig,
-					eq(listingTypeConfig.slug, listing.listingTypeSlug),
+					eq(listingTypeConfig.slug, listing.listingTypeSlug)
 				)
 				.where(and(...conditions)),
 		]);
@@ -126,7 +146,10 @@ export async function listListingsForOrganization(
 			.orderBy(orderBy)
 			.limit(page.limit)
 			.offset(page.offset),
-		db.select({ total: count() }).from(listing).where(and(...conditions)),
+		db
+			.select({ total: count() })
+			.from(listing)
+			.where(and(...conditions)),
 	]);
 
 	return {
@@ -138,7 +161,7 @@ export async function listListingsForOrganization(
 export async function findListingForOrganization(
 	id: string,
 	organizationId: string,
-	db: Db,
+	db: Db
 ): Promise<ListingRow | null> {
 	const [row] = await db
 		.select()

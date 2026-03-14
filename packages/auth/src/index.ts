@@ -105,65 +105,67 @@ const initAuth = () => {
 		);
 	}
 
-	return instrumentBetterAuth(betterAuth({
-		database: drizzleAdapter(db, {
-			provider: "pg",
-			schema,
-		}),
-		trustedOrigins: corsOrigins,
-		emailAndPassword: {
-			enabled: true,
-		},
-		account: {
-			accountLinking: {
+	return instrumentBetterAuth(
+		betterAuth({
+			database: drizzleAdapter(db, {
+				provider: "pg",
+				schema,
+			}),
+			trustedOrigins: corsOrigins,
+			emailAndPassword: {
 				enabled: true,
-				trustedProviders: ["email-password"],
 			},
-		},
-		session: {
-			cookieCache: {
-				enabled: true,
-				maxAge: SESSION_COOKIE_CACHE_MAX_AGE_SECONDS,
+			account: {
+				accountLinking: {
+					enabled: true,
+					trustedProviders: ["email-password"],
+				},
 			},
-		},
-		secret: env.BETTER_AUTH_SECRET,
-		// BETTER_AUTH_URL is the public URL of the auth server (api.domain/api/auth).
-		// This must be the same on all services (web, server, assistant, etc.) so they
-		// agree on cookie domain, cross-subdomain config, and OAuth redirect URLs.
-		// Do NOT use SERVER_URL here — that's the internal calling URL for assistant/notifications.
-		baseURL: env.BETTER_AUTH_URL,
-		advanced: {
-			// On localhost (HTTP), SameSite=None+Secure cookies are rejected by Playwright/Chromium.
-			// Use Lax for local dev and None+Secure only for deployed environments.
-			defaultCookieAttributes:
-				authUrl.hostname === "localhost"
-					? { sameSite: "lax" as const, httpOnly: true }
-					: { sameSite: "none" as const, secure: true, httpOnly: true },
-			...crossSubDomainCookiesConfig,
-		},
-		databaseHooks: {
 			session: {
-				create: {
-					// biome-ignore lint/suspicious/noExplicitAny: better-auth hook type is not exported
-					before: async (session: any) => {
-						const [firstMembership] = await db
-							.select({ organizationId: schema.member.organizationId })
-							.from(schema.member)
-							.where(eq(schema.member.userId, session.userId))
-							.orderBy(asc(schema.member.createdAt))
-							.limit(1);
-						return {
-							data: {
-								...session,
-								activeOrganizationId: firstMembership?.organizationId ?? null,
-							},
-						};
+				cookieCache: {
+					enabled: true,
+					maxAge: SESSION_COOKIE_CACHE_MAX_AGE_SECONDS,
+				},
+			},
+			secret: env.BETTER_AUTH_SECRET,
+			// BETTER_AUTH_URL is the public URL of the auth server (api.domain/api/auth).
+			// This must be the same on all services (web, server, assistant, etc.) so they
+			// agree on cookie domain, cross-subdomain config, and OAuth redirect URLs.
+			// Do NOT use SERVER_URL here — that's the internal calling URL for assistant/notifications.
+			baseURL: env.BETTER_AUTH_URL,
+			advanced: {
+				// On localhost (HTTP), SameSite=None+Secure cookies are rejected by Playwright/Chromium.
+				// Use Lax for local dev and None+Secure only for deployed environments.
+				defaultCookieAttributes:
+					authUrl.hostname === "localhost"
+						? { sameSite: "lax" as const, httpOnly: true }
+						: { sameSite: "none" as const, secure: true, httpOnly: true },
+				...crossSubDomainCookiesConfig,
+			},
+			databaseHooks: {
+				session: {
+					create: {
+						// biome-ignore lint/suspicious/noExplicitAny: better-auth hook type is not exported
+						before: async (session: any) => {
+							const [firstMembership] = await db
+								.select({ organizationId: schema.member.organizationId })
+								.from(schema.member)
+								.where(eq(schema.member.userId, session.userId))
+								.orderBy(asc(schema.member.createdAt))
+								.limit(1);
+							return {
+								data: {
+									...session,
+									activeOrganizationId: firstMembership?.organizationId ?? null,
+								},
+							};
+						},
 					},
 				},
 			},
-		},
-		plugins,
-	}));
+			plugins,
+		})
+	);
 };
 
 // Lazily initialize auth on first access to avoid import-time side effects

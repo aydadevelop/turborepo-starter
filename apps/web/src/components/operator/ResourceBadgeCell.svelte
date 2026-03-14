@@ -6,11 +6,7 @@
 		variant = "secondary",
 	}: {
 		label: string;
-		variant?:
-			| "default"
-			| "secondary"
-			| "destructive"
-			| "outline";
+		variant?: "default" | "secondary" | "destructive" | "outline";
 	} = $props();
 </script>
 

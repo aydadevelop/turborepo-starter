@@ -19,4 +19,6 @@
 	} = $props();
 </script>
 
-<Loader2Icon class={cn("animate-spin text-muted-foreground", sizeClasses[size], className)} />
+<Loader2Icon
+	class={cn("animate-spin text-muted-foreground", sizeClasses[size], className)}
+/>

@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
+	import { orpc } from "$lib/orpc";
 	import ResourceBadgeCell from "../../components/operator/ResourceBadgeCell.svelte";
 	import ResourceLinkCell from "../../components/operator/ResourceLinkCell.svelte";
 	import ResourceTable from "../../components/operator/ResourceTable.svelte";
 	import {
+		type ColumnDef,
 		createColumnHelper,
 		renderComponent,
-		type ColumnDef,
 	} from "../../components/operator/resource-table";
 	import SurfaceCard from "../../components/operator/SurfaceCard.svelte";
-	import { orpc } from "$lib/orpc";
 
 	const bookingsQuery = createQuery(() =>
 		orpc.booking.listMyBookings.queryOptions({ input: {} })
@@ -45,7 +45,7 @@
 
 	const columnHelper = createColumnHelper<BookingRow>();
 
-	const columns: ColumnDef<BookingRow, any>[] = [
+	const columns: ColumnDef<BookingRow, unknown>[] = [
 		columnHelper.accessor((row) => `#${row.id.slice(0, 8)}`, {
 			id: "booking",
 			header: "Booking",
@@ -98,7 +98,7 @@
 		{#snippet children()}
 			<ResourceTable
 				data={rows}
-				columns={columns}
+				{columns}
 				getRowId={(row) => row.id}
 				loading={bookingsQuery.isPending || ticketsQuery.isPending}
 				errorMessage={bookingsQuery.isError || ticketsQuery.isError

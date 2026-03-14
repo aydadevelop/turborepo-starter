@@ -2,20 +2,17 @@ import { expect, test } from "vitest";
 import { page } from "vitest/browser";
 import { renderComponent } from "../../test/browser/render";
 import ResourceTable from "./ResourceTable.svelte";
-import {
-	createColumnHelper,
-	type ColumnDef,
-} from "./resource-table";
+import { type ColumnDef, createColumnHelper } from "./resource-table";
 
-type DemoRow = {
+interface DemoRow {
 	id: string;
 	name: string;
 	status: string;
-};
+}
 
 const columnHelper = createColumnHelper<DemoRow>();
 
-const columns: ColumnDef<DemoRow, any>[] = [
+const columns: ColumnDef<DemoRow, unknown>[] = [
 	columnHelper.accessor("name", {
 		header: "Name",
 		meta: {
@@ -49,7 +46,9 @@ test("renders the empty state when no rows are provided", async () => {
 		emptyMessage: "No resources found.",
 	});
 
-	await expect.element(page.getByText("No resources found.")).toBeInTheDocument();
+	await expect
+		.element(page.getByText("No resources found."))
+		.toBeInTheDocument();
 });
 
 test("renders rows through the shared table wrapper", async () => {
@@ -64,6 +63,8 @@ test("renders rows through the shared table wrapper", async () => {
 
 	await expect.element(page.getByText("Sea Explorer")).toBeInTheDocument();
 	await expect.element(page.getByText("River Runner")).toBeInTheDocument();
-	await expect.element(page.getByTestId("resource-row-one")).toBeInTheDocument();
+	await expect
+		.element(page.getByTestId("resource-row-one"))
+		.toBeInTheDocument();
 	await expect(document.body).toMatchScreenshot("resource-table-data");
 });

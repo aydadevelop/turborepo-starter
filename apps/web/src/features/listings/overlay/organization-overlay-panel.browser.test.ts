@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { renderComponent } from "../../../test/browser/render";
 import type { OrganizationOverlaySummary } from "$lib/orpc-types";
+import { renderComponent } from "../../../test/browser/render";
 import OrganizationOverlayPanel from "./OrganizationOverlayPanel.svelte";
 
 const overlay: OrganizationOverlaySummary = {
@@ -64,10 +64,7 @@ const overlay: OrganizationOverlaySummary = {
 	},
 };
 
-async function waitForCondition(
-	check: () => boolean,
-	timeoutMs = 1000
-) {
+async function waitForCondition(check: () => boolean, timeoutMs = 1000) {
 	const startedAt = Date.now();
 
 	while (!check()) {
@@ -103,20 +100,32 @@ test("creates and resolves manual overrides through the overlay panel contract",
 
 	await expect.element(page.getByText("Manual overrides")).toBeVisible();
 	await expect.element(page.getByText("Allow manual pricing")).toBeVisible();
-	await expect.element(page.getByRole("button", { name: "Add override" })).toBeVisible();
-	await expect.element(page.getByRole("button", { name: "Publish to channel" })).toBeVisible();
-	await expect.element(page.getByRole("button", { name: "Approve listing" })).toBeVisible();
+	await expect
+		.element(page.getByRole("button", { name: "Add override" }))
+		.toBeVisible();
+	await expect
+		.element(page.getByRole("button", { name: "Publish to channel" }))
+		.toBeVisible();
+	await expect
+		.element(page.getByRole("button", { name: "Approve listing" }))
+		.toBeVisible();
 	await expect(document.body).toMatchScreenshot("organization-overlay-panel");
 
 	expect(onCreateManualOverride).not.toHaveBeenCalled();
 
-	await userEvent.click(page.getByRole("button", { name: "Publish to channel" }));
+	await userEvent.click(
+		page.getByRole("button", { name: "Publish to channel" })
+	);
 	await userEvent.selectOptions(
 		page.getByLabelText("Listing", { exact: true }),
 		"listing-1"
 	);
-	(document.querySelector('[role="dialog"] form') as HTMLFormElement | null)?.requestSubmit();
-	await waitForCondition(() => onPublishListingToChannel.mock.calls.length === 1);
+	(
+		document.querySelector('[role="dialog"] form') as HTMLFormElement | null
+	)?.requestSubmit();
+	await waitForCondition(
+		() => onPublishListingToChannel.mock.calls.length === 1
+	);
 	expect(onPublishListingToChannel).toHaveBeenCalledWith({
 		listingId: "listing-1",
 		channelType: "platform_marketplace",
@@ -132,7 +141,9 @@ test("creates and resolves manual overrides through the overlay panel contract",
 		page.getByLabelText("Moderation note"),
 		"Ready after compliance review"
 	);
-	(document.querySelector('[role="dialog"] form') as HTMLFormElement | null)?.requestSubmit();
+	(
+		document.querySelector('[role="dialog"] form') as HTMLFormElement | null
+	)?.requestSubmit();
 	await waitForCondition(() => onApproveListing.mock.calls.length === 1);
 	expect(onApproveListing).toHaveBeenCalledWith({
 		listingId: "listing-2",
@@ -143,8 +154,13 @@ test("creates and resolves manual overrides through the overlay panel contract",
 	await userEvent.click(page.getByRole("button", { name: "Add override" }));
 	await userEvent.fill(page.getByLabelText("Code"), "manual-pricing-2");
 	await userEvent.fill(page.getByLabelText("Title"), "Allow manual boarding");
-	await userEvent.fill(page.getByLabelText("Note"), "Temporary operator exception");
-	(document.querySelector('[role="dialog"] form') as HTMLFormElement | null)?.requestSubmit();
+	await userEvent.fill(
+		page.getByLabelText("Note"),
+		"Temporary operator exception"
+	);
+	(
+		document.querySelector('[role="dialog"] form') as HTMLFormElement | null
+	)?.requestSubmit();
 	await waitForCondition(() => onCreateManualOverride.mock.calls.length === 1);
 	expect(onCreateManualOverride).toHaveBeenCalledWith({
 		scopeType: "organization",

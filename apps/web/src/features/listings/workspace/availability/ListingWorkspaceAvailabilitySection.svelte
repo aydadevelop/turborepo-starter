@@ -6,12 +6,11 @@
 		CardHeader,
 		CardTitle,
 	} from "@my-app/ui/components/card";
-	import CreateAvailabilityRuleForm from "./CreateAvailabilityRuleForm.svelte";
+	import type { AvailabilityWorkspaceState } from "$lib/orpc-types";
+	import WorkspaceActionDialog from "../shared/WorkspaceActionDialog.svelte";
 	import CreateAvailabilityBlockForm from "./CreateAvailabilityBlockForm.svelte";
 	import CreateAvailabilityExceptionForm from "./CreateAvailabilityExceptionForm.svelte";
-	import WorkspaceActionDialog from "../shared/WorkspaceActionDialog.svelte";
-
-	import type { AvailabilityWorkspaceState } from "$lib/orpc-types";
+	import CreateAvailabilityRuleForm from "./CreateAvailabilityRuleForm.svelte";
 
 	let {
 		listingId,
@@ -33,26 +32,32 @@
 		exceptionErrorMessage?: string | null;
 		exceptionPending?: boolean;
 		listingId: string;
-		onAddAvailabilityBlock?: ((input: {
-			endsAt: string;
-			listingId: string;
-			reason?: string;
-			startsAt: string;
-		}) => boolean | void | Promise<boolean | void>) | null;
-		onAddAvailabilityException?: ((input: {
-			date: string;
-			endMinute?: number;
-			isAvailable: boolean;
-			listingId: string;
-			reason?: string;
-			startMinute?: number;
-		}) => boolean | void | Promise<boolean | void>) | null;
-		onAddAvailabilityRule?: ((input: {
-			dayOfWeek: number;
-			endMinute: number;
-			listingId: string;
-			startMinute: number;
-		}) => boolean | void | Promise<boolean | void>) | null;
+		onAddAvailabilityBlock?:
+			| ((input: {
+					endsAt: string;
+					listingId: string;
+					reason?: string;
+					startsAt: string;
+			  }) => boolean | undefined | Promise<boolean | undefined>)
+			| null;
+		onAddAvailabilityException?:
+			| ((input: {
+					date: string;
+					endMinute?: number;
+					isAvailable: boolean;
+					listingId: string;
+					reason?: string;
+					startMinute?: number;
+			  }) => boolean | undefined | Promise<boolean | undefined>)
+			| null;
+		onAddAvailabilityRule?:
+			| ((input: {
+					dayOfWeek: number;
+					endMinute: number;
+					listingId: string;
+					startMinute: number;
+			  }) => boolean | undefined | Promise<boolean | undefined>)
+			| null;
 		pending?: boolean;
 	} = $props();
 
@@ -169,11 +174,15 @@
 		<div class="grid gap-4 md:grid-cols-3">
 			<div class="rounded-lg border p-3 text-sm">
 				<p class="font-medium">Rules</p>
-				<p class="text-muted-foreground">{availability?.activeRuleCount ?? 0}</p>
+				<p class="text-muted-foreground">
+					{availability?.activeRuleCount ?? 0}
+				</p>
 			</div>
 			<div class="rounded-lg border p-3 text-sm">
 				<p class="font-medium">Blocks</p>
-				<p class="text-muted-foreground">{availability?.activeBlockCount ?? 0}</p>
+				<p class="text-muted-foreground">
+					{availability?.activeBlockCount ?? 0}
+				</p>
 			</div>
 			<div class="rounded-lg border p-3 text-sm">
 				<p class="font-medium">Exceptions</p>
@@ -199,7 +208,8 @@
 				<h4 class="text-sm font-medium">Current blocks</h4>
 				{#each availability.blocks as block (block.id)}
 					<div class="rounded-lg border p-3 text-sm text-muted-foreground">
-						{block.startsAt} - {block.endsAt}
+						{block.startsAt}
+						- {block.endsAt}
 						{#if block.reason}
 							<span> · {block.reason}</span>
 						{/if}
@@ -216,7 +226,8 @@
 						{exception.date}
 						{#if exception.isAvailable}
 							<span>
-								· available {exception.startMinute ?? 0}–{exception.endMinute ?? 0}
+								· available
+								{exception.startMinute ?? 0}–{exception.endMinute ?? 0}
 							</span>
 						{:else}
 							<span> · unavailable</span>

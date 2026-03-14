@@ -1,7 +1,7 @@
 <script lang="ts">
+	import OrganizationManualOverridesSection from "./OrganizationManualOverridesSection.svelte";
 	import OrganizationOverlayBlockersSection from "./OrganizationOverlayBlockersSection.svelte";
 	import OrganizationOverlayDistributionSection from "./OrganizationOverlayDistributionSection.svelte";
-	import OrganizationManualOverridesSection from "./OrganizationManualOverridesSection.svelte";
 	import OrganizationOverlayModerationSection from "./OrganizationOverlayModerationSection.svelte";
 	import OrganizationOverlayReadinessSection from "./OrganizationOverlayReadinessSection.svelte";
 	import OrganizationOverlaySummaryCards from "./OrganizationOverlaySummaryCards.svelte";

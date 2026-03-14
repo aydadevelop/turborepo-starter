@@ -8,8 +8,8 @@
 		CardHeader,
 		CardTitle,
 	} from "@my-app/ui/components/card";
-	import ListingPublicationButton from "../../../components/org/ListingPublicationButton.svelte";
 	import type { ListingListItem } from "$lib/orpc-types";
+	import ListingPublicationButton from "../../../components/org/ListingPublicationButton.svelte";
 
 	let {
 		listings,
@@ -19,25 +19,17 @@
 		total: number;
 	} = $props();
 
-	const getPublicationState = (item: {
-		status: string;
-		isActive: boolean;
-	}) => item.status === "active" && item.isActive;
+	const getPublicationState = (item: { status: string; isActive: boolean }) =>
+		item.status === "active" && item.isActive;
 
-	const getStatusLabel = (item: {
-		status: string;
-		isActive: boolean;
-	}) => {
+	const getStatusLabel = (item: { status: string; isActive: boolean }) => {
 		if (getPublicationState(item)) return "Published";
 		if (item.status === "draft") return "Draft";
 		if (!item.isActive || item.status === "inactive") return "Unpublished";
 		return item.status;
 	};
 
-	const getStatusVariant = (item: {
-		status: string;
-		isActive: boolean;
-	}) => {
+	const getStatusVariant = (item: { status: string; isActive: boolean }) => {
 		if (getPublicationState(item)) return "default" as const;
 		if (item.status === "draft") return "secondary" as const;
 		return "outline" as const;
@@ -53,7 +45,8 @@
 					<div class="space-y-1">
 						<CardTitle>{item.name}</CardTitle>
 						<CardDescription>
-							/{item.slug} · {item.listingTypeSlug}
+							/{item.slug}
+							· {item.listingTypeSlug}
 						</CardDescription>
 					</div>
 					<Badge variant={getStatusVariant(item)}>{getStatusLabel(item)}</Badge>
@@ -68,7 +61,9 @@
 					<p class="text-sm text-muted-foreground">No description yet.</p>
 				{/if}
 
-				<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<div
+					class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+				>
 					<Button href={`/org/listings/${item.id}`} variant="outline">
 						Edit listing
 					</Button>
@@ -80,5 +75,6 @@
 </div>
 
 <p class="text-sm text-muted-foreground">
-	{total} listing{total === 1 ? "" : "s"}
+	{total}
+	listing{total === 1 ? "" : "s"}
 </p>

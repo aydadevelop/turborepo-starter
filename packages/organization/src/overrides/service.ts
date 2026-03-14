@@ -1,20 +1,19 @@
 import { db as defaultDb } from "@my-app/db";
-
+import type { Db, OrganizationManualOverrideRow } from "../types";
 import {
 	insertOrganizationManualOverride,
 	listActiveOrganizationManualOverrides,
 	resolveOrganizationManualOverride as resolveOrganizationManualOverrideRow,
 } from "./repository";
-import type { Db, OrganizationManualOverrideRow } from "../types";
 
-export const listOrganizationManualOverrides = async (
+export const listOrganizationManualOverrides = (
 	organizationId: string,
 	db: Db = defaultDb
 ): Promise<OrganizationManualOverrideRow[]> => {
 	return listActiveOrganizationManualOverrides(organizationId, db);
 };
 
-export const createOrganizationManualOverride = async (
+export const createOrganizationManualOverride = (
 	input: {
 		code: string;
 		createdByUserId?: string;

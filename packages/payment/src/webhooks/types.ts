@@ -12,7 +12,7 @@ export interface PaymentWebhookAdapter {
 
 	processWebhook(
 		webhookType: string,
-		payload: unknown,
+		payload: unknown
 	): Promise<PaymentWebhookResult>;
 	readonly provider: PaymentProvider;
 	readonly supportedWebhookTypes: ReadonlySet<string>;

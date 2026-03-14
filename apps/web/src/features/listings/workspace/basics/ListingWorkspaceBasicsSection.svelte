@@ -1,5 +1,4 @@
 <script lang="ts">
-	import ListingEditorForm from "../../../../components/org/ListingEditorForm.svelte";
 	import { Badge } from "@my-app/ui/components/badge";
 	import {
 		Card,
@@ -8,13 +7,13 @@
 		CardHeader,
 		CardTitle,
 	} from "@my-app/ui/components/card";
-	import WorkspaceActionDialog from "../shared/WorkspaceActionDialog.svelte";
-
 	import type {
 		ListingTypeOption,
 		ListingWorkspaceState,
 		OrpcInputs,
 	} from "$lib/orpc-types";
+	import ListingEditorForm from "../../../../components/org/ListingEditorForm.svelte";
+	import WorkspaceActionDialog from "../shared/WorkspaceActionDialog.svelte";
 	import type { ListingWorkspaceInitialValue } from "../types";
 
 	let {
@@ -27,9 +26,11 @@
 	}: {
 		initialValue?: ListingWorkspaceInitialValue | null;
 		listingTypeOptions?: ListingTypeOption[];
-		onUpdateListing?: ((
-			input: OrpcInputs["listing"]["create"]
-		) => boolean | void | Promise<boolean | void>) | null;
+		onUpdateListing?:
+			| ((
+					input: OrpcInputs["listing"]["create"]
+			  ) => boolean | undefined | Promise<boolean | undefined>)
+			| null;
 		updateErrorMessage?: string | null;
 		updatePending?: boolean;
 		workspace: ListingWorkspaceState;
@@ -167,7 +168,7 @@
 					{#snippet children()}
 						<ListingEditorForm
 							mode="edit"
-							initialValue={initialValue}
+							{initialValue}
 							{listingTypeOptions}
 							submitLabel="Save basics"
 							pending={updatePending}

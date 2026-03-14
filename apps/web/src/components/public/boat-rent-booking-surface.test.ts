@@ -15,7 +15,7 @@ describe("boat-rent booking surface helpers", () => {
 				requestedDurationMinutes: 120,
 				passengerCount: 4,
 				appliedDiscountCode: " spring10 ",
-			}),
+			})
 		).toBeNull();
 
 		expect(
@@ -25,7 +25,7 @@ describe("boat-rent booking surface helpers", () => {
 				requestedDurationMinutes: 120,
 				passengerCount: 4,
 				appliedDiscountCode: " spring10 ",
-			}),
+			})
 		).toEqual({
 			listingId: "listing_1",
 			date: "2030-01-15",
@@ -48,7 +48,7 @@ describe("boat-rent booking surface helpers", () => {
 				notes: "Sunset cruise",
 				specialRequests: "Champagne",
 				discountCode: " save10 ",
-			}),
+			})
 		).toBeNull();
 
 		expect(
@@ -70,7 +70,7 @@ describe("boat-rent booking surface helpers", () => {
 						currency: "RUB",
 						durationMinutes: 120,
 						baseCents: 10_000,
-						adjustmentCents: 2_000,
+						adjustmentCents: 2000,
 						subtotalCents: 12_000,
 						serviceFeeCents: 0,
 						taxCents: 0,
@@ -87,7 +87,7 @@ describe("boat-rent booking surface helpers", () => {
 				notes: "Sunset cruise",
 				specialRequests: "Champagne",
 				discountCode: " save10 ",
-			}),
+			})
 		).toEqual({
 			listingId: "listing_1",
 			startsAt: "2030-01-15T10:00:00.000Z",
@@ -115,7 +115,7 @@ describe("boat-rent booking surface helpers", () => {
 				currency: "RUB",
 				durationMinutes: 120,
 				baseCents: 10_000,
-				adjustmentCents: 2_000,
+				adjustmentCents: 2000,
 				subtotalCents: 12_000,
 				serviceFeeCents: 600,
 				taxCents: 360,
@@ -126,16 +126,16 @@ describe("boat-rent booking surface helpers", () => {
 					status: "applied",
 					reasonCode: null,
 					reasonLabel: null,
-					appliedAmountCents: 1_200,
+					appliedAmountCents: 1200,
 					discountedSubtotalCents: 10_800,
 					discountedServiceFeeCents: 540,
 					discountedTaxCents: 324,
 					discountedTotalCents: 11_664,
 				},
-			}),
+			})
 		).toEqual({
 			appliedDiscountCode: "SPRING10",
-			discountAmountCents: 1_200,
+			discountAmountCents: 1200,
 			feeAndTaxCents: 864,
 			subtotalCents: 10_800,
 			totalCents: 11_664,

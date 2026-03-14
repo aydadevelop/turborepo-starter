@@ -98,7 +98,7 @@ describe("resolveBookingActionWindowPolicyProfile", () => {
 
 	it("returns default when metadata has no bookingActionPolicy key", () => {
 		const profile = resolveBookingActionWindowPolicyProfile(
-			JSON.stringify({ somethingElse: true }),
+			JSON.stringify({ somethingElse: true })
 		);
 		expect(profile).toEqual(defaultBookingActionWindowPolicyProfile);
 	});
@@ -110,12 +110,10 @@ describe("resolveBookingActionWindowPolicyProfile", () => {
 			},
 		});
 		const profile = resolveBookingActionWindowPolicyProfile(metadata);
-		expect(
-			profile.cancellation.customerLatestHoursBeforeStart,
-		).toBe(24);
+		expect(profile.cancellation.customerLatestHoursBeforeStart).toBe(24);
 		// Other fields unchanged
 		expect(profile.shift).toEqual(
-			defaultBookingActionWindowPolicyProfile.shift,
+			defaultBookingActionWindowPolicyProfile.shift
 		);
 	});
 });

@@ -20,7 +20,7 @@ const normalizeMessageId = (value: string | undefined): string | null => {
 
 export const toProcessInboundSupportIntentFromEmail = (
 	payload: SupportEmailIntakePayload,
-	organizationId: string,
+	organizationId: string
 ): ProcessInboundSupportIntentInput => {
 	const normalizedMessageId =
 		normalizeMessageId(payload.messageId) ?? payload.messageId.trim();

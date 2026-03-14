@@ -1,4 +1,3 @@
-import { and, asc, eq, gt, inArray, lt } from "drizzle-orm";
 import {
 	listingAvailabilityBlock,
 	listingAvailabilityException,
@@ -12,9 +11,10 @@ import {
 	listingTypeConfig,
 } from "@my-app/db/schema/marketplace";
 import {
-	resolveDefaultPricingContext,
 	type ResolvedPricingContext,
+	resolveDefaultPricingContext,
 } from "@my-app/pricing";
+import { and, asc, eq, gt, inArray, lt } from "drizzle-orm";
 import { blockingBookingStatuses } from "../overlap";
 import type { Db, PublicBookingSurfaceInput } from "../types";
 import type {
@@ -26,27 +26,27 @@ import type {
 
 export interface PublicSurfaceListingRow {
 	id: string;
-	organizationId: string;
-	timezone: string;
-	serviceFamily: string;
 	minimumDurationMinutes: number;
 	minimumNoticeMinutes: number;
-	workingHoursStart: number;
+	organizationId: string;
+	serviceFamily: string;
+	timezone: string;
 	workingHoursEnd: number;
+	workingHoursStart: number;
 }
 
 export interface PublicSurfaceQueryState {
-	listing: PublicSurfaceListingRow;
-	rules: AvailabilityRuleWindow[];
-	exception: AvailabilityExceptionWindow | undefined;
 	busyWindows: BusyWindow[];
+	exception: AvailabilityExceptionWindow | undefined;
+	listing: PublicSurfaceListingRow;
 	minimumDurationRules: MinimumDurationRuleWindow[];
 	pricingContext: ResolvedPricingContext | null;
+	rules: AvailabilityRuleWindow[];
 }
 
 export const loadPublicBookingSurfaceListing = async (
 	listingId: string,
-	db: Db,
+	db: Db
 ): Promise<PublicSurfaceListingRow> => {
 	const [listingRow] = await db
 		.select({
@@ -65,12 +65,12 @@ export const loadPublicBookingSurfaceListing = async (
 			and(
 				eq(listingPublication.listingId, listing.id),
 				eq(listingPublication.isActive, true),
-				eq(listingPublication.channelType, "platform_marketplace"),
-			),
+				eq(listingPublication.channelType, "platform_marketplace")
+			)
 		)
 		.innerJoin(
 			listingTypeConfig,
-			eq(listingTypeConfig.slug, listing.listingTypeSlug),
+			eq(listingTypeConfig.slug, listing.listingTypeSlug)
 		)
 		.where(and(eq(listing.id, listingId), eq(listing.isActive, true)))
 		.limit(1);
@@ -93,7 +93,7 @@ export const loadPublicBookingSurfaceState = async (
 		weekday: number;
 	},
 	listingRow: PublicSurfaceListingRow,
-	db: Db,
+	db: Db
 ): Promise<PublicSurfaceQueryState> => {
 	const [
 		rules,
@@ -113,12 +113,12 @@ export const loadPublicBookingSurfaceState = async (
 				and(
 					eq(listingAvailabilityRule.listingId, input.listingId),
 					eq(listingAvailabilityRule.dayOfWeek, input.weekday),
-					eq(listingAvailabilityRule.isActive, true),
-				),
+					eq(listingAvailabilityRule.isActive, true)
+				)
 			)
 			.orderBy(
 				asc(listingAvailabilityRule.startMinute),
-				asc(listingAvailabilityRule.endMinute),
+				asc(listingAvailabilityRule.endMinute)
 			),
 		db
 			.select({
@@ -130,8 +130,8 @@ export const loadPublicBookingSurfaceState = async (
 			.where(
 				and(
 					eq(listingAvailabilityException.listingId, input.listingId),
-					eq(listingAvailabilityException.date, input.date),
-				),
+					eq(listingAvailabilityException.date, input.date)
+				)
 			)
 			.limit(1),
 		db
@@ -147,8 +147,8 @@ export const loadPublicBookingSurfaceState = async (
 					eq(listingAvailabilityBlock.listingId, input.listingId),
 					eq(listingAvailabilityBlock.isActive, true),
 					lt(listingAvailabilityBlock.startsAt, input.dayEnd),
-					gt(listingAvailabilityBlock.endsAt, input.dayStart),
-				),
+					gt(listingAvailabilityBlock.endsAt, input.dayStart)
+				)
 			),
 		db
 			.select({
@@ -161,8 +161,8 @@ export const loadPublicBookingSurfaceState = async (
 					eq(booking.listingId, input.listingId),
 					inArray(booking.status, [...blockingBookingStatuses]),
 					lt(booking.startsAt, input.dayEnd),
-					gt(booking.endsAt, input.dayStart),
-				),
+					gt(booking.endsAt, input.dayStart)
+				)
 			),
 		db
 			.select({
@@ -178,8 +178,8 @@ export const loadPublicBookingSurfaceState = async (
 			.where(
 				and(
 					eq(listingMinimumDurationRule.listingId, input.listingId),
-					eq(listingMinimumDurationRule.isActive, true),
-				),
+					eq(listingMinimumDurationRule.isActive, true)
+				)
 			),
 		resolveDefaultPricingContext(input.listingId, db),
 	]);

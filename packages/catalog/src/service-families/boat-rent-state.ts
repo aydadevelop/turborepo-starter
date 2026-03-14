@@ -1,5 +1,5 @@
-import { and, eq } from "drizzle-orm";
 import { listingBoatRentProfile } from "@my-app/db/schema/marketplace";
+import { and, eq } from "drizzle-orm";
 
 import type {
 	Db,

@@ -7,10 +7,8 @@ import type {
 
 export type Db = typeof db;
 
-export type AvailabilityRuleRow =
-	typeof listingAvailabilityRule.$inferSelect;
-export type AvailabilityBlockRow =
-	typeof listingAvailabilityBlock.$inferSelect;
+export type AvailabilityRuleRow = typeof listingAvailabilityRule.$inferSelect;
+export type AvailabilityBlockRow = typeof listingAvailabilityBlock.$inferSelect;
 export type AvailabilityExceptionRow =
 	typeof listingAvailabilityException.$inferSelect;
 
@@ -25,27 +23,27 @@ export interface AvailabilityWorkspaceState {
 }
 
 export interface CreateAvailabilityRuleInput {
+	dayOfWeek: number;
+	endMinute: number;
 	listingId: string;
 	organizationId: string;
-	dayOfWeek: number;
 	startMinute: number;
-	endMinute: number;
 }
 
 export interface CreateAvailabilityBlockInput {
+	endsAt: Date;
 	listingId: string;
 	organizationId: string;
-	startsAt: Date;
-	endsAt: Date;
 	reason?: string;
+	startsAt: Date;
 }
 
 export interface CreateAvailabilityExceptionInput {
+	date: string;
+	endMinute?: number;
+	isAvailable: boolean;
 	listingId: string;
 	organizationId: string;
-	date: string;
-	isAvailable: boolean;
-	startMinute?: number;
-	endMinute?: number;
 	reason?: string;
+	startMinute?: number;
 }

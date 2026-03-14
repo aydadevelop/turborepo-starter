@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { renderComponent } from "../../../../test/browser/render";
 import type { CalendarWorkspaceState } from "$lib/orpc-types";
+import { renderComponent } from "../../../../test/browser/render";
 import ListingWorkspaceCalendarSection from "./ListingWorkspaceCalendarSection.svelte";
 
 const calendar: CalendarWorkspaceState = {
@@ -86,13 +86,18 @@ test("opens calendar discovery actions in a manage dialog", async () => {
 
 	renderComponent(ListingWorkspaceCalendarSection, {
 		calendar,
-		googleCalendarConnectUrl: "http://localhost:43100/api/calendar/oauth/google/start",
+		googleCalendarConnectUrl:
+			"http://localhost:43100/api/calendar/oauth/google/start",
 		onRefreshCalendarAccountSources,
 		onAttachCalendarSource,
 	});
 
-	await expect.element(page.getByRole("link", { name: "Connect Google" })).toBeVisible();
-	await expect.element(page.getByRole("button", { name: "Manage calendars" })).toBeVisible();
+	await expect
+		.element(page.getByRole("link", { name: "Connect Google" }))
+		.toBeVisible();
+	await expect
+		.element(page.getByRole("button", { name: "Manage calendars" }))
+		.toBeVisible();
 	await expect(document.body).toMatchScreenshot(
 		"listing-workspace-calendar-section"
 	);
@@ -104,7 +109,9 @@ test("opens calendar discovery actions in a manage dialog", async () => {
 	await expect.element(page.getByText("Fleet Primary").first()).toBeVisible();
 	await expect.element(page.getByText("Fleet Backup").first()).toBeVisible();
 
-	await userEvent.click(page.getByRole("button", { name: "Refresh calendars" }));
+	await userEvent.click(
+		page.getByRole("button", { name: "Refresh calendars" })
+	);
 	expect(onRefreshCalendarAccountSources).toHaveBeenCalledWith("account-1");
 
 	await userEvent.click(page.getByRole("button", { name: "Attach" }));

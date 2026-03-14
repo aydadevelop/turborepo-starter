@@ -1,7 +1,7 @@
 <script lang="ts">
-	import ChatEmptyStateScreen from "../../../features/chat/ChatEmptyStateScreen.svelte";
 	import type { CreateMutationResult } from "@tanstack/svelte-query";
 	import { getContext } from "svelte";
+	import ChatEmptyStateScreen from "../../../features/chat/ChatEmptyStateScreen.svelte";
 
 	const createChat =
 		getContext<

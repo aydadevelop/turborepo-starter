@@ -1,12 +1,4 @@
-export type {
-	AvailabilityBlockRow,
-	AvailabilityExceptionRow,
-	AvailabilityRuleRow,
-	AvailabilityWorkspaceState,
-	CreateAvailabilityBlockInput,
-	CreateAvailabilityExceptionInput,
-	CreateAvailabilityRuleInput,
-} from "./types";
+// biome-ignore lint/performance/noBarrelFile: Availability entrypoint re-exports supported availability APIs.
 export {
 	assertSlotAvailable,
 	checkSlotAvailable,
@@ -18,4 +10,13 @@ export {
 	deleteAvailabilityRule,
 	listAvailabilityRules,
 } from "./availability-service";
+export type {
+	AvailabilityBlockRow,
+	AvailabilityExceptionRow,
+	AvailabilityRuleRow,
+	AvailabilityWorkspaceState,
+	CreateAvailabilityBlockInput,
+	CreateAvailabilityExceptionInput,
+	CreateAvailabilityRuleInput,
+} from "./types";
 export { getAvailabilityWorkspaceState as getListingAvailabilityWorkspaceState } from "./workspace-state";

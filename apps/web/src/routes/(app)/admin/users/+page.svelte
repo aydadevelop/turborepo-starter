@@ -3,17 +3,17 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
+	import { orpc } from "$lib/orpc";
 	import DataTable from "../../../../components/operator/DataTable.svelte";
 	import { createDataTableState } from "../../../../components/operator/data-table-state.svelte";
 	import ResourceBadgeCell from "../../../../components/operator/ResourceBadgeCell.svelte";
 	import {
+		type ColumnDef,
 		createColumnHelper,
 		renderComponent,
-		type ColumnDef,
 	} from "../../../../components/operator/resource-table";
 	import SurfaceCard from "../../../../components/operator/SurfaceCard.svelte";
 	import Text from "../../../../components/operator/Text.svelte";
-	import { orpc } from "$lib/orpc";
 	import AdminUserActionsCell from "./AdminUserActionsCell.svelte";
 
 	let impersonating = $state(false);
@@ -58,7 +58,7 @@
 
 	const columnHelper = createColumnHelper<UserRow>();
 
-	const columns: ColumnDef<UserRow, any>[] = [
+	const columns: ColumnDef<UserRow, unknown>[] = [
 		columnHelper.accessor("name", {
 			header: "Name",
 			meta: {
@@ -103,7 +103,9 @@
 					? renderComponent(AdminUserActionsCell, {
 							pending: impersonating,
 							dataTestId: `impersonate-user-${row.original.id}`,
-							onImpersonate: () => void handleImpersonate(row.original.id),
+							onImpersonate: () => {
+								handleImpersonate(row.original.id);
+							},
 						})
 					: null,
 		}),

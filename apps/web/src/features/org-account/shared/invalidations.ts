@@ -1,10 +1,11 @@
-import { invalidationKeys } from "$lib/invalidation";
-
-export {
-	type InvalidationKey,
-	invalidateQueryKeys,
-	invalidationKeys,
+import {
+	invalidateQueryKeys as baseInvalidateQueryKeys,
+	invalidationKeys as baseInvalidationKeys,
 } from "$lib/invalidation";
+
+export type { InvalidationKey } from "$lib/invalidation";
+export const invalidateQueryKeys = baseInvalidateQueryKeys;
+export const invalidationKeys = baseInvalidationKeys;
 
 /**
  * @deprecated Use `invalidationKeys.organizationStructure()` from `$lib/invalidation`.

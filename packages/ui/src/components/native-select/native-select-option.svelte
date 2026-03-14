@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { HTMLOptionAttributes } from "svelte/elements";
 	import type { WithElementRef } from "@my-app/ui/lib/utils";
+	import type { HTMLOptionAttributes } from "svelte/elements";
 
 	let {
 		ref = $bindable(null),

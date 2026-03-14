@@ -51,7 +51,7 @@ const pricingWorkspaceStateOutput = z.object({
 			profileId: z.string(),
 			totalRuleCount: z.number().int(),
 			activeRuleCount: z.number().int(),
-		}),
+		})
 	),
 	profiles: z.array(pricingProfileOutput),
 	totalActiveRuleCount: z.number().int(),
@@ -71,7 +71,7 @@ export const pricingContract = {
 				serviceFeeBps: z.number().int().min(0).optional(),
 				taxBps: z.number().int().min(0).optional(),
 				isDefault: z.boolean().optional(),
-			}),
+			})
 		)
 		.output(pricingProfileOutput),
 
@@ -85,7 +85,7 @@ export const pricingContract = {
 				serviceFeeBps: z.number().int().min(0).optional(),
 				taxBps: z.number().int().min(0).optional(),
 				isDefault: z.boolean().optional(),
-			}),
+			})
 		)
 		.output(pricingProfileOutput),
 
@@ -95,7 +95,10 @@ export const pricingContract = {
 		.output(z.array(pricingProfileOutput)),
 
 	getWorkspaceState: oc
-		.route({ tags: ["Pricing"], summary: "Get pricing workspace state for a listing" })
+		.route({
+			tags: ["Pricing"],
+			summary: "Get pricing workspace state for a listing",
+		})
 		.input(z.object({ listingId: z.string() }))
 		.output(pricingWorkspaceStateOutput),
 
@@ -111,7 +114,7 @@ export const pricingContract = {
 				adjustmentType: z.enum(["percent", "flat_cents"]),
 				adjustmentValue: z.number().int(),
 				priority: z.number().int().optional(),
-			}),
+			})
 		)
 		.output(pricingRuleOutput),
 
@@ -128,7 +131,7 @@ export const pricingContract = {
 				startsAt: z.string().datetime(),
 				endsAt: z.string().datetime(),
 				passengers: z.number().int().positive().optional(),
-			}),
+			})
 		)
 		.output(quoteBreakdownOutput),
 };

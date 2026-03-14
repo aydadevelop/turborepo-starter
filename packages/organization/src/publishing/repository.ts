@@ -1,7 +1,7 @@
 import { db as defaultDb } from "@my-app/db";
 import { listing, listingPublication } from "@my-app/db/schema/marketplace";
 import { and, count, eq, isNull, sql } from "drizzle-orm";
-
+import { ensureOrganizationListingExists } from "../moderation/repository";
 import type {
 	Db,
 	OrganizationDistributionSummary,
@@ -9,75 +9,80 @@ import type {
 	OrganizationPublicationChannelType,
 	OrganizationPublishingSummary,
 } from "../types";
-import { ensureOrganizationListingExists } from "../moderation/repository";
 
 export async function resolveOrganizationPublishingSummary(
 	organizationId: string,
 	db: Db = defaultDb
 ): Promise<OrganizationPublishingSummary> {
-	const [totalRow, draftRow, publishedRow, unpublishedRow, activePubRow, reviewRow] =
-		await Promise.all([
-			db
-				.select({ count: count() })
-				.from(listing)
-				.where(eq(listing.organizationId, organizationId)),
-			db
-				.select({ count: count() })
-				.from(listing)
-				.where(
-					and(
-						eq(listing.organizationId, organizationId),
-						eq(listing.status, "draft")
-					)
-				),
-			db
-				.select({
-					count: sql<number>`count(distinct ${listingPublication.listingId})`,
-				})
-				.from(listingPublication)
-				.where(
-					and(
-						eq(listingPublication.organizationId, organizationId),
-						eq(listingPublication.isActive, true)
-					)
-				),
-			db
-				.select({ count: count() })
-				.from(listing)
-				.where(
-					and(
-						eq(listing.organizationId, organizationId),
-						eq(listing.status, "inactive")
-					)
-				),
-			db
-				.select({ count: count() })
-				.from(listingPublication)
-				.where(
-					and(
-						eq(listingPublication.organizationId, organizationId),
-						eq(listingPublication.isActive, true)
-					)
-				),
-			db
-				.select({
-					count: sql<number>`count(distinct ${listing.id})`,
-				})
-				.from(listing)
-				.innerJoin(
-					listingPublication,
-					and(
-						eq(listingPublication.listingId, listing.id),
-						eq(listingPublication.isActive, true)
-					)
+	const [
+		totalRow,
+		draftRow,
+		publishedRow,
+		unpublishedRow,
+		activePubRow,
+		reviewRow,
+	] = await Promise.all([
+		db
+			.select({ count: count() })
+			.from(listing)
+			.where(eq(listing.organizationId, organizationId)),
+		db
+			.select({ count: count() })
+			.from(listing)
+			.where(
+				and(
+					eq(listing.organizationId, organizationId),
+					eq(listing.status, "draft")
 				)
-				.where(
-					and(
-						eq(listing.organizationId, organizationId),
-						isNull(listing.approvedAt)
-					)
-				),
-		]);
+			),
+		db
+			.select({
+				count: sql<number>`count(distinct ${listingPublication.listingId})`,
+			})
+			.from(listingPublication)
+			.where(
+				and(
+					eq(listingPublication.organizationId, organizationId),
+					eq(listingPublication.isActive, true)
+				)
+			),
+		db
+			.select({ count: count() })
+			.from(listing)
+			.where(
+				and(
+					eq(listing.organizationId, organizationId),
+					eq(listing.status, "inactive")
+				)
+			),
+		db
+			.select({ count: count() })
+			.from(listingPublication)
+			.where(
+				and(
+					eq(listingPublication.organizationId, organizationId),
+					eq(listingPublication.isActive, true)
+				)
+			),
+		db
+			.select({
+				count: sql<number>`count(distinct ${listing.id})`,
+			})
+			.from(listing)
+			.innerJoin(
+				listingPublication,
+				and(
+					eq(listingPublication.listingId, listing.id),
+					eq(listingPublication.isActive, true)
+				)
+			)
+			.where(
+				and(
+					eq(listing.organizationId, organizationId),
+					isNull(listing.approvedAt)
+				)
+			),
+	]);
 
 	return {
 		totalListingCount: Number(totalRow[0]?.count ?? 0),
@@ -126,7 +131,7 @@ export async function resolveOrganizationDistributionSummary(
 						where ${listingPublication.listingId} = ${listing.id}
 							and ${listingPublication.organizationId} = ${organizationId}
 							and ${listingPublication.isActive} = true
-					)`,
+					)`
 				)
 			),
 	]);
@@ -160,9 +165,7 @@ export async function resolveOrganizationListingDistributionState(
 
 	const activeChannels = rows.map((row) => row.channelType);
 	const supportedChannels = activeChannels.filter(
-		(
-			channelType
-		): channelType is OrganizationPublicationChannelType =>
+		(channelType): channelType is OrganizationPublicationChannelType =>
 			channelType === "own_site" || channelType === "platform_marketplace"
 	);
 

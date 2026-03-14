@@ -1,7 +1,11 @@
-import { and, count, eq, isNull, lt } from "drizzle-orm";
 import { supportTicket } from "@my-app/db/schema/support";
+import { and, count, eq, isNull, lt } from "drizzle-orm";
 
-import type { Db, SupportOperatorSummary, SupportTicketStatus } from "../shared/types";
+import type {
+	Db,
+	SupportOperatorSummary,
+	SupportTicketStatus,
+} from "../shared/types";
 
 async function countByStatus(
 	organizationId: string,

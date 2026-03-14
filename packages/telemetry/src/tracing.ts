@@ -1,8 +1,8 @@
 import {
+	context as otelContext,
 	type Span,
 	SpanKind,
 	SpanStatusCode,
-	context as otelContext,
 	trace,
 } from "@opentelemetry/api";
 import { os } from "@orpc/server";
@@ -23,7 +23,7 @@ const TRACER_NAME = "@my-app/telemetry/orpc";
  *   import { tracingMiddleware } from "@my-app/telemetry/tracing";
  *   export const publicProcedure = o.use(tracingMiddleware);
  */
-export const tracingMiddleware = os.middleware(async ({ next, path }) => {
+export const tracingMiddleware = os.middleware(({ next, path }) => {
 	const tracer = trace.getTracer(TRACER_NAME);
 	const procedurePath = path.join(".");
 	const spanName = `rpc ${procedurePath}`;
@@ -53,8 +53,7 @@ export const tracingMiddleware = os.middleware(async ({ next, path }) => {
 			} catch (error: unknown) {
 				span.setStatus({
 					code: SpanStatusCode.ERROR,
-					message:
-						error instanceof Error ? error.message : String(error),
+					message: error instanceof Error ? error.message : String(error),
 				});
 				if (error instanceof Error) {
 					span.recordException(error);
@@ -73,6 +72,6 @@ export const tracingMiddleware = os.middleware(async ({ next, path }) => {
 			} finally {
 				span.end();
 			}
-		},
+		}
 	);
 });

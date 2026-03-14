@@ -3,7 +3,9 @@ import { type Component, flushSync, mount, unmount } from "svelte";
 import { page } from "vitest/browser";
 import QueryHarness from "./QueryHarness.svelte";
 
-type BrowserRenderable = Component<any>;
+type BrowserRenderable<
+	Props extends Record<string, unknown> = Record<string, unknown>,
+> = Component<Props>;
 
 const DEFAULT_QUERY_OPTIONS: DefaultOptions = {
 	queries: {
@@ -39,13 +41,13 @@ export const cleanupBrowserMounts = async () => {
 };
 
 export const renderComponent = <Props extends Record<string, unknown>>(
-	component: Component<any>,
+	component: Component<Props>,
 	props: Props
 ) => {
 	const target = document.createElement("div");
 	document.body.append(target);
 
-	const instance = mount(component as unknown as BrowserRenderable, {
+	const instance = mount(component as unknown as BrowserRenderable<Props>, {
 		target,
 		props: props as Record<string, unknown>,
 	});
@@ -59,7 +61,7 @@ export const renderComponent = <Props extends Record<string, unknown>>(
 };
 
 export const renderWithQueryClient = <Props extends Record<string, unknown>>(
-	component: Component<any>,
+	component: Component<Props>,
 	props?: Props
 ) => {
 	const target = document.createElement("div");
@@ -73,7 +75,7 @@ export const renderWithQueryClient = <Props extends Record<string, unknown>>(
 		target,
 		props: {
 			client,
-			component: component as unknown as BrowserRenderable,
+			component: component as unknown as BrowserRenderable<Props>,
 			props: (props ?? {}) as Record<string, unknown>,
 		},
 	});

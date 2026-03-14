@@ -3,15 +3,15 @@ import { z } from "zod";
 const timeString = z.string().regex(/^\d{2}:\d{2}$/, "Use HH:MM time format.");
 
 function parseMinute(time: string): number {
-	const [hours, minutes] = time.split(":").map((part) => Number.parseInt(part, 10));
+	const [hours, minutes] = time
+		.split(":")
+		.map((part) => Number.parseInt(part, 10));
 	return hours * 60 + minutes;
 }
 
 export const createAvailabilityRuleSchema = z
 	.object({
-		dayOfWeek: z
-			.string()
-			.regex(/^[0-6]$/, "Select a valid day of the week."),
+		dayOfWeek: z.string().regex(/^[0-6]$/, "Select a valid day of the week."),
 		startTime: timeString,
 		endTime: timeString,
 	})

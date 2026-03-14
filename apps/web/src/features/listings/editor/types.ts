@@ -9,7 +9,7 @@ export type ListingEditorMode = "create" | "edit";
 
 export type ListingEditorSubmitValues = OrpcInputs["listing"]["create"];
 
-export type ListingEditorInitialValue = {
+export interface ListingEditorInitialValue {
 	description?: string | null;
 	listingTypeSlug?: string;
 	metadata?: Record<string, unknown> | null;
@@ -20,9 +20,9 @@ export type ListingEditorInitialValue = {
 	};
 	slug?: string;
 	timezone?: string | null;
-};
+}
 
-export type ListingEditorFormValues = {
+export interface ListingEditorFormValues {
 	boatRentBasePort: string;
 	boatRentCapacity: string;
 	boatRentCaptainMode: ListingBoatRentProfileState["captainMode"];
@@ -44,9 +44,9 @@ export type ListingEditorFormValues = {
 	name: string;
 	slug: string;
 	timezone: string;
-};
+}
 
-export type ListingEditorContext = {
+export interface ListingEditorContext {
 	listingTypeOptions: ListingTypeOption[];
 	mode: ListingEditorMode;
-};
+}

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { cn } from "@my-app/ui/lib/utils";
 	import {
 		Content as DialogContent,
 		Description as DialogDescription,
@@ -7,6 +6,7 @@
 		Root as DialogRoot,
 		Title as DialogTitle,
 	} from "@my-app/ui/components/dialog";
+	import { cn } from "@my-app/ui/lib/utils";
 	import type { Snippet } from "svelte";
 
 	/**
@@ -59,9 +59,7 @@
 		</div>
 
 		{#if footer}
-			<div class="border-t pt-4 flex justify-end gap-2">
-				{@render footer()}
-			</div>
+			<div class="border-t pt-4 flex justify-end gap-2">{@render footer()}</div>
 		{/if}
 	</DialogContent>
 </DialogRoot>

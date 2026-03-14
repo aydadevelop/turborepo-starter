@@ -17,11 +17,11 @@
 	} = $props();
 </script>
 
-<div class={cn("flex flex-col items-center justify-center gap-3 py-12 text-center", className)}>
+<div
+	class={cn("flex flex-col items-center justify-center gap-3 py-12 text-center", className)}
+>
 	{#if icon}
-		<div class="text-muted-foreground">
-			{@render icon()}
-		</div>
+		<div class="text-muted-foreground">{@render icon()}</div>
 	{/if}
 	<div class="space-y-1">
 		<p class="text-sm font-medium text-foreground">{title}</p>
@@ -30,8 +30,6 @@
 		{/if}
 	</div>
 	{#if action}
-		<div class="mt-2">
-			{@render action()}
-		</div>
+		<div class="mt-2">{@render action()}</div>
 	{/if}
 </div>

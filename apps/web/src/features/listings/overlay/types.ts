@@ -1,43 +1,45 @@
 import type { OrganizationOverlaySummary } from "$lib/orpc-types";
 
-export type OrganizationOverlayListingOption = {
+export interface OrganizationOverlayListingOption {
 	id: string;
 	name: string;
-};
+}
 
-export type ManualOverrideInput = {
-	scopeType: "organization" | "listing";
-	scopeKey?: string | null;
+export interface ManualOverrideInput {
 	code: string;
-	title: string;
 	note?: string;
-};
+	scopeKey?: string | null;
+	scopeType: "organization" | "listing";
+	title: string;
+}
 
-export type DistributionActionInput = {
-	listingId: string;
+export interface DistributionActionInput {
 	channelType: "own_site" | "platform_marketplace";
-};
+	listingId: string;
+}
 
-export type OrganizationOverlayActions = {
+export interface OrganizationOverlayActions {
 	onApproveListing: (input: {
 		listingId: string;
 		note?: string;
-	}) => boolean | void | Promise<boolean | void>;
+	}) => boolean | undefined | Promise<boolean | undefined>;
 	onClearListingApproval: (input: {
 		listingId: string;
 		note?: string;
-	}) => boolean | void | Promise<boolean | void>;
+	}) => boolean | undefined | Promise<boolean | undefined>;
 	onCreateManualOverride: (
 		input: ManualOverrideInput
-	) => boolean | void | Promise<boolean | void>;
+	) => boolean | undefined | Promise<boolean | undefined>;
 	onPublishListingToChannel: (
 		input: DistributionActionInput
-	) => boolean | void | Promise<boolean | void>;
-	onResolveManualOverride: (id: string) => boolean | void | Promise<boolean | void>;
+	) => boolean | undefined | Promise<boolean | undefined>;
+	onResolveManualOverride: (
+		id: string
+	) => boolean | undefined | Promise<boolean | undefined>;
 	onUnpublishListing: (
 		listingId: string
-	) => boolean | void | Promise<boolean | void>;
-};
+	) => boolean | undefined | Promise<boolean | undefined>;
+}
 
 export type OrganizationOverlayPanelProps = OrganizationOverlayActions & {
 	createError?: string | null;

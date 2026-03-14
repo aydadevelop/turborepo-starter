@@ -1,15 +1,12 @@
-import { ORPCError } from "@orpc/server";
-import { db } from "@my-app/db";
 import { getPublicBookingSurface } from "@my-app/booking";
-import {
-	getPublishedListing,
-	searchPublishedListings,
-} from "@my-app/catalog";
+import { getPublishedListing, searchPublishedListings } from "@my-app/catalog";
+import { db } from "@my-app/db";
+import { ORPCError } from "@orpc/server";
 
 import { publicProcedure } from "../index";
 
 export const storefrontRouter = {
-	list: publicProcedure.storefront.list.handler(async ({ input }) => {
+	list: publicProcedure.storefront.list.handler(({ input }) => {
 		return searchPublishedListings(input, db);
 	}),
 
@@ -37,12 +34,13 @@ export const storefrontRouter = {
 					}
 					if (e.message === "NOT_SUPPORTED") {
 						throw new ORPCError("PRECONDITION_FAILED", {
-							message: "Public booking surface is not supported for this listing",
+							message:
+								"Public booking surface is not supported for this listing",
 						});
 					}
 				}
 				throw e;
 			}
-		},
+		}
 	),
 };

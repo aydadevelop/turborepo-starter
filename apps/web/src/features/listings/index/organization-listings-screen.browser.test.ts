@@ -1,7 +1,10 @@
 import { expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
+import type {
+	ListingListItem,
+	OrganizationOverlaySummary,
+} from "$lib/orpc-types";
 import { renderWithQueryClient } from "../../../test/browser/render";
-import type { ListingListItem, OrganizationOverlaySummary } from "$lib/orpc-types";
 
 const mockState = vi.hoisted(() => ({
 	overlay: {

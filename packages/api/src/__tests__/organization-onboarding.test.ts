@@ -12,6 +12,11 @@ vi.mock("@my-app/db", () => ({
 	},
 }));
 
+import {
+	clearCalendarAdapterRegistry,
+	FakeCalendarAdapter,
+	registerCalendarAdapter,
+} from "@my-app/calendar";
 import { organization, user } from "@my-app/db/schema/auth";
 import {
 	listingCalendarConnection,
@@ -25,11 +30,6 @@ import {
 	paymentProviderConfig,
 } from "@my-app/db/schema/marketplace";
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
-import {
-	clearCalendarAdapterRegistry,
-	FakeCalendarAdapter,
-	registerCalendarAdapter,
-} from "@my-app/calendar";
 import { clearEventPushers } from "@my-app/events";
 import { registerOrganizationOverlayProjector } from "@my-app/organization";
 import { RPCHandler } from "@orpc/server/fetch";
@@ -363,7 +363,10 @@ describe("organization onboarding + calendar routes", () => {
 		expect(disconnected.status).toBe(200);
 		expect(disconnected.body).toEqual({ success: true });
 
-		const listedAfterDisconnect = await callRpc("/rpc/calendar/listAccounts", {});
+		const listedAfterDisconnect = await callRpc(
+			"/rpc/calendar/listAccounts",
+			{}
+		);
 		expect(listedAfterDisconnect.status).toBe(200);
 		expect(listedAfterDisconnect.body).toMatchObject([
 			{
@@ -427,17 +430,20 @@ describe("organization onboarding + calendar routes", () => {
 		expect(listed.status).toBe(200);
 		const [firstSource] = listed.body as Array<{ id: string }>;
 		expect(firstSource).toBeDefined();
+		if (!firstSource) {
+			throw new Error("Expected at least one calendar source");
+		}
 
 		const attached = await callRpc("/rpc/calendar/attachSource", {
 			listingId: LISTING_ID,
-			sourceId: firstSource!.id,
+			sourceId: firstSource.id,
 		});
 		expect(attached.status).toBe(200);
 		expect(attached.body).toMatchObject({
 			listingId: LISTING_ID,
 			organizationId: ORG_ID,
 			calendarAccountId: "calendar-account-1",
-			calendarSourceId: firstSource!.id,
+			calendarSourceId: firstSource.id,
 			provider: "google",
 			isActive: true,
 		});
@@ -445,14 +451,14 @@ describe("organization onboarding + calendar routes", () => {
 		const [persistedSource] = await db
 			.select()
 			.from(organizationCalendarSource)
-			.where(eq(organizationCalendarSource.id, firstSource!.id))
+			.where(eq(organizationCalendarSource.id, firstSource.id))
 			.limit(1);
 		expect(persistedSource?.organizationId).toBe(ORG_ID);
 
 		const [persistedConnection] = await db
 			.select()
 			.from(listingCalendarConnection)
-			.where(eq(listingCalendarConnection.calendarSourceId, firstSource!.id))
+			.where(eq(listingCalendarConnection.calendarSourceId, firstSource.id))
 			.limit(1);
 		expect(persistedConnection?.listingId).toBe(LISTING_ID);
 		expect(persistedConnection?.calendarAccountId).toBe("calendar-account-1");
@@ -519,10 +525,13 @@ describe("organization onboarding + calendar routes", () => {
 			(approved.body as { approvedAt: string | null }).approvedAt
 		).not.toBeNull();
 
-		const published = await callRpc("/rpc/organization/publishListingToChannel", {
-			listingId: LISTING_ID,
-			channelType: "own_site",
-		});
+		const published = await callRpc(
+			"/rpc/organization/publishListingToChannel",
+			{
+				listingId: LISTING_ID,
+				channelType: "own_site",
+			}
+		);
 		expect(published.status).toBe(200);
 		expect(published.body).toEqual({
 			listingId: LISTING_ID,

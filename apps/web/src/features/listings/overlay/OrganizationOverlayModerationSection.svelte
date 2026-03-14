@@ -7,8 +7,8 @@
 		CardTitle,
 	} from "@my-app/ui/components/card";
 	import type { OrganizationOverlaySummary } from "$lib/orpc-types";
-	import WorkspaceActionDialog from "../workspace/shared/WorkspaceActionDialog.svelte";
 	import ListingModerationActionForm from "../workspace/publish/ListingModerationActionForm.svelte";
+	import WorkspaceActionDialog from "../workspace/shared/WorkspaceActionDialog.svelte";
 	import type { OrganizationOverlayListingOption } from "./types";
 
 	let {
@@ -26,11 +26,11 @@
 		onApproveListing: (input: {
 			listingId: string;
 			note?: string;
-		}) => boolean | void | Promise<boolean | void>;
+		}) => boolean | undefined | Promise<boolean | undefined>;
 		onClearListingApproval: (input: {
 			listingId: string;
 			note?: string;
-		}) => boolean | void | Promise<boolean | void>;
+		}) => boolean | undefined | Promise<boolean | undefined>;
 	} = $props();
 
 	let approveDialogOpen = $state(false);
@@ -61,13 +61,16 @@
 	<CardHeader class="pb-2">
 		<CardDescription>Moderation</CardDescription>
 		<CardTitle class="text-base">
-			{overlay.moderation.reviewPendingCount} pending review
+			{overlay.moderation.reviewPendingCount}
+			pending review
 		</CardTitle>
 	</CardHeader>
 	<CardContent class="space-y-3 text-sm text-muted-foreground">
 		<p>
-			{overlay.moderation.approvedListingCount} approved /
-			{overlay.moderation.unapprovedActiveListingCount} active without approval
+			{overlay.moderation.approvedListingCount}
+			approved /
+			{overlay.moderation.unapprovedActiveListingCount}
+			active without approval
 		</p>
 		<div class="flex flex-wrap gap-2">
 			<WorkspaceActionDialog
@@ -80,7 +83,7 @@
 				{#snippet children()}
 					<ListingModerationActionForm
 						mode="approve"
-						listingOptions={listingOptions}
+						{listingOptions}
 						onSubmit={handleApproveListing}
 						pending={moderationPending}
 						errorMessage={moderationError}
@@ -99,7 +102,7 @@
 				{#snippet children()}
 					<ListingModerationActionForm
 						mode="clear"
-						listingOptions={listingOptions}
+						{listingOptions}
 						onSubmit={handleClearListingApproval}
 						pending={moderationPending}
 						errorMessage={moderationError}

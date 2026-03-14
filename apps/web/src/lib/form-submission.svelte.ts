@@ -44,16 +44,9 @@ import { formatMutationError } from "$lib/mutation-result";
 
 export interface FormSubmissionOptions<TInput, TOutput> {
 	/**
-	 * The submit function. Should return a MutationResult.
-	 * If it throws, the error is caught and formatted.
+	 * Fallback error message when the error shape is unrecognizable.
 	 */
-	submit: (input: TInput) => Promise<MutationResult<TOutput>>;
-
-	/**
-	 * Called after a successful submission with the result data.
-	 * Use this to reset the form, navigate, show a toast, etc.
-	 */
-	onSuccess?: (data: TOutput) => void;
+	errorFallback?: string;
 
 	/**
 	 * Format the success message. Return null to skip.
@@ -62,26 +55,32 @@ export interface FormSubmissionOptions<TInput, TOutput> {
 	formatSuccess?: (data: TOutput) => string | null;
 
 	/**
-	 * Fallback error message when the error shape is unrecognizable.
+	 * Called after a successful submission with the result data.
+	 * Use this to reset the form, navigate, show a toast, etc.
 	 */
-	errorFallback?: string;
+	onSuccess?: (data: TOutput) => void;
+	/**
+	 * The submit function. Should return a MutationResult.
+	 * If it throws, the error is caught and formatted.
+	 */
+	submit: (input: TInput) => Promise<MutationResult<TOutput>>;
 }
 
-export interface FormSubmission<TInput, TOutput> {
+export interface FormSubmission<TInput, _TOutput> {
 	/** Current error message, or null. */
 	readonly error: string | null;
-	/** Current success message, or null. */
-	readonly successMessage: string | null;
-	/** Whether a submission is in progress. */
-	readonly pending: boolean;
 	/** Execute the submission pipeline. */
 	execute(input: TInput): Promise<void>;
+	/** Whether a submission is in progress. */
+	readonly pending: boolean;
 	/** Clear error and success state. */
 	reset(): void;
+	/** Current success message, or null. */
+	readonly successMessage: string | null;
 }
 
 export function createFormSubmission<TInput, TOutput = void>(
-	options: FormSubmissionOptions<TInput, TOutput>,
+	options: FormSubmissionOptions<TInput, TOutput>
 ): FormSubmission<TInput, TOutput> {
 	let error = $state<string | null>(null);
 	let successMessage = $state<string | null>(null);
@@ -119,7 +118,7 @@ export function createFormSubmission<TInput, TOutput = void>(
 			} catch (e) {
 				error = formatMutationError(
 					e,
-					options.errorFallback ?? "Something went wrong. Please try again.",
+					options.errorFallback ?? "Something went wrong. Please try again."
 				);
 			} finally {
 				pending = false;

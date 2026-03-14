@@ -7,8 +7,8 @@ import {
 import { buildTicketStatusPatch } from "../shared/status";
 import type {
 	AssignTicketInput,
-	CustomerSupportTicketListInput,
 	CreateSupportTicketInput,
+	CustomerSupportTicketListInput,
 	Db,
 	ListOrgTicketsFilter,
 	SupportActorContext,

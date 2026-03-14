@@ -7,8 +7,8 @@
 		skipToken,
 	} from "@tanstack/svelte-query";
 	import { page } from "$app/state";
-	import SurfaceCard from "../../components/operator/SurfaceCard.svelte";
 	import { orpc, queryClient } from "$lib/orpc";
+	import SurfaceCard from "../../components/operator/SurfaceCard.svelte";
 
 	const ticketId = $derived(page.params.ticketId ?? "");
 
@@ -21,7 +21,9 @@
 	const addMessageMutation = createMutation(() =>
 		orpc.support.addMyMessage.mutationOptions({
 			onSuccess: () => {
-				queryClient.invalidateQueries({ queryKey: orpc.support.getMyTicket.key() });
+				queryClient.invalidateQueries({
+					queryKey: orpc.support.getMyTicket.key(),
+				});
 				replyBody = "";
 			},
 		})
@@ -48,7 +50,10 @@
 		{@const { ticket, messages } = ticketQuery.data}
 
 		<div>
-			<a href="/dashboard/bookings" class="text-sm text-muted-foreground hover:underline">
+			<a
+				href="/dashboard/bookings"
+				class="text-sm text-muted-foreground hover:underline"
+			>
 				← Back to bookings
 			</a>
 		</div>
@@ -64,7 +69,10 @@
 			{/snippet}
 			{#snippet children()}
 				<div class="text-sm text-muted-foreground">
-					Status: <span class="font-medium text-foreground capitalize">{ticket.status.replace(/_/g, " ")}</span>
+					Status:
+					<span class="font-medium text-foreground capitalize"
+						>{ticket.status.replace(/_/g, " ")}</span
+					>
 				</div>
 			{/snippet}
 		</SurfaceCard>
@@ -112,7 +120,9 @@
 							</Button>
 						</div>
 						{#if addMessageMutation.isError}
-							<p class="text-sm text-destructive">Failed to send. Please try again.</p>
+							<p class="text-sm text-destructive">
+								Failed to send. Please try again.
+							</p>
 						{/if}
 					</form>
 				{/snippet}

@@ -11,10 +11,10 @@
 		Option as NativeSelectOption,
 		Root as NativeSelectRoot,
 	} from "@my-app/ui/components/native-select";
-	import ConfirmActionDialog from "../../../components/admin/ConfirmActionDialog.svelte";
 	import type { OrganizationOverlaySummary } from "$lib/orpc-types";
-	import WorkspaceActionDialog from "../workspace/shared/WorkspaceActionDialog.svelte";
+	import ConfirmActionDialog from "../../../components/admin/ConfirmActionDialog.svelte";
 	import ListingDistributionActionForm from "../workspace/publish/ListingDistributionActionForm.svelte";
+	import WorkspaceActionDialog from "../workspace/shared/WorkspaceActionDialog.svelte";
 	import type {
 		DistributionActionInput,
 		OrganizationOverlayListingOption,
@@ -34,10 +34,10 @@
 		distributionError?: string | null;
 		onPublishListingToChannel: (
 			input: DistributionActionInput
-		) => boolean | void | Promise<boolean | void>;
+		) => boolean | undefined | Promise<boolean | undefined>;
 		onUnpublishListing: (
 			listingId: string
-		) => boolean | void | Promise<boolean | void>;
+		) => boolean | undefined | Promise<boolean | undefined>;
 	} = $props();
 
 	let publishDialogOpen = $state(false);
@@ -63,8 +63,10 @@
 	<CardHeader class="pb-2">
 		<CardDescription>Distribution</CardDescription>
 		<CardTitle class="text-base">
-			{overlay.distribution.marketplacePublicationCount} marketplace /
-			{overlay.distribution.ownSitePublicationCount} own site
+			{overlay.distribution.marketplacePublicationCount}
+			marketplace /
+			{overlay.distribution.ownSitePublicationCount}
+			own site
 		</CardTitle>
 	</CardHeader>
 	<CardContent class="space-y-3 text-sm text-muted-foreground">
@@ -82,7 +84,7 @@
 			>
 				{#snippet children()}
 					<ListingDistributionActionForm
-						listingOptions={listingOptions}
+						{listingOptions}
 						onSubmit={handlePublish}
 						pending={distributionPending}
 						errorMessage={distributionError}
@@ -103,7 +105,10 @@
 		</div>
 
 		<div class="space-y-2">
-			<label class="text-xs font-medium text-foreground" for="overlay-unpublish-listing">
+			<label
+				class="text-xs font-medium text-foreground"
+				for="overlay-unpublish-listing"
+			>
 				Listing to unpublish
 			</label>
 			<NativeSelectRoot
@@ -112,7 +117,9 @@
 			>
 				<NativeSelectOption value="">Select listing</NativeSelectOption>
 				{#each listingOptions as option (option.id)}
-					<NativeSelectOption value={option.id}>{option.name}</NativeSelectOption>
+					<NativeSelectOption value={option.id}
+						>{option.name}</NativeSelectOption
+					>
 				{/each}
 			</NativeSelectRoot>
 		</div>

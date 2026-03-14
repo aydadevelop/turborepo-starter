@@ -51,7 +51,11 @@ test("renders the admin organizations page with a loaded-state screenshot", asyn
 	renderWithQueryClient(AdminOrganizationsPage);
 
 	await expect.element(page.getByText("Organizations")).toBeVisible();
-	await expect.element(page.getByRole("cell", { name: "Alpha Marine" })).toBeVisible();
-	await expect.element(page.getByRole("cell", { name: "North Star" })).toBeVisible();
+	await expect
+		.element(page.getByRole("cell", { name: "Alpha Marine" }))
+		.toBeVisible();
+	await expect
+		.element(page.getByRole("cell", { name: "North Star" }))
+		.toBeVisible();
 	await expect(document.body).toMatchScreenshot("admin-organizations-page");
 });

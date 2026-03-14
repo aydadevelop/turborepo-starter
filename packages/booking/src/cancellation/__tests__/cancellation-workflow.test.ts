@@ -1,4 +1,3 @@
-import { and, eq } from "drizzle-orm";
 import { organization, user } from "@my-app/db/schema/auth";
 import {
 	booking,
@@ -11,25 +10,22 @@ import {
 	organizationPaymentConfig,
 	paymentProviderConfig,
 } from "@my-app/db/schema/marketplace";
-import {
-	bootstrapTestDatabase,
-	type TestDatabase,
-} from "@my-app/db/test";
+import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import {
 	clearEventPushers,
 	EventBus,
 	registerEventPusher,
 } from "@my-app/events";
 import {
+	type PaymentProvider,
 	registerPaymentProvider,
 	resetPaymentProviderRegistry,
-	type PaymentProvider,
 } from "@my-app/payment";
 import type { WorkflowContext } from "@my-app/workflows";
+import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { processCancellationWorkflow } from "../cancellation-workflow";
 import type { Db } from "../../types";
+import { processCancellationWorkflow } from "../cancellation-workflow";
 
 const ORG_ID = "disp-org-1";
 const USER_ID = "disp-user-1";
@@ -150,7 +146,7 @@ const dbState = bootstrapTestDatabase({
 const getDb = () => dbState.db as unknown as Db;
 
 const makeCtx = (
-	overrides: Partial<WorkflowContext> = {},
+	overrides: Partial<WorkflowContext> = {}
 ): WorkflowContext => ({
 	organizationId: ORG_ID,
 	actorUserId: USER_ID,
@@ -160,11 +156,13 @@ const makeCtx = (
 });
 
 const registerTestProvider = (
-	overrides: Partial<PaymentProvider> = {},
+	overrides: Partial<PaymentProvider> = {}
 ): PaymentProvider => {
 	const provider: PaymentProvider = {
 		providerId: "cloudpayments",
-		refundPayment: vi.fn().mockResolvedValue({ externalRefundId: "cp-refund-1" }),
+		refundPayment: vi
+			.fn()
+			.mockResolvedValue({ externalRefundId: "cp-refund-1" }),
 		...overrides,
 	};
 
@@ -174,7 +172,7 @@ const registerTestProvider = (
 
 const insertCancellationRequest = async (
 	db: Db,
-	overrides: Partial<typeof bookingCancellationRequest.$inferInsert> = {},
+	overrides: Partial<typeof bookingCancellationRequest.$inferInsert> = {}
 ): Promise<void> => {
 	await db.insert(bookingCancellationRequest).values({
 		id: REQUEST_ID,
@@ -186,8 +184,8 @@ const insertCancellationRequest = async (
 		reason: "Operator approved cancellation",
 		reasonCode: "OWNER_OPERATIONAL_ISSUE",
 		bookingTotalPriceCents: 10_000,
-		penaltyAmountCents: 5_000,
-		refundAmountCents: 5_000,
+		penaltyAmountCents: 5000,
+		refundAmountCents: 5000,
 		currency: "RUB",
 		requestedAt: NOW,
 		createdAt: NOW,
@@ -198,7 +196,7 @@ const insertCancellationRequest = async (
 
 const insertCapturedAttempt = async (
 	db: Db,
-	overrides: Partial<typeof bookingPaymentAttempt.$inferInsert> = {},
+	overrides: Partial<typeof bookingPaymentAttempt.$inferInsert> = {}
 ): Promise<void> => {
 	await db.insert(bookingPaymentAttempt).values({
 		id: "disp-payment-attempt-1",
@@ -239,7 +237,7 @@ describe("processCancellationWorkflow", () => {
 				organizationId: ORG_ID,
 				appliedByUserId: USER_ID,
 			},
-			makeCtx(),
+			makeCtx()
 		);
 
 		expect(result.success).toBe(true);
@@ -249,7 +247,7 @@ describe("processCancellationWorkflow", () => {
 
 		expect(provider.refundPayment).toHaveBeenCalledWith(
 			expect.objectContaining({
-				amountCents: 5_000,
+				amountCents: 5000,
 				providerPaymentId: "455",
 				currency: "RUB",
 			}),
@@ -257,7 +255,7 @@ describe("processCancellationWorkflow", () => {
 				providerId: "cloudpayments",
 				publicKey: "pk_live_test",
 				credentials: expect.objectContaining({ apiSecret: "secret_live_test" }),
-			}),
+			})
 		);
 
 		const [refund] = await db
@@ -268,7 +266,7 @@ describe("processCancellationWorkflow", () => {
 		expect(refund).toMatchObject({
 			status: "processed",
 			externalRefundId: "cp-refund-1",
-			amountCents: 5_000,
+			amountCents: 5000,
 			provider: "cloudpayments",
 		});
 
@@ -279,7 +277,7 @@ describe("processCancellationWorkflow", () => {
 			.limit(1);
 		expect(updatedBooking).toMatchObject({
 			status: "cancelled",
-			refundAmountCents: 5_000,
+			refundAmountCents: 5000,
 		});
 
 		const [updatedRequest] = await db
@@ -302,10 +300,10 @@ describe("processCancellationWorkflow", () => {
 				data: expect.objectContaining({
 					bookingId: BOOKING_ID,
 					reason: "Operator approved cancellation",
-					refundAmountKopeks: 5_000,
+					refundAmountKopeks: 5000,
 				}),
 			}),
-			undefined,
+			undefined
 		);
 		expect(pusher).toHaveBeenCalledTimes(1);
 	});
@@ -328,7 +326,7 @@ describe("processCancellationWorkflow", () => {
 				organizationId: ORG_ID,
 				appliedByUserId: USER_ID,
 			},
-			makeCtx(),
+			makeCtx()
 		);
 
 		expect(result.success).toBe(true);
@@ -379,7 +377,7 @@ describe("processCancellationWorkflow", () => {
 				organizationId: ORG_ID,
 				appliedByUserId: USER_ID,
 			},
-			makeCtx({ eventBus: failingBus }),
+			makeCtx({ eventBus: failingBus })
 		);
 
 		expect(result.success).toBe(false);
@@ -424,8 +422,8 @@ describe("processCancellationWorkflow", () => {
 		const provider = registerTestProvider();
 
 		await insertCancellationRequest(db, {
-			refundAmountCents: 2_500,
-			penaltyAmountCents: 7_500,
+			refundAmountCents: 2500,
+			penaltyAmountCents: 7500,
 			reason: "Snapshot should win",
 		});
 		await insertCapturedAttempt(db, { amountCents: 10_000 });
@@ -446,13 +444,13 @@ describe("processCancellationWorkflow", () => {
 				organizationId: ORG_ID,
 				appliedByUserId: USER_ID,
 			},
-			makeCtx(),
+			makeCtx()
 		);
 
 		expect(result.success).toBe(true);
 		expect(provider.refundPayment).toHaveBeenCalledWith(
-			expect.objectContaining({ amountCents: 2_500 }),
-			expect.anything(),
+			expect.objectContaining({ amountCents: 2500 }),
+			expect.anything()
 		);
 
 		const [refund] = await db
@@ -461,10 +459,10 @@ describe("processCancellationWorkflow", () => {
 			.where(
 				and(
 					eq(bookingRefund.bookingId, BOOKING_ID),
-					eq(bookingRefund.status, "processed"),
-				),
+					eq(bookingRefund.status, "processed")
+				)
 			)
 			.limit(1);
-		expect(refund?.amountCents).toBe(2_500);
+		expect(refund?.amountCents).toBe(2500);
 	});
 });

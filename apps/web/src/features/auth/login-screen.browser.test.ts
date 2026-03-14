@@ -81,17 +81,11 @@ import LoginScreen from "./LoginScreen.svelte";
 test("renders login and signup loaded states with screenshots", async () => {
 	renderComponent(LoginScreen, {});
 
-	await expect
-		.element(page.getByTestId("login-heading"))
-		.toBeVisible();
-	await expect
-		.element(page.getByTestId("login-email-input"))
-		.toBeVisible();
+	await expect.element(page.getByTestId("login-heading")).toBeVisible();
+	await expect.element(page.getByTestId("login-email-input")).toBeVisible();
 	await expect(document.body).toMatchScreenshot("login-screen-sign-in");
 
 	await userEvent.click(page.getByTestId("switch-to-sign-up-button"));
-	await expect
-		.element(page.getByText("Create Account"))
-		.toBeVisible();
+	await expect.element(page.getByText("Create Account")).toBeVisible();
 	await expect(document.body).toMatchScreenshot("login-screen-sign-up");
 });

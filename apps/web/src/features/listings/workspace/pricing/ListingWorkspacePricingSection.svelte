@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Badge } from "@my-app/ui/components/badge";
 	import {
 		Card,
 		CardContent,
@@ -6,12 +7,10 @@
 		CardHeader,
 		CardTitle,
 	} from "@my-app/ui/components/card";
-	import { Badge } from "@my-app/ui/components/badge";
+	import type { PricingWorkspaceState } from "$lib/orpc-types";
+	import WorkspaceActionDialog from "../shared/WorkspaceActionDialog.svelte";
 	import CreatePricingProfileForm from "./CreatePricingProfileForm.svelte";
 	import CreatePricingRuleForm from "./CreatePricingRuleForm.svelte";
-	import WorkspaceActionDialog from "../shared/WorkspaceActionDialog.svelte";
-
-	import type { PricingWorkspaceState } from "$lib/orpc-types";
 
 	let {
 		listingId,
@@ -25,26 +24,30 @@
 	}: {
 		errorMessage?: string | null;
 		listingId: string;
-		onCreatePricingProfile?: ((input: {
-			baseHourlyPriceCents: number;
-			currency: string;
-			isDefault?: boolean;
-			listingId: string;
-			minimumHours?: number;
-			name: string;
-			serviceFeeBps?: number;
-			taxBps?: number;
-		}) => boolean | void | Promise<boolean | void>) | null;
-		onCreatePricingRule?: ((input: {
-			adjustmentType: "flat_cents" | "percent";
-			adjustmentValue: number;
-			conditionJson: Record<string, unknown>;
-			listingId: string;
-			name: string;
-			priority?: number;
-			pricingProfileId: string;
-			ruleType: string;
-		}) => boolean | void | Promise<boolean | void>) | null;
+		onCreatePricingProfile?:
+			| ((input: {
+					baseHourlyPriceCents: number;
+					currency: string;
+					isDefault?: boolean;
+					listingId: string;
+					minimumHours?: number;
+					name: string;
+					serviceFeeBps?: number;
+					taxBps?: number;
+			  }) => boolean | undefined | Promise<boolean | undefined>)
+			| null;
+		onCreatePricingRule?:
+			| ((input: {
+					adjustmentType: "flat_cents" | "percent";
+					adjustmentValue: number;
+					conditionJson: Record<string, unknown>;
+					listingId: string;
+					name: string;
+					priority?: number;
+					pricingProfileId: string;
+					ruleType: string;
+			  }) => boolean | undefined | Promise<boolean | undefined>)
+			| null;
 		pending?: boolean;
 		pricing?: PricingWorkspaceState | null;
 		ruleErrorMessage?: string | null;
@@ -177,8 +180,11 @@
 							{/if}
 						</div>
 						<p class="mt-2 text-sm text-muted-foreground">
-							{getRuleSummary(profile.id)?.activeRuleCount ?? 0} active / {getRuleSummary(profile.id)?.totalRuleCount ??
-								0} total rules
+							{getRuleSummary(profile.id)?.activeRuleCount ?? 0}
+							active /
+							{getRuleSummary(profile.id)?.totalRuleCount ??
+								0}
+							total rules
 						</p>
 					</div>
 				{/each}

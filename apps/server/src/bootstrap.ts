@@ -13,6 +13,8 @@ import {
 	createCloudPaymentsPaymentProvider,
 	registerPaymentProvider,
 } from "@my-app/payment";
+import { NOTIFICATION_QUEUE } from "@my-app/queue";
+import { createPgBossProducer } from "@my-app/queue/producer";
 import {
 	createLocalFileStorageProvider,
 	createS3StorageProvider,
@@ -29,10 +31,7 @@ const parseGoogleServiceAccountKey = (): Record<string, unknown> => {
 			env.GOOGLE_CALENDAR_CREDENTIALS_JSON ||
 				env.GOOGLE_SERVICE_ACCOUNT_KEY ||
 				"{}"
-		) as Record<
-			string,
-			unknown
-		>;
+		) as Record<string, unknown>;
 	} catch {
 		return {};
 	}
@@ -91,7 +90,7 @@ export const registerServerIntegrations = (): void => {
 	);
 	registerBookingLifecycleSync(db);
 	registerOrganizationOverlayProjector(db);
-	registerNotificationEventPusher(undefined, db);
+	registerNotificationEventPusher(createPgBossProducer(NOTIFICATION_QUEUE), db);
 	registerPaymentProvider(createCloudPaymentsPaymentProvider());
 	registerStorageProvider(createListingPublicStorageProvider());
 	configurePaymentWebhookAdaptersFromEnv({

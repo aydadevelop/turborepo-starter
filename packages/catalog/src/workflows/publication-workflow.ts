@@ -1,11 +1,20 @@
-import { createStep, createWorkflow, type WorkflowContext } from "@my-app/workflows";
+import {
+	createStep,
+	createWorkflow,
+	type WorkflowContext,
+} from "@my-app/workflows";
 
 import {
 	applyPublishListingState,
 	applyUnpublishListingState,
 	emitPublicationReadinessChanged,
 } from "../publication-service";
-import type { Db, ListingPublicationRow, ListingRow, PublishListingInput } from "../types";
+import type {
+	Db,
+	ListingPublicationRow,
+	ListingRow,
+	PublishListingInput,
+} from "../types";
 
 interface PublishedListingOutput {
 	listing: ListingRow;
@@ -19,11 +28,13 @@ interface UnpublishedListingOutput {
 const makePublishListingStateStep = (db: Db) =>
 	createStep<PublishListingInput, PublishedListingOutput>(
 		"catalog.publish-listing-state",
-		async (input) => {
-			return applyPublishListingState(input, db);
-		},
+		(input) => applyPublishListingState(input, db),
 		async (output, ctx) => {
-			await applyUnpublishListingState(output.listing.id, ctx.organizationId, db);
+			await applyUnpublishListingState(
+				output.listing.id,
+				ctx.organizationId,
+				db
+			);
 		}
 	);
 

@@ -200,7 +200,7 @@ export const storefrontContract = {
 				durationMinutes: z.number().int().min(30),
 				passengers: z.number().int().positive().optional(),
 				discountCode: z.string().min(1).max(64).optional(),
-			}),
+			})
 		)
 		.output(bookingSurfaceSchema),
 };

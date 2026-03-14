@@ -20,7 +20,7 @@ describe("buildCreatePricingProfileInput", () => {
 				listingId: "listing-1",
 				name: "Weekend",
 				currency: "RUB",
-				baseHourlyPriceCents: 120000,
+				baseHourlyPriceCents: 120_000,
 				minimumHours: 2,
 				serviceFeeBps: 500,
 				taxBps: 2000,

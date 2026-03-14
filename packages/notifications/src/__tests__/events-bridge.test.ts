@@ -7,7 +7,9 @@ const { mockLimit } = vi.hoisted(() => ({
 
 // Mock notificationsPusher before importing events-bridge
 vi.mock("../pusher", () => ({
-	notificationsPusher: vi.fn().mockResolvedValue({ idempotent: false, queued: true }),
+	notificationsPusher: vi
+		.fn()
+		.mockResolvedValue({ idempotent: false, queued: true }),
 }));
 
 // Mock @my-app/db with a chainable drizzle-like interface
@@ -20,15 +22,17 @@ vi.mock("@my-app/db", () => ({
 	},
 }));
 
-import { notificationsPusher } from "../pusher";
 import { registerNotificationEventPusher } from "../events-bridge";
+import { notificationsPusher } from "../pusher";
 
 describe("events-bridge", () => {
 	beforeEach(() => {
 		clearEventPushers();
 		vi.clearAllMocks();
 		// Reset db mock to return a valid booking row by default
-		mockLimit.mockResolvedValue([{ customerUserId: "customer-1", organizationId: "org-1" }]);
+		mockLimit.mockResolvedValue([
+			{ customerUserId: "customer-1", organizationId: "org-1" },
+		]);
 	});
 
 	it("resolves booking customerUserId as in-app recipient for booking:confirmed", async () => {
@@ -43,13 +47,20 @@ describe("events-bridge", () => {
 
 		expect(notificationsPusher).toHaveBeenCalledOnce();
 		const calls = (notificationsPusher as ReturnType<typeof vi.fn>).mock.calls;
-		const callArg = calls[0]?.[0] as { input: { eventType: string; payload: { recipients: Array<{ userId: string }> } } };
+		const callArg = calls[0]?.[0] as {
+			input: {
+				eventType: string;
+				payload: { recipients: Array<{ userId: string }> };
+			};
+		};
 		expect(callArg?.input.eventType).toBe("booking:confirmed");
 		expect(callArg?.input.payload.recipients[0]?.userId).toBe("customer-1");
 	});
 
 	it("does not call notificationsPusher when booking has no customerUserId", async () => {
-		mockLimit.mockResolvedValue([{ customerUserId: null, organizationId: "org-1" }]);
+		mockLimit.mockResolvedValue([
+			{ customerUserId: null, organizationId: "org-1" },
+		]);
 		registerNotificationEventPusher(undefined);
 
 		await emitDomainEvent({
@@ -96,7 +107,11 @@ describe("events-bridge", () => {
 			type: "booking:cancelled",
 			organizationId: "org-1",
 			idempotencyKey: "idkey-cancelled-1",
-			data: { bookingId: "bk-1", reason: "Customer request", refundAmountKopeks: 0 },
+			data: {
+				bookingId: "bk-1",
+				reason: "Customer request",
+				refundAmountKopeks: 0,
+			},
 		});
 
 		expect(notificationsPusher).toHaveBeenCalledOnce();

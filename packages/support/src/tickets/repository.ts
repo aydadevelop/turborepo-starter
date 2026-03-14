@@ -16,10 +16,163 @@ import type {
 	Db,
 	ListOrgTicketsFilter,
 	SupportTicketCollectionResult,
-	SupportTicketListInput,
 	SupportTicketInsert,
+	SupportTicketListInput,
 	SupportTicketRow,
 } from "../shared/types";
+
+type TicketCondition =
+	| ReturnType<typeof eq>
+	| ReturnType<typeof isNotNull>
+	| ReturnType<typeof isNull>
+	| ReturnType<typeof lt>
+	| NonNullable<ReturnType<typeof or>>;
+
+const buildTicketSearchCondition = (search: string) => {
+	const searchCondition = or(
+		ilike(supportTicket.subject, `%${search}%`),
+		ilike(supportTicket.description, `%${search}%`)
+	);
+	if (!searchCondition) {
+		throw new Error("Failed to build support ticket search condition");
+	}
+
+	return searchCondition;
+};
+
+const buildOverdueStatusesCondition = () => {
+	const overdueStatuses = or(
+		eq(supportTicket.status, "open"),
+		eq(supportTicket.status, "pending_customer"),
+		eq(supportTicket.status, "pending_operator"),
+		eq(supportTicket.status, "escalated")
+	);
+	if (!overdueStatuses) {
+		throw new Error("Failed to build overdue support ticket status condition");
+	}
+
+	return overdueStatuses;
+};
+
+const buildOrganizationTicketConditions = (
+	organizationId: string,
+	input: SupportTicketListInput<ListOrgTicketsFilter>
+): TicketCondition[] => {
+	const filter = input.filter ?? {};
+	const search = input.search?.trim();
+	const conditions: TicketCondition[] = [
+		eq(supportTicket.organizationId, organizationId),
+	];
+
+	if (filter.status) {
+		conditions.push(eq(supportTicket.status, filter.status));
+	}
+	if (filter.priority) {
+		conditions.push(eq(supportTicket.priority, filter.priority));
+	}
+	if (filter.source) {
+		conditions.push(eq(supportTicket.source, filter.source));
+	}
+	if (filter.bookingId) {
+		conditions.push(eq(supportTicket.bookingId, filter.bookingId));
+	}
+	if (filter.assignedToUserId) {
+		conditions.push(
+			eq(supportTicket.assignedToUserId, filter.assignedToUserId)
+		);
+	}
+	if (filter.customerUserId) {
+		conditions.push(eq(supportTicket.customerUserId, filter.customerUserId));
+	}
+	if (filter.onlyUnassigned) {
+		conditions.push(isNull(supportTicket.assignedToUserId));
+	}
+	if (filter.onlyOverdue) {
+		conditions.push(isNotNull(supportTicket.dueAt));
+		conditions.push(lt(supportTicket.dueAt, new Date()));
+		conditions.push(buildOverdueStatusesCondition());
+	}
+	if (search) {
+		conditions.push(buildTicketSearchCondition(search));
+	}
+
+	return conditions;
+};
+
+const buildCustomerTicketConditions = (
+	customerUserId: string,
+	input: CustomerSupportTicketListInput
+): TicketCondition[] => {
+	const filter = input.filter ?? {};
+	const search = input.search?.trim();
+	const conditions: TicketCondition[] = [
+		eq(supportTicket.customerUserId, customerUserId),
+	];
+
+	if (filter.bookingId) {
+		conditions.push(eq(supportTicket.bookingId, filter.bookingId));
+	}
+	if (filter.status) {
+		conditions.push(eq(supportTicket.status, filter.status));
+	}
+	if (search) {
+		conditions.push(buildTicketSearchCondition(search));
+	}
+
+	return conditions;
+};
+
+const resolveOrganizationTicketOrderBy = (
+	sort: SupportTicketListInput<ListOrgTicketsFilter>["sort"]
+) => {
+	const direction = sort?.dir ?? "desc";
+
+	if (sort?.by === "updated_at") {
+		return direction === "asc"
+			? asc(supportTicket.updatedAt)
+			: desc(supportTicket.updatedAt);
+	}
+	if (sort?.by === "due_at") {
+		return direction === "asc"
+			? asc(supportTicket.dueAt)
+			: desc(supportTicket.dueAt);
+	}
+	if (sort?.by === "priority") {
+		return direction === "asc"
+			? asc(supportTicket.priority)
+			: desc(supportTicket.priority);
+	}
+	if (sort?.by === "status") {
+		return direction === "asc"
+			? asc(supportTicket.status)
+			: desc(supportTicket.status);
+	}
+
+	return direction === "asc"
+		? asc(supportTicket.createdAt)
+		: desc(supportTicket.createdAt);
+};
+
+const resolveCustomerTicketOrderBy = (
+	sort: CustomerSupportTicketListInput["sort"]
+) => {
+	const direction = sort?.dir ?? "desc";
+
+	if (sort?.by === "updated_at") {
+		return direction === "asc"
+			? asc(supportTicket.updatedAt)
+			: desc(supportTicket.updatedAt);
+	}
+	if (sort?.by === "status") {
+		return direction === "asc"
+			? asc(supportTicket.status)
+			: desc(supportTicket.status);
+	}
+
+	return direction === "asc"
+		? asc(supportTicket.createdAt)
+		: desc(supportTicket.createdAt);
+};
 
 export async function insertTicket(
 	values: SupportTicketInsert,
@@ -76,77 +229,9 @@ export async function listOrganizationTickets(
 	input: SupportTicketListInput<ListOrgTicketsFilter>,
 	db: Db
 ): Promise<SupportTicketCollectionResult> {
-	const filter = input.filter ?? {};
 	const page = input.page ?? { limit: 50, offset: 0 };
-	const conditions = [eq(supportTicket.organizationId, organizationId)];
-
-	if (filter.status) {
-		conditions.push(eq(supportTicket.status, filter.status));
-	}
-	if (filter.priority) {
-		conditions.push(eq(supportTicket.priority, filter.priority));
-	}
-	if (filter.source) {
-		conditions.push(eq(supportTicket.source, filter.source));
-	}
-	if (filter.bookingId) {
-		conditions.push(eq(supportTicket.bookingId, filter.bookingId));
-	}
-	if (filter.assignedToUserId) {
-		conditions.push(
-			eq(supportTicket.assignedToUserId, filter.assignedToUserId)
-		);
-	}
-	if (filter.customerUserId) {
-		conditions.push(eq(supportTicket.customerUserId, filter.customerUserId));
-	}
-	if (filter.onlyUnassigned) {
-		conditions.push(isNull(supportTicket.assignedToUserId));
-	}
-	if (filter.onlyOverdue) {
-		const overdueStatuses = or(
-			eq(supportTicket.status, "open"),
-			eq(supportTicket.status, "pending_customer"),
-			eq(supportTicket.status, "pending_operator"),
-			eq(supportTicket.status, "escalated")
-		);
-
-		conditions.push(isNotNull(supportTicket.dueAt));
-		conditions.push(lt(supportTicket.dueAt, new Date()));
-		if (overdueStatuses) {
-			conditions.push(overdueStatuses);
-		}
-	}
-
-	if (input.search) {
-		conditions.push(
-			or(
-				ilike(supportTicket.subject, `%${input.search}%`),
-				ilike(supportTicket.description, `%${input.search}%`),
-			)!,
-		);
-	}
-
-	const orderBy =
-		input.sort?.by === "updated_at"
-			? input.sort.dir === "asc"
-				? asc(supportTicket.updatedAt)
-				: desc(supportTicket.updatedAt)
-			: input.sort?.by === "due_at"
-				? input.sort.dir === "asc"
-					? asc(supportTicket.dueAt)
-					: desc(supportTicket.dueAt)
-				: input.sort?.by === "priority"
-					? input.sort.dir === "asc"
-						? asc(supportTicket.priority)
-						: desc(supportTicket.priority)
-					: input.sort?.by === "status"
-						? input.sort.dir === "asc"
-							? asc(supportTicket.status)
-							: desc(supportTicket.status)
-						: input.sort?.dir === "asc"
-							? asc(supportTicket.createdAt)
-							: desc(supportTicket.createdAt);
+	const conditions = buildOrganizationTicketConditions(organizationId, input);
+	const orderBy = resolveOrganizationTicketOrderBy(input.sort);
 
 	const [items, countResult] = await Promise.all([
 		db
@@ -173,38 +258,9 @@ export async function listCustomerOwnedTickets(
 	input: CustomerSupportTicketListInput,
 	db: Db
 ): Promise<SupportTicketCollectionResult> {
-	const filter = input.filter ?? {};
 	const page = input.page ?? { limit: 50, offset: 0 };
-	const conditions = [eq(supportTicket.customerUserId, customerUserId)];
-
-	if (filter.bookingId) {
-		conditions.push(eq(supportTicket.bookingId, filter.bookingId));
-	}
-	if (filter.status) {
-		conditions.push(eq(supportTicket.status, filter.status));
-	}
-
-	if (input.search) {
-		conditions.push(
-			or(
-				ilike(supportTicket.subject, `%${input.search}%`),
-				ilike(supportTicket.description, `%${input.search}%`),
-			)!,
-		);
-	}
-
-	const orderBy =
-		input.sort?.by === "updated_at"
-			? input.sort.dir === "asc"
-				? asc(supportTicket.updatedAt)
-				: desc(supportTicket.updatedAt)
-			: input.sort?.by === "status"
-				? input.sort.dir === "asc"
-					? asc(supportTicket.status)
-					: desc(supportTicket.status)
-				: input.sort?.dir === "asc"
-					? asc(supportTicket.createdAt)
-					: desc(supportTicket.createdAt);
+	const conditions = buildCustomerTicketConditions(customerUserId, input);
+	const orderBy = resolveCustomerTicketOrderBy(input.sort);
 
 	const [items, countResult] = await Promise.all([
 		db

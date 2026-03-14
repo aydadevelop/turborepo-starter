@@ -6,7 +6,9 @@
 </script>
 
 <div class="rounded-lg border bg-card p-4 text-sm">
-	<div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+	<div
+		class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
+	>
 		<div class="space-y-1">
 			<p class="font-medium">Organization readiness</p>
 			<p class="text-muted-foreground">

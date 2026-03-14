@@ -11,7 +11,6 @@ import { clearTestDatabase, createTestDatabase } from "@my-app/db/test";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { testUtils } from "better-auth/plugins";
-import type { TestHelpers } from "better-auth/plugins";
 import { organization as organizationPlugin } from "better-auth/plugins/organization";
 
 import {
@@ -41,8 +40,8 @@ export const createTestAuth = async () => {
 		emailAndPassword: {
 			enabled: true,
 		},
-		telemetry: { 
-			enabled: false
+		telemetry: {
+			enabled: false,
 		},
 		plugins: [
 			testUtils(),
@@ -87,11 +86,11 @@ export const createTestAuth = async () => {
 
 	return {
 		auth,
-		test: ctx.test as TestHelpers,
+		test: ctx.test as import("better-auth/plugins").TestHelpers,
 		clearDb: () => clearTestDatabase(db),
 		close,
 	};
 };
 
 export type TestAuth = Awaited<ReturnType<typeof createTestAuth>>;
-export type { TestHelpers };
+export type { TestHelpers } from "better-auth/plugins";

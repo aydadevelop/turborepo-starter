@@ -1,7 +1,7 @@
-import { type Span, SpanKind, SpanStatusCode, trace } from "@opentelemetry/api";
 import { createContext } from "@my-app/api/context";
 import { appRouter } from "@my-app/api/handlers/index";
 import { log } from "@my-app/telemetry";
+import { type Span, SpanKind, SpanStatusCode, trace } from "@opentelemetry/api";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { ORPCError, onError } from "@orpc/server";
@@ -123,13 +123,18 @@ export const rpcMiddleware: MiddlewareHandler = async (c, next) => {
 				span.setStatus({ code: SpanStatusCode.OK });
 				return ctx;
 			} catch (error) {
-				span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message : String(error) });
-				if (error instanceof Error) span.recordException(error);
+				span.setStatus({
+					code: SpanStatusCode.ERROR,
+					message: error instanceof Error ? error.message : String(error),
+				});
+				if (error instanceof Error) {
+					span.recordException(error);
+				}
 				throw error;
 			} finally {
 				span.end();
 			}
-		},
+		}
 	);
 
 	const rpcResult = await rpcHandler.handle(c.req.raw, {

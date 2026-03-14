@@ -2,8 +2,12 @@
 	import MessageSquarePlus from "@lucide/svelte/icons/message-square-plus";
 	import Trash2 from "@lucide/svelte/icons/trash-2";
 	import { Button } from "@my-app/ui/components/button";
-	import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
-	import { setContext, type Snippet } from "svelte";
+	import {
+		createMutation,
+		createQuery,
+		useQueryClient,
+	} from "@tanstack/svelte-query";
+	import { type Snippet, setContext } from "svelte";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";

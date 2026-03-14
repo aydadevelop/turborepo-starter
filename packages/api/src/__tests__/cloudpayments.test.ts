@@ -1,11 +1,10 @@
 import { createHmac } from "node:crypto";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { CloudPaymentsWebhookAdapter } from "@my-app/payment/webhooks/cloudpayments/index";
 import {
 	WebhookAuthError,
 	WebhookPayloadError,
 } from "@my-app/payment/webhooks/errors";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const adapter = new CloudPaymentsWebhookAdapter({
 	publicId: "pk_test",

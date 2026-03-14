@@ -3,27 +3,27 @@ import type {
 	OrganizationOverlaySummary,
 } from "$lib/orpc-types";
 
-export type OrganizationListingOption = {
+export interface OrganizationListingOption {
 	id: string;
 	name: string;
-};
+}
 
-export type ManualOverrideInput = {
-	scopeType: "organization" | "listing";
-	scopeKey?: string | null;
+export interface ManualOverrideInput {
 	code: string;
-	title: string;
 	note?: string;
-};
+	scopeKey?: string | null;
+	scopeType: "organization" | "listing";
+	title: string;
+}
 
-export type DistributionActionInput = {
-	listingId: string;
+export interface DistributionActionInput {
 	channelType: "own_site" | "platform_marketplace";
-};
+	listingId: string;
+}
 
-export type OrganizationListingsScreenData = {
+export interface OrganizationListingsScreenData {
 	listingOptions: OrganizationListingOption[];
 	listings: ListingListItem[];
 	overlay: OrganizationOverlaySummary | null;
 	total: number;
-};
+}

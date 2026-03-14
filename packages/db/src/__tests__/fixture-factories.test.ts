@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { organization, user } from "../schema/auth";
-import { listing, listingTypeConfig, booking } from "../schema/marketplace";
+import { booking, listing, listingTypeConfig } from "../schema/marketplace";
 import { bootstrapTestDatabase, type TestDatabase } from "../test";
 import {
 	createListingFixture,

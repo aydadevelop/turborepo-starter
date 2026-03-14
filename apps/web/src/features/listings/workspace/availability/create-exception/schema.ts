@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 function parseMinute(time: string): number {
-	const [hours, minutes] = time.split(":").map((part) => Number.parseInt(part, 10));
+	const [hours, minutes] = time
+		.split(":")
+		.map((part) => Number.parseInt(part, 10));
 	return hours * 60 + minutes;
 }
 
@@ -18,11 +20,12 @@ export const createAvailabilityExceptionSchema = z
 			return;
 		}
 
-		if (!value.startTime || !value.endTime) {
+		if (!(value.startTime && value.endTime)) {
 			ctx.addIssue({
 				code: "custom",
 				path: ["startTime"],
-				message: "Provide both start and end times for a partial-day available exception.",
+				message:
+					"Provide both start and end times for a partial-day available exception.",
 			});
 			return;
 		}

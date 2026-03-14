@@ -76,7 +76,9 @@ test("renders the organization create page with a loaded-state screenshot", asyn
 	await expect
 		.element(page.getByRole("heading", { name: "Create Organization" }))
 		.toBeVisible();
-	await expect.element(page.getByLabelText("Organization name")).toHaveValue("Dmitry");
+	await expect
+		.element(page.getByLabelText("Organization name"))
+		.toHaveValue("Dmitry");
 	await expect
 		.element(page.getByTestId("org-create-terms-scroll"))
 		.toBeVisible();

@@ -1,16 +1,13 @@
 import { z } from "zod";
 
+const NON_NEGATIVE_INTEGER_RE = /^\d+$/;
+const POSITIVE_INTEGER_RE = /^[1-9]\d*$/;
+
 const nonNegativeIntegerString = (message: string) =>
-	z
-		.string()
-		.trim()
-		.regex(/^\d+$/, message);
+	z.string().trim().regex(NON_NEGATIVE_INTEGER_RE, message);
 
 const positiveIntegerString = (message: string) =>
-	z
-		.string()
-		.trim()
-		.regex(/^[1-9]\d*$/, message);
+	z.string().trim().regex(POSITIVE_INTEGER_RE, message);
 
 export const createPricingProfileSchema = z.object({
 	name: z.string().trim().min(1, "Profile name is required.").max(120),
@@ -28,8 +25,6 @@ export const createPricingProfileSchema = z.object({
 	serviceFeeBps: nonNegativeIntegerString(
 		"Service fee must be a non-negative whole number."
 	),
-	taxBps: nonNegativeIntegerString(
-		"Tax must be a non-negative whole number."
-	),
+	taxBps: nonNegativeIntegerString("Tax must be a non-negative whole number."),
 	isDefault: z.boolean(),
 });

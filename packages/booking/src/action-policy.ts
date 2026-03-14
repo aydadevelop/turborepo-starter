@@ -1,5 +1,5 @@
-import { eq } from "drizzle-orm";
 import { organization } from "@my-app/db/schema/auth";
+import { eq } from "drizzle-orm";
 import z from "zod";
 import type { Db } from "./types";
 
@@ -58,9 +58,7 @@ const bookingActionPolicyMetadataSchema = z
 
 const resolvePolicyItem = (
 	base: BookingActionWindowPolicyItem,
-	override:
-		| z.infer<typeof bookingActionWindowPolicyItemSchema>
-		| undefined,
+	override: z.infer<typeof bookingActionWindowPolicyItemSchema> | undefined
 ): BookingActionWindowPolicyItem => ({
 	customerLatestHoursBeforeStart:
 		override?.customerLatestHoursBeforeStart ??
@@ -71,12 +69,11 @@ const resolvePolicyItem = (
 		override?.managerLatestHoursBeforeStart ??
 		base.managerLatestHoursBeforeStart,
 	systemLatestHoursBeforeStart:
-		override?.systemLatestHoursBeforeStart ??
-		base.systemLatestHoursBeforeStart,
+		override?.systemLatestHoursBeforeStart ?? base.systemLatestHoursBeforeStart,
 });
 
 export const resolveBookingActionWindowPolicyProfile = (
-	metadataRaw: string | null | undefined,
+	metadataRaw: string | null | undefined
 ): BookingActionWindowPolicyProfile => {
 	if (!metadataRaw) {
 		return defaultBookingActionWindowPolicyProfile;
@@ -93,11 +90,11 @@ export const resolveBookingActionWindowPolicyProfile = (
 		return {
 			cancellation: resolvePolicyItem(
 				defaultBookingActionWindowPolicyProfile.cancellation,
-				overrides.cancellation,
+				overrides.cancellation
 			),
 			shift: resolvePolicyItem(
 				defaultBookingActionWindowPolicyProfile.shift,
-				overrides.shift,
+				overrides.shift
 			),
 		};
 	} catch {
@@ -164,7 +161,7 @@ export const evaluateBookingActionWindow = (params: {
  */
 export const loadOrganizationBookingActionPolicyProfile = async (
 	organizationId: string,
-	db: Db,
+	db: Db
 ): Promise<BookingActionWindowPolicyProfile> => {
 	const [organizationRow] = await db
 		.select({ metadata: organization.metadata })
@@ -173,8 +170,6 @@ export const loadOrganizationBookingActionPolicyProfile = async (
 		.limit(1);
 
 	return resolveBookingActionWindowPolicyProfile(
-		organizationRow?.metadata
-			? JSON.stringify(organizationRow.metadata)
-			: null,
+		organizationRow?.metadata ? JSON.stringify(organizationRow.metadata) : null
 	);
 };

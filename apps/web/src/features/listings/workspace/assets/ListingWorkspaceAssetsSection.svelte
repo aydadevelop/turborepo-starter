@@ -10,7 +10,8 @@
 
 	import type { ListingAssetWorkspaceState } from "$lib/orpc-types";
 
-	let { assets = null }: { assets?: ListingAssetWorkspaceState | null } = $props();
+	let { assets = null }: { assets?: ListingAssetWorkspaceState | null } =
+		$props();
 </script>
 
 <Card>

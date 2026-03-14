@@ -191,7 +191,7 @@ export const supportTicketMessage = pgTable(
 		index("support_ticket_message_ix_ticket_id").on(table.ticketId),
 		index("support_ticket_message_ix_organization_id").on(table.organizationId),
 		index("support_ticket_message_ix_inbound_message_id").on(
-			table.inboundMessageId,
+			table.inboundMessageId
 		),
 		index("support_ticket_message_ix_channel").on(table.channel),
 		index("support_ticket_message_ix_created_at").on(table.createdAt),

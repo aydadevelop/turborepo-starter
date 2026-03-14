@@ -3,6 +3,11 @@ import { page, userEvent } from "vitest/browser";
 import { renderWithQueryClient } from "../../../../test/browser/render";
 import { ORG_ROLE_OPTIONS } from "../../shared/roles";
 
+const MANAGER_RE = /Manager/;
+const AGENT_RE = /Agent/;
+const ADMIN_RE = /Admin/;
+const MEMBER_RE = /^Member/;
+
 const mockState = vi.hoisted(() => ({
 	canManage: {
 		canManageOrganization: true,
@@ -57,7 +62,9 @@ for (const role of ORG_ROLE_OPTIONS.filter((r) => r.value !== "org_owner")) {
 		await new Promise((r) => setTimeout(r, 100));
 
 		// Verify role button exists with label
-		const roleButton = page.getByRole("button", { name: new RegExp(role.label) });
+		const roleButton = page.getByRole("button", {
+			name: new RegExp(role.label),
+		});
 		await expect.element(roleButton).toBeInTheDocument();
 
 		// Verify description is visible (use first() to avoid strict mode violation)
@@ -65,9 +72,9 @@ for (const role of ORG_ROLE_OPTIONS.filter((r) => r.value !== "org_owner")) {
 		await expect.element(description).toBeInTheDocument();
 
 		// Take screenshot of the role option
-		await expect(page.getByRole("button", { name: new RegExp(role.label) })).toMatchScreenshot(
-			`role-option-${role.value}`
-		);
+		await expect(
+			page.getByRole("button", { name: new RegExp(role.label) })
+		).toMatchScreenshot(`role-option-${role.value}`);
 	});
 }
 
@@ -80,12 +87,12 @@ test("selects manager role and submits invite", async () => {
 	);
 
 	// Click manager role
-	await userEvent.click(page.getByRole("button", { name: /Manager/ }));
+	await userEvent.click(page.getByRole("button", { name: MANAGER_RE }));
 
 	// Take screenshot showing manager selected
-	await expect(page.getByRole("button", { name: /Manager/ })).toMatchScreenshot(
-		"manager-role-selected"
-	);
+	await expect(
+		page.getByRole("button", { name: MANAGER_RE })
+	).toMatchScreenshot("manager-role-selected");
 
 	await userEvent.click(page.getByRole("button", { name: "Send Invitation" }));
 
@@ -105,14 +112,14 @@ test("selects agent role and submits invite", async () => {
 	);
 
 	// Click agent role (recommended for captains)
-	await userEvent.click(page.getByRole("button", { name: /Agent/ }));
+	await userEvent.click(page.getByRole("button", { name: AGENT_RE }));
 
 	// Verify recommended label is shown (use first() to avoid strict mode)
 	const recommendedLabel = page.getByText("Recommended for captains").first();
 	await expect.element(recommendedLabel).toBeInTheDocument();
 
 	// Take screenshot showing agent selected with recommended label
-	await expect(page.getByRole("button", { name: /Agent/ })).toMatchScreenshot(
+	await expect(page.getByRole("button", { name: AGENT_RE })).toMatchScreenshot(
 		"agent-role-selected-with-recommended"
 	);
 
@@ -134,10 +141,10 @@ test("selects admin role and submits invite", async () => {
 	);
 
 	// Click admin role
-	await userEvent.click(page.getByRole("button", { name: /Admin/ }));
+	await userEvent.click(page.getByRole("button", { name: ADMIN_RE }));
 
 	// Take screenshot showing admin selected
-	await expect(page.getByRole("button", { name: /Admin/ })).toMatchScreenshot(
+	await expect(page.getByRole("button", { name: ADMIN_RE })).toMatchScreenshot(
 		"admin-role-selected"
 	);
 
@@ -159,10 +166,10 @@ test("selects member role and submits invite", async () => {
 	);
 
 	// Click member role
-	await userEvent.click(page.getByRole("button", { name: /^Member/ }));
+	await userEvent.click(page.getByRole("button", { name: MEMBER_RE }));
 
 	// Take screenshot showing member selected
-	await expect(page.getByRole("button", { name: /^Member/ })).toMatchScreenshot(
+	await expect(page.getByRole("button", { name: MEMBER_RE })).toMatchScreenshot(
 		"member-role-selected"
 	);
 
@@ -186,7 +193,9 @@ test("full invite form with all roles visible", async () => {
 
 	// Verify all non-owner roles are present
 	for (const role of ORG_ROLE_OPTIONS.filter((r) => r.value !== "org_owner")) {
-		const roleButton = page.getByRole("button", { name: new RegExp(role.label) });
+		const roleButton = page.getByRole("button", {
+			name: new RegExp(role.label),
+		});
 		await expect.element(roleButton).toBeInTheDocument();
 	}
 });
@@ -203,7 +212,7 @@ test("shows error when organization context is unavailable", async () => {
 		page.getByLabelText("Email address"),
 		"test@example.com"
 	);
-	await userEvent.click(page.getByRole("button", { name: /Manager/ }));
+	await userEvent.click(page.getByRole("button", { name: MANAGER_RE }));
 	await userEvent.click(page.getByRole("button", { name: "Send Invitation" }));
 
 	await expect
@@ -218,7 +227,7 @@ test("validates email is required", async () => {
 	renderWithQueryClient(InviteMemberScreen);
 
 	// Try to submit without email
-	await userEvent.click(page.getByRole("button", { name: /Manager/ }));
+	await userEvent.click(page.getByRole("button", { name: MANAGER_RE }));
 	await userEvent.click(page.getByRole("button", { name: "Send Invitation" }));
 
 	// Should show validation error

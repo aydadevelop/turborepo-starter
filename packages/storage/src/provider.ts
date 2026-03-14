@@ -42,8 +42,6 @@ export interface StorageSignedUploadResult extends StorageObjectRef {
 }
 
 export interface StorageProvider {
-	readonly providerId: string;
-
 	deleteObject(ref: StorageObjectRef): Promise<void>;
 
 	getObjectBuffer?(ref: StorageObjectRef): Promise<Buffer>;
@@ -52,12 +50,13 @@ export interface StorageProvider {
 
 	getSignedDownloadUrl(
 		ref: StorageObjectRef,
-		options?: StorageSignedUrlOptions,
+		options?: StorageSignedUrlOptions
 	): Promise<string>;
 
 	getSignedUploadUrl?(
-		input: StorageSignedUploadInput,
+		input: StorageSignedUploadInput
 	): Promise<StorageSignedUploadResult>;
+	readonly providerId: string;
 
 	upload(input: StorageUploadInput): Promise<StorageUploadResult>;
 }

@@ -1,8 +1,4 @@
-import type {
-	EmailMessage,
-	EmailProvider,
-	EmailSendResult,
-} from "../provider";
+import type { EmailMessage, EmailProvider, EmailSendResult } from "../provider";
 
 export interface FakeEmailProviderRecord {
 	message: EmailMessage;
@@ -45,5 +41,5 @@ export class FakeEmailProvider implements EmailProvider {
 }
 
 export const createFakeEmailProvider = (
-	options?: FakeEmailProviderOptions,
+	options?: FakeEmailProviderOptions
 ): FakeEmailProvider => new FakeEmailProvider(options);

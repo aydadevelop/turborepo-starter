@@ -2,6 +2,8 @@ import { expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import { renderWithQueryClient } from "../../test/browser/render";
 
+const BOOKING_HISTORY_RE = /Booking history/;
+
 const mockState = vi.hoisted(() => ({
 	bookings: [
 		{
@@ -51,7 +53,7 @@ test("renders bookings through the shared screen pattern", async () => {
 	renderWithQueryClient(DashboardBookingsScreen);
 
 	await expect.element(page.getByText("My Bookings")).toBeVisible();
-	await expect.element(page.getByText(/Booking history/)).toBeVisible();
+	await expect.element(page.getByText(BOOKING_HISTORY_RE)).toBeVisible();
 	await expect.element(page.getByRole("table")).toBeVisible();
 	await expect(document.body).toMatchScreenshot("dashboard-bookings-screen");
 });

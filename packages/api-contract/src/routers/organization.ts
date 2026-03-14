@@ -166,7 +166,8 @@ export const organizationContract = {
 	clearListingApproval: oc
 		.route({
 			tags: ["Organization"],
-			summary: "Clear moderation approval for a listing in the active organization",
+			summary:
+				"Clear moderation approval for a listing in the active organization",
 		})
 		.input(moderationActionInputSchema)
 		.output(listingModerationStateOutputSchema),
@@ -174,7 +175,8 @@ export const organizationContract = {
 	getListingModerationAudit: oc
 		.route({
 			tags: ["Organization"],
-			summary: "List moderation audit entries for a listing in the active organization",
+			summary:
+				"List moderation audit entries for a listing in the active organization",
 		})
 		.input(z.object({ listingId: z.string() }))
 		.output(z.array(listingModerationAuditEntryOutputSchema)),

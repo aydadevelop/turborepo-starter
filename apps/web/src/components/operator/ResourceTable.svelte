@@ -1,5 +1,4 @@
 <script lang="ts" generics="TData extends RowData">
-	import { cn } from "@my-app/ui/lib/utils";
 	import {
 		Table,
 		TableBody,
@@ -8,16 +7,17 @@
 		TableHeader,
 		TableRow,
 	} from "@my-app/ui/components/table";
+	import { cn } from "@my-app/ui/lib/utils";
 	import type { Snippet } from "svelte";
 	import type {
 		ResourceTableColumnMeta,
 		ResourceTableRowAttributes,
 	} from "./resource-table";
 	import {
+		type ColumnDef,
 		createTable,
 		getCoreRowModel,
 		isRenderedComponent,
-		type ColumnDef,
 		type RowData,
 	} from "./resource-table";
 
@@ -58,7 +58,9 @@
 					right: [],
 				},
 			},
-			onStateChange: () => {},
+			onStateChange: () => {
+				// no-op: this table uses static local state only
+			},
 			renderFallbackValue: null,
 			getCoreRowModel: getCoreRowModel(),
 		})
@@ -83,23 +85,32 @@
 		return renderer;
 	};
 
-	const renderHeader = (header: ReturnType<typeof table.getHeaderGroups>[number]["headers"][number]) =>
-		renderContent(header.column.columnDef.header, header.getContext());
+	const renderHeader = (
+		header: ReturnType<typeof table.getHeaderGroups>[number]["headers"][number]
+	) => renderContent(header.column.columnDef.header, header.getContext());
 
-	const renderCell = (cell: ReturnType<typeof table.getRowModel>["rows"][number]["getVisibleCells"] extends () => infer TCells
-		? TCells extends Array<infer TCell>
-			? TCell
+	const renderCell = (
+		cell: ReturnType<
+			typeof table.getRowModel
+		>["rows"][number]["getVisibleCells"] extends () => infer TCells
+			? TCells extends Array<infer TCell>
+				? TCell
+				: never
 			: never
-		: never) => {
+	) => {
 		const renderer =
-			cell.column.columnDef.cell ?? ((context: typeof cell.getContext extends () => infer TContext ? TContext : never) => context.getValue());
+			cell.column.columnDef.cell ??
+			((
+				context: typeof cell.getContext extends () => infer TContext
+					? TContext
+					: never
+			) => context.getValue());
 
 		return renderContent(renderer, cell.getContext());
 	};
 
-	const isPrimitiveRenderable = (
-		value: unknown
-	): value is string | number => typeof value === "string" || typeof value === "number";
+	const isPrimitiveRenderable = (value: unknown): value is string | number =>
+		typeof value === "string" || typeof value === "number";
 
 	const hasRenderableContent = (value: unknown) =>
 		value !== null && value !== undefined && value !== false;
@@ -137,7 +148,10 @@
 		<TableBody>
 			{#if loading}
 				<TableRow>
-					<TableCell colspan={columnCount} class="text-center text-muted-foreground">
+					<TableCell
+						colspan={columnCount}
+						class="text-center text-muted-foreground"
+					>
 						{loadingMessage}
 					</TableCell>
 				</TableRow>
@@ -149,7 +163,10 @@
 				</TableRow>
 			{:else if table.getRowModel().rows.length === 0}
 				<TableRow>
-					<TableCell colspan={columnCount} class="text-center text-muted-foreground">
+					<TableCell
+						colspan={columnCount}
+						class="text-center text-muted-foreground"
+					>
 						{emptyMessage}
 					</TableCell>
 				</TableRow>

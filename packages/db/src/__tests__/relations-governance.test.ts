@@ -12,13 +12,17 @@ describe("Relations governance", () => {
 	it("keeps relations.ts as a stable merger over bounded-context fragments", () => {
 		const relationsText = readFileSync(relationsFile, "utf8");
 
-		expect(relationsText).toContain("const baseRelations = defineRelations(schema);");
-		expect(relationsText).toContain('import { authRelations } from "./relations/auth";');
 		expect(relationsText).toContain(
-			'import { marketplaceRelations } from "./relations/marketplace";',
+			"const baseRelations = defineRelations(schema);"
 		);
 		expect(relationsText).toContain(
-			'import { supportRelations } from "./relations/support";',
+			'import { authRelations } from "./relations/auth";'
+		);
+		expect(relationsText).toContain(
+			'import { marketplaceRelations } from "./relations/marketplace";'
+		);
+		expect(relationsText).toContain(
+			'import { supportRelations } from "./relations/support";'
 		);
 		expect(relationsText).not.toContain("user: {");
 		expect(relationsText).not.toContain("booking: {");

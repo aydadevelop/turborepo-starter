@@ -24,21 +24,17 @@ import {
 	organizationPaymentConfig,
 	paymentProviderConfig,
 } from "@my-app/db/schema/marketplace";
+import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import {
-	bootstrapTestDatabase,
-	type TestDatabase,
-} from "@my-app/db/test";
-import {
+	type PaymentProvider,
 	registerPaymentProvider,
 	resetPaymentProviderRegistry,
-	type PaymentProvider,
 } from "@my-app/payment";
 import { RPCHandler } from "@orpc/server/fetch";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { appRouter } from "../handlers/index";
 import type { Context } from "../context";
+import { appRouter } from "../handlers/index";
 
 const ORG_ID = "api-cancel-org-1";
 const USER_ID = "api-cancel-user-1";
@@ -189,7 +185,7 @@ const createRpcContext = (overrides: Partial<Context> = {}): Context => ({
 
 const callApplyCancellation = async (
 	requestId: string,
-	contextOverrides: Partial<Context> = {},
+	contextOverrides: Partial<Context> = {}
 ): Promise<{ status: number; body: unknown }> => {
 	const request = new Request(
 		"http://example.test/rpc/booking/applyCancellation",
@@ -201,7 +197,7 @@ const callApplyCancellation = async (
 			body: JSON.stringify({
 				json: { requestId },
 			}),
-		},
+		}
 	);
 
 	const result = await rpcHandler.handle(request, {
@@ -209,7 +205,7 @@ const callApplyCancellation = async (
 		context: createRpcContext(contextOverrides),
 	});
 
-	if (!result.matched || !result.response) {
+	if (!(result.matched && result.response)) {
 		throw new Error("RPC request did not match booking.applyCancellation");
 	}
 
@@ -222,11 +218,13 @@ const callApplyCancellation = async (
 };
 
 const registerTestProvider = (
-	overrides: Partial<PaymentProvider> = {},
+	overrides: Partial<PaymentProvider> = {}
 ): PaymentProvider => {
 	const provider: PaymentProvider = {
 		providerId: "cloudpayments",
-		refundPayment: vi.fn().mockResolvedValue({ externalRefundId: "cp-refund-1" }),
+		refundPayment: vi
+			.fn()
+			.mockResolvedValue({ externalRefundId: "cp-refund-1" }),
 		...overrides,
 	};
 
@@ -236,8 +234,8 @@ const registerTestProvider = (
 
 const insertCancellationRequest = async (
 	db: TestDatabase,
-	overrides: Partial<typeof bookingCancellationRequest.$inferInsert> = {},
-	): Promise<string> => {
+	overrides: Partial<typeof bookingCancellationRequest.$inferInsert> = {}
+): Promise<string> => {
 	const requestId = overrides.id ?? crypto.randomUUID();
 
 	await db.insert(bookingCancellationRequest).values({
@@ -250,8 +248,8 @@ const insertCancellationRequest = async (
 		reason: "Operator approved cancellation",
 		reasonCode: "OWNER_OPERATIONAL_ISSUE",
 		bookingTotalPriceCents: 10_000,
-		penaltyAmountCents: 5_000,
-		refundAmountCents: 5_000,
+		penaltyAmountCents: 5000,
+		refundAmountCents: 5000,
 		currency: "RUB",
 		requestedAt: NOW,
 		createdAt: NOW,
@@ -264,7 +262,7 @@ const insertCancellationRequest = async (
 
 const insertCapturedAttempt = async (
 	db: TestDatabase,
-	overrides: Partial<typeof bookingPaymentAttempt.$inferInsert> = {},
+	overrides: Partial<typeof bookingPaymentAttempt.$inferInsert> = {}
 ) => {
 	await db.insert(bookingPaymentAttempt).values({
 		id: "api-cancel-payment-attempt-1",
@@ -308,7 +306,7 @@ describe("booking.applyCancellation live handler", () => {
 
 		expect(provider.refundPayment).toHaveBeenCalledWith(
 			expect.objectContaining({
-				amountCents: 5_000,
+				amountCents: 5000,
 				providerPaymentId: "455",
 				currency: "RUB",
 				idempotencyKey: `${requestId}:refund`,
@@ -317,7 +315,7 @@ describe("booking.applyCancellation live handler", () => {
 				providerId: "cloudpayments",
 				publicKey: "pk_live_test",
 				credentials: expect.objectContaining({ apiSecret: "secret_live_test" }),
-			}),
+			})
 		);
 
 		const [updatedBooking] = await db
@@ -328,7 +326,7 @@ describe("booking.applyCancellation live handler", () => {
 		expect(updatedBooking).toMatchObject({
 			status: "cancelled",
 			paymentStatus: "refunded",
-			refundAmountCents: 5_000,
+			refundAmountCents: 5000,
 		});
 
 		const [updatedRequest] = await db
@@ -349,12 +347,12 @@ describe("booking.applyCancellation live handler", () => {
 			.where(
 				and(
 					eq(bookingRefund.bookingId, BOOKING_ID),
-					eq(bookingRefund.status, "processed"),
-				),
+					eq(bookingRefund.status, "processed")
+				)
 			)
 			.limit(1);
 		expect(refund).toMatchObject({
-			amountCents: 5_000,
+			amountCents: 5000,
 			externalRefundId: "cp-refund-1",
 			provider: "cloudpayments",
 			status: "processed",

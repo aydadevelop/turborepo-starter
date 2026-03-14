@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Badge } from "@my-app/ui/components/badge";
 	import { Button } from "@my-app/ui/components/button";
-	import WorkspaceActionDialog from "../shared/WorkspaceActionDialog.svelte";
 	import type { CalendarWorkspaceState } from "$lib/orpc-types";
+	import WorkspaceActionDialog from "../shared/WorkspaceActionDialog.svelte";
 
 	let {
 		accountId,
@@ -18,8 +18,12 @@
 		accountLabel: string;
 		attachedSourceIds?: Set<string>;
 		attachingSourceId?: string | null;
-		onAttachCalendarSource?: ((sourceId: string) => void | Promise<void>) | null;
-		onRefreshCalendarAccountSources?: ((accountId: string) => void | Promise<void>) | null;
+		onAttachCalendarSource?:
+			| ((sourceId: string) => void | Promise<void>)
+			| null;
+		onRefreshCalendarAccountSources?:
+			| ((accountId: string) => void | Promise<void>)
+			| null;
 		refreshing?: boolean;
 		sources?: CalendarWorkspaceState["sources"];
 	} = $props();
@@ -36,8 +40,8 @@
 	{#snippet children()}
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<p class="text-sm text-muted-foreground">
-				Review discovered calendars, refresh the account, and attach active calendars
-				to this listing.
+				Review discovered calendars, refresh the account, and attach active
+				calendars to this listing.
 			</p>
 			{#if onRefreshCalendarAccountSources}
 				<Button
@@ -55,7 +59,9 @@
 		{#if sources.length}
 			<div class="space-y-2">
 				{#each sources as source (source.id)}
-					<div class="flex items-center justify-between gap-3 rounded-md border p-3">
+					<div
+						class="flex items-center justify-between gap-3 rounded-md border p-3"
+					>
 						<div class="space-y-1">
 							<p class="text-sm font-medium">{source.name}</p>
 							<p class="text-xs text-muted-foreground">

@@ -58,7 +58,7 @@ export class SmtpEmailProvider implements EmailProvider {
 			html: message.html,
 			replyTo: formatAddresses(
 				message.replyTo ??
-					(this.defaultReplyTo ? [this.defaultReplyTo] : undefined),
+					(this.defaultReplyTo ? [this.defaultReplyTo] : undefined)
 			),
 			subject: message.subject,
 			text: message.text,
@@ -76,7 +76,7 @@ export class SmtpEmailProvider implements EmailProvider {
 }
 
 export const createSmtpEmailProvider = (
-	config: SmtpEmailProviderConfig,
+	config: SmtpEmailProviderConfig
 ): EmailProvider => new SmtpEmailProvider(config);
 
 const formatAddress = (address: EmailAddress): string => {
@@ -88,7 +88,9 @@ const formatAddress = (address: EmailAddress): string => {
 	return `"${trimmedName.replace(/"/g, '\\"')}" <${address.address}>`;
 };
 
-const formatAddresses = (addresses: EmailAddress[] | undefined): string[] | undefined => {
+const formatAddresses = (
+	addresses: EmailAddress[] | undefined
+): string[] | undefined => {
 	if (!addresses || addresses.length === 0) {
 		return undefined;
 	}
@@ -105,7 +107,7 @@ const toStringArray = (value: unknown): string[] => {
 };
 
 const toAttachmentContent = (
-	content: EmailAttachment["content"],
+	content: EmailAttachment["content"]
 ): string | Buffer => {
 	if (typeof content === "string" || Buffer.isBuffer(content)) {
 		return content;

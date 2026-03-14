@@ -11,6 +11,7 @@ import type {
 import { boatRentServiceFamilyPolicy } from "./boat-rent";
 import { excursionsServiceFamilyPolicy } from "./excursions";
 
+// biome-ignore lint/performance/noBarrelFile: Internal service-family aggregator re-exports policy helpers for catalog modules.
 export {
 	boatRentServiceFamilyPolicy,
 	normalizeBoatRentProfileInput,

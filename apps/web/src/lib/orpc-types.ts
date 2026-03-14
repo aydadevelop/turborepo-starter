@@ -27,8 +27,7 @@ export type CalendarWorkspaceState =
 	OrpcOutputs["calendar"]["getWorkspaceState"];
 export type CalendarOrgWorkspaceState =
 	OrpcOutputs["calendar"]["getOrgWorkspaceState"];
-export type CalendarSource =
-	CalendarWorkspaceState["sources"][number];
+export type CalendarSource = CalendarWorkspaceState["sources"][number];
 
 export type NotificationListOutput = OrpcOutputs["notifications"]["listMe"];
 export type InAppNotificationItem = NotificationListOutput["items"][number];

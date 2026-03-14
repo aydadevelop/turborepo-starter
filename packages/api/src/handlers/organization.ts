@@ -197,39 +197,43 @@ export const organizationRouter = {
 
 	getListingModerationAudit: organizationPermissionProcedure({
 		listing: ["read"],
-	}).organization.getListingModerationAudit.handler(async ({ context, input }) => {
-		try {
-			const rows = await getOrganizationListingModerationAudit(
-				input.listingId,
-				context.activeMembership.organizationId,
-				db
-			);
-			return rows.map(formatListingModerationAuditEntry);
-		} catch (error) {
-			return throwOrganizationRouterError(error);
+	}).organization.getListingModerationAudit.handler(
+		async ({ context, input }) => {
+			try {
+				const rows = await getOrganizationListingModerationAudit(
+					input.listingId,
+					context.activeMembership.organizationId,
+					db
+				);
+				return rows.map(formatListingModerationAuditEntry);
+			} catch (error) {
+				return throwOrganizationRouterError(error);
+			}
 		}
-	}),
+	),
 
 	publishListingToChannel: organizationPermissionProcedure({
 		listing: ["update"],
-	}).organization.publishListingToChannel.handler(async ({ context, input }) => {
-		try {
-			return await publishOrganizationListingToChannel(
-				{
-					listingId: input.listingId,
-					organizationId: context.activeMembership.organizationId,
-					channelType: input.channelType,
-				},
-				buildWorkflowContext(
-					context,
-					`organization:publish-listing:${input.listingId}:${input.channelType}`
-				),
-				db
-			);
-		} catch (error) {
-			return throwOrganizationRouterError(error);
+	}).organization.publishListingToChannel.handler(
+		async ({ context, input }) => {
+			try {
+				return await publishOrganizationListingToChannel(
+					{
+						listingId: input.listingId,
+						organizationId: context.activeMembership.organizationId,
+						channelType: input.channelType,
+					},
+					buildWorkflowContext(
+						context,
+						`organization:publish-listing:${input.listingId}:${input.channelType}`
+					),
+					db
+				);
+			} catch (error) {
+				return throwOrganizationRouterError(error);
+			}
 		}
-	}),
+	),
 
 	unpublishListing: organizationPermissionProcedure({
 		listing: ["update"],

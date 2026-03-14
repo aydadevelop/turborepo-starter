@@ -5,10 +5,21 @@ import {
 } from "@my-app/db/schema/marketplace";
 import { resolvePublicObjectUrl } from "@my-app/storage";
 import { and, asc, eq, sql } from "drizzle-orm";
-import { getEmptyBoatRentProfileState, getEmptyExcursionProfileState } from "../service-families";
+import {
+	findListingTypeBySlug,
+	listOrganizationAvailableListingTypes,
+} from "../listing-types/repository";
+import { findListingForOrganization } from "../listings/repository";
+import {
+	getEmptyBoatRentProfileState,
+	getEmptyExcursionProfileState,
+} from "../service-families";
 import { findBoatRentProfile } from "../service-families/boat-rent-state";
 import { findExcursionProfile } from "../service-families/excursion-state";
-import { getServiceFamilyPolicy, toListingTypeOption } from "../service-family-policy";
+import {
+	getServiceFamilyPolicy,
+	toListingTypeOption,
+} from "../service-family-policy";
 import type {
 	Db,
 	ListingAssetWorkspaceState,
@@ -16,17 +27,10 @@ import type {
 	ListingWorkspaceState,
 	OrganizationSettingsRow,
 } from "../types";
-import {
-	findListingForOrganization,
-} from "../listings/repository";
-import {
-	findListingTypeBySlug,
-	listOrganizationAvailableListingTypes,
-} from "../listing-types/repository";
 
 export async function findOrganizationSettings(
 	organizationId: string,
-	db: Db,
+	db: Db
 ): Promise<OrganizationSettingsRow | null> {
 	const [row] = await db
 		.select()
@@ -39,7 +43,7 @@ export async function findOrganizationSettings(
 
 export async function getListingCreateEditorState(
 	organizationId: string,
-	db: Db,
+	db: Db
 ): Promise<ListingCreateEditorState> {
 	const [listingTypes, settings] = await Promise.all([
 		listOrganizationAvailableListingTypes(organizationId, db),
@@ -57,7 +61,7 @@ export async function getListingCreateEditorState(
 export async function resolveListingWorkspaceState(
 	id: string,
 	organizationId: string,
-	db: Db,
+	db: Db
 ): Promise<ListingWorkspaceState | null> {
 	const listingRow = await findListingForOrganization(id, organizationId, db);
 	if (!listingRow) {
@@ -75,8 +79,8 @@ export async function resolveListingWorkspaceState(
 				and(
 					eq(listingPublication.listingId, id),
 					eq(listingPublication.organizationId, organizationId),
-					eq(listingPublication.isActive, true),
-				),
+					eq(listingPublication.isActive, true)
+				)
 			)
 			.limit(1),
 	]);
@@ -125,12 +129,12 @@ export async function resolveListingWorkspaceState(
 export async function resolveListingAssetWorkspaceState(
 	listingId: string,
 	organizationId: string,
-	db: Db,
+	db: Db
 ): Promise<ListingAssetWorkspaceState | null> {
 	const listingRow = await findListingForOrganization(
 		listingId,
 		organizationId,
-		db,
+		db
 	);
 	if (!listingRow) {
 		return null;

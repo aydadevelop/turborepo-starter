@@ -142,7 +142,6 @@ interface BuildWorkflowContextOptions {
 	actorUserId?: string;
 	eventBus?: EventBus;
 	idempotencyKey: string;
-	notificationQueue?: QueueProducer;
 	organizationId: string;
 }
 
@@ -152,7 +151,7 @@ const buildWorkflowContextFromOptions = (
 	organizationId: options.organizationId,
 	actorUserId: options.actorUserId,
 	idempotencyKey: options.idempotencyKey,
-	eventBus: options.eventBus ?? new EventBus(options.notificationQueue),
+	eventBus: options.eventBus ?? new EventBus(),
 });
 
 export function buildWorkflowContext(
@@ -173,7 +172,6 @@ export function buildWorkflowContext(
 			actorUserId: context.session?.user?.id ?? undefined,
 			eventBus: context.eventBus,
 			idempotencyKey,
-			notificationQueue: context.notificationQueue,
 			organizationId: context.activeMembership.organizationId,
 		});
 	}
@@ -201,7 +199,7 @@ export async function createContext({
 	const requestCookies = parseCookiesFromHeader(
 		context.req.raw.headers.get("cookie")
 	);
-	const eventBus = new EventBus(notificationQueue);
+	const eventBus = new EventBus();
 
 	return {
 		session,

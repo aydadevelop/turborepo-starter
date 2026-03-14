@@ -22,9 +22,9 @@ export const MARKETPLACE_IDS = {
 
 export interface MarketplaceFixtureClock {
 	anchorDate: Date;
-	now: Date;
-	bookingStartsAt: Date;
 	bookingEndsAt: Date;
+	bookingStartsAt: Date;
+	now: Date;
 }
 
 const isoOffset = (anchorDate: Date, offsetMs: number): Date =>

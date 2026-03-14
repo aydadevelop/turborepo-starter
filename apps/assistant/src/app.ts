@@ -1,4 +1,8 @@
-import { httpInstrumentationMiddleware, log, prometheus } from "@my-app/telemetry";
+import {
+	httpInstrumentationMiddleware,
+	log,
+	prometheus,
+} from "@my-app/telemetry";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 
@@ -8,11 +12,16 @@ import { rpcMiddleware } from "./rpc/handlers";
 
 export const app = new Hono();
 
-const { printMetrics, registerMetrics } = prometheus({ collectDefaultMetrics: true });
+const { printMetrics, registerMetrics } = prometheus({
+	collectDefaultMetrics: true,
+});
 app.use("*", registerMetrics);
 app.get("/metrics", printMetrics);
 
-const logRequest = async (c: Parameters<Parameters<typeof app.use>[1]>[0], next: () => Promise<void>) => {
+const logRequest = async (
+	c: Parameters<Parameters<typeof app.use>[1]>[0],
+	next: () => Promise<void>
+) => {
 	const start = Date.now();
 	await next();
 	log.info(`${c.req.method} ${c.req.path}`, {
@@ -22,8 +31,10 @@ const logRequest = async (c: Parameters<Parameters<typeof app.use>[1]>[0], next:
 		duration: Date.now() - start,
 	});
 };
-app.use(async (c, next) => {
-	if (c.req.path === "/health" || c.req.method === "OPTIONS") return next();
+app.use((c, next) => {
+	if (c.req.path === "/health" || c.req.method === "OPTIONS") {
+		return next();
+	}
 	return logRequest(c, next);
 });
 app.use("*", httpInstrumentationMiddleware({ serviceName: "assistant" }));

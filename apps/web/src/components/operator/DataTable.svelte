@@ -1,16 +1,14 @@
 <script lang="ts" generics="TData extends RowData">
 	import { Input } from "@my-app/ui/components/input";
 	import type { Snippet } from "svelte";
+	import type {
+		DataTablePagination,
+		DataTableSearch,
+	} from "./data-table-state.svelte";
 	import ResourceTable from "./ResourceTable.svelte";
 	import ResourceTablePagination from "./ResourceTablePagination.svelte";
-	import type { DataTablePagination, DataTableSearch } from "./data-table-state.svelte";
-	import type {
-		ResourceTableRowAttributes,
-	} from "./resource-table";
-	import {
-		type ColumnDef,
-		type RowData,
-	} from "./resource-table";
+	import type { ResourceTableRowAttributes } from "./resource-table";
+	import { type ColumnDef, type RowData } from "./resource-table";
 
 	// DataTable — complete widget: search + table + pagination.
 	// Wraps ResourceTable + ResourceTablePagination with DataTableState.

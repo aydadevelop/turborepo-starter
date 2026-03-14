@@ -130,5 +130,6 @@ export const bootstrapTestDatabase = (
 	return state;
 };
 
-export { createParityTest } from "./parity";
 export type { ParityDeclaration, ParityResult } from "./parity";
+// biome-ignore lint/performance/noBarrelFile: Test harness entrypoint re-exports parity utilities for db tests.
+export { createParityTest } from "./parity";

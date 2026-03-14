@@ -1,16 +1,16 @@
-import { db as defaultDb } from "@my-app/db";
-import { publishListingWorkflow, unpublishListingWorkflow } from "@my-app/catalog";
-import type { WorkflowContext } from "@my-app/workflows";
-
 import {
-	resolveOrganizationListingDistributionState,
-} from "./repository";
+	publishListingWorkflow,
+	unpublishListingWorkflow,
+} from "@my-app/catalog";
+import { db as defaultDb } from "@my-app/db";
+import type { WorkflowContext } from "@my-app/workflows";
 import { ensureOrganizationListingExists } from "../moderation/repository";
 import type {
 	Db,
 	OrganizationListingDistributionState,
 	OrganizationPublicationChannelType,
 } from "../types";
+import { resolveOrganizationListingDistributionState } from "./repository";
 
 export const publishOrganizationListingToChannel = async (
 	input: {
@@ -61,5 +61,9 @@ export const unpublishOrganizationListing = async (
 		throw result.error;
 	}
 
-	return resolveOrganizationListingDistributionState(listingId, organizationId, db);
+	return resolveOrganizationListingDistributionState(
+		listingId,
+		organizationId,
+		db
+	);
 };

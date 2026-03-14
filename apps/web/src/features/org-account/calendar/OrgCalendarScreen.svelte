@@ -19,9 +19,8 @@
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-
-	import type { CalendarOrgWorkspaceState } from "$lib/orpc-types";
 	import { orpc, queryClient } from "$lib/orpc";
+	import type { CalendarOrgWorkspaceState } from "$lib/orpc-types";
 	import { resolveServerPath } from "$lib/server-url";
 
 	const stateQuery = createQuery(() =>
@@ -126,7 +125,10 @@
 
 	const connectionsByListing = $derived.by(() => {
 		const connections = stateQuery.data?.connections ?? [];
-		const grouped = new Map<string, { listingName: string | null; connections: OrgConnection[] }>();
+		const grouped = new Map<
+			string,
+			{ listingName: string | null; connections: OrgConnection[] }
+		>();
 		for (const c of connections) {
 			const entry = grouped.get(c.listingId) ?? {
 				listingName: c.listingName,
@@ -139,9 +141,7 @@
 	});
 
 	const sourceNameById = $derived(
-		new Map(
-			(stateQuery.data?.sources ?? []).map((s) => [s.id, s.name])
-		)
+		new Map((stateQuery.data?.sources ?? []).map((s) => [s.id, s.name]))
 	);
 
 	const listingOptions = $derived(
@@ -163,7 +163,7 @@
 	}
 
 	async function confirmAttachSource() {
-		if (!attachSourceId || !attachListingId) return;
+		if (!(attachSourceId && attachListingId)) return;
 		await attachSourceMutation.mutateAsync({
 			sourceId: attachSourceId,
 			listingId: attachListingId,
@@ -178,9 +178,7 @@
 	{#if stateQuery.isPending}
 		<p class="text-sm text-muted-foreground">Loading calendar workspace…</p>
 	{:else if stateQuery.isError}
-		<p class="text-sm text-destructive">
-			Failed to load calendar workspace.
-		</p>
+		<p class="text-sm text-destructive">Failed to load calendar workspace.</p>
 	{:else}
 		<!-- Connect provider CTA -->
 		<Card>
@@ -219,7 +217,9 @@
 											account.accountEmail ??
 											account.externalAccountId}
 									</p>
-									<div class="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+									<div
+										class="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
+									>
 										<span>{account.provider}</span>
 										{#if account.accountEmail}
 											<span>·</span>
@@ -228,7 +228,9 @@
 									</div>
 								</div>
 								<div class="flex shrink-0 items-center gap-2">
-									<Badge variant={ACCOUNT_STATUS_VARIANT[account.status] ?? "secondary"}>
+									<Badge
+										variant={ACCOUNT_STATUS_VARIANT[account.status] ?? "secondary"}
+									>
 										{account.status}
 									</Badge>
 									<Button
@@ -292,7 +294,8 @@
 								<div class="min-w-0 space-y-0.5">
 									<p class="truncate font-medium">{source.name}</p>
 									<p class="truncate text-sm text-muted-foreground">
-										{source.provider} · {source.externalCalendarId}
+										{source.provider}
+										· {source.externalCalendarId}
 									</p>
 								</div>
 								<div class="flex shrink-0 items-center gap-1.5">
@@ -346,13 +349,20 @@
 
 					{#if showHiddenSources && hiddenSources.length > 0}
 						<div class="space-y-3 rounded-lg border border-dashed p-3">
-							<p class="text-xs font-medium text-muted-foreground">Hidden calendars</p>
+							<p class="text-xs font-medium text-muted-foreground">
+								Hidden calendars
+							</p>
 							{#each hiddenSources as source (source.id)}
-								<div class="flex items-center justify-between gap-3 rounded-lg border p-3">
+								<div
+									class="flex items-center justify-between gap-3 rounded-lg border p-3"
+								>
 									<div class="min-w-0 space-y-0.5">
-										<p class="truncate font-medium text-muted-foreground">{source.name}</p>
+										<p class="truncate font-medium text-muted-foreground">
+											{source.name}
+										</p>
 										<p class="truncate text-sm text-muted-foreground">
-											{source.provider} · {source.externalCalendarId}
+											{source.provider}
+											· {source.externalCalendarId}
 										</p>
 									</div>
 									<Button
@@ -400,7 +410,7 @@
 			</CardHeader>
 			<CardContent class="space-y-5">
 				{#if connectionsByListing.size > 0}
-					{#each [...connectionsByListing.entries()] as [listingId, group] (listingId)}
+					{#each [...connectionsByListing.entries()] as [ listingId, group ] (listingId)}
 						<div class="space-y-2">
 							<div class="flex items-center gap-2">
 								<p class="text-sm font-semibold">
@@ -441,7 +451,9 @@
 										</div>
 									</div>
 									{#if connection.lastError && connection.syncStatus === "error"}
-										<p class="mt-2 text-xs text-destructive">{connection.lastError}</p>
+										<p class="mt-2 text-xs text-destructive">
+											{connection.lastError}
+										</p>
 									{/if}
 								</div>
 							{/each}
@@ -463,8 +475,9 @@
 		<DialogHeader>
 			<DialogTitle>Disconnect calendar account?</DialogTitle>
 			<DialogDescription>
-				This will disconnect <strong>{confirmDisconnectAccountLabel}</strong> and
-				remove all discovered calendars from this account. Existing listing
+				This will disconnect
+				<strong>{confirmDisconnectAccountLabel}</strong>
+				and remove all discovered calendars from this account. Existing listing
 				connections will remain but stop syncing.
 			</DialogDescription>
 		</DialogHeader>

@@ -1,5 +1,10 @@
 import { organization, user } from "@my-app/db/schema/auth";
-import { booking, listing, listingPublication, listingTypeConfig } from "@my-app/db/schema/marketplace";
+import {
+	booking,
+	listing,
+	listingPublication,
+	listingTypeConfig,
+} from "@my-app/db/schema/marketplace";
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import { describe, expect, it } from "vitest";
 
@@ -40,8 +45,18 @@ const testDbState = bootstrapTestDatabase({
 			{ id: OTHER_ORG_ID, name: "Support Org Two", slug: "sup-org-two" },
 		]);
 		await db.insert(user).values([
-			{ id: CUSTOMER_USER_ID, name: "Customer One", email: "customer-1@test.com", emailVerified: true },
-			{ id: OTHER_CUSTOMER_USER_ID, name: "Customer Two", email: "customer-2@test.com", emailVerified: true },
+			{
+				id: CUSTOMER_USER_ID,
+				name: "Customer One",
+				email: "customer-1@test.com",
+				emailVerified: true,
+			},
+			{
+				id: OTHER_CUSTOMER_USER_ID,
+				name: "Customer Two",
+				email: "customer-2@test.com",
+				emailVerified: true,
+			},
 		]);
 		await db.insert(listing).values({
 			id: "sup-listing-1",
@@ -85,7 +100,7 @@ describe("createSupportTicket", () => {
 				subject: "My booking issue",
 				description: "I need help",
 			},
-			getDb(),
+			getDb()
 		);
 
 		expect(ticket.organizationId).toBe(ORG_ID);
@@ -101,7 +116,7 @@ describe("addTicketMessage", () => {
 		// Create a ticket in ORG_ID
 		const ticket = await createSupportTicket(
 			{ organizationId: ORG_ID, subject: "Isolation test ticket" },
-			getDb(),
+			getDb()
 		);
 
 		// Try to add message from OTHER_ORG_ID — should throw
@@ -112,8 +127,8 @@ describe("addTicketMessage", () => {
 					organizationId: OTHER_ORG_ID,
 					body: "Unauthorized message attempt",
 				},
-				getDb(),
-			),
+				getDb()
+			)
 		).rejects.toThrow("NOT_FOUND");
 	});
 });
@@ -122,18 +137,22 @@ describe("listOrgTickets", () => {
 	it("filters by bookingId and returns only matching tickets", async () => {
 		// Create two tickets — one linked to booking, one not
 		await createSupportTicket(
-			{ organizationId: ORG_ID, bookingId: BOOKING_ID, subject: "Booking ticket" },
-			getDb(),
+			{
+				organizationId: ORG_ID,
+				bookingId: BOOKING_ID,
+				subject: "Booking ticket",
+			},
+			getDb()
 		);
 		await createSupportTicket(
 			{ organizationId: ORG_ID, subject: "General ticket" },
-			getDb(),
+			getDb()
 		);
 
 		const result = await listOrgTickets(
 			ORG_ID,
 			{ filter: { bookingId: BOOKING_ID } },
-			getDb(),
+			getDb()
 		);
 
 		expect(result.items.length).toBeGreaterThanOrEqual(1);
@@ -149,7 +168,7 @@ describe("listOrgTickets", () => {
 				subject: "Harbor pickup issue",
 				priority: "urgent",
 			},
-			getDb(),
+			getDb()
 		);
 		await createSupportTicket(
 			{
@@ -157,7 +176,7 @@ describe("listOrgTickets", () => {
 				subject: "Cabin photo request",
 				priority: "low",
 			},
-			getDb(),
+			getDb()
 		);
 
 		const result = await listOrgTickets(
@@ -169,7 +188,7 @@ describe("listOrgTickets", () => {
 					dir: "desc",
 				},
 			},
-			getDb(),
+			getDb()
 		);
 
 		expect(result.total).toBe(1);
@@ -181,19 +200,30 @@ describe("listOrgTickets", () => {
 
 describe("getTicket", () => {
 	it("throws NOT_FOUND when ticket does not exist for org", async () => {
-		await expect(getTicket("nonexistent-ticket-id", ORG_ID, getDb())).rejects.toThrow("NOT_FOUND");
+		await expect(
+			getTicket("nonexistent-ticket-id", ORG_ID, getDb())
+		).rejects.toThrow("NOT_FOUND");
 	});
 });
 
 describe("listCustomerTickets", () => {
 	it("returns only tickets where customerUserId matches", async () => {
 		const ticket = await createSupportTicket(
-			{ organizationId: ORG_ID, bookingId: BOOKING_ID, subject: "Customer ticket", customerUserId: CUSTOMER_USER_ID },
-			getDb(),
+			{
+				organizationId: ORG_ID,
+				bookingId: BOOKING_ID,
+				subject: "Customer ticket",
+				customerUserId: CUSTOMER_USER_ID,
+			},
+			getDb()
 		);
 		await createSupportTicket(
-			{ organizationId: ORG_ID, subject: "Other customer ticket", customerUserId: OTHER_CUSTOMER_USER_ID },
-			getDb(),
+			{
+				organizationId: ORG_ID,
+				subject: "Other customer ticket",
+				customerUserId: OTHER_CUSTOMER_USER_ID,
+			},
+			getDb()
 		);
 
 		const result = await listCustomerTickets(CUSTOMER_USER_ID, {}, getDb());
@@ -207,7 +237,11 @@ describe("listCustomerTickets", () => {
 	});
 
 	it("does not return tickets belonging to other customers", async () => {
-		const result = await listCustomerTickets(OTHER_CUSTOMER_USER_ID, {}, getDb());
+		const result = await listCustomerTickets(
+			OTHER_CUSTOMER_USER_ID,
+			{},
+			getDb()
+		);
 
 		for (const row of result.items) {
 			expect(row.customerUserId).toBe(OTHER_CUSTOMER_USER_ID);
@@ -216,14 +250,19 @@ describe("listCustomerTickets", () => {
 
 	it("filters by bookingId when provided", async () => {
 		await createSupportTicket(
-			{ organizationId: ORG_ID, bookingId: BOOKING_ID, subject: "Booking-scoped ticket", customerUserId: CUSTOMER_USER_ID },
-			getDb(),
+			{
+				organizationId: ORG_ID,
+				bookingId: BOOKING_ID,
+				subject: "Booking-scoped ticket",
+				customerUserId: CUSTOMER_USER_ID,
+			},
+			getDb()
 		);
 
 		const result = await listCustomerTickets(
 			CUSTOMER_USER_ID,
 			{ filter: { bookingId: BOOKING_ID } },
-			getDb(),
+			getDb()
 		);
 
 		expect(result.items.length).toBeGreaterThanOrEqual(1);
@@ -236,8 +275,12 @@ describe("listCustomerTickets", () => {
 describe("getCustomerTicket", () => {
 	it("returns the ticket when customerUserId matches", async () => {
 		const ticket = await createSupportTicket(
-			{ organizationId: ORG_ID, subject: "My own ticket", customerUserId: CUSTOMER_USER_ID },
-			getDb(),
+			{
+				organizationId: ORG_ID,
+				subject: "My own ticket",
+				customerUserId: CUSTOMER_USER_ID,
+			},
+			getDb()
 		);
 
 		const row = await getCustomerTicket(ticket.id, CUSTOMER_USER_ID, getDb());
@@ -247,11 +290,17 @@ describe("getCustomerTicket", () => {
 
 	it("throws NOT_FOUND when customerUserId does not match", async () => {
 		const ticket = await createSupportTicket(
-			{ organizationId: ORG_ID, subject: "Someone else's ticket", customerUserId: CUSTOMER_USER_ID },
-			getDb(),
+			{
+				organizationId: ORG_ID,
+				subject: "Someone else's ticket",
+				customerUserId: CUSTOMER_USER_ID,
+			},
+			getDb()
 		);
 
-		await expect(getCustomerTicket(ticket.id, OTHER_CUSTOMER_USER_ID, getDb())).rejects.toThrow("NOT_FOUND");
+		await expect(
+			getCustomerTicket(ticket.id, OTHER_CUSTOMER_USER_ID, getDb())
+		).rejects.toThrow("NOT_FOUND");
 	});
 });
 
@@ -259,11 +308,27 @@ describe("listTicketMessages", () => {
 	it("returns only non-internal messages for a ticket", async () => {
 		const ticket = await createSupportTicket(
 			{ organizationId: ORG_ID, subject: "Messages test ticket" },
-			getDb(),
+			getDb()
 		);
 
-		await addTicketMessage({ ticketId: ticket.id, organizationId: ORG_ID, body: "Public reply", isInternal: false }, getDb());
-		await addTicketMessage({ ticketId: ticket.id, organizationId: ORG_ID, body: "Internal note", isInternal: true }, getDb());
+		await addTicketMessage(
+			{
+				ticketId: ticket.id,
+				organizationId: ORG_ID,
+				body: "Public reply",
+				isInternal: false,
+			},
+			getDb()
+		);
+		await addTicketMessage(
+			{
+				ticketId: ticket.id,
+				organizationId: ORG_ID,
+				body: "Internal note",
+				isInternal: true,
+			},
+			getDb()
+		);
 
 		const messages = await listTicketMessages(ticket.id, getDb());
 

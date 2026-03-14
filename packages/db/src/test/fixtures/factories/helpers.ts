@@ -5,7 +5,7 @@ export const upsertFixtureById = async <
 	TSelect extends Record<string, unknown>,
 >(
 	db: TestDatabase,
-	table: any,
+	table: Parameters<TestDatabase["insert"]>[0] & { id: unknown },
 	values: TInsert
 ): Promise<TSelect> => {
 	const rows = (await db

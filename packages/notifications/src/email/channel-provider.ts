@@ -1,11 +1,11 @@
-import { notificationEvent } from "@my-app/db/schema/notification";
-import { getEmailProvider } from "./registry";
+import type { notificationEvent } from "@my-app/db/schema/notification";
+import type { NotificationRecipient } from "../contracts";
 
 import type {
 	NotificationProvider,
 	NotificationProviderResult,
 } from "../processor";
-import type { NotificationRecipient } from "../contracts";
+import { getEmailProvider } from "./registry";
 
 export interface EmailNotificationProviderOptions {
 	emailProviderId: string;

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import ChatConversationScreen from "../../../../features/chat/ChatConversationScreen.svelte";
 	import { page } from "$app/state";
+	import ChatConversationScreen from "../../../../features/chat/ChatConversationScreen.svelte";
 </script>
 
 <ChatConversationScreen chatId={page.params.id ?? ""} />

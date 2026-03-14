@@ -10,11 +10,13 @@
 
 import type { TestDatabase } from "../index";
 import { seedMarketplaceBaselineScenario } from "./scenarios/marketplace-baseline";
+
+// biome-ignore lint/performance/noBarrelFile: Test fixture compatibility entrypoint re-exports shared marketplace fixture helpers.
 export {
+	createMarketplaceFixtureClock,
 	DEFAULT_MARKETPLACE_ANCHOR_DATE,
 	MARKETPLACE_IDS,
 	type MarketplaceFixtureClock,
-	createMarketplaceFixtureClock,
 } from "./shared";
 
 export interface MarketplaceFixtureSeedOptions {

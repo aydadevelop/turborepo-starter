@@ -1,14 +1,14 @@
 import type { MutationResult } from "$lib/mutation-result";
-import type {
-	ListingEditorContext,
-	ListingEditorFormValues,
-	ListingEditorSubmitValues,
-} from "./types";
 import {
 	findListingTypeOption,
 	parseMetadataObject,
 	parsePositiveInteger,
 } from "./shared";
+import type {
+	ListingEditorContext,
+	ListingEditorFormValues,
+	ListingEditorSubmitValues,
+} from "./types";
 
 export function buildListingEditorSubmitValues(
 	values: ListingEditorFormValues,

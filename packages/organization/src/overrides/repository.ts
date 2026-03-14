@@ -8,7 +8,7 @@ import type {
 	OrganizationManualOverrideSummary,
 } from "../types";
 
-export async function listActiveOrganizationManualOverrides(
+export function listActiveOrganizationManualOverrides(
 	organizationId: string,
 	db: Db = defaultDb
 ): Promise<OrganizationManualOverrideRow[]> {

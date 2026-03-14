@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import {
-	evaluateCancellationPolicy,
-} from "../cancellation-policy-service";
+import { evaluateCancellationPolicy } from "../cancellation-policy-service";
 import {
 	FLEXIBLE_CANCELLATION_POLICY,
 	STRICT_CANCELLATION_POLICY,
 } from "../policy-templates";
 
-const makeInput = (overrides: Partial<Parameters<typeof evaluateCancellationPolicy>[0]> = {}) => {
+const makeInput = (
+	overrides: Partial<Parameters<typeof evaluateCancellationPolicy>[0]> = {}
+) => {
 	const now = new Date("2024-06-01T12:00:00Z");
 	return {
 		bookingId: "booking-1",
@@ -82,19 +82,19 @@ describe("evaluateCancellationPolicy", () => {
 	it("already-refunded amount is subtracted from refundable base", () => {
 		const input = makeInput({
 			capturedAmountCents: 10_000,
-			alreadyRefundedCents: 4_000,
+			alreadyRefundedCents: 4000,
 			policyProfile: FLEXIBLE_CANCELLATION_POLICY,
 		});
 		const decision = evaluateCancellationPolicy(input);
 
-		expect(decision.refundableBaseCents).toBe(6_000);
-		expect(decision.suggestedRefundCents).toBe(6_000);
+		expect(decision.refundableBaseCents).toBe(6000);
+		expect(decision.suggestedRefundCents).toBe(6000);
 	});
 
 	it("suggestedRefundCents never exceeds refundable base", () => {
 		const input = makeInput({
-			capturedAmountCents: 5_000,
-			alreadyRefundedCents: 5_000,
+			capturedAmountCents: 5000,
+			alreadyRefundedCents: 5000,
 			policyProfile: FLEXIBLE_CANCELLATION_POLICY,
 		});
 		const decision = evaluateCancellationPolicy(input);
@@ -118,7 +118,7 @@ describe("evaluateCancellationPolicy", () => {
 		});
 
 		expect(() => evaluateCancellationPolicy(input)).toThrow(
-			"CANCELLATION_REASON_NOT_ALLOWED",
+			"CANCELLATION_REASON_NOT_ALLOWED"
 		);
 	});
 });

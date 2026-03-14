@@ -1,35 +1,39 @@
 const MINUTE_MS = 60_000;
 
 export interface BusyInterval {
-	startsAt: Date;
 	endsAt: Date;
+	startsAt: Date;
 }
 
 export interface FreeGap {
-	startsAt: Date;
-	endsAt: Date;
 	durationMinutes: number;
+	endsAt: Date;
+	startsAt: Date;
 }
 
 export interface TimeSlot {
-	startsAt: Date;
 	endsAt: Date;
+	startsAt: Date;
 }
 
 const clipIntervalToWindow = (
 	start: number,
 	end: number,
 	windowStart?: Date,
-	windowEnd?: Date,
+	windowEnd?: Date
 ): { start: number; end: number } | null => {
 	let s = start;
 	let e = end;
 	if (windowStart) {
-		if (e <= windowStart.getTime()) return null;
+		if (e <= windowStart.getTime()) {
+			return null;
+		}
 		s = Math.max(s, windowStart.getTime());
 	}
 	if (windowEnd) {
-		if (s >= windowEnd.getTime()) return null;
+		if (s >= windowEnd.getTime()) {
+			return null;
+		}
 		e = Math.min(e, windowEnd.getTime());
 	}
 	return { start: s, end: e };
@@ -37,12 +41,18 @@ const clipIntervalToWindow = (
 
 const mergeOverlapping = (sorted: BusyInterval[]): BusyInterval[] => {
 	const first = sorted[0];
-	if (!first) return [];
-	const merged: BusyInterval[] = [{ startsAt: first.startsAt, endsAt: first.endsAt }];
+	if (!first) {
+		return [];
+	}
+	const merged: BusyInterval[] = [
+		{ startsAt: first.startsAt, endsAt: first.endsAt },
+	];
 	for (let i = 1; i < sorted.length; i++) {
 		const current = sorted[i];
 		const last = merged.at(-1);
-		if (!(last && current)) continue;
+		if (!(last && current)) {
+			continue;
+		}
 		if (current.startsAt.getTime() <= last.endsAt.getTime()) {
 			if (current.endsAt.getTime() > last.endsAt.getTime()) {
 				last.endsAt = current.endsAt;
@@ -62,9 +72,11 @@ export const mergeBusyIntervals = (
 	intervals: BusyInterval[],
 	windowStart?: Date,
 	windowEnd?: Date,
-	bufferMinutes = 0,
+	bufferMinutes = 0
 ): BusyInterval[] => {
-	if (intervals.length === 0) return [];
+	if (intervals.length === 0) {
+		return [];
+	}
 
 	const bufferMs = bufferMinutes * MINUTE_MS;
 	const processed: BusyInterval[] = [];
@@ -74,7 +86,7 @@ export const mergeBusyIntervals = (
 			iv.startsAt.getTime() - bufferMs,
 			iv.endsAt.getTime() + bufferMs,
 			windowStart,
-			windowEnd,
+			windowEnd
 		);
 		if (clipped) {
 			processed.push({
@@ -84,7 +96,9 @@ export const mergeBusyIntervals = (
 		}
 	}
 
-	if (processed.length === 0) return [];
+	if (processed.length === 0) {
+		return [];
+	}
 
 	processed.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 	return mergeOverlapping(processed);
@@ -97,7 +111,7 @@ export const mergeBusyIntervals = (
 export const findFreeGaps = (
 	dayStart: Date,
 	dayEnd: Date,
-	busyIntervals: BusyInterval[],
+	busyIntervals: BusyInterval[]
 ): FreeGap[] => {
 	const gaps: FreeGap[] = [];
 	let cursor = dayStart.getTime();
@@ -138,7 +152,7 @@ export const findFreeGaps = (
 export const extractSlotsFromGaps = (
 	gaps: FreeGap[],
 	durationMinutes: number,
-	stepMinutes = 30,
+	stepMinutes = 30
 ): TimeSlot[] => {
 	const durationMs = durationMinutes * MINUTE_MS;
 	const stepMs = stepMinutes * MINUTE_MS;
@@ -178,7 +192,7 @@ export const calculateAvailableSlots = (params: {
 		params.busyIntervals,
 		params.dayStart,
 		params.dayEnd,
-		params.bufferMinutes,
+		params.bufferMinutes
 	);
 	const gaps = findFreeGaps(params.dayStart, params.dayEnd, mergedBusy);
 	const minDuration = params.minimumDurationMinutes ?? params.durationMinutes;
@@ -186,6 +200,6 @@ export const calculateAvailableSlots = (params: {
 	return extractSlotsFromGaps(
 		qualifyingGaps,
 		params.durationMinutes,
-		params.stepMinutes,
+		params.stepMinutes
 	);
 };

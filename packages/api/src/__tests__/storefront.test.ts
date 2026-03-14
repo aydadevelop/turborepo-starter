@@ -130,7 +130,7 @@ const createRpcContext = (): Context => ({
 
 const callRpc = async (
 	path: string,
-	json: unknown,
+	json: unknown
 ): Promise<{ status: number; body: unknown }> => {
 	const request = new Request(`http://example.test${path}`, {
 		method: "POST",
@@ -210,7 +210,7 @@ describe("storefront getBookingSurface RPC", () => {
 		};
 		expect(
 			surface.slots.find((slot) => slot.status === "available")?.quote
-				?.discountPreview,
+				?.discountPreview
 		).toMatchObject({
 			code: "STORE10",
 			status: "applied",

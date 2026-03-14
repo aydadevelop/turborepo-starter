@@ -1,10 +1,10 @@
-import { and, asc, eq } from "drizzle-orm";
 import {
 	listingAvailabilityBlock,
 	listingAvailabilityException,
 	listingAvailabilityRule,
 } from "@my-app/db/schema/availability";
 import { listing } from "@my-app/db/schema/marketplace";
+import { and, asc, eq } from "drizzle-orm";
 
 import type { AvailabilityWorkspaceState, Db } from "./types";
 
@@ -16,7 +16,9 @@ async function verifyListingOwnership(
 	const [row] = await db
 		.select({ id: listing.id })
 		.from(listing)
-		.where(and(eq(listing.id, listingId), eq(listing.organizationId, organizationId)))
+		.where(
+			and(eq(listing.id, listingId), eq(listing.organizationId, organizationId))
+		)
 		.limit(1);
 
 	if (!row) {

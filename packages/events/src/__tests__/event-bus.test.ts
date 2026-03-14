@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	EventBus,
 	clearEventPushers,
+	EventBus,
 	emitDomainEvent,
 	registerEventPusher,
 } from "../event-bus";
 import type { DomainEvent } from "../types";
 
-const makeEvent = (overrides?: Partial<DomainEvent<"booking:created">>): DomainEvent<"booking:created"> => ({
+const makeEvent = (
+	overrides?: Partial<DomainEvent<"booking:created">>
+): DomainEvent<"booking:created"> => ({
 	type: "booking:created",
 	organizationId: "org-1",
 	idempotencyKey: "idkey-1",
@@ -29,7 +31,7 @@ describe("EventBus", () => {
 		await bus.emit(event);
 
 		expect(pusher).toHaveBeenCalledOnce();
-		expect(pusher).toHaveBeenCalledWith(event, undefined);
+		expect(pusher).toHaveBeenCalledWith(event);
 	});
 
 	it("clearEventPushers prevents registered pushers from firing", async () => {
@@ -54,18 +56,6 @@ describe("EventBus", () => {
 		expect(pusher2).toHaveBeenCalledOnce();
 	});
 
-	it("EventBus.emit forwards queue to emitDomainEvent", async () => {
-		const pusher = vi.fn().mockResolvedValue(undefined);
-		registerEventPusher(pusher);
-
-		const queue = { send: vi.fn() };
-		const bus = new EventBus(queue);
-		const event = makeEvent();
-		await bus.emit(event);
-
-		expect(pusher).toHaveBeenCalledWith(event, queue);
-	});
-
 	it("multiple pushers all receive the event", async () => {
 		const pusher1 = vi.fn().mockResolvedValue(undefined);
 		const pusher2 = vi.fn().mockResolvedValue(undefined);
@@ -77,8 +67,8 @@ describe("EventBus", () => {
 		const event = makeEvent();
 		await emitDomainEvent(event);
 
-		expect(pusher1).toHaveBeenCalledWith(event, undefined);
-		expect(pusher2).toHaveBeenCalledWith(event, undefined);
-		expect(pusher3).toHaveBeenCalledWith(event, undefined);
+		expect(pusher1).toHaveBeenCalledWith(event);
+		expect(pusher2).toHaveBeenCalledWith(event);
+		expect(pusher3).toHaveBeenCalledWith(event);
 	});
 });

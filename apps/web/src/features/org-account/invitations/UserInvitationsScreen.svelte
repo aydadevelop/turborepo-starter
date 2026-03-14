@@ -4,8 +4,8 @@
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { authClient } from "$lib/auth-client";
 	import { queryClient } from "$lib/orpc";
-	import SurfaceCard from "../../../components/operator/SurfaceCard.svelte";
 	import { userInvitationsQueryOptions } from "$lib/query-options";
+	import SurfaceCard from "../../../components/operator/SurfaceCard.svelte";
 	import { formatOrgAccountError } from "../shared/errors";
 	import {
 		getInvitationListInvalidationKeys,
@@ -106,7 +106,9 @@
 					<div class="space-y-3">
 						{#each pendingInvitations as invitation (invitation.id)}
 							<div class="rounded-lg border p-4">
-								<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+								<div
+									class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+								>
 									<div class="space-y-1">
 										<p class="font-medium">
 											{invitation.organizationName ?? "Organization"}
@@ -197,7 +199,9 @@
 		{:else}
 			<SurfaceCard title="Pending invitations">
 				{#snippet children()}
-					<p class="text-center text-muted-foreground">No pending invitations.</p>
+					<p class="text-center text-muted-foreground">
+						No pending invitations.
+					</p>
 				{/snippet}
 			</SurfaceCard>
 		{/if}
@@ -210,7 +214,9 @@
 				{#snippet children()}
 					<div class="space-y-2">
 						{#each pastInvitations as invitation (invitation.id)}
-							<div class="flex items-center justify-between rounded-lg border p-4">
+							<div
+								class="flex items-center justify-between rounded-lg border p-4"
+							>
 								<div class="space-y-1">
 									<p class="text-sm font-medium">
 										{invitation.organizationName ?? "Organization"}

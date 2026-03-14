@@ -1,7 +1,4 @@
 import { defineRelations } from "drizzle-orm";
-// biome-ignore lint/performance/noNamespaceImport: defineRelations requires namespace import
-import * as schema from "./schema";
-
 import { affiliateRelations } from "./relations/affiliate";
 import { authRelations } from "./relations/auth";
 import { availabilityRelations } from "./relations/availability";
@@ -10,6 +7,8 @@ import { notificationRelations } from "./relations/notification";
 import { staffingRelations } from "./relations/staffing";
 import { supportRelations } from "./relations/support";
 import { systemRelations } from "./relations/system";
+// biome-ignore lint/performance/noNamespaceImport: defineRelations requires namespace import
+import * as schema from "./schema";
 
 const baseRelations = defineRelations(schema);
 

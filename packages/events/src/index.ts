@@ -1,8 +1,8 @@
-export type { DomainEventMap, DomainEventType, DomainEvent } from "./types";
+// biome-ignore lint/performance/noBarrelFile: Package-level events entrypoint re-exports supported event APIs.
 export {
 	clearEventPushers,
-	emitDomainEvent,
 	EventBus,
+	emitDomainEvent,
 	registerEventPusher,
 } from "./event-bus";
-export type { QueueProducer } from "./event-bus";
+export type { DomainEvent, DomainEventMap, DomainEventType } from "./types";

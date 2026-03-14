@@ -1,6 +1,6 @@
-import { and, eq, gt, inArray, lt, ne } from "drizzle-orm";
 import { listingAvailabilityBlock } from "@my-app/db/schema/availability";
 import { booking } from "@my-app/db/schema/marketplace";
+import { and, eq, gt, inArray, lt, ne } from "drizzle-orm";
 import type { Db } from "./types";
 
 /** Booking statuses that count as occupying a time slot (block new bookings). */
@@ -17,7 +17,7 @@ export const blockingBookingStatuses = [
  */
 export const detectOverlap = (
 	a: { startsAt: Date; endsAt: Date },
-	b: { startsAt: Date; endsAt: Date },
+	b: { startsAt: Date; endsAt: Date }
 ): boolean => a.startsAt < b.endsAt && a.endsAt > b.startsAt;
 
 /**
@@ -33,7 +33,7 @@ export const assertNoOverlap = async (
 		endsAt: Date;
 		excludeBookingId?: string;
 	},
-	db: Db,
+	db: Db
 ): Promise<void> => {
 	const conditions = [
 		eq(booking.organizationId, params.organizationId),
@@ -55,7 +55,7 @@ export const assertNoOverlap = async (
 
 	if (overlappingBooking) {
 		throw new Error(
-			"BOOKING_OVERLAP: Listing is already booked for the selected time range",
+			"BOOKING_OVERLAP: Listing is already booked for the selected time range"
 		);
 	}
 };
@@ -70,7 +70,7 @@ export const assertNoAvailabilityBlockOverlap = async (
 		startsAt: Date;
 		endsAt: Date;
 	},
-	db: Db,
+	db: Db
 ): Promise<void> => {
 	const [overlappingBlock] = await db
 		.select({ id: listingAvailabilityBlock.id })
@@ -80,14 +80,14 @@ export const assertNoAvailabilityBlockOverlap = async (
 				eq(listingAvailabilityBlock.listingId, params.listingId),
 				eq(listingAvailabilityBlock.isActive, true),
 				lt(listingAvailabilityBlock.startsAt, params.endsAt),
-				gt(listingAvailabilityBlock.endsAt, params.startsAt),
-			),
+				gt(listingAvailabilityBlock.endsAt, params.startsAt)
+			)
 		)
 		.limit(1);
 
 	if (overlappingBlock) {
 		throw new Error(
-			"AVAILABILITY_BLOCK_OVERLAP: Listing is unavailable for the selected time range",
+			"AVAILABILITY_BLOCK_OVERLAP: Listing is unavailable for the selected time range"
 		);
 	}
 };

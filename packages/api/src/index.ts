@@ -1,13 +1,12 @@
 import { appContract } from "@my-app/api-contract/routers";
-import { implement, ORPCError } from "@orpc/server";
-
-import type { Context } from "./context";
 import { EventBus } from "@my-app/events";
+import { tracingMiddleware } from "@my-app/telemetry/tracing";
+import { implement, ORPCError } from "@orpc/server";
+import type { Context } from "./context";
 import {
 	hasOrganizationPermission,
 	type OrganizationPermission,
 } from "./organization";
-import { tracingMiddleware } from "@my-app/telemetry/tracing";
 
 export const o = implement(appContract).$context<Context>();
 
@@ -60,7 +59,7 @@ const requireActiveOrganization = o.middleware(({ context, next }) => {
 	return next({
 		context: {
 			activeMembership: context.activeMembership,
-			eventBus: context.eventBus ?? new EventBus(context.notificationQueue),
+			eventBus: context.eventBus ?? new EventBus(),
 		},
 	});
 });
@@ -86,7 +85,9 @@ export const sessionProcedure = publicProcedure.use(requireSession);
 export const protectedProcedure = sessionProcedure.use(
 	requireAuthenticatedUser
 );
-export const organizationProcedure = protectedProcedure.use(requireActiveOrganization);
+export const organizationProcedure = protectedProcedure.use(
+	requireActiveOrganization
+);
 
 export const organizationPermissionProcedure = (
 	permission: OrganizationPermission

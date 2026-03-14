@@ -7,14 +7,17 @@ import {
 	resolveLocalStoragePath,
 } from "../index";
 
+const LOCAL_FILE_PUBLIC_KEY_RE = /^photos\/cabin-[a-f0-9]+\.jpg$/;
+const STORAGE_NOT_FOUND_RE = /was not found/i;
+
 describe("local file storage provider", () => {
 	const createdDirs: string[] = [];
 
 	afterEach(async () => {
 		await Promise.all(
-			createdDirs.splice(0).map((dir) =>
-				rm(dir, { recursive: true, force: true }),
-			),
+			createdDirs
+				.splice(0)
+				.map((dir) => rm(dir, { recursive: true, force: true }))
 		);
 	});
 
@@ -34,7 +37,7 @@ describe("local file storage provider", () => {
 			mimeType: "image/jpeg",
 		});
 
-		expect(uploaded.key).toMatch(/^photos\/cabin-[a-f0-9]+\.jpg$/);
+		expect(uploaded.key).toMatch(LOCAL_FILE_PUBLIC_KEY_RE);
 		expect(uploaded.publicUrl).toBeTruthy();
 		expect(provider.getPublicUrl(uploaded)).toBe(uploaded.publicUrl);
 
@@ -47,7 +50,7 @@ describe("local file storage provider", () => {
 		await provider.deleteObject(uploaded);
 
 		await expect(provider.getObjectBuffer?.(uploaded)).rejects.toThrow(
-			/was not found/i,
+			STORAGE_NOT_FOUND_RE
 		);
 	});
 
@@ -72,7 +75,7 @@ describe("local file storage provider", () => {
 		});
 		expect(signedUrl).toContain("local-file://listing-private-v1/");
 		expect(resolveLocalStoragePath(baseDir, uploaded.key)).toContain(
-			uploaded.key,
+			uploaded.key
 		);
 	});
 });

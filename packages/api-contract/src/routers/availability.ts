@@ -50,14 +50,17 @@ const availabilityWorkspaceStateOutput = z.object({
 
 export const availabilityContract = {
 	addRule: oc
-		.route({ tags: ["Availability"], summary: "Add recurring availability rule" })
+		.route({
+			tags: ["Availability"],
+			summary: "Add recurring availability rule",
+		})
 		.input(
 			z.object({
 				listingId: z.string(),
 				dayOfWeek: z.number().int().min(0).max(6),
 				startMinute: z.number().int().min(0).max(1440),
 				endMinute: z.number().int().min(1).max(1440),
-			}),
+			})
 		)
 		.output(availabilityRuleOutput),
 
@@ -72,7 +75,10 @@ export const availabilityContract = {
 		.output(z.array(availabilityRuleOutput)),
 
 	getWorkspaceState: oc
-		.route({ tags: ["Availability"], summary: "Get availability workspace state" })
+		.route({
+			tags: ["Availability"],
+			summary: "Get availability workspace state",
+		})
 		.input(z.object({ listingId: z.string() }))
 		.output(availabilityWorkspaceStateOutput),
 
@@ -84,7 +90,7 @@ export const availabilityContract = {
 				startsAt: z.string().datetime(),
 				endsAt: z.string().datetime(),
 				reason: z.string().optional(),
-			}),
+			})
 		)
 		.output(availabilityBlockOutput),
 
@@ -103,7 +109,7 @@ export const availabilityContract = {
 				startMinute: z.number().int().optional(),
 				endMinute: z.number().int().optional(),
 				reason: z.string().optional(),
-			}),
+			})
 		)
 		.output(availabilityExceptionOutput),
 
@@ -119,7 +125,7 @@ export const availabilityContract = {
 				listingId: z.string(),
 				startsAt: z.string().datetime(),
 				endsAt: z.string().datetime(),
-			}),
+			})
 		)
 		.output(z.object({ available: z.boolean() })),
 };

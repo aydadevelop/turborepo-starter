@@ -14,19 +14,19 @@
 	} from "@my-app/ui/components/native-select";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { authClient } from "$lib/auth-client";
-	import ResourceBadgeCell from "../../../components/operator/ResourceBadgeCell.svelte";
-	import ResourceTable from "../../../components/operator/ResourceTable.svelte";
-	import {
-		createColumnHelper,
-		renderComponent,
-		type ColumnDef,
-	} from "../../../components/operator/resource-table";
-	import SurfaceCard from "../../../components/operator/SurfaceCard.svelte";
+	import { createConfirmAction } from "$lib/confirm-action.svelte";
+	import { formatMutationError } from "$lib/mutation-result";
 	import { queryClient } from "$lib/orpc";
 	import { fullOrganizationQueryOptions } from "$lib/query-options";
 	import ConfirmActionDialog from "../../../components/admin/ConfirmActionDialog.svelte";
-	import { createConfirmAction } from "$lib/confirm-action.svelte";
-	import { formatMutationError } from "$lib/mutation-result";
+	import ResourceBadgeCell from "../../../components/operator/ResourceBadgeCell.svelte";
+	import ResourceTable from "../../../components/operator/ResourceTable.svelte";
+	import {
+		type ColumnDef,
+		createColumnHelper,
+		renderComponent,
+	} from "../../../components/operator/resource-table";
+	import SurfaceCard from "../../../components/operator/SurfaceCard.svelte";
 	import {
 		getMembershipInvalidationKeys,
 		invalidateQueryKeys,
@@ -145,7 +145,7 @@
 	const memberColumnHelper = createColumnHelper<MemberRow>();
 	const invitationColumnHelper = createColumnHelper<InvitationRow>();
 
-	const memberColumns: ColumnDef<MemberRow, any>[] = [
+	const memberColumns: ColumnDef<MemberRow, unknown>[] = [
 		memberColumnHelper.accessor((member) => member.user?.name ?? "—", {
 			id: "name",
 			header: "Name",
@@ -188,14 +188,14 @@
 					onRemove: () => {
 						removeAction.request(
 							row.original.id,
-							row.original.user?.name ?? row.original.user?.email ?? "member",
+							row.original.user?.name ?? row.original.user?.email ?? "member"
 						);
 					},
 				}),
 		}),
 	];
 
-	const pendingInvitationColumns: ColumnDef<InvitationRow, any>[] = [
+	const pendingInvitationColumns: ColumnDef<InvitationRow, unknown>[] = [
 		invitationColumnHelper.accessor("email", {
 			header: "Email",
 			meta: {
@@ -275,15 +275,15 @@
 			<SurfaceCard title={`Pending Invitations (${pendingInvitations.length})`}>
 				{#snippet children()}
 					<div class="space-y-3">
-					{#if invitationError}
-						<p class="text-sm text-destructive">{invitationError}</p>
-					{/if}
-					<ResourceTable
-						data={pendingInvitations as InvitationRow[]}
-						columns={pendingInvitationColumns}
-						getRowId={(invitation) => invitation.id}
-						emptyMessage="No pending invitations."
-					/>
+						{#if invitationError}
+							<p class="text-sm text-destructive">{invitationError}</p>
+						{/if}
+						<ResourceTable
+							data={pendingInvitations as InvitationRow[]}
+							columns={pendingInvitationColumns}
+							getRowId={(invitation) => invitation.id}
+							emptyMessage="No pending invitations."
+						/>
 					</div>
 				{/snippet}
 			</SurfaceCard>

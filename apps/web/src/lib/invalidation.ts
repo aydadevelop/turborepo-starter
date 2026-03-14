@@ -23,10 +23,7 @@ export const invalidationKeys = {
 
 	/** Membership: org structure + invitations */
 	membership(): InvalidationKey[] {
-		return [
-			...this.organizationStructure(),
-			queryKeys.invitations.all,
-		];
+		return [...this.organizationStructure(), queryKeys.invitations.all];
 	},
 
 	/** Invitation list only */
@@ -56,9 +53,9 @@ export const invalidationKeys = {
  */
 export async function invalidateQueryKeys(
 	queryClient: QueryClient,
-	keys: readonly InvalidationKey[],
+	keys: readonly InvalidationKey[]
 ): Promise<void> {
 	await Promise.all(
-		keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+		keys.map((queryKey) => queryClient.invalidateQueries({ queryKey }))
 	);
 }

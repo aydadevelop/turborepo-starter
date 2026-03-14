@@ -1,6 +1,5 @@
 import { organization, user } from "@my-app/db/schema/auth";
 import { listingAvailabilityBlock } from "@my-app/db/schema/availability";
-import { clearEventPushers, EventBus, registerEventPusher } from "@my-app/events";
 import {
 	booking,
 	bookingDiscountApplication,
@@ -11,6 +10,11 @@ import {
 	listingTypeConfig,
 } from "@my-app/db/schema/marketplace";
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
+import {
+	clearEventPushers,
+	EventBus,
+	registerEventPusher,
+} from "@my-app/events";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -58,8 +62,18 @@ const testDbState = bootstrapTestDatabase({
 			{ id: OTHER_ORG_ID, name: "Booking Org Two", slug: "bk-org-two" },
 		]);
 		await db.insert(user).values([
-			{ id: USER_1_ID, name: "User One", email: "bk-user1@test.com", emailVerified: true },
-			{ id: USER_2_ID, name: "User Two", email: "bk-user2@test.com", emailVerified: true },
+			{
+				id: USER_1_ID,
+				name: "User One",
+				email: "bk-user1@test.com",
+				emailVerified: true,
+			},
+			{
+				id: USER_2_ID,
+				name: "User Two",
+				email: "bk-user2@test.com",
+				emailVerified: true,
+			},
 		]);
 		await db.insert(listing).values([
 			{
@@ -140,8 +154,8 @@ const testDbState = bootstrapTestDatabase({
 				status: "pending",
 				startsAt: now,
 				endsAt: later,
-				basePriceCents: 5_000,
-				totalPriceCents: 5_000,
+				basePriceCents: 5000,
+				totalPriceCents: 5000,
 				currency: "RUB",
 			},
 		]);
@@ -172,27 +186,27 @@ describe("listOrgBookings", () => {
 		const result = await listOrgBookings(
 			ORG_ID,
 			{ filter: { status: "pending" } },
-			getDb(),
+			getDb()
 		);
 		expect(result.items).toHaveLength(1);
-		expect(result.items[0]!.id).toBe(BK_1_ID);
+		expect(result.items[0]?.id).toBe(BK_1_ID);
 	});
 
 	it("filters by listingId", async () => {
 		const result = await listOrgBookings(
 			ORG_ID,
 			{ filter: { listingId: LISTING_1_ID } },
-			getDb(),
+			getDb()
 		);
 		expect(result.items).toHaveLength(1);
-		expect(result.items[0]!.id).toBe(BK_1_ID);
+		expect(result.items[0]?.id).toBe(BK_1_ID);
 	});
 
 	it("returns empty array when no match", async () => {
 		const result = await listOrgBookings(
 			ORG_ID,
 			{ filter: { listingId: "nonexistent" } },
-			getDb(),
+			getDb()
 		);
 		expect(result.items).toHaveLength(0);
 		expect(result.total).toBe(0);
@@ -208,7 +222,7 @@ describe("listOrgBookings", () => {
 					dir: "asc",
 				},
 			},
-			getDb(),
+			getDb()
 		);
 
 		expect(result.total).toBe(1);
@@ -227,11 +241,15 @@ describe("getOrgBooking", () => {
 	});
 
 	it("throws NOT_FOUND when looking up with wrong org", async () => {
-		await expect(getOrgBooking(BK_1_ID, OTHER_ORG_ID, getDb())).rejects.toThrow("NOT_FOUND");
+		await expect(getOrgBooking(BK_1_ID, OTHER_ORG_ID, getDb())).rejects.toThrow(
+			"NOT_FOUND"
+		);
 	});
 
 	it("throws NOT_FOUND for nonexistent booking id", async () => {
-		await expect(getOrgBooking("nonexistent-id", ORG_ID, getDb())).rejects.toThrow("NOT_FOUND");
+		await expect(
+			getOrgBooking("nonexistent-id", ORG_ID, getDb())
+		).rejects.toThrow("NOT_FOUND");
 	});
 });
 
@@ -241,8 +259,8 @@ describe("listCustomerBookings", () => {
 	it("returns only bookings belonging to the customer", async () => {
 		const rows = await listCustomerBookings(USER_1_ID, getDb());
 		expect(rows).toHaveLength(1);
-		expect(rows[0]!.id).toBe(BK_1_ID);
-		expect(rows[0]!.customerUserId).toBe(USER_1_ID);
+		expect(rows[0]?.id).toBe(BK_1_ID);
+		expect(rows[0]?.customerUserId).toBe(USER_1_ID);
 	});
 
 	it("does not return other customers' bookings", async () => {
@@ -414,7 +432,7 @@ const testDbState2 = bootstrapTestDatabase({
 				listingId: BK2_LISTING_FREE_ID,
 				name: "Default Profile",
 				currency: "RUB",
-				baseHourlyPriceCents: 6_000,
+				baseHourlyPriceCents: 6000,
 				isDefault: true,
 			},
 			{
@@ -422,7 +440,7 @@ const testDbState2 = bootstrapTestDatabase({
 				listingId: BK2_LISTING_MARKETLESS_ID,
 				name: "Marketless Profile",
 				currency: "RUB",
-				baseHourlyPriceCents: 6_000,
+				baseHourlyPriceCents: 6000,
 				isDefault: true,
 			},
 			{
@@ -430,7 +448,7 @@ const testDbState2 = bootstrapTestDatabase({
 				listingId: BK2_LISTING_MISMATCH_ID,
 				name: "Mismatch Profile",
 				currency: "RUB",
-				baseHourlyPriceCents: 6_000,
+				baseHourlyPriceCents: 6000,
 				isDefault: true,
 			},
 		]);
@@ -493,7 +511,7 @@ describe("createBooking", () => {
 				source: "web",
 				currency: "RUB",
 			},
-			getDb2(),
+			getDb2()
 		);
 
 		expect(row.organizationId).toBe(BK2_ORG_ID);
@@ -510,7 +528,7 @@ describe("createBooking", () => {
 				source: "web",
 				currency: "RUB",
 			},
-			getDb2(),
+			getDb2()
 		);
 		expect(row.status).toBe("pending");
 		expect(row.paymentStatus).toBe("unpaid");
@@ -531,11 +549,11 @@ describe("createBooking", () => {
 				customerUserId: USER_1_ID,
 				discountCode: "save10",
 			},
-			getDb2(),
+			getDb2()
 		);
 
 		expect(row.basePriceCents).toBe(12_000);
-		expect(row.discountAmountCents).toBe(1_200);
+		expect(row.discountAmountCents).toBe(1200);
 		expect(row.totalPriceCents).toBe(10_800);
 
 		const db = getDb2();
@@ -550,7 +568,7 @@ describe("createBooking", () => {
 			code: "SAVE10",
 			discountType: "percentage",
 			discountValue: 10,
-			appliedAmountCents: 1_200,
+			appliedAmountCents: 1200,
 		});
 
 		const [discountCode] = await db
@@ -571,8 +589,8 @@ describe("createBooking", () => {
 					source: "web",
 					currency: "RUB",
 				},
-				getDb2(),
-			),
+				getDb2()
+			)
 		).rejects.toThrow("NOT_FOUND");
 	});
 
@@ -586,8 +604,8 @@ describe("createBooking", () => {
 					source: "web",
 					currency: "RUB",
 				},
-				getDb2(),
-			),
+				getDb2()
+			)
 		).rejects.toThrow("PUBLICATION_ORG_MISMATCH");
 	});
 
@@ -601,8 +619,8 @@ describe("createBooking", () => {
 					source: "web",
 					currency: "RUB",
 				},
-				getDb2(),
-			),
+				getDb2()
+			)
 		).rejects.toThrow("SLOT_UNAVAILABLE");
 	});
 
@@ -616,8 +634,8 @@ describe("createBooking", () => {
 					source: "web",
 					currency: "RUB",
 				},
-				getDb2(),
-			),
+				getDb2()
+			)
 		).rejects.toThrow("NO_PRICING_PROFILE");
 	});
 });
@@ -628,7 +646,7 @@ describe("updateBookingStatus", () => {
 	it("transitions pending → confirmed", async () => {
 		const row = await updateBookingStatus(
 			{ id: BK2_PENDING_1_ID, organizationId: BK2_ORG_ID, status: "confirmed" },
-			getDb2(),
+			getDb2()
 		);
 		expect(row.status).toBe("confirmed");
 	});
@@ -642,7 +660,7 @@ describe("updateBookingStatus", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2(),
+			getDb2()
 		);
 		const pusher = vi.fn().mockResolvedValue(undefined);
 		registerEventPusher(pusher);
@@ -659,7 +677,7 @@ describe("updateBookingStatus", () => {
 					eventBus: new EventBus(),
 				},
 			},
-			getDb2(),
+			getDb2()
 		);
 
 		expect(pusher).toHaveBeenCalledWith(
@@ -673,7 +691,7 @@ describe("updateBookingStatus", () => {
 					ownerId: BK2_ORG_ID,
 				},
 			},
-			undefined,
+			undefined
 		);
 	});
 
@@ -687,11 +705,11 @@ describe("updateBookingStatus", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2(),
+			getDb2()
 		);
 		const row = await updateBookingStatus(
 			{ id: created.id, organizationId: BK2_ORG_ID, status: "rejected" },
-			getDb2(),
+			getDb2()
 		);
 		expect(row.status).toBe("rejected");
 	});
@@ -705,7 +723,7 @@ describe("updateBookingStatus", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2(),
+			getDb2()
 		);
 		const row = await updateBookingStatus(
 			{
@@ -714,7 +732,7 @@ describe("updateBookingStatus", () => {
 				status: "cancelled",
 				cancellationReason: "changed mind",
 			},
-			getDb2(),
+			getDb2()
 		);
 		expect(row.status).toBe("cancelled");
 		expect(row.cancelledAt).toBeTruthy();
@@ -730,7 +748,7 @@ describe("updateBookingStatus", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2(),
+			getDb2()
 		);
 		const pusher = vi.fn().mockResolvedValue(undefined);
 		registerEventPusher(pusher);
@@ -748,7 +766,7 @@ describe("updateBookingStatus", () => {
 					eventBus: new EventBus(),
 				},
 			},
-			getDb2(),
+			getDb2()
 		);
 
 		expect(pusher).toHaveBeenCalledWith(
@@ -763,22 +781,30 @@ describe("updateBookingStatus", () => {
 					refundAmountKopeks: 0,
 				},
 			},
-			undefined,
+			undefined
 		);
 	});
 
 	it("transitions confirmed → in_progress", async () => {
 		const row = await updateBookingStatus(
-			{ id: BK2_CONFIRMED_1_ID, organizationId: BK2_ORG_ID, status: "in_progress" },
-			getDb2(),
+			{
+				id: BK2_CONFIRMED_1_ID,
+				organizationId: BK2_ORG_ID,
+				status: "in_progress",
+			},
+			getDb2()
 		);
 		expect(row.status).toBe("in_progress");
 	});
 
 	it("transitions in_progress → completed", async () => {
 		const row = await updateBookingStatus(
-			{ id: BK2_IN_PROGRESS_1_ID, organizationId: BK2_ORG_ID, status: "completed" },
-			getDb2(),
+			{
+				id: BK2_IN_PROGRESS_1_ID,
+				organizationId: BK2_ORG_ID,
+				status: "completed",
+			},
+			getDb2()
 		);
 		expect(row.status).toBe("completed");
 	});
@@ -792,31 +818,39 @@ describe("updateBookingStatus", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2(),
+			getDb2()
 		);
 		await expect(
 			updateBookingStatus(
 				{ id: created.id, organizationId: BK2_ORG_ID, status: "completed" },
-				getDb2(),
-			),
+				getDb2()
+			)
 		).rejects.toThrow("INVALID_TRANSITION");
 	});
 
 	it("throws INVALID_TRANSITION for terminal state (completed → confirmed)", async () => {
 		await expect(
 			updateBookingStatus(
-				{ id: BK2_COMPLETED_1_ID, organizationId: BK2_ORG_ID, status: "confirmed" },
-				getDb2(),
-			),
+				{
+					id: BK2_COMPLETED_1_ID,
+					organizationId: BK2_ORG_ID,
+					status: "confirmed",
+				},
+				getDb2()
+			)
 		).rejects.toThrow("INVALID_TRANSITION");
 	});
 
 	it("throws NOT_FOUND for booking in wrong org", async () => {
 		await expect(
 			updateBookingStatus(
-				{ id: BK2_PENDING_1_ID, organizationId: "wrong-org", status: "confirmed" },
-				getDb2(),
-			),
+				{
+					id: BK2_PENDING_1_ID,
+					organizationId: "wrong-org",
+					status: "confirmed",
+				},
+				getDb2()
+			)
 		).rejects.toThrow("NOT_FOUND");
 	});
 });
@@ -831,7 +865,7 @@ describe("updateBookingSchedule", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2(),
+			getDb2()
 		);
 
 		const row = await updateBookingSchedule(
@@ -842,7 +876,7 @@ describe("updateBookingSchedule", () => {
 				endsAt: new Date("2030-02-04T16:00:00Z"),
 				timezone: "Europe/Moscow",
 			},
-			getDb2(),
+			getDb2()
 		);
 
 		expect(row.startsAt.toISOString()).toBe("2030-02-04T14:00:00.000Z");
@@ -859,7 +893,7 @@ describe("updateBookingSchedule", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2(),
+			getDb2()
 		);
 
 		const created = await createBooking(
@@ -870,7 +904,7 @@ describe("updateBookingSchedule", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2(),
+			getDb2()
 		);
 
 		await expect(
@@ -881,8 +915,8 @@ describe("updateBookingSchedule", () => {
 					startsAt: new Date("2030-02-05T10:30:00Z"),
 					endsAt: new Date("2030-02-05T11:30:00Z"),
 				},
-				getDb2(),
-			),
+				getDb2()
+			)
 		).rejects.toThrow("BOOKING_OVERLAP");
 	});
 
@@ -895,7 +929,7 @@ describe("updateBookingSchedule", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2(),
+			getDb2()
 		);
 		const pusher = vi.fn().mockResolvedValue(undefined);
 		registerEventPusher(pusher);
@@ -914,7 +948,7 @@ describe("updateBookingSchedule", () => {
 					eventBus: new EventBus(),
 				},
 			},
-			getDb2(),
+			getDb2()
 		);
 
 		expect(pusher).toHaveBeenCalledWith(
@@ -930,7 +964,7 @@ describe("updateBookingSchedule", () => {
 					timezone: "UTC",
 				},
 			},
-			undefined,
+			undefined
 		);
 	});
 });

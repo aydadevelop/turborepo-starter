@@ -36,11 +36,10 @@ export const createListingFixture = (
 	db: TestDatabase,
 	values: InferInsertModel<typeof listing>
 ): Promise<typeof listing.$inferSelect> =>
-	upsertFixtureById<InferInsertModel<typeof listing>, typeof listing.$inferSelect>(
-		db,
-		listing,
-		values
-	);
+	upsertFixtureById<
+		InferInsertModel<typeof listing>,
+		typeof listing.$inferSelect
+	>(db, listing, values);
 
 export const createListingPricingProfileFixture = (
 	db: TestDatabase,
@@ -91,8 +90,7 @@ export const createBookingFixture = (
 	db: TestDatabase,
 	values: InferInsertModel<typeof booking>
 ): Promise<typeof booking.$inferSelect> =>
-	upsertFixtureById<InferInsertModel<typeof booking>, typeof booking.$inferSelect>(
-		db,
-		booking,
-		values
-	);
+	upsertFixtureById<
+		InferInsertModel<typeof booking>,
+		typeof booking.$inferSelect
+	>(db, booking, values);

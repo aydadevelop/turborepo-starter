@@ -3,11 +3,15 @@ import type { OrpcInputs } from "$lib/orpc-types";
 
 import type { CreateAvailabilityExceptionFormValues } from "./types";
 
+const DATE_STRING_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 export type CreateAvailabilityExceptionInput =
 	OrpcInputs["availability"]["addException"];
 
 function parseMinute(time: string): number {
-	const [hours, minutes] = time.split(":").map((part) => Number.parseInt(part, 10));
+	const [hours, minutes] = time
+		.split(":")
+		.map((part) => Number.parseInt(part, 10));
 	return hours * 60 + minutes;
 }
 
@@ -15,7 +19,7 @@ export function buildCreateAvailabilityExceptionInput(
 	listingId: string,
 	values: CreateAvailabilityExceptionFormValues
 ): MutationResult<CreateAvailabilityExceptionInput> {
-	if (!values.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+	if (!values.date.match(DATE_STRING_RE)) {
 		return { ok: false, message: "Select a valid date." };
 	}
 
@@ -31,10 +35,11 @@ export function buildCreateAvailabilityExceptionInput(
 		};
 	}
 
-	if (!values.startTime || !values.endTime) {
+	if (!(values.startTime && values.endTime)) {
 		return {
 			ok: false,
-			message: "Provide both start and end times for a partial-day available exception.",
+			message:
+				"Provide both start and end times for a partial-day available exception.",
 		};
 	}
 

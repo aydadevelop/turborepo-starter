@@ -68,7 +68,7 @@ const calendarOrgWorkspaceStateOutputSchema = z.object({
 	connections: z.array(
 		calendarConnectionOutputSchema.extend({
 			listingName: z.string().nullable(),
-		}),
+		})
 	),
 });
 
@@ -76,7 +76,8 @@ export const calendarContract = {
 	connectAccount: oc
 		.route({
 			tags: ["Calendar"],
-			summary: "Register a connected calendar provider account for the active organization",
+			summary:
+				"Register a connected calendar provider account for the active organization",
 		})
 		.input(
 			z.object({
@@ -84,14 +85,15 @@ export const calendarContract = {
 				externalAccountId: z.string().trim().min(1),
 				accountEmail: z.string().email().optional(),
 				displayName: z.string().trim().min(1).optional(),
-			}),
+			})
 		)
 		.output(calendarAccountOutputSchema),
 
 	disconnectAccount: oc
 		.route({
 			tags: ["Calendar"],
-			summary: "Disconnect a calendar provider account from the active organization",
+			summary:
+				"Disconnect a calendar provider account from the active organization",
 		})
 		.input(z.object({ accountId: z.string() }))
 		.output(z.object({ success: z.boolean() })),
@@ -99,7 +101,8 @@ export const calendarContract = {
 	listAccounts: oc
 		.route({
 			tags: ["Calendar"],
-			summary: "List connected calendar provider accounts for the active organization",
+			summary:
+				"List connected calendar provider accounts for the active organization",
 		})
 		.input(z.object({}))
 		.output(z.array(calendarAccountOutputSchema)),
@@ -120,7 +123,7 @@ export const calendarContract = {
 		.input(
 			z.object({
 				accountId: z.string().optional(),
-			}),
+			})
 		)
 		.output(z.array(calendarSourceOutputSchema)),
 
@@ -134,7 +137,7 @@ export const calendarContract = {
 				listingId: z.string(),
 				provider: z.enum(["google", "outlook", "ical", "manual"]),
 				calendarId: z.string().trim().min(1),
-			}),
+			})
 		)
 		.output(calendarConnectionOutputSchema),
 
@@ -147,7 +150,7 @@ export const calendarContract = {
 			z.object({
 				listingId: z.string(),
 				sourceId: z.string(),
-			}),
+			})
 		)
 		.output(calendarConnectionOutputSchema),
 
@@ -178,7 +181,8 @@ export const calendarContract = {
 	getOrgWorkspaceState: oc
 		.route({
 			tags: ["Calendar"],
-			summary: "Get calendar workspace state across all listings in the organization",
+			summary:
+				"Get calendar workspace state across all listings in the organization",
 		})
 		.input(z.object({}))
 		.output(calendarOrgWorkspaceStateOutputSchema),
@@ -192,7 +196,7 @@ export const calendarContract = {
 			z.object({
 				sourceId: z.string(),
 				isHidden: z.boolean(),
-			}),
+			})
 		)
 		.output(calendarSourceOutputSchema),
 };

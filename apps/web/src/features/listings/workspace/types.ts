@@ -17,16 +17,20 @@ export interface ListingWorkspaceCalendarActions {
 	googleCalendarConnectUrl?: string | null;
 	onAttachCalendarSource?: ((sourceId: string) => void | Promise<void>) | null;
 	onDetachConnection?: ((connectionId: string) => void | Promise<void>) | null;
-	onRefreshCalendarAccountSources?: ((accountId: string) => void | Promise<void>) | null;
+	onRefreshCalendarAccountSources?:
+		| ((accountId: string) => void | Promise<void>)
+		| null;
 	refreshingAccountId?: string | null;
 }
 
 export interface ListingWorkspaceBasicsActions {
 	initialValue?: ListingWorkspaceInitialValue | null;
 	listingTypeOptions?: ListingTypeOption[];
-	onUpdateListing?: ((
-		input: OrpcInputs["listing"]["create"]
-	) => boolean | void | Promise<boolean | void>) | null;
+	onUpdateListing?:
+		| ((
+				input: OrpcInputs["listing"]["create"]
+		  ) => boolean | undefined | Promise<boolean | undefined>)
+		| null;
 	updateErrorMessage?: string | null;
 	updatePending?: boolean;
 }
@@ -36,46 +40,60 @@ export interface ListingWorkspacePublishActions {
 	distributionSubmitPending?: boolean;
 	moderationActionErrorMessage?: string | null;
 	moderationSubmitPending?: boolean;
-	onApproveListing?: ((input: {
-		listingId: string;
-		note?: string;
-	}) => boolean | void | Promise<boolean | void>) | null;
-	onClearListingApproval?: ((input: {
-		listingId: string;
-		note?: string;
-	}) => boolean | void | Promise<boolean | void>) | null;
-	onPublishListingToChannel?: ((input: {
-		channelType: "own_site" | "platform_marketplace";
-		listingId: string;
-	}) => boolean | void | Promise<boolean | void>) | null;
-	onUnpublishListing?: ((listingId: string) => boolean | void | Promise<boolean | void>) | null;
+	onApproveListing?:
+		| ((input: {
+				listingId: string;
+				note?: string;
+		  }) => boolean | undefined | Promise<boolean | undefined>)
+		| null;
+	onClearListingApproval?:
+		| ((input: {
+				listingId: string;
+				note?: string;
+		  }) => boolean | undefined | Promise<boolean | undefined>)
+		| null;
+	onPublishListingToChannel?:
+		| ((input: {
+				channelType: "own_site" | "platform_marketplace";
+				listingId: string;
+		  }) => boolean | undefined | Promise<boolean | undefined>)
+		| null;
+	onUnpublishListing?:
+		| ((
+				listingId: string
+		  ) => boolean | undefined | Promise<boolean | undefined>)
+		| null;
 }
 
 export interface ListingWorkspacePricingActions {
-	onCreatePricingRule?: ((input: {
-		adjustmentType: "flat_cents" | "percent";
-		adjustmentValue: number;
-		conditionJson: Record<string, unknown>;
-		listingId: string;
-		name: string;
-		priority?: number;
-		pricingProfileId: string;
-		ruleType: string;
-	}) => boolean | void | Promise<boolean | void>) | null;
-	onCreatePricingProfile?: ((input: {
-		baseHourlyPriceCents: number;
-		currency: string;
-		isDefault?: boolean;
-		listingId: string;
-		minimumHours?: number;
-		name: string;
-		serviceFeeBps?: number;
-		taxBps?: number;
-	}) => boolean | void | Promise<boolean | void>) | null;
+	onCreatePricingProfile?:
+		| ((input: {
+				baseHourlyPriceCents: number;
+				currency: string;
+				isDefault?: boolean;
+				listingId: string;
+				minimumHours?: number;
+				name: string;
+				serviceFeeBps?: number;
+				taxBps?: number;
+		  }) => boolean | undefined | Promise<boolean | undefined>)
+		| null;
+	onCreatePricingRule?:
+		| ((input: {
+				adjustmentType: "flat_cents" | "percent";
+				adjustmentValue: number;
+				conditionJson: Record<string, unknown>;
+				listingId: string;
+				name: string;
+				priority?: number;
+				pricingProfileId: string;
+				ruleType: string;
+		  }) => boolean | undefined | Promise<boolean | undefined>)
+		| null;
 	pricingActionErrorMessage?: string | null;
-	pricingSubmitPending?: boolean;
 	pricingRuleActionErrorMessage?: string | null;
 	pricingRuleSubmitPending?: boolean;
+	pricingSubmitPending?: boolean;
 }
 
 export interface ListingWorkspaceAvailabilityActions {
@@ -85,26 +103,32 @@ export interface ListingWorkspaceAvailabilityActions {
 	availabilityExceptionActionErrorMessage?: string | null;
 	availabilityExceptionSubmitPending?: boolean;
 	availabilitySubmitPending?: boolean;
-	onAddAvailabilityBlock?: ((input: {
-		endsAt: string;
-		listingId: string;
-		reason?: string;
-		startsAt: string;
-	}) => boolean | void | Promise<boolean | void>) | null;
-	onAddAvailabilityException?: ((input: {
-		date: string;
-		endMinute?: number;
-		isAvailable: boolean;
-		listingId: string;
-		reason?: string;
-		startMinute?: number;
-	}) => boolean | void | Promise<boolean | void>) | null;
-	onAddAvailabilityRule?: ((input: {
-		dayOfWeek: number;
-		endMinute: number;
-		listingId: string;
-		startMinute: number;
-	}) => boolean | void | Promise<boolean | void>) | null;
+	onAddAvailabilityBlock?:
+		| ((input: {
+				endsAt: string;
+				listingId: string;
+				reason?: string;
+				startsAt: string;
+		  }) => boolean | undefined | Promise<boolean | undefined>)
+		| null;
+	onAddAvailabilityException?:
+		| ((input: {
+				date: string;
+				endMinute?: number;
+				isAvailable: boolean;
+				listingId: string;
+				reason?: string;
+				startMinute?: number;
+		  }) => boolean | undefined | Promise<boolean | undefined>)
+		| null;
+	onAddAvailabilityRule?:
+		| ((input: {
+				dayOfWeek: number;
+				endMinute: number;
+				listingId: string;
+				startMinute: number;
+		  }) => boolean | undefined | Promise<boolean | undefined>)
+		| null;
 }
 
 export interface ListingWorkspaceSectionsProps
@@ -128,10 +152,10 @@ export interface ListingWorkspaceInitialServiceFamilyDetails {
 
 export interface ListingWorkspaceInitialValue {
 	description: ListingWorkspaceState["listing"]["description"];
+	listingTypeSlug: ListingWorkspaceState["listing"]["listingTypeSlug"];
 	metadata: ListingWorkspaceState["listing"]["metadata"];
 	name: ListingWorkspaceState["listing"]["name"];
 	serviceFamilyDetails?: ListingWorkspaceInitialServiceFamilyDetails;
 	slug: ListingWorkspaceState["listing"]["slug"];
 	timezone: ListingWorkspaceState["listing"]["timezone"];
-	listingTypeSlug: ListingWorkspaceState["listing"]["listingTypeSlug"];
 }

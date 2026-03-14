@@ -8,19 +8,20 @@ import type {
 export type Db = typeof db;
 export type OrgPaymentConfigRow = typeof organizationPaymentConfig.$inferSelect;
 export type PaymentWebhookEventRow = typeof paymentWebhookEvent.$inferSelect;
-export type BookingPaymentAttemptRow = typeof bookingPaymentAttempt.$inferSelect;
+export type BookingPaymentAttemptRow =
+	typeof bookingPaymentAttempt.$inferSelect;
 
 export interface ConnectPaymentProviderInput {
-	organizationId: string;
-	providerConfigId: string;
-	provider: "cloudpayments" | "stripe";
-	publicKey?: string;
 	encryptedCredentials: string;
+	organizationId: string;
+	provider: "cloudpayments" | "stripe";
+	providerConfigId: string;
+	publicKey?: string;
 }
 
 export interface ReconcileWebhookResult {
-	processed: boolean;
-	idempotent: boolean;
 	bookingId: string | null;
+	idempotent: boolean;
 	organizationId: string;
+	processed: boolean;
 }

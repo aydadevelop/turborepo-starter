@@ -1,5 +1,5 @@
-import { and, eq } from "drizzle-orm";
 import { supportTicket, supportTicketMessage } from "@my-app/db/schema/support";
+import { and, eq } from "drizzle-orm";
 import type {
 	AddTicketMessageInput,
 	CreateSupportTicketInput,
@@ -11,7 +11,7 @@ import type {
 
 export async function createSupportTicket(
 	input: CreateSupportTicketInput,
-	db: Db,
+	db: Db
 ): Promise<SupportTicketRow> {
 	const [row] = await db
 		.insert(supportTicket)
@@ -29,12 +29,16 @@ export async function createSupportTicket(
 		})
 		.returning();
 
-	return row!;
+	if (!row) {
+		throw new Error("Failed to create support ticket");
+	}
+
+	return row;
 }
 
 export async function addTicketMessage(
 	input: AddTicketMessageInput,
-	db: Db,
+	db: Db
 ): Promise<SupportTicketMessageRow> {
 	// Verify ticket belongs to the organization
 	const [ticket] = await db
@@ -43,8 +47,8 @@ export async function addTicketMessage(
 		.where(
 			and(
 				eq(supportTicket.id, input.ticketId),
-				eq(supportTicket.organizationId, input.organizationId),
-			),
+				eq(supportTicket.organizationId, input.organizationId)
+			)
 		)
 		.limit(1);
 
@@ -65,18 +69,27 @@ export async function addTicketMessage(
 		})
 		.returning();
 
-	return row!;
+	if (!row) {
+		throw new Error("Failed to create support ticket message");
+	}
+
+	return row;
 }
 
 export async function getTicket(
 	id: string,
 	organizationId: string,
-	db: Db,
+	db: Db
 ): Promise<SupportTicketRow> {
 	const [row] = await db
 		.select()
 		.from(supportTicket)
-		.where(and(eq(supportTicket.id, id), eq(supportTicket.organizationId, organizationId)))
+		.where(
+			and(
+				eq(supportTicket.id, id),
+				eq(supportTicket.organizationId, organizationId)
+			)
+		)
 		.limit(1);
 
 	if (!row) {
@@ -86,10 +99,10 @@ export async function getTicket(
 	return row;
 }
 
-export async function listOrgTickets(
+export function listOrgTickets(
 	organizationId: string,
 	filter: ListTicketsFilter,
-	db: Db,
+	db: Db
 ): Promise<SupportTicketRow[]> {
 	const conditions = [eq(supportTicket.organizationId, organizationId)];
 
@@ -116,10 +129,10 @@ export async function listOrgTickets(
 	return query;
 }
 
-export async function listCustomerTickets(
+export function listCustomerTickets(
 	customerUserId: string,
 	filter: ListTicketsFilter,
-	db: Db,
+	db: Db
 ): Promise<SupportTicketRow[]> {
 	const conditions = [eq(supportTicket.customerUserId, customerUserId)];
 
@@ -149,12 +162,17 @@ export async function listCustomerTickets(
 export async function getCustomerTicket(
 	ticketId: string,
 	customerUserId: string,
-	db: Db,
+	db: Db
 ): Promise<SupportTicketRow> {
 	const [row] = await db
 		.select()
 		.from(supportTicket)
-		.where(and(eq(supportTicket.id, ticketId), eq(supportTicket.customerUserId, customerUserId)))
+		.where(
+			and(
+				eq(supportTicket.id, ticketId),
+				eq(supportTicket.customerUserId, customerUserId)
+			)
+		)
 		.limit(1);
 
 	if (!row) {
@@ -164,10 +182,18 @@ export async function getCustomerTicket(
 	return row;
 }
 
-export async function listTicketMessages(ticketId: string, db: Db): Promise<SupportTicketMessageRow[]> {
+export function listTicketMessages(
+	ticketId: string,
+	db: Db
+): Promise<SupportTicketMessageRow[]> {
 	return db
 		.select()
 		.from(supportTicketMessage)
-		.where(and(eq(supportTicketMessage.ticketId, ticketId), eq(supportTicketMessage.isInternal, false)))
+		.where(
+			and(
+				eq(supportTicketMessage.ticketId, ticketId),
+				eq(supportTicketMessage.isInternal, false)
+			)
+		)
 		.orderBy(supportTicketMessage.createdAt);
 }

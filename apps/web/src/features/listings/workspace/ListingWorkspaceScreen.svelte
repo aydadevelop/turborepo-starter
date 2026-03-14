@@ -72,7 +72,7 @@
 		name: string;
 		serviceFeeBps?: number;
 		taxBps?: number;
-		}) => {
+	}) => {
 		try {
 			await createPricingProfileMutation.mutateAsync(input);
 			return true;
@@ -190,7 +190,9 @@
 		}
 	};
 
-	const googleCalendarConnectUrl = $derived(getGoogleCalendarConnectUrl(page.url.pathname));
+	const googleCalendarConnectUrl = $derived(
+		getGoogleCalendarConnectUrl(page.url.pathname)
+	);
 	const calendarNotice = $derived(
 		buildCalendarWorkspaceNotice(page.url.searchParams)
 	);
@@ -267,15 +269,13 @@
 				?.message ?? null}
 			onAddAvailabilityException={addAvailabilityException}
 			availabilityExceptionSubmitPending={addAvailabilityExceptionMutation.isPending}
-			availabilityExceptionActionErrorMessage={
-				addAvailabilityExceptionMutation.error?.message ?? null
-			}
-			googleCalendarConnectUrl={googleCalendarConnectUrl}
+			availabilityExceptionActionErrorMessage={addAvailabilityExceptionMutation.error?.message ?? null}
+			{googleCalendarConnectUrl}
 			onRefreshCalendarAccountSources={refreshCalendarSources}
 			onAttachCalendarSource={attachCalendarSource}
 			onDetachConnection={detachConnection}
-			refreshingAccountId={refreshingAccountId}
-			attachingSourceId={attachingSourceId}
+			{refreshingAccountId}
+			{attachingSourceId}
 			calendarActionErrorMessage={refreshCalendarSourcesMutation.error?.message ??
 				attachCalendarSourceMutation.error?.message ??
 				disconnectConnectionMutation.error?.message ??

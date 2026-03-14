@@ -8,6 +8,8 @@ import {
 	uploadObject,
 } from "../index";
 
+const REGISTRY_PUBLIC_KEY_RE = /^images\/example-[a-f0-9]+\.jpg$/;
+
 afterEach(() => {
 	resetStorageProviderRegistry();
 });
@@ -25,9 +27,9 @@ describe("storage registry", () => {
 			access: "public",
 		});
 
-		expect(uploaded.key).toMatch(/^images\/example-[a-f0-9]+\.jpg$/);
+		expect(uploaded.key).toMatch(REGISTRY_PUBLIC_KEY_RE);
 		expect(resolvePublicObjectUrl("test-provider", uploaded)).toBe(
-			uploaded.publicUrl,
+			uploaded.publicUrl
 		);
 
 		const signedUpload = await getSignedObjectUploadUrl("test-provider", {
@@ -37,13 +39,13 @@ describe("storage registry", () => {
 		expect(signedUpload.url).toContain("signature=fake");
 	});
 
-	it("throws a descriptive error when a provider is missing", async () => {
+	it("throws a descriptive error when a provider is missing", () => {
 		expect(() =>
 			uploadObject("missing-provider", {
 				filename: "x.txt",
 				content: Buffer.from("x"),
 				access: "public",
-			}),
+			})
 		).toThrow('StorageProvider "missing-provider" is not registered');
 	});
 });

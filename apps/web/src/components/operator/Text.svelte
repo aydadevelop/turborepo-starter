@@ -41,34 +41,50 @@
 
 {#if as === "span"}
 	<span class={cn(variantClasses[variant], className)} {...restProps}>
-		{#if children}{@render children()}{/if}
+		{#if children}
+			{@render children()}
+		{/if}
 	</span>
 {:else if as === "h1"}
 	<h1 class={cn(variantClasses[variant], className)} {...restProps}>
-		{#if children}{@render children()}{/if}
+		{#if children}
+			{@render children()}
+		{/if}
 	</h1>
 {:else if as === "h2"}
 	<h2 class={cn(variantClasses[variant], className)} {...restProps}>
-		{#if children}{@render children()}{/if}
+		{#if children}
+			{@render children()}
+		{/if}
 	</h2>
 {:else if as === "h3"}
 	<h3 class={cn(variantClasses[variant], className)} {...restProps}>
-		{#if children}{@render children()}{/if}
+		{#if children}
+			{@render children()}
+		{/if}
 	</h3>
 {:else if as === "h4"}
 	<h4 class={cn(variantClasses[variant], className)} {...restProps}>
-		{#if children}{@render children()}{/if}
+		{#if children}
+			{@render children()}
+		{/if}
 	</h4>
 {:else if as === "div"}
 	<div class={cn(variantClasses[variant], className)} {...restProps}>
-		{#if children}{@render children()}{/if}
+		{#if children}
+			{@render children()}
+		{/if}
 	</div>
 {:else if as === "label"}
 	<label class={cn(variantClasses[variant], className)} {...restProps}>
-		{#if children}{@render children()}{/if}
+		{#if children}
+			{@render children()}
+		{/if}
 	</label>
 {:else}
 	<p class={cn(variantClasses[variant], className)} {...restProps}>
-		{#if children}{@render children()}{/if}
+		{#if children}
+			{@render children()}
+		{/if}
 	</p>
 {/if}

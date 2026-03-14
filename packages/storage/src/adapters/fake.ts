@@ -27,7 +27,7 @@ const buildSignedUrl = (
 	publicBaseUrl: string,
 	key: string,
 	action: "download" | "upload",
-	expiresInSeconds: number,
+	expiresInSeconds: number
 ): string => {
 	const url = new URL(buildObjectUrl(publicBaseUrl, key));
 	url.searchParams.set("signature", "fake");
@@ -37,16 +37,14 @@ const buildSignedUrl = (
 };
 
 export const createFakeStorageProvider = (
-	options: FakeStorageProviderOptions,
+	options: FakeStorageProviderOptions
 ): FakeStorageProvider => {
 	const files = new Map<string, Buffer>();
 	const publicBaseUrl =
 		options.publicBaseUrl ??
 		`https://storage.test/${encodeURIComponent(options.providerId)}`;
 
-	const upload = async (
-		input: StorageUploadInput,
-	): Promise<StorageUploadResult> => {
+	const upload = (input: StorageUploadInput): Promise<StorageUploadResult> => {
 		const key = input.key
 			? normalizeStorageKey(input.key)
 			: createStorageObjectKey({
@@ -54,16 +52,16 @@ export const createFakeStorageProvider = (
 					prefix: input.prefix,
 				});
 		files.set(key, toBuffer(input.content));
-		return {
+		return Promise.resolve({
 			key,
 			access: input.access,
 			publicUrl:
 				input.access === "public" ? buildObjectUrl(publicBaseUrl, key) : null,
-		};
+		});
 	};
 
-	const getSignedUploadUrl = async (
-		input: StorageSignedUploadInput,
+	const getSignedUploadUrl = (
+		input: StorageSignedUploadInput
 	): Promise<StorageSignedUploadResult> => {
 		const expiresInSeconds = input.expiresInSeconds ?? 900;
 		const key = input.key
@@ -73,7 +71,7 @@ export const createFakeStorageProvider = (
 					prefix: input.prefix,
 				});
 
-		return {
+		return Promise.resolve({
 			key,
 			access: input.access,
 			expiresInSeconds,
@@ -81,18 +79,20 @@ export const createFakeStorageProvider = (
 				input.access === "public" ? buildObjectUrl(publicBaseUrl, key) : null,
 			url: buildSignedUrl(publicBaseUrl, key, "upload", expiresInSeconds),
 			headers: input.mimeType ? { "content-type": input.mimeType } : undefined,
-		};
+		});
 	};
 
-	const getSignedDownloadUrl = async (
+	const getSignedDownloadUrl = (
 		ref: StorageObjectRef,
-		options?: StorageSignedUrlOptions,
+		options?: StorageSignedUrlOptions
 	): Promise<string> => {
-		return buildSignedUrl(
-			publicBaseUrl,
-			ref.key,
-			"download",
-			options?.expiresInSeconds ?? 900,
+		return Promise.resolve(
+			buildSignedUrl(
+				publicBaseUrl,
+				ref.key,
+				"download",
+				options?.expiresInSeconds ?? 900
+			)
 		);
 	};
 
@@ -100,8 +100,9 @@ export const createFakeStorageProvider = (
 		providerId: options.providerId,
 		files,
 		upload,
-		async deleteObject(ref) {
+		deleteObject(ref) {
 			files.delete(normalizeStorageKey(ref.key));
+			return Promise.resolve();
 		},
 		getPublicUrl(ref) {
 			return ref.access === "public"
@@ -110,13 +111,13 @@ export const createFakeStorageProvider = (
 		},
 		getSignedDownloadUrl,
 		getSignedUploadUrl,
-		async getObjectBuffer(ref) {
+		getObjectBuffer(ref) {
 			const buffer = files.get(normalizeStorageKey(ref.key));
 			if (!buffer) {
 				throw new Error(`Storage object "${ref.key}" was not found.`);
 			}
 
-			return buffer;
+			return Promise.resolve(buffer);
 		},
 	};
 };

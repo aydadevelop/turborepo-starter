@@ -146,8 +146,12 @@
 						<div
 							class="flex items-center justify-between rounded-lg border p-3 text-sm"
 						>
-							<span class="font-medium">{inv.organizationName ?? "Organization"}</span>
-							<Badge variant={inv.status === "accepted" ? "default" : "outline"}>
+							<span class="font-medium"
+								>{inv.organizationName ?? "Organization"}</span
+							>
+							<Badge
+								variant={inv.status === "accepted" ? "default" : "outline"}
+							>
 								{inv.status}
 							</Badge>
 						</div>

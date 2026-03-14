@@ -7,12 +7,12 @@ export const registerPaymentProvider = (provider: PaymentProvider): void => {
 };
 
 export const getPaymentProvider = (
-	providerId: PaymentProviderId,
+	providerId: PaymentProviderId
 ): PaymentProvider => {
 	const provider = paymentProviderRegistry.get(providerId);
 	if (!provider) {
 		throw new Error(
-			`PaymentProvider "${providerId}" is not registered. Call registerPaymentProvider() at startup.`,
+			`PaymentProvider "${providerId}" is not registered. Call registerPaymentProvider() at startup.`
 		);
 	}
 

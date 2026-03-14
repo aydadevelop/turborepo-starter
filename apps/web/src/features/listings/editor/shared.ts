@@ -31,7 +31,11 @@ export function parseMetadataObject(
 
 	try {
 		const parsed = JSON.parse(trimmedMetadata) as unknown;
-		if (parsed === null || Array.isArray(parsed) || typeof parsed !== "object") {
+		if (
+			parsed === null ||
+			Array.isArray(parsed) ||
+			typeof parsed !== "object"
+		) {
 			return { ok: false, message: "Metadata must be a JSON object." };
 		}
 

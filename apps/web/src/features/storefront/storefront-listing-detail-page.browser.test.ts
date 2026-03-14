@@ -1,7 +1,10 @@
 import { writable } from "svelte/store";
 import { expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import type { StorefrontBookingSurface, StorefrontListingItem } from "$lib/orpc-types";
+import type {
+	StorefrontBookingSurface,
+	StorefrontListingItem,
+} from "$lib/orpc-types";
 import { renderWithQueryClient } from "../../test/browser/render";
 
 const mockState = vi.hoisted(() => ({
@@ -98,7 +101,7 @@ const mockState = vi.hoisted(() => ({
 					currency: "RUB",
 					durationMinutes: 120,
 					baseCents: 12_000,
-					adjustmentCents: 1_000,
+					adjustmentCents: 1000,
 					subtotalCents: 13_000,
 					serviceFeeCents: 0,
 					taxCents: 500,
@@ -109,7 +112,7 @@ const mockState = vi.hoisted(() => ({
 						status: "applied",
 						reasonCode: null,
 						reasonLabel: null,
-						appliedAmountCents: 1_000,
+						appliedAmountCents: 1000,
 						discountedSubtotalCents: 12_000,
 						discountedServiceFeeCents: 0,
 						discountedTaxCents: 500,
@@ -228,9 +231,7 @@ test("renders the public listing detail page with the live boat-rent booking sur
 
 	await userEvent.fill(page.getByLabelText("Date"), "2030-01-15");
 
-	await expect
-		.element(page.getByText("Live booking surface"))
-		.toBeVisible();
+	await expect.element(page.getByText("Live booking surface")).toBeVisible();
 	await expect.element(page.getByText("Maintenance window")).toBeVisible();
 	await expect(document.body).toMatchScreenshot(
 		"storefront-listing-detail-page"

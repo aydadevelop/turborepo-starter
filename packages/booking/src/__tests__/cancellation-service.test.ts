@@ -10,7 +10,10 @@ import {
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import { describe, expect, it } from "vitest";
 
-import { applyCancellation, requestCancellation } from "../cancellation-service";
+import {
+	applyCancellation,
+	requestCancellation,
+} from "../cancellation-service";
 import type { Db } from "../types";
 
 const ORG_ID = "can-org-1";
@@ -43,8 +46,14 @@ const testDbState = bootstrapTestDatabase({
 			isActive: true,
 			sortOrder: 0,
 		});
-		await db.insert(user).values({ id: APPLIER_USER_ID, name: "Applier", email: "applier@test.com" });
-		await db.insert(organization).values({ id: ORG_ID, name: "Cancel Org", slug: "can-org" });
+		await db.insert(user).values({
+			id: APPLIER_USER_ID,
+			name: "Applier",
+			email: "applier@test.com",
+		});
+		await db
+			.insert(organization)
+			.values({ id: ORG_ID, name: "Cancel Org", slug: "can-org" });
 		// Org settings fallback: free window 24h, penalty 20%
 		await db.insert(organizationSettings).values({
 			id: crypto.randomUUID(),
@@ -82,16 +91,18 @@ const testDbState = bootstrapTestDatabase({
 			currency: "RUB",
 		});
 
-		await db.insert(booking).values([
-			mkBooking(BOOKING_FREE_ID, h(30 * 24)),
-			mkBooking(BOOKING_PENALTY_ID, h(3)),
-			mkBooking(BOOKING_LATE_ID, h(0.5)),
-			mkBooking(BOOKING_MANAGER_ID, h(30 * 24)),
-			mkBooking(BOOKING_HEALTH_ID, h(0.5)),
-			mkBooking(BOOKING_SAFETY_ID, h(30 * 24)),
-			mkBooking(BOOKING_NO_PMT_ID, h(30 * 24)),
-			mkBooking(BOOKING_DUP_ID, h(30 * 24)),
-		]);
+		await db
+			.insert(booking)
+			.values([
+				mkBooking(BOOKING_FREE_ID, h(30 * 24)),
+				mkBooking(BOOKING_PENALTY_ID, h(3)),
+				mkBooking(BOOKING_LATE_ID, h(0.5)),
+				mkBooking(BOOKING_MANAGER_ID, h(30 * 24)),
+				mkBooking(BOOKING_HEALTH_ID, h(0.5)),
+				mkBooking(BOOKING_SAFETY_ID, h(30 * 24)),
+				mkBooking(BOOKING_NO_PMT_ID, h(30 * 24)),
+				mkBooking(BOOKING_DUP_ID, h(30 * 24)),
+			]);
 
 		// Add captured payment attempts for most bookings (10000 cents each)
 		const paidBookings = [
@@ -115,7 +126,7 @@ const testDbState = bootstrapTestDatabase({
 				amountCents: 10_000,
 				currency: "RUB",
 				processedAt: now,
-			})),
+			}))
 		);
 		// BOOKING_NO_PMT_ID intentionally has NO payment attempts
 	},
@@ -126,8 +137,12 @@ const getDb = () => testDbState.db as unknown as Db;
 describe("requestCancellation — policy outcomes", () => {
 	it("customer in free window (30 days away) → 100% refund", async () => {
 		const { outcome } = await requestCancellation(
-			{ bookingId: BOOKING_FREE_ID, organizationId: ORG_ID, initiatedByRole: "customer" },
-			getDb(),
+			{
+				bookingId: BOOKING_FREE_ID,
+				organizationId: ORG_ID,
+				initiatedByRole: "customer",
+			},
+			getDb()
 		);
 
 		expect(outcome.refundPercent).toBe(100);
@@ -138,19 +153,27 @@ describe("requestCancellation — policy outcomes", () => {
 
 	it("customer in penalty window (3h away) → 80% refund (20% penalty)", async () => {
 		const { outcome } = await requestCancellation(
-			{ bookingId: BOOKING_PENALTY_ID, organizationId: ORG_ID, initiatedByRole: "customer" },
-			getDb(),
+			{
+				bookingId: BOOKING_PENALTY_ID,
+				organizationId: ORG_ID,
+				initiatedByRole: "customer",
+			},
+			getDb()
 		);
 
 		expect(outcome.refundPercent).toBe(80); // 100% - 20% penalty
-		expect(outcome.suggestedRefundCents).toBe(8_000);
+		expect(outcome.suggestedRefundCents).toBe(8000);
 		expect(outcome.policyCode).toBe("customer_standard_partial_refund");
 	});
 
 	it("customer in late window (30min away) → 0% refund (100% penalty)", async () => {
 		const { outcome } = await requestCancellation(
-			{ bookingId: BOOKING_LATE_ID, organizationId: ORG_ID, initiatedByRole: "customer" },
-			getDb(),
+			{
+				bookingId: BOOKING_LATE_ID,
+				organizationId: ORG_ID,
+				initiatedByRole: "customer",
+			},
+			getDb()
 		);
 
 		expect(outcome.refundPercent).toBe(0); // latePenaltyBps=10_000 → 100% penalty
@@ -160,8 +183,12 @@ describe("requestCancellation — policy outcomes", () => {
 
 	it("manager-initiated (30 days away) → 100% refund regardless of time window", async () => {
 		const { outcome } = await requestCancellation(
-			{ bookingId: BOOKING_MANAGER_ID, organizationId: ORG_ID, initiatedByRole: "manager" },
-			getDb(),
+			{
+				bookingId: BOOKING_MANAGER_ID,
+				organizationId: ORG_ID,
+				initiatedByRole: "manager",
+			},
+			getDb()
 		);
 
 		expect(outcome.refundPercent).toBe(100);
@@ -176,7 +203,7 @@ describe("requestCancellation — policy outcomes", () => {
 				initiatedByRole: "customer",
 				reasonCode: "CUSTOMER_HEALTH_ISSUE",
 			},
-			getDb(),
+			getDb()
 		);
 
 		expect(outcome.refundPercent).toBe(100);
@@ -195,8 +222,8 @@ describe("requestCancellation — MANAGER_SAFETY_REJECTION", () => {
 					initiatedByRole: "manager",
 					reasonCode: "MANAGER_SAFETY_REJECTION",
 				},
-				getDb(),
-			),
+				getDb()
+			)
 		).rejects.toThrow("EVIDENCE_REQUIRED");
 	});
 
@@ -209,7 +236,7 @@ describe("requestCancellation — MANAGER_SAFETY_REJECTION", () => {
 				reasonCode: "MANAGER_SAFETY_REJECTION",
 				evidence: [{ type: "photo", url: "https://example.com/evidence.jpg" }],
 			},
-			getDb(),
+			getDb()
 		);
 
 		expect(outcome.refundPercent).toBe(0);
@@ -220,8 +247,12 @@ describe("requestCancellation — MANAGER_SAFETY_REJECTION", () => {
 describe("applyCancellation — no captured payments", () => {
 	it("no payment attempts → refundableBaseCents=0, applyCancellation skips bookingRefund", async () => {
 		const { request, outcome } = await requestCancellation(
-			{ bookingId: BOOKING_NO_PMT_ID, organizationId: ORG_ID, initiatedByRole: "customer" },
-			getDb(),
+			{
+				bookingId: BOOKING_NO_PMT_ID,
+				organizationId: ORG_ID,
+				initiatedByRole: "customer",
+			},
+			getDb()
 		);
 
 		expect(outcome.capturedAmountCents).toBe(0);
@@ -231,7 +262,7 @@ describe("applyCancellation — no captured payments", () => {
 			request.id,
 			ORG_ID,
 			APPLIER_USER_ID,
-			getDb(),
+			getDb()
 		);
 
 		// No refund row should be inserted when refundAmountCents=0
@@ -242,15 +273,23 @@ describe("applyCancellation — no captured payments", () => {
 describe("requestCancellation — duplicate guard", () => {
 	it("throws DUPLICATE_REQUEST on second call for same booking", async () => {
 		await requestCancellation(
-			{ bookingId: BOOKING_DUP_ID, organizationId: ORG_ID, initiatedByRole: "customer" },
-			getDb(),
+			{
+				bookingId: BOOKING_DUP_ID,
+				organizationId: ORG_ID,
+				initiatedByRole: "customer",
+			},
+			getDb()
 		);
 
 		await expect(() =>
 			requestCancellation(
-				{ bookingId: BOOKING_DUP_ID, organizationId: ORG_ID, initiatedByRole: "customer" },
-				getDb(),
-			),
+				{
+					bookingId: BOOKING_DUP_ID,
+					organizationId: ORG_ID,
+					initiatedByRole: "customer",
+				},
+				getDb()
+			)
 		).rejects.toThrow("DUPLICATE_REQUEST");
 	});
 });

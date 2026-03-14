@@ -58,10 +58,10 @@ export interface OrganizationListingModerationState {
 }
 
 export interface OrganizationListingModerationAuditEntry {
-	action: OrganizationListingModerationAuditRow["action"];
 	actedAt: Date;
 	actedByDisplayName: string | null;
 	actedByUserId: string | null;
+	action: OrganizationListingModerationAuditRow["action"];
 	id: string;
 	listingId: string;
 	note: string | null;

@@ -1,18 +1,17 @@
 import { db as defaultDb } from "@my-app/db";
-
+import type {
+	Db,
+	OrganizationListingModerationAuditEntry,
+	OrganizationListingModerationState,
+} from "../types";
 import {
 	insertOrganizationListingModerationAudit,
 	listOrganizationListingModerationAudit,
 	resolveOrganizationListingModerationState,
 	setOrganizationListingApproval,
 } from "./repository";
-import type {
-	Db,
-	OrganizationListingModerationAuditEntry,
-	OrganizationListingModerationState,
-} from "../types";
 
-export const approveOrganizationListing = async (
+export const approveOrganizationListing = (
 	input: {
 		actorUserId?: string | null;
 		listingId: string;
@@ -52,7 +51,7 @@ export const approveOrganizationListing = async (
 	});
 };
 
-export const clearOrganizationListingApproval = async (
+export const clearOrganizationListingApproval = (
 	input: {
 		actorUserId?: string | null;
 		listingId: string;
@@ -92,7 +91,7 @@ export const clearOrganizationListingApproval = async (
 	});
 };
 
-export const getOrganizationListingModerationAudit = async (
+export const getOrganizationListingModerationAudit = (
 	listingId: string,
 	organizationId: string,
 	db: Db = defaultDb

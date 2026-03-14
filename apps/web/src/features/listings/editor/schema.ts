@@ -1,12 +1,11 @@
 import { isSupportedTimezone } from "@my-app/reference-data/timezones";
 import { z } from "zod";
-
-import type { ListingEditorContext } from "./types";
 import {
 	findListingTypeOption,
 	parseMetadataObject,
 	parsePositiveInteger,
 } from "./shared";
+import type { ListingEditorContext } from "./types";
 
 const listingEditorBaseSchema = z.object({
 	boatRentBasePort: z.string(),
@@ -55,10 +54,23 @@ const listingEditorBaseSchema = z.object({
 		),
 });
 
+const addCustomIssue = (
+	ctx: Parameters<Parameters<typeof listingEditorBaseSchema.superRefine>[0]>[1],
+	path: string[],
+	message: string
+) => {
+	ctx.addIssue({
+		code: "custom",
+		path,
+		message,
+	});
+};
+
 export function createListingEditorSchema({
 	mode,
 	listingTypeOptions,
 }: ListingEditorContext) {
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: service-family-specific validation is intentionally centralized in this form schema.
 	return listingEditorBaseSchema.superRefine((value, ctx) => {
 		const selectedListingType = findListingTypeOption(
 			listingTypeOptions,
@@ -66,23 +78,18 @@ export function createListingEditorSchema({
 		);
 
 		if (mode === "create" && !selectedListingType) {
-			ctx.addIssue({
-				code: "custom",
-				path: ["listingTypeSlug"],
-				message:
-					listingTypeOptions.length === 0
-						? "No listing types are currently available for this organization."
-						: "Select a listing type.",
-			});
+			addCustomIssue(
+				ctx,
+				["listingTypeSlug"],
+				listingTypeOptions.length === 0
+					? "No listing types are currently available for this organization."
+					: "Select a listing type."
+			);
 		}
 
 		const metadataResult = parseMetadataObject(value.metadataText);
 		if (!metadataResult.ok) {
-			ctx.addIssue({
-				code: "custom",
-				path: ["metadataText"],
-				message: metadataResult.message,
-			});
+			addCustomIssue(ctx, ["metadataText"], metadataResult.message);
 		}
 
 		if (selectedListingType?.serviceFamily === "boat_rent") {
@@ -92,37 +99,33 @@ export function createListingEditorSchema({
 				"Capacity must be a positive whole number for boat-rent listings."
 			);
 			if (!capacityResult.ok) {
-				ctx.addIssue({
-					code: "custom",
-					path: ["boatRentCapacity"],
-					message: capacityResult.message,
-				});
+				addCustomIssue(ctx, ["boatRentCapacity"], capacityResult.message);
 			}
 
 			if (value.boatRentBasePort.trim().length === 0) {
-				ctx.addIssue({
-					code: "custom",
-					path: ["boatRentBasePort"],
-					message: "Base port is required for boat-rent listings.",
-				});
+				addCustomIssue(
+					ctx,
+					["boatRentBasePort"],
+					"Base port is required for boat-rent listings."
+				);
 			}
 
 			if (value.boatRentDepartureArea.trim().length === 0) {
-				ctx.addIssue({
-					code: "custom",
-					path: ["boatRentDepartureArea"],
-					message: "Departure area is required for boat-rent listings.",
-				});
+				addCustomIssue(
+					ctx,
+					["boatRentDepartureArea"],
+					"Departure area is required for boat-rent listings."
+				);
 			}
 		}
 
 		if (selectedListingType?.serviceFamily === "excursions") {
 			if (value.excursionMeetingPoint.trim().length === 0) {
-				ctx.addIssue({
-					code: "custom",
-					path: ["excursionMeetingPoint"],
-					message: "Meeting point is required for excursion listings.",
-				});
+				addCustomIssue(
+					ctx,
+					["excursionMeetingPoint"],
+					"Meeting point is required for excursion listings."
+				);
 			}
 
 			const durationResult = parsePositiveInteger(
@@ -131,11 +134,11 @@ export function createListingEditorSchema({
 				"Duration must be a positive whole number of minutes for excursion listings."
 			);
 			if (!durationResult.ok) {
-				ctx.addIssue({
-					code: "custom",
-					path: ["excursionDurationMinutes"],
-					message: durationResult.message,
-				});
+				addCustomIssue(
+					ctx,
+					["excursionDurationMinutes"],
+					durationResult.message
+				);
 			}
 
 			const groupSizeResult = parsePositiveInteger(
@@ -144,19 +147,15 @@ export function createListingEditorSchema({
 				"Max group size must be a positive whole number for excursion listings."
 			);
 			if (!groupSizeResult.ok) {
-				ctx.addIssue({
-					code: "custom",
-					path: ["excursionMaxGroupSize"],
-					message: groupSizeResult.message,
-				});
+				addCustomIssue(ctx, ["excursionMaxGroupSize"], groupSizeResult.message);
 			}
 
 			if (value.excursionPrimaryLanguage.trim().length === 0) {
-				ctx.addIssue({
-					code: "custom",
-					path: ["excursionPrimaryLanguage"],
-					message: "Primary language is required for excursion listings.",
-				});
+				addCustomIssue(
+					ctx,
+					["excursionPrimaryLanguage"],
+					"Primary language is required for excursion listings."
+				);
 			}
 		}
 	});

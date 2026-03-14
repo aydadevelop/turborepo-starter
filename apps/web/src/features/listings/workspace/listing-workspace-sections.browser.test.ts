@@ -279,10 +279,7 @@ const moderationAudit: ListingModerationAuditEntry[] = [
 	},
 ];
 
-async function waitForCondition(
-	check: () => boolean,
-	timeoutMs = 1000
-) {
+async function waitForCondition(check: () => boolean, timeoutMs = 1000) {
 	const startedAt = Date.now();
 
 	while (!check()) {
@@ -496,16 +493,14 @@ describe("ListingWorkspaceSections", () => {
 				},
 			},
 			listingTypeOptions: workspace.listingType ? [workspace.listingType] : [],
-			onUpdateListing: async (input: OrpcInputs["listing"]["create"]) => {
+			onUpdateListing: (input: OrpcInputs["listing"]["create"]) => {
 				submittedName = input.name;
 				return true;
 			},
 		});
 
 		await page.getByRole("button", { name: "Edit basics" }).click();
-		await expect
-			.element(page.getByRole("dialog"))
-			.toBeVisible();
+		await expect.element(page.getByRole("dialog")).toBeVisible();
 		await expect
 			.element(page.getByRole("button", { name: "Save basics" }))
 			.toBeVisible();
@@ -516,9 +511,7 @@ describe("ListingWorkspaceSections", () => {
 		) as HTMLFormElement | null;
 		dialogForm?.requestSubmit();
 
-		await waitForCondition(
-			() => submittedName === "Evening Charter Plus"
-		);
+		await waitForCondition(() => submittedName === "Evening Charter Plus");
 		expect(submittedName).toBe("Evening Charter Plus");
 		await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
 

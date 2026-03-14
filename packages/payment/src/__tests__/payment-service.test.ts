@@ -1,4 +1,3 @@
-import { and, eq } from "drizzle-orm";
 import { organization } from "@my-app/db/schema/auth";
 import {
 	booking,
@@ -11,9 +10,13 @@ import {
 	paymentWebhookEvent,
 } from "@my-app/db/schema/marketplace";
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { connectPaymentProvider, reconcilePaymentWebhook } from "../payment-service";
+import {
+	connectPaymentProvider,
+	reconcilePaymentWebhook,
+} from "../payment-service";
 import type { Db } from "../types";
 
 const ORG_ID = "pm-org-1";
@@ -38,7 +41,9 @@ const testDbState = bootstrapTestDatabase({
 			isActive: true,
 			sortOrder: 0,
 		});
-		await db.insert(organization).values({ id: ORG_ID, name: "PM Org", slug: "pm-org" });
+		await db
+			.insert(organization)
+			.values({ id: ORG_ID, name: "PM Org", slug: "pm-org" });
 		await db.insert(paymentProviderConfig).values({
 			id: PROVIDER_CONFIG_ID,
 			provider: "cloudpayments",
@@ -99,7 +104,7 @@ describe("reconcilePaymentWebhook", () => {
 			WEBHOOK_ENDPOINT_ID,
 			"pay",
 			VALID_PAY_PAYLOAD,
-			getDb(),
+			getDb()
 		);
 
 		expect(result1.processed).toBe(true);
@@ -114,8 +119,8 @@ describe("reconcilePaymentWebhook", () => {
 				and(
 					eq(paymentWebhookEvent.endpointId, WEBHOOK_ENDPOINT_ID),
 					eq(paymentWebhookEvent.status, "processed"),
-					eq(paymentWebhookEvent.webhookType, "pay"),
-				),
+					eq(paymentWebhookEvent.webhookType, "pay")
+				)
 			)
 			.limit(1);
 		expect(processedEvent).toBeDefined();
@@ -132,24 +137,22 @@ describe("reconcilePaymentWebhook", () => {
 			.select()
 			.from(organizationPaymentConfig)
 			.where(
-				eq(
-					organizationPaymentConfig.webhookEndpointId,
-					WEBHOOK_ENDPOINT_ID
-				)
+				eq(organizationPaymentConfig.webhookEndpointId, WEBHOOK_ENDPOINT_ID)
 			)
 			.limit(1);
 		expect(updatedConfig?.validationStatus).toBe("validated");
 		expect(updatedConfig?.isActive).toBe(true);
 		expect(updatedConfig?.validatedAt).toBeInstanceOf(Date);
 
-		const validatedAtAfterFirstIngress = updatedConfig?.validatedAt?.toISOString();
+		const validatedAtAfterFirstIngress =
+			updatedConfig?.validatedAt?.toISOString();
 
 		// Second call (duplicate) — should be idempotent
 		const result2 = await reconcilePaymentWebhook(
 			WEBHOOK_ENDPOINT_ID,
 			"pay",
 			VALID_PAY_PAYLOAD,
-			getDb(),
+			getDb()
 		);
 
 		expect(result2.idempotent).toBe(true);
@@ -181,10 +184,7 @@ describe("reconcilePaymentWebhook", () => {
 			.select()
 			.from(organizationPaymentConfig)
 			.where(
-				eq(
-					organizationPaymentConfig.webhookEndpointId,
-					WEBHOOK_ENDPOINT_ID
-				)
+				eq(organizationPaymentConfig.webhookEndpointId, WEBHOOK_ENDPOINT_ID)
 			)
 			.limit(1);
 		expect(configAfterDuplicate?.validatedAt?.toISOString()).toBe(
@@ -194,7 +194,12 @@ describe("reconcilePaymentWebhook", () => {
 
 	it("throws ENDPOINT_NOT_FOUND for unknown endpointId", async () => {
 		await expect(() =>
-			reconcilePaymentWebhook("unknown-endpoint-xyz", "pay", VALID_PAY_PAYLOAD, getDb()),
+			reconcilePaymentWebhook(
+				"unknown-endpoint-xyz",
+				"pay",
+				VALID_PAY_PAYLOAD,
+				getDb()
+			)
 		).rejects.toThrow("ENDPOINT_NOT_FOUND");
 	});
 });

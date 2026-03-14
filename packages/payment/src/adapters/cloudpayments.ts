@@ -6,6 +6,7 @@ import type {
 } from "../provider";
 
 const CLOUDPAYMENTS_API_BASE_URL = "https://api.cloudpayments.ru";
+const CLOUDPAYMENTS_NUMERIC_TRANSACTION_ID_RE = /^\d+$/;
 
 interface CloudPaymentsAdapterOptions {
 	apiBaseUrl?: string;
@@ -13,16 +14,16 @@ interface CloudPaymentsAdapterOptions {
 }
 
 interface CloudPaymentsRefundResponse {
-	Success: boolean;
 	Message: string | null;
 	Model?: {
 		TransactionId?: number | string | null;
 	};
+	Success: boolean;
 }
 
 interface CloudPaymentsCredentials {
-	publicId: string;
 	apiSecret: string;
+	publicId: string;
 }
 
 class CloudPaymentsAdapterError extends Error {
@@ -45,7 +46,7 @@ export class CloudPaymentsPaymentProvider implements PaymentProvider {
 
 	async refundPayment(
 		input: RefundPaymentInput,
-		config: PaymentExecutionConfig,
+		config: PaymentExecutionConfig
 	): Promise<RefundPaymentResult> {
 		this.assertRefundInput(input);
 		const credentials = this.resolveCredentials(config);
@@ -62,21 +63,20 @@ export class CloudPaymentsPaymentProvider implements PaymentProvider {
 					TransactionId: toCloudPaymentsTransactionId(input.providerPaymentId),
 					Amount: toCloudPaymentsAmount(input.amountCents),
 				}),
-			},
+			}
 		);
 
 		if (!response.ok) {
 			const responseBody = await response.text();
 			throw new CloudPaymentsAdapterError(
-				`CLOUDPAYMENTS_HTTP_ERROR: ${response.status} ${response.statusText}${responseBody ? `: ${responseBody}` : ""}`,
+				`CLOUDPAYMENTS_HTTP_ERROR: ${response.status} ${response.statusText}${responseBody ? `: ${responseBody}` : ""}`
 			);
 		}
 
-		const payload =
-			(await response.json()) as CloudPaymentsRefundResponse;
+		const payload = (await response.json()) as CloudPaymentsRefundResponse;
 		if (!payload.Success) {
 			throw new CloudPaymentsAdapterError(
-				`CLOUDPAYMENTS_REFUND_FAILED: ${payload.Message ?? "Unknown provider error"}`,
+				`CLOUDPAYMENTS_REFUND_FAILED: ${payload.Message ?? "Unknown provider error"}`
 			);
 		}
 
@@ -87,7 +87,7 @@ export class CloudPaymentsPaymentProvider implements PaymentProvider {
 			String(externalRefundId).trim() === ""
 		) {
 			throw new CloudPaymentsAdapterError(
-				"CLOUDPAYMENTS_INVALID_RESPONSE: missing Model.TransactionId",
+				"CLOUDPAYMENTS_INVALID_RESPONSE: missing Model.TransactionId"
 			);
 		}
 
@@ -97,32 +97,32 @@ export class CloudPaymentsPaymentProvider implements PaymentProvider {
 	}
 
 	private resolveCredentials(
-		config: PaymentExecutionConfig,
+		config: PaymentExecutionConfig
 	): CloudPaymentsCredentials {
 		if (config.providerId !== this.providerId) {
 			throw new CloudPaymentsAdapterError(
-				`CLOUDPAYMENTS_INVALID_CONFIG: expected providerId "${this.providerId}", received "${config.providerId}"`,
+				`CLOUDPAYMENTS_INVALID_CONFIG: expected providerId "${this.providerId}", received "${config.providerId}"`
 			);
 		}
 
 		const publicId =
 			nonEmptyString(config.publicKey) ??
-			nonEmptyString(config.credentials["publicKey"]) ??
-			nonEmptyString(config.credentials["publicId"]);
+			nonEmptyString(config.credentials.publicKey) ??
+			nonEmptyString(config.credentials.publicId);
 		const apiSecret =
-			nonEmptyString(config.credentials["apiSecret"]) ??
-			nonEmptyString(config.credentials["api_secret"]) ??
-			nonEmptyString(config.credentials["secret"]);
+			nonEmptyString(config.credentials.apiSecret) ??
+			nonEmptyString(config.credentials.api_secret) ??
+			nonEmptyString(config.credentials.secret);
 
 		if (!publicId) {
 			throw new CloudPaymentsAdapterError(
-				"CLOUDPAYMENTS_INVALID_CONFIG: missing public key",
+				"CLOUDPAYMENTS_INVALID_CONFIG: missing public key"
 			);
 		}
 
 		if (!apiSecret) {
 			throw new CloudPaymentsAdapterError(
-				"CLOUDPAYMENTS_INVALID_CONFIG: missing api secret",
+				"CLOUDPAYMENTS_INVALID_CONFIG: missing api secret"
 			);
 		}
 
@@ -132,32 +132,32 @@ export class CloudPaymentsPaymentProvider implements PaymentProvider {
 	private assertRefundInput(input: RefundPaymentInput): void {
 		if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
 			throw new CloudPaymentsAdapterError(
-				`CLOUDPAYMENTS_INVALID_INPUT: amountCents must be a positive integer, received ${input.amountCents}`,
+				`CLOUDPAYMENTS_INVALID_INPUT: amountCents must be a positive integer, received ${input.amountCents}`
 			);
 		}
 
 		if (!input.currency.trim()) {
 			throw new CloudPaymentsAdapterError(
-				"CLOUDPAYMENTS_INVALID_INPUT: currency is required",
+				"CLOUDPAYMENTS_INVALID_INPUT: currency is required"
 			);
 		}
 
 		if (!input.idempotencyKey.trim()) {
 			throw new CloudPaymentsAdapterError(
-				"CLOUDPAYMENTS_INVALID_INPUT: idempotencyKey is required",
+				"CLOUDPAYMENTS_INVALID_INPUT: idempotencyKey is required"
 			);
 		}
 
 		if (!input.providerPaymentId.trim()) {
 			throw new CloudPaymentsAdapterError(
-				"CLOUDPAYMENTS_INVALID_INPUT: providerPaymentId is required",
+				"CLOUDPAYMENTS_INVALID_INPUT: providerPaymentId is required"
 			);
 		}
 	}
 }
 
 export const createCloudPaymentsPaymentProvider = (
-	options?: CloudPaymentsAdapterOptions,
+	options?: CloudPaymentsAdapterOptions
 ): PaymentProvider => new CloudPaymentsPaymentProvider(options);
 
 const nonEmptyString = (value: unknown): string | null => {
@@ -172,12 +172,10 @@ const nonEmptyString = (value: unknown): string | null => {
 const toCloudPaymentsAmount = (amountCents: number): number =>
 	Number((amountCents / 100).toFixed(2));
 
-const toCloudPaymentsTransactionId = (
-	providerPaymentId: string,
-): number => {
-	if (!/^\d+$/.test(providerPaymentId)) {
+const toCloudPaymentsTransactionId = (providerPaymentId: string): number => {
+	if (!CLOUDPAYMENTS_NUMERIC_TRANSACTION_ID_RE.test(providerPaymentId)) {
 		throw new CloudPaymentsAdapterError(
-			`CLOUDPAYMENTS_INVALID_INPUT: providerPaymentId must be a numeric transaction id, received ${providerPaymentId}`,
+			`CLOUDPAYMENTS_INVALID_INPUT: providerPaymentId must be a numeric transaction id, received ${providerPaymentId}`
 		);
 	}
 

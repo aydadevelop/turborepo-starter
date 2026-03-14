@@ -8,7 +8,8 @@
 		createOrganizationListingsQueries,
 	} from "./query-state";
 
-	const { overlaySummaryQuery, listingsQuery } = createOrganizationListingsQueries();
+	const { overlaySummaryQuery, listingsQuery } =
+		createOrganizationListingsQueries();
 	const {
 		createManualOverride,
 		resolveManualOverride,
@@ -105,7 +106,9 @@
 </script>
 
 <div class="space-y-6">
-	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+	<div
+		class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+	>
 		<div class="space-y-1">
 			<h2 class="text-2xl font-semibold tracking-tight">Listings</h2>
 			<p class="text-sm text-muted-foreground">
@@ -121,7 +124,7 @@
 			overlay={overlaySummaryQuery.data}
 			{listingOptions}
 			createPending={createManualOverride.isPending}
-			resolvePendingId={resolvePendingId}
+			{resolvePendingId}
 			createError={createManualOverride.error?.message ?? null}
 			moderationPending={approveListing.isPending || clearListingApproval.isPending}
 			moderationError={approveListing.error?.message ??
@@ -164,7 +167,8 @@
 		<Card>
 			<CardContent class="space-y-3 py-6">
 				<p class="text-sm text-muted-foreground">
-					No listings yet. Create your first listing to start building your catalog.
+					No listings yet. Create your first listing to start building your
+					catalog.
 				</p>
 				<Button href="/org/listings/new" variant="outline">
 					Create your first listing
@@ -172,6 +176,6 @@
 			</CardContent>
 		</Card>
 	{:else}
-		<ListingCatalogGrid listings={listings} total={totalListings} />
+		<ListingCatalogGrid {listings} total={totalListings} />
 	{/if}
 </div>

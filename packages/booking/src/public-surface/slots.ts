@@ -1,10 +1,13 @@
-import type { PublicBookingSurfaceSlot, PublicBookingSlotStatus } from "../types";
+import type {
+	PublicBookingSlotStatus,
+	PublicBookingSurfaceSlot,
+} from "../types";
 import {
+	type BusyWindow,
 	findBusyWindow,
 	formatTimeInZone,
-	type BusyWindow,
-	type MinuteWindow,
 	type MinimumDurationRuleWindow,
+	type MinuteWindow,
 	resolveRequiredMinimumDuration,
 	SLOT_STEP_MINUTES,
 	toSlotStatusLabel,
@@ -13,8 +16,8 @@ import {
 
 export interface RawPublicBookingSurfaceSlot
 	extends Omit<PublicBookingSurfaceSlot, "quote"> {
-	startsAtDate: Date;
 	endsAtDate: Date;
+	startsAtDate: Date;
 }
 
 export const buildRawSlots = (params: {
@@ -39,10 +42,10 @@ export const buildRawSlots = (params: {
 			const startsAtDate = zonedLocalDateTimeToUtc(
 				params.date,
 				minute,
-				params.listingTimezone,
+				params.listingTimezone
 			);
 			const endsAtDate = new Date(
-				startsAtDate.getTime() + params.durationMinutes * 60_000,
+				startsAtDate.getTime() + params.durationMinutes * 60_000
 			);
 			const requiredMinimumDuration = resolveRequiredMinimumDuration({
 				baseMinimumDurationMinutes: params.baseMinimumDurationMinutes,
@@ -53,7 +56,7 @@ export const buildRawSlots = (params: {
 			const overlap = findBusyWindow(
 				params.busyWindows,
 				startsAtDate,
-				endsAtDate,
+				endsAtDate
 			);
 
 			let status: PublicBookingSlotStatus = "available";

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
 import { organization } from "../schema/auth";
 import {
 	listingAvailabilityBlock,
@@ -12,15 +12,12 @@ import {
 	listingAsset,
 	listingPricingProfile,
 	listingTypeConfig,
-	organizationPaymentConfig,
 	organizationListingType,
 	organizationOnboarding,
+	organizationPaymentConfig,
 	paymentProviderConfig,
 } from "../schema/marketplace";
-import {
-	bootstrapTestDatabase,
-	type TestDatabase,
-} from "../test";
+import { bootstrapTestDatabase, type TestDatabase } from "../test";
 
 const ORG_ID = "wave2-org-1";
 const LISTING_TYPE_ID = "wave2-listing-type-1";
@@ -82,7 +79,7 @@ describe("Wave 2 schema hardening", () => {
 				id: "onboarding-2",
 				organizationId: ORG_ID,
 				lastRecalculatedAt: new Date("2026-03-10T11:00:00.000Z"),
-			}),
+			})
 		).rejects.toThrow();
 	});
 
@@ -110,18 +107,20 @@ describe("Wave 2 schema hardening", () => {
 				dayOfWeek: 7,
 				startMinute: 600,
 				endMinute: 540,
-			}),
+			})
 		).rejects.toThrow();
 	});
 
 	it("rejects invalid availability blocks with inverted windows", async () => {
 		await expect(
-			getDb().insert(listingAvailabilityBlock).values({
-				id: "availability-block-invalid",
-				listingId: LISTING_ID,
-				startsAt: new Date("2026-05-01T12:00:00.000Z"),
-				endsAt: new Date("2026-05-01T10:00:00.000Z"),
-			}),
+			getDb()
+				.insert(listingAvailabilityBlock)
+				.values({
+					id: "availability-block-invalid",
+					listingId: LISTING_ID,
+					startsAt: new Date("2026-05-01T12:00:00.000Z"),
+					endsAt: new Date("2026-05-01T10:00:00.000Z"),
+				})
 		).rejects.toThrow();
 	});
 
@@ -133,7 +132,7 @@ describe("Wave 2 schema hardening", () => {
 			listingId: LISTING_ID,
 			name: "Default",
 			currency: "RUB",
-			baseHourlyPriceCents: 10000,
+			baseHourlyPriceCents: 10_000,
 			isDefault: true,
 		});
 
@@ -143,9 +142,9 @@ describe("Wave 2 schema hardening", () => {
 				listingId: LISTING_ID,
 				name: "Another default",
 				currency: "RUB",
-				baseHourlyPriceCents: 12000,
+				baseHourlyPriceCents: 12_000,
 				isDefault: true,
-			}),
+			})
 		).rejects.toThrow();
 	});
 
@@ -171,7 +170,7 @@ describe("Wave 2 schema hardening", () => {
 				externalCalendarId: "cal-2",
 				isPrimary: true,
 				isActive: true,
-			}),
+			})
 		).rejects.toThrow();
 	});
 
@@ -193,7 +192,7 @@ describe("Wave 2 schema hardening", () => {
 				kind: "image",
 				storageKey: "image-2.jpg",
 				isPrimary: true,
-			}),
+			})
 		).rejects.toThrow();
 	});
 
@@ -213,7 +212,7 @@ describe("Wave 2 schema hardening", () => {
 				organizationId: ORG_ID,
 				listingTypeSlug: "wave2-listing-type",
 				isDefault: true,
-			}),
+			})
 		).rejects.toThrow();
 	});
 
@@ -236,6 +235,10 @@ describe("Wave 2 schema hardening", () => {
 				id: organizationPaymentConfig.id,
 				updatedAt: organizationPaymentConfig.updatedAt,
 			});
+		expect(inserted).toBeDefined();
+		if (!inserted) {
+			throw new Error("Expected inserted organization payment config row");
+		}
 
 		await new Promise((resolve) => setTimeout(resolve, 5));
 
@@ -252,7 +255,7 @@ describe("Wave 2 schema hardening", () => {
 			});
 
 		expect(updated?.updatedAt.getTime()).toBeGreaterThan(
-			inserted!.updatedAt.getTime(),
+			inserted.updatedAt.getTime()
 		);
 	});
 });

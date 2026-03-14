@@ -8,8 +8,8 @@
 		CardHeader,
 		CardTitle,
 	} from "@my-app/ui/components/card";
-	import WorkspaceActionDialog from "../workspace/shared/WorkspaceActionDialog.svelte";
 	import type { OrganizationOverlaySummary } from "$lib/orpc-types";
+	import WorkspaceActionDialog from "../workspace/shared/WorkspaceActionDialog.svelte";
 	import CreateManualOverrideForm from "./CreateManualOverrideForm.svelte";
 	import type { OrganizationOverlayListingOption } from "./types";
 
@@ -33,8 +33,10 @@
 			code: string;
 			title: string;
 			note?: string;
-		}) => boolean | void | Promise<boolean | void>;
-		onResolveManualOverride: (id: string) => boolean | void | Promise<boolean | void>;
+		}) => boolean | undefined | Promise<boolean | undefined>;
+		onResolveManualOverride: (
+			id: string
+		) => boolean | undefined | Promise<boolean | undefined>;
 	} = $props();
 
 	let createDialogOpen = $state(false);
@@ -49,17 +51,23 @@
 		const result = await onCreateManualOverride(input);
 		if (result !== false) {
 			createDialogOpen = false;
+			return undefined;
 		}
+
+		return false;
 	}
 </script>
 
 <Card>
 	<CardHeader class="gap-3">
-		<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+		<div
+			class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+		>
 			<div class="space-y-1">
 				<CardTitle class="text-base">Manual overrides</CardTitle>
 				<CardDescription>
-					Use explicit override records for the 10% of cases that should not require code changes.
+					Use explicit override records for the 10% of cases that should not
+					require code changes.
 				</CardDescription>
 			</div>
 			<WorkspaceActionDialog
@@ -87,7 +95,9 @@
 			<div class="space-y-3">
 				{#each overlay.manualOverrides.items as item (item.id)}
 					<div class="rounded-lg border p-4">
-						<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+						<div
+							class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+						>
 							<div class="space-y-1">
 								<div class="flex flex-wrap items-center gap-2">
 									<p class="font-medium">{item.title}</p>

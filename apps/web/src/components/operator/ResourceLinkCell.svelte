@@ -10,10 +10,6 @@
 	} = $props();
 </script>
 
-<a
-	href={href}
-	class="text-sm text-primary hover:underline"
-	data-testid={dataTestId}
->
+<a {href} class="text-sm text-primary hover:underline" data-testid={dataTestId}>
 	{label}
 </a>

@@ -17,7 +17,9 @@ test("submits recurring availability values through the section form contract", 
 	await userEvent.selectOptions(page.getByLabelText("Day"), "5");
 	await userEvent.fill(page.getByLabelText("Start time"), "10:30");
 	await userEvent.fill(page.getByLabelText("End time"), "18:00");
-	await userEvent.click(page.getByRole("button", { name: "Add recurring rule" }));
+	await userEvent.click(
+		page.getByRole("button", { name: "Add recurring rule" })
+	);
 
 	expect(onSubmit).toHaveBeenCalledWith({
 		listingId: "listing-1",

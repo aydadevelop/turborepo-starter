@@ -235,7 +235,6 @@ export const internalServerRouteProcedures = {
 						db,
 						buildWorkflowContext({
 							idempotencyKey: `support-email:${parsed.data.messageId}`,
-							notificationQueue: undefined,
 							organizationId: env.SUPPORT_EMAIL_INTAKE_ORGANIZATION_ID,
 						})
 					);

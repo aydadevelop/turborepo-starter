@@ -17,7 +17,9 @@ test("submits availability block values through the section form contract", asyn
 	await userEvent.fill(page.getByLabelText("Starts at"), "2026-06-01T10:00");
 	await userEvent.fill(page.getByLabelText("Ends at"), "2026-06-01T18:00");
 	await userEvent.fill(page.getByLabelText("Reason"), "Private charter");
-	await userEvent.click(page.getByRole("button", { name: "Add availability block" }));
+	await userEvent.click(
+		page.getByRole("button", { name: "Add availability block" })
+	);
 
 	await expect.poll(() => onSubmit.mock.calls.length).toBe(1);
 	expect(onSubmit).toHaveBeenCalledWith({

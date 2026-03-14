@@ -1,7 +1,7 @@
 <script lang="ts">
+	import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
 	import { cn, type WithElementRef } from "@my-app/ui/lib/utils";
 	import type { HTMLSelectAttributes } from "svelte/elements";
-	import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
 
 	let {
 		ref = $bindable(null),

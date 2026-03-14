@@ -1,33 +1,40 @@
 import type { db } from "@my-app/db";
-import type { booking, bookingCancellationRequest } from "@my-app/db/schema/marketplace";
+import type {
+	booking,
+	bookingCancellationRequest,
+} from "@my-app/db/schema/marketplace";
 import type { WorkflowContext } from "@my-app/workflows";
 import type { CancellationReasonCode } from "./cancellation-reasons";
 
 export type Db = typeof db;
 export type BookingRow = typeof booking.$inferSelect;
-export type CancellationRequestRow = typeof bookingCancellationRequest.$inferSelect;
+export type CancellationRequestRow =
+	typeof bookingCancellationRequest.$inferSelect;
 
 export interface CreateBookingInput {
-	listingId: string;
-	startsAt: Date;
-	endsAt: Date;
-	passengers?: number;
+	contactEmail?: string;
 	contactName?: string;
 	contactPhone?: string;
-	contactEmail?: string;
-	timezone?: string;
-	notes?: string;
-	specialRequests?: string;
-	source: "manual" | "web" | "telegram" | "partner" | "api" | "calendar_sync";
-	customerUserId?: string;
 	createdByUserId?: string;
 	currency?: string;
+	customerUserId?: string;
 	discountCode?: string;
+	endsAt: Date;
+	listingId: string;
+	notes?: string;
+	passengers?: number;
+	source: "manual" | "web" | "telegram" | "partner" | "api" | "calendar_sync";
+	specialRequests?: string;
+	startsAt: Date;
+	timezone?: string;
 }
 
 export interface UpdateBookingStatusInput {
+	cancellationReason?: string;
+	cancelledByUserId?: string;
 	id: string;
 	organizationId: string;
+	refundAmountCents?: number;
 	status:
 		| "pending"
 		| "awaiting_payment"
@@ -38,17 +45,14 @@ export interface UpdateBookingStatusInput {
 		| "rejected"
 		| "no_show"
 		| "disputed";
-	cancellationReason?: string;
-	cancelledByUserId?: string;
-	refundAmountCents?: number;
 	workflowContext?: WorkflowContext;
 }
 
 export interface UpdateBookingScheduleInput {
+	endsAt: Date;
 	id: string;
 	organizationId: string;
 	startsAt: Date;
-	endsAt: Date;
 	timezone?: string | null;
 	workflowContext?: WorkflowContext;
 }
@@ -79,13 +83,16 @@ export interface BookingCollectionResult {
 }
 
 export interface CancellationEvidence {
+	description?: string;
 	type: "photo" | "document" | "video" | "other";
 	url: string;
-	description?: string;
 }
 
 export interface CancellationPolicyOutcome {
 	actor: "customer" | "manager";
+	alreadyRefundedCents: number;
+	capturedAmountCents: number;
+	hoursUntilStart: number;
 	policyCode:
 		| "customer_early_full_refund"
 		| "customer_standard_partial_refund"
@@ -95,9 +102,6 @@ export interface CancellationPolicyOutcome {
 	policyLabel: string;
 	policySource: "default_profile" | "reason_override";
 	reasonCode?: string;
-	hoursUntilStart: number;
-	capturedAmountCents: number;
-	alreadyRefundedCents: number;
 	refundableBaseCents: number;
 	refundPercent: number; // 0–100
 	suggestedRefundCents: number;
@@ -105,20 +109,20 @@ export interface CancellationPolicyOutcome {
 
 export interface RequestCancellationInput {
 	bookingId: string;
-	organizationId: string;
-	requestedByUserId?: string;
+	evidence?: CancellationEvidence[];
 	initiatedByRole: "customer" | "manager";
+	organizationId: string;
 	reason?: string;
 	reasonCode?: CancellationReasonCode;
-	evidence?: CancellationEvidence[];
+	requestedByUserId?: string;
 }
 
 export interface PublicBookingSurfaceInput {
-	listingId: string;
 	date: string;
-	durationMinutes: number;
-	passengers?: number;
 	discountCode?: string;
+	durationMinutes: number;
+	listingId: string;
+	passengers?: number;
 }
 
 export type PublicBookingSlotStatus =
@@ -128,8 +132,12 @@ export type PublicBookingSlotStatus =
 	| "minimum_duration_not_met";
 
 export interface PublicBookingSlotDiscountPreview {
+	appliedAmountCents: number;
 	code: string;
-	status: "applied" | "invalid";
+	discountedServiceFeeCents: number | null;
+	discountedSubtotalCents: number | null;
+	discountedTaxCents: number | null;
+	discountedTotalCents: number | null;
 	reasonCode:
 		| "PROMOTION_CODE_NOT_FOUND"
 		| "PROMOTION_CODE_INACTIVE"
@@ -141,26 +149,22 @@ export interface PublicBookingSlotDiscountPreview {
 		| "PROMOTION_CODE_MINIMUM_SUBTOTAL_NOT_MET"
 		| null;
 	reasonLabel: string | null;
-	appliedAmountCents: number;
-	discountedSubtotalCents: number | null;
-	discountedServiceFeeCents: number | null;
-	discountedTaxCents: number | null;
-	discountedTotalCents: number | null;
+	status: "applied" | "invalid";
 }
 
 export interface PublicBookingSlotQuote {
+	adjustmentCents: number;
+	baseCents: number;
+	currency: string;
+	discountPreview: PublicBookingSlotDiscountPreview | null;
+	durationMinutes: number;
+	hasSpecialPricing: boolean;
 	listingId: string;
 	profileId: string;
-	currency: string;
-	durationMinutes: number;
-	baseCents: number;
-	adjustmentCents: number;
-	subtotalCents: number;
 	serviceFeeCents: number;
+	subtotalCents: number;
 	taxCents: number;
 	totalCents: number;
-	hasSpecialPricing: boolean;
-	discountPreview: PublicBookingSlotDiscountPreview | null;
 }
 
 export interface PublicBookingSurfaceSlot {
@@ -200,8 +204,8 @@ export interface PublicBookingSurface {
 	minimumNoticeMinutes: number;
 	passengers: number | null;
 	pricingConfigured: boolean;
-	requestedDurationMinutes: number;
 	requestedDiscountCode: string | null;
+	requestedDurationMinutes: number;
 	serviceFamily: "boat_rent";
 	slotStepMinutes: number;
 	slots: PublicBookingSurfaceSlot[];

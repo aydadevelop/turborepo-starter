@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
 	import { resolve } from "$app/paths";
-	import SurfaceCard from "../../../components/operator/SurfaceCard.svelte";
 	import { orpc } from "$lib/orpc";
+	import SurfaceCard from "../../../components/operator/SurfaceCard.svelte";
 
 	const orgsQuery = createQuery(() =>
 		orpc.admin.organizations.listOrgs.queryOptions({ input: { limit: 5 } })

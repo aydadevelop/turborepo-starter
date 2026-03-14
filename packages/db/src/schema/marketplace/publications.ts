@@ -40,12 +40,12 @@ export const listingPublication = pgTable(
 			.default("platform"),
 		merchantPaymentConfigId: text("merchant_payment_config_id").references(
 			() => organizationPaymentConfig.id,
-			{ onDelete: "set null" },
+			{ onDelete: "set null" }
 		),
 		platformFeeBps: integer("platform_fee_bps"),
 		pricingProfileId: text("pricing_profile_id").references(
 			() => listingPricingProfile.id,
-			{ onDelete: "set null" },
+			{ onDelete: "set null" }
 		),
 		displayConfig: jsonb("display_config").$type<Record<string, unknown>>(),
 		...timestamps,
@@ -55,15 +55,15 @@ export const listingPublication = pgTable(
 		index("listing_publication_ix_organization_id").on(table.organizationId),
 		index("listing_publication_ix_channel_type").on(table.channelType),
 		index("listing_publication_ix_merchant_payment_config_id").on(
-			table.merchantPaymentConfigId,
+			table.merchantPaymentConfigId
 		),
 		index("listing_publication_ix_pricing_profile_id").on(
-			table.pricingProfileId,
+			table.pricingProfileId
 		),
 		uniqueIndex("listing_publication_uq_listing_channel").on(
 			table.listingId,
 			table.channelType,
-			table.channelId,
+			table.channelId
 		),
-	],
+	]
 );

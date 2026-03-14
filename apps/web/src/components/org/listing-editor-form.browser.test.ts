@@ -77,7 +77,9 @@ test("shows a metadata validation error instead of submitting invalid JSON", asy
 			slug: "morning-charter",
 		},
 	});
-	await expect(document.body).toMatchScreenshot("listing-editor-form-invalid-json");
+	await expect(document.body).toMatchScreenshot(
+		"listing-editor-form-invalid-json"
+	);
 
 	await userEvent.click(page.getByRole("button", { name: "Edit JSON" }));
 	await userEvent.fill(page.getByLabelText("Metadata JSON"), "[]");
@@ -114,7 +116,9 @@ test("renders and submits typed excursion fields when an excursion type is selec
 		onSubmit,
 		listingTypeOptions,
 	});
-	await expect(document.body).toMatchScreenshot("listing-editor-form-excursion");
+	await expect(document.body).toMatchScreenshot(
+		"listing-editor-form-excursion"
+	);
 
 	await userEvent.click(page.getByLabelText("Listing type"));
 	await userEvent.click(page.getByRole("option", { name: "Walking tour" }));

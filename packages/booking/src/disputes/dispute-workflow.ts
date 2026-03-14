@@ -1,14 +1,14 @@
-import { eq } from "drizzle-orm";
 import { bookingDispute } from "@my-app/db/schema/marketplace";
 import { createStep, createWorkflow } from "@my-app/workflows";
+import { eq } from "drizzle-orm";
 import type { Db } from "../types";
 
 export interface OpenDisputeInput {
 	bookingId: string;
-	organizationId: string;
-	reasonCode?: string;
 	details?: string;
+	organizationId: string;
 	raisedByUserId?: string;
+	reasonCode?: string;
 }
 
 interface WithDisputeId extends OpenDisputeInput {
@@ -16,9 +16,9 @@ interface WithDisputeId extends OpenDisputeInput {
 }
 
 export interface ResolveDisputeInput {
+	bookingId: string;
 	disputeId: string;
 	organizationId: string;
-	bookingId: string;
 	resolution: string;
 	resolvedByUserId?: string;
 }
@@ -51,7 +51,7 @@ const makeOpenDisputeStep = (db: Db) =>
 			});
 
 			return { ...input, disputeId };
-		},
+		}
 	);
 
 const makeResolveDisputeStep = (db: Db) =>
@@ -78,7 +78,7 @@ const makeResolveDisputeStep = (db: Db) =>
 			});
 
 			return input;
-		},
+		}
 	);
 
 /**
@@ -96,11 +96,11 @@ export const processDisputeWorkflow = (db: Db) => {
 	return {
 		open: createWorkflow<OpenDisputeInput, WithDisputeId>(
 			"open-dispute",
-			async (input, ctx) => openDisputeStep(input, ctx),
+			async (input, ctx) => openDisputeStep(input, ctx)
 		),
 		resolve: createWorkflow<ResolveDisputeInput, ResolveDisputeInput>(
 			"resolve-dispute",
-			async (input, ctx) => resolveDisputeStep(input, ctx),
+			async (input, ctx) => resolveDisputeStep(input, ctx)
 		),
 	};
 };

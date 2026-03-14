@@ -1,17 +1,17 @@
 export type PaymentProviderId = "cloudpayments" | "stripe";
 
 export interface PaymentExecutionConfig {
-	providerId: PaymentProviderId;
-	publicKey?: string;
 	credentialKeyVersion?: number;
 	credentials: Record<string, unknown>;
+	providerId: PaymentProviderId;
+	publicKey?: string;
 }
 
 export interface RefundPaymentInput {
 	amountCents: number;
-	providerPaymentId: string;
 	currency: string;
 	idempotencyKey: string;
+	providerPaymentId: string;
 }
 
 export interface RefundPaymentResult {
@@ -23,6 +23,6 @@ export interface PaymentProvider {
 
 	refundPayment(
 		input: RefundPaymentInput,
-		config: PaymentExecutionConfig,
+		config: PaymentExecutionConfig
 	): Promise<RefundPaymentResult>;
 }

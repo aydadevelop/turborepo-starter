@@ -18,7 +18,7 @@ export const getStorageProvider = (providerId: string): StorageProvider => {
 	const provider = storageProviderRegistry.get(providerId);
 	if (!provider) {
 		throw new Error(
-			`StorageProvider "${providerId}" is not registered. Call registerStorageProvider() at startup.`,
+			`StorageProvider "${providerId}" is not registered. Call registerStorageProvider() at startup.`
 		);
 	}
 
@@ -31,21 +31,21 @@ export const resetStorageProviderRegistry = (): void => {
 
 export const uploadObject = (
 	providerId: string,
-	input: StorageUploadInput,
+	input: StorageUploadInput
 ): Promise<StorageUploadResult> => {
 	return getStorageProvider(providerId).upload(input);
 };
 
 export const deleteObject = (
 	providerId: string,
-	ref: StorageObjectRef,
+	ref: StorageObjectRef
 ): Promise<void> => {
 	return getStorageProvider(providerId).deleteObject(ref);
 };
 
 export const resolvePublicObjectUrl = (
 	providerId: string,
-	ref: StorageObjectRef,
+	ref: StorageObjectRef
 ): string | null => {
 	return getStorageProvider(providerId).getPublicUrl(ref);
 };
@@ -53,19 +53,19 @@ export const resolvePublicObjectUrl = (
 export const getSignedObjectDownloadUrl = (
 	providerId: string,
 	ref: StorageObjectRef,
-	options?: StorageSignedUrlOptions,
+	options?: StorageSignedUrlOptions
 ): Promise<string> => {
 	return getStorageProvider(providerId).getSignedDownloadUrl(ref, options);
 };
 
-export const getSignedObjectUploadUrl = async (
+export const getSignedObjectUploadUrl = (
 	providerId: string,
-	input: StorageSignedUploadInput,
+	input: StorageSignedUploadInput
 ): Promise<StorageSignedUploadResult> => {
 	const provider = getStorageProvider(providerId);
 	if (!provider.getSignedUploadUrl) {
 		throw new Error(
-			`StorageProvider "${providerId}" does not support signed upload URLs.`,
+			`StorageProvider "${providerId}" does not support signed upload URLs.`
 		);
 	}
 

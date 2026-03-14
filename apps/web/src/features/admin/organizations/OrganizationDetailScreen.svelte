@@ -1,17 +1,18 @@
 <script lang="ts">
-	import ResourceBadgeCell from "../../../components/operator/ResourceBadgeCell.svelte";
-	import ResourceTable from "../../../components/operator/ResourceTable.svelte";
-	import {
-		createColumnHelper,
-		renderComponent,
-		type ColumnDef,
-	} from "../../../components/operator/resource-table";
-	import SurfaceCard from "../../../components/operator/SurfaceCard.svelte";
-	import { createQuery } from "@tanstack/svelte-query";
+	// biome-ignore lint/performance/noNamespaceImport: shadcn-style tabs namespace usage is intentional in this component.
 	import * as Tabs from "@my-app/ui/components/tabs";
+	import { createQuery } from "@tanstack/svelte-query";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { orpc } from "$lib/orpc";
+	import ResourceBadgeCell from "../../../components/operator/ResourceBadgeCell.svelte";
+	import ResourceTable from "../../../components/operator/ResourceTable.svelte";
+	import {
+		type ColumnDef,
+		createColumnHelper,
+		renderComponent,
+	} from "../../../components/operator/resource-table";
+	import SurfaceCard from "../../../components/operator/SurfaceCard.svelte";
 
 	const orgId = $derived(page.params.id ?? "");
 
@@ -34,7 +35,9 @@
 	);
 
 	type MemberRow = NonNullable<typeof membersQuery.data>["items"][number];
-	type InvitationRow = NonNullable<typeof invitationsQuery.data>["items"][number];
+	type InvitationRow = NonNullable<
+		typeof invitationsQuery.data
+	>["items"][number];
 
 	const memberColumnHelper = createColumnHelper<MemberRow>();
 	const invitationColumnHelper = createColumnHelper<InvitationRow>();
@@ -57,7 +60,7 @@
 	const statusVariant = (status: string) =>
 		status === "pending" ? ("outline" as const) : ("secondary" as const);
 
-	const memberColumns: ColumnDef<MemberRow, any>[] = [
+	const memberColumns: ColumnDef<MemberRow, unknown>[] = [
 		memberColumnHelper.accessor((member) => member.userName ?? "—", {
 			id: "userName",
 			header: "User",
@@ -93,7 +96,7 @@
 		),
 	];
 
-	const invitationColumns: ColumnDef<InvitationRow, any>[] = [
+	const invitationColumns: ColumnDef<InvitationRow, unknown>[] = [
 		invitationColumnHelper.accessor("email", {
 			header: "Email",
 			meta: {
@@ -147,7 +150,9 @@
 			</a>
 			<div class="space-y-1">
 				<h2 class="text-xl font-semibold">{org.name}</h2>
-				<div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+				<div
+					class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+				>
 					<span>Slug: {org.slug}</span>
 					<span>&middot;</span>
 					<span>Created {new Date(org.createdAt).toLocaleDateString()}</span>

@@ -1,11 +1,10 @@
 import { db as defaultDb } from "@my-app/db";
-
+import type { Db, OrganizationOnboardingRow } from "../types";
 import {
 	findOrganizationOnboarding,
 	resolveOrganizationOnboardingState,
 	upsertOrganizationOnboarding,
 } from "./repository";
-import type { Db, OrganizationOnboardingRow } from "../types";
 
 export const recalculateOrganizationOnboarding = async (
 	organizationId: string,

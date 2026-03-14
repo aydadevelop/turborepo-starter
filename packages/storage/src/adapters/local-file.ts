@@ -25,20 +25,20 @@ export interface LocalFileStorageProviderOptions {
 const buildPrivateDownloadUrl = (
 	providerId: string,
 	key: string,
-	expiresInSeconds: number,
+	expiresInSeconds: number
 ): string => {
 	const url = new URL(
-		`local-file://${encodeURIComponent(providerId)}/${normalizeStorageKey(key)}`,
+		`local-file://${encodeURIComponent(providerId)}/${normalizeStorageKey(key)}`
 	);
 	url.searchParams.set("expires", String(expiresInSeconds));
 	return url.toString();
 };
 
 export const createLocalFileStorageProvider = (
-	options: LocalFileStorageProviderOptions,
+	options: LocalFileStorageProviderOptions
 ): StorageProvider => {
 	const upload = async (
-		input: StorageUploadInput,
+		input: StorageUploadInput
 	): Promise<StorageUploadResult> => {
 		const key = input.key
 			? normalizeStorageKey(input.key)
@@ -57,8 +57,8 @@ export const createLocalFileStorageProvider = (
 		};
 	};
 
-	const getSignedUploadUrl = async (
-		input: StorageSignedUploadInput,
+	const getSignedUploadUrl = (
+		input: StorageSignedUploadInput
 	): Promise<StorageSignedUploadResult> => {
 		const key = input.key
 			? normalizeStorageKey(input.key)
@@ -68,7 +68,7 @@ export const createLocalFileStorageProvider = (
 				});
 		const expiresInSeconds = input.expiresInSeconds ?? 900;
 
-		return {
+		return Promise.resolve({
 			key,
 			access: input.access,
 			expiresInSeconds,
@@ -78,7 +78,7 @@ export const createLocalFileStorageProvider = (
 					: null,
 			url: buildPrivateDownloadUrl(options.providerId, key, expiresInSeconds),
 			headers: input.mimeType ? { "content-type": input.mimeType } : undefined,
-		};
+		});
 	};
 
 	return {
@@ -94,15 +94,17 @@ export const createLocalFileStorageProvider = (
 
 			return buildObjectUrl(options.publicBaseUrl, ref.key);
 		},
-		async getSignedDownloadUrl(ref, options_) {
+		getSignedDownloadUrl(ref, options_) {
 			if (ref.access === "public" && options.publicBaseUrl) {
-				return buildObjectUrl(options.publicBaseUrl, ref.key);
+				return Promise.resolve(buildObjectUrl(options.publicBaseUrl, ref.key));
 			}
 
-			return buildPrivateDownloadUrl(
-				options.providerId,
-				ref.key,
-				options_?.expiresInSeconds ?? 900,
+			return Promise.resolve(
+				buildPrivateDownloadUrl(
+					options.providerId,
+					ref.key,
+					options_?.expiresInSeconds ?? 900
+				)
 			);
 		},
 		getSignedUploadUrl,
@@ -118,7 +120,7 @@ export const createLocalFileStorageProvider = (
 
 export const resolveLocalStoragePath = (
 	baseDir: string,
-	key: string,
+	key: string
 ): string => {
 	return path.join(baseDir, normalizeStorageKey(key));
 };

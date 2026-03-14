@@ -1,15 +1,16 @@
-import { assertSlotAvailable } from "./availability";
+import {
+	booking,
+	listing,
+	listingPublication,
+} from "@my-app/db/schema/marketplace";
 import { applyDiscountToQuote, calculateQuote } from "@my-app/pricing";
-import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
-import { booking, listing, listingPublication } from "@my-app/db/schema/marketplace";
 import {
 	recordPromotionUsage,
 	resolvePromotionUsageForBooking,
 } from "@my-app/promotions";
-import {
-	assertNoAvailabilityBlockOverlap,
-	assertNoOverlap,
-} from "./overlap";
+import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import { assertSlotAvailable } from "./availability";
+import { assertNoAvailabilityBlockOverlap, assertNoOverlap } from "./overlap";
 import type {
 	BookingCollectionResult,
 	BookingRow,
@@ -19,6 +20,67 @@ import type {
 	UpdateBookingScheduleInput,
 	UpdateBookingStatusInput,
 } from "./types";
+
+type BookingCondition =
+	| ReturnType<typeof eq>
+	| NonNullable<ReturnType<typeof or>>;
+
+const buildBookingSearchCondition = (search: string) => {
+	const condition = or(
+		ilike(booking.contactName, `%${search}%`),
+		ilike(booking.contactEmail, `%${search}%`),
+		ilike(booking.externalRef, `%${search}%`)
+	);
+	if (!condition) {
+		throw new Error("Failed to build booking search condition");
+	}
+
+	return condition;
+};
+
+const buildOrgBookingConditions = (
+	organizationId: string,
+	input: ListOrgBookingsInput
+): BookingCondition[] => {
+	const filters = input.filter ?? {};
+	const conditions: BookingCondition[] = [
+		eq(booking.organizationId, organizationId),
+	];
+
+	if (filters.listingId) {
+		conditions.push(eq(booking.listingId, filters.listingId));
+	}
+	if (filters.status) {
+		conditions.push(eq(booking.status, filters.status));
+	}
+	if (filters.paymentStatus) {
+		conditions.push(eq(booking.paymentStatus, filters.paymentStatus));
+	}
+	if (filters.source) {
+		conditions.push(eq(booking.source, filters.source));
+	}
+	if (input.search) {
+		conditions.push(buildBookingSearchCondition(input.search));
+	}
+
+	return conditions;
+};
+
+const resolveBookingOrderBy = (sort: ListOrgBookingsInput["sort"]) => {
+	const direction = sort?.dir ?? "desc";
+
+	if (sort?.by === "starts_at") {
+		return direction === "asc" ? asc(booking.startsAt) : desc(booking.startsAt);
+	}
+	if (sort?.by === "ends_at") {
+		return direction === "asc" ? asc(booking.endsAt) : desc(booking.endsAt);
+	}
+	if (sort?.by === "status") {
+		return direction === "asc" ? asc(booking.status) : desc(booking.status);
+	}
+
+	return direction === "asc" ? asc(booking.createdAt) : desc(booking.createdAt);
+};
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
 	pending: ["awaiting_payment", "confirmed", "rejected", "cancelled"],
@@ -35,45 +97,11 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 export async function listOrgBookings(
 	organizationId: string,
 	input: ListOrgBookingsInput,
-	db: Db,
+	db: Db
 ): Promise<BookingCollectionResult> {
-	const filters = input.filter ?? {};
 	const page = input.page ?? { limit: 50, offset: 0 };
-	const conditions = [eq(booking.organizationId, organizationId)];
-	if (filters.listingId) conditions.push(eq(booking.listingId, filters.listingId));
-	if (filters.status) conditions.push(eq(booking.status, filters.status));
-	if (filters.paymentStatus) {
-		conditions.push(eq(booking.paymentStatus, filters.paymentStatus));
-	}
-	if (filters.source) {
-		conditions.push(eq(booking.source, filters.source));
-	}
-	if (input.search) {
-		conditions.push(
-			or(
-				ilike(booking.contactName, `%${input.search}%`),
-				ilike(booking.contactEmail, `%${input.search}%`),
-				ilike(booking.externalRef, `%${input.search}%`),
-			)!,
-		);
-	}
-
-	const orderBy =
-		input.sort?.by === "starts_at"
-			? input.sort.dir === "asc"
-				? asc(booking.startsAt)
-				: desc(booking.startsAt)
-			: input.sort?.by === "ends_at"
-				? input.sort.dir === "asc"
-					? asc(booking.endsAt)
-					: desc(booking.endsAt)
-				: input.sort?.by === "status"
-					? input.sort.dir === "asc"
-						? asc(booking.status)
-						: desc(booking.status)
-					: input.sort?.dir === "asc"
-						? asc(booking.createdAt)
-						: desc(booking.createdAt);
+	const conditions = buildOrgBookingConditions(organizationId, input);
+	const orderBy = resolveBookingOrderBy(input.sort);
 
 	const [items, countResult] = await Promise.all([
 		db
@@ -83,7 +111,10 @@ export async function listOrgBookings(
 			.orderBy(orderBy)
 			.limit(page.limit)
 			.offset(page.offset),
-		db.select({ total: count() }).from(booking).where(and(...conditions)),
+		db
+			.select({ total: count() })
+			.from(booking)
+			.where(and(...conditions)),
 	]);
 
 	return {
@@ -92,17 +123,26 @@ export async function listOrgBookings(
 	};
 }
 
-export async function getOrgBooking(id: string, organizationId: string, db: Db): Promise<BookingRow> {
+export async function getOrgBooking(
+	id: string,
+	organizationId: string,
+	db: Db
+): Promise<BookingRow> {
 	const [row] = await db
 		.select()
 		.from(booking)
 		.where(and(eq(booking.id, id), eq(booking.organizationId, organizationId)))
 		.limit(1);
-	if (!row) throw new Error("NOT_FOUND");
+	if (!row) {
+		throw new Error("NOT_FOUND");
+	}
 	return row;
 }
 
-export async function listCustomerBookings(customerUserId: string, db: Db): Promise<BookingRow[]> {
+export function listCustomerBookings(
+	customerUserId: string,
+	db: Db
+): Promise<BookingRow[]> {
 	return db
 		.select()
 		.from(booking)
@@ -125,13 +165,13 @@ async function resolveBookingContext(listingId: string, db: Db) {
 			and(
 				eq(listingPublication.listingId, listing.id),
 				eq(listingPublication.isActive, true),
-				eq(listingPublication.channelType, "platform_marketplace"),
-			),
+				eq(listingPublication.channelType, "platform_marketplace")
+			)
 		)
 		.where(and(eq(listing.id, listingId), eq(listing.isActive, true)))
 		.limit(1);
 
-	if (!row?.publicationId || !row.publicationOrganizationId) {
+	if (!(row?.publicationId && row.publicationOrganizationId)) {
 		throw new Error("NOT_FOUND");
 	}
 
@@ -147,18 +187,21 @@ async function resolveBookingContext(listingId: string, db: Db) {
 	};
 }
 
-export async function createBooking(input: CreateBookingInput, db: Db): Promise<BookingRow> {
+export function createBooking(
+	input: CreateBookingInput,
+	db: Db
+): Promise<BookingRow> {
 	return db.transaction(async (tx) => {
 		const transactionDb = tx as unknown as Db;
 		const bookingContext = await resolveBookingContext(
 			input.listingId,
-			transactionDb,
+			transactionDb
 		);
 		await assertSlotAvailable(
 			input.listingId,
 			input.startsAt,
 			input.endsAt,
-			transactionDb,
+			transactionDb
 		);
 		const quote = await calculateQuote(
 			{
@@ -167,7 +210,7 @@ export async function createBooking(input: CreateBookingInput, db: Db): Promise<
 				endsAt: input.endsAt,
 				passengers: input.passengers,
 			},
-			transactionDb,
+			transactionDb
 		);
 		const promotionClaim = input.discountCode
 			? await resolvePromotionUsageForBooking(
@@ -178,13 +221,13 @@ export async function createBooking(input: CreateBookingInput, db: Db): Promise<
 						customerUserId: input.customerUserId,
 						subtotalCents: quote.subtotalCents,
 					},
-					transactionDb,
+					transactionDb
 				)
 			: null;
 		const discountedQuote = promotionClaim
 			? applyDiscountToQuote(
 					quote,
-					promotionClaim.application.appliedAmountCents,
+					promotionClaim.application.appliedAmountCents
 				)
 			: null;
 		const [row] = await tx
@@ -232,7 +275,7 @@ export async function createBooking(input: CreateBookingInput, db: Db): Promise<
 					customerUserId: input.customerUserId,
 					promotion: promotionClaim,
 				},
-				transactionDb,
+				transactionDb
 			);
 		}
 
@@ -240,16 +283,28 @@ export async function createBooking(input: CreateBookingInput, db: Db): Promise<
 	});
 }
 
-export async function updateBookingStatus(input: UpdateBookingStatusInput, db: Db): Promise<BookingRow> {
+export async function updateBookingStatus(
+	input: UpdateBookingStatusInput,
+	db: Db
+): Promise<BookingRow> {
 	const [current] = await db
 		.select()
 		.from(booking)
-		.where(and(eq(booking.id, input.id), eq(booking.organizationId, input.organizationId)))
+		.where(
+			and(
+				eq(booking.id, input.id),
+				eq(booking.organizationId, input.organizationId)
+			)
+		)
 		.limit(1);
-	if (!current) throw new Error("NOT_FOUND");
+	if (!current) {
+		throw new Error("NOT_FOUND");
+	}
 
 	const allowed = VALID_TRANSITIONS[current.status] ?? [];
-	if (!allowed.includes(input.status)) throw new Error("INVALID_TRANSITION");
+	if (!allowed.includes(input.status)) {
+		throw new Error("INVALID_TRANSITION");
+	}
 
 	const payload: Partial<typeof booking.$inferInsert> & { updatedAt: Date } = {
 		status: input.status,
@@ -264,49 +319,70 @@ export async function updateBookingStatus(input: UpdateBookingStatusInput, db: D
 	const [updated] = await db
 		.update(booking)
 		.set(payload)
-		.where(and(eq(booking.id, input.id), eq(booking.organizationId, input.organizationId)))
+		.where(
+			and(
+				eq(booking.id, input.id),
+				eq(booking.organizationId, input.organizationId)
+			)
+		)
 		.returning();
+	if (!updated) {
+		throw new Error("NOT_FOUND");
+	}
 
-	if (input.workflowContext && (input.status === "confirmed" || input.status === "cancelled")) {
+	if (
+		input.workflowContext &&
+		(input.status === "confirmed" || input.status === "cancelled")
+	) {
 		if (input.status === "confirmed") {
 			await input.workflowContext.eventBus.emit({
 				type: "booking:confirmed",
-				organizationId: updated!.organizationId,
+				organizationId: updated.organizationId,
 				actorUserId: input.workflowContext.actorUserId,
-				idempotencyKey: `booking:confirmed:${updated!.id}`,
+				idempotencyKey: `booking:confirmed:${updated.id}`,
 				data: {
-					bookingId: updated!.id,
-					ownerId: updated!.organizationId,
+					bookingId: updated.id,
+					ownerId: updated.organizationId,
 				},
 			});
 		} else {
 			await input.workflowContext.eventBus.emit({
 				type: "booking:cancelled",
-				organizationId: updated!.organizationId,
+				organizationId: updated.organizationId,
 				actorUserId: input.workflowContext.actorUserId,
-				idempotencyKey: `booking:cancelled:${updated!.id}`,
+				idempotencyKey: `booking:cancelled:${updated.id}`,
 				data: {
-					bookingId: updated!.id,
-					reason: updated!.cancellationReason ?? input.cancellationReason ?? "cancelled",
+					bookingId: updated.id,
+					reason:
+						updated.cancellationReason ??
+						input.cancellationReason ??
+						"cancelled",
 					refundAmountKopeks: input.refundAmountCents ?? 0,
 				},
 			});
 		}
 	}
 
-	return updated!;
+	return updated;
 }
 
 export async function updateBookingSchedule(
 	input: UpdateBookingScheduleInput,
-	db: Db,
+	db: Db
 ): Promise<BookingRow> {
 	const [current] = await db
 		.select()
 		.from(booking)
-		.where(and(eq(booking.id, input.id), eq(booking.organizationId, input.organizationId)))
+		.where(
+			and(
+				eq(booking.id, input.id),
+				eq(booking.organizationId, input.organizationId)
+			)
+		)
 		.limit(1);
-	if (!current) throw new Error("NOT_FOUND");
+	if (!current) {
+		throw new Error("NOT_FOUND");
+	}
 
 	if (!["pending", "awaiting_payment", "confirmed"].includes(current.status)) {
 		throw new Error("INVALID_STATE");
@@ -320,7 +396,7 @@ export async function updateBookingSchedule(
 			endsAt: input.endsAt,
 			excludeBookingId: current.id,
 		},
-		db,
+		db
 	);
 	await assertNoAvailabilityBlockOverlap(
 		{
@@ -328,7 +404,7 @@ export async function updateBookingSchedule(
 			startsAt: input.startsAt,
 			endsAt: input.endsAt,
 		},
-		db,
+		db
 	);
 
 	const [updated] = await db
@@ -339,23 +415,31 @@ export async function updateBookingSchedule(
 			timezone: input.timezone ?? current.timezone,
 			updatedAt: new Date(),
 		})
-		.where(and(eq(booking.id, input.id), eq(booking.organizationId, input.organizationId)))
+		.where(
+			and(
+				eq(booking.id, input.id),
+				eq(booking.organizationId, input.organizationId)
+			)
+		)
 		.returning();
+	if (!updated) {
+		throw new Error("NOT_FOUND");
+	}
 
 	if (input.workflowContext) {
 		await input.workflowContext.eventBus.emit({
 			type: "booking:schedule-updated",
-			organizationId: updated!.organizationId,
+			organizationId: updated.organizationId,
 			actorUserId: input.workflowContext.actorUserId,
-			idempotencyKey: `booking:schedule-updated:${updated!.id}:${updated!.updatedAt.toISOString()}`,
+			idempotencyKey: `booking:schedule-updated:${updated.id}:${updated.updatedAt.toISOString()}`,
 			data: {
-				bookingId: updated!.id,
-				startsAt: updated!.startsAt.toISOString(),
-				endsAt: updated!.endsAt.toISOString(),
-				timezone: updated!.timezone ?? null,
+				bookingId: updated.id,
+				startsAt: updated.startsAt.toISOString(),
+				endsAt: updated.endsAt.toISOString(),
+				timezone: updated.timezone ?? null,
 			},
 		});
 	}
 
-	return updated!;
+	return updated;
 }

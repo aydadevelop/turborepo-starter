@@ -180,7 +180,11 @@ export async function unpublishListing(
 	db: Db,
 	context?: PublicationMutationContext
 ): Promise<ListingRow> {
-	const result = await applyUnpublishListingState(listingId, organizationId, db);
+	const result = await applyUnpublishListingState(
+		listingId,
+		organizationId,
+		db
+	);
 
 	await emitPublicationReadinessChanged(
 		organizationId,

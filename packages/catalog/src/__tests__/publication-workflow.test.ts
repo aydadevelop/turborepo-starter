@@ -4,8 +4,8 @@ import {
 	listingPublication,
 	listingTypeConfig,
 } from "@my-app/db/schema/marketplace";
-import { EventBus } from "@my-app/events";
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
+import { EventBus } from "@my-app/events";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 

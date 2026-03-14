@@ -74,7 +74,8 @@ export const boatRentServiceFamilyPolicy: ListingServiceFamilyPolicy = {
 				label: "Departure area",
 				kind: "text",
 				required: true,
-				helpText: "Human-friendly area label used in search and storefront copy.",
+				helpText:
+					"Human-friendly area label used in search and storefront copy.",
 			},
 			{
 				key: "fuelPolicy",

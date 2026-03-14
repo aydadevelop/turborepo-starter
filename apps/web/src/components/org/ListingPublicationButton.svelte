@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
 	import { createMutation } from "@tanstack/svelte-query";
-	import { queryClient, orpc } from "$lib/orpc";
+	import { orpc, queryClient } from "$lib/orpc";
 
 	let {
 		listingId,

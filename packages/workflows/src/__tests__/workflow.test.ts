@@ -1,4 +1,4 @@
-import { EventBus, clearEventPushers } from "@my-app/events";
+import { clearEventPushers, EventBus } from "@my-app/events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createStep } from "../create-step";
 import { createWorkflow } from "../create-workflow";
@@ -17,18 +17,21 @@ describe("createStep + createWorkflow", () => {
 	});
 
 	it("happy path: two steps execute sequentially and return { success: true, output }", async () => {
-		const step1 = createStep("step-1", async (input: { value: number }) => {
-			return { doubled: input.value * 2 };
+		const step1 = createStep("step-1", (input: { value: number }) => {
+			return Promise.resolve({ doubled: input.value * 2 });
 		});
 
-		const step2 = createStep("step-2", async (input: { doubled: number }) => {
-			return { tripled: input.doubled * 3 };
+		const step2 = createStep("step-2", (input: { doubled: number }) => {
+			return Promise.resolve({ tripled: input.doubled * 3 });
 		});
 
-		const workflow = createWorkflow("test-wf", async (input: { value: number }, ctx) => {
-			const r1 = await step1(input, ctx);
-			return step2(r1, ctx);
-		});
+		const workflow = createWorkflow(
+			"test-wf",
+			async (input: { value: number }, ctx) => {
+				const r1 = await step1(input, ctx);
+				return step2(r1, ctx);
+			}
+		);
 
 		const result = await workflow.execute({ value: 5 }, makeCtx());
 
@@ -39,16 +42,21 @@ describe("createStep + createWorkflow", () => {
 	});
 
 	it("failure path: step 2 throws, step 1 compensation is called, returns { success: false, error }", async () => {
-		const compensate1 = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+		const compensate1 = vi
+			.fn<() => Promise<void>>()
+			.mockResolvedValue(undefined);
 
 		const step1 = createStep(
 			"step-1",
-			async (_input: null) => ({ result: "step-1-output" as string }),
-			compensate1 as (output: { result: string }, ctx: WorkflowContext) => Promise<void>,
+			(_input: null) => Promise.resolve({ result: "step-1-output" as string }),
+			compensate1 as (
+				output: { result: string },
+				ctx: WorkflowContext
+			) => Promise<void>
 		);
 
-		const step2 = createStep("step-2", async (_input: { result: string }) => {
-			throw new Error("step-2 failed");
+		const step2 = createStep("step-2", (_input: { result: string }) => {
+			return Promise.reject(new Error("step-2 failed"));
 		});
 
 		const workflow = createWorkflow("test-wf", async (input: null, ctx) => {
@@ -64,19 +72,36 @@ describe("createStep + createWorkflow", () => {
 		}
 
 		expect(compensate1).toHaveBeenCalledOnce();
-		expect(compensate1).toHaveBeenCalledWith({ result: "step-1-output" }, expect.objectContaining({ organizationId: "org-1" }));
+		expect(compensate1).toHaveBeenCalledWith(
+			{ result: "step-1-output" },
+			expect.objectContaining({ organizationId: "org-1" })
+		);
 	});
 
 	it("reverse compensation: A, B, C sequence where C throws; compensation runs B then A (not C)", async () => {
 		const callOrder: string[] = [];
 
-		const compA = vi.fn().mockImplementation(async () => { callOrder.push("comp-A"); });
-		const compB = vi.fn().mockImplementation(async () => { callOrder.push("comp-B"); });
+		const compA = vi.fn().mockImplementation(() => {
+			callOrder.push("comp-A");
+			return Promise.resolve();
+		});
+		const compB = vi.fn().mockImplementation(() => {
+			callOrder.push("comp-B");
+			return Promise.resolve();
+		});
 
-		const stepA = createStep("step-A", async (_: null) => "a-output", compA);
-		const stepB = createStep("step-B", async (_: string) => "b-output", compB);
-		const stepC = createStep("step-C", async (_: string) => {
-			throw new Error("C exploded");
+		const stepA = createStep(
+			"step-A",
+			(_: null) => Promise.resolve("a-output"),
+			compA
+		);
+		const stepB = createStep(
+			"step-B",
+			(_: string) => Promise.resolve("b-output"),
+			compB
+		);
+		const stepC = createStep("step-C", (_: string) => {
+			return Promise.reject(new Error("C exploded"));
 		});
 
 		const workflow = createWorkflow("test-wf", async (input: null, ctx) => {
@@ -94,16 +119,27 @@ describe("createStep + createWorkflow", () => {
 	it("compensation failure is swallowed: compensate that throws does not propagate; later compensations still run", async () => {
 		const callOrder: string[] = [];
 
-		const compA = vi.fn().mockImplementation(async () => { callOrder.push("comp-A"); });
-		const compB = vi.fn().mockImplementation(async () => {
+		const compA = vi.fn().mockImplementation(() => {
+			callOrder.push("comp-A");
+			return Promise.resolve();
+		});
+		const compB = vi.fn().mockImplementation(() => {
 			callOrder.push("comp-B-throw");
-			throw new Error("compensation B failed");
+			return Promise.reject(new Error("compensation B failed"));
 		});
 
-		const stepA = createStep("step-A", async (_: null) => "a", compA);
-		const stepB = createStep("step-B", async (_: string) => "b", compB);
-		const stepC = createStep("step-C", async (_: string) => {
-			throw new Error("C failed");
+		const stepA = createStep(
+			"step-A",
+			(_: null) => Promise.resolve("a"),
+			compA
+		);
+		const stepB = createStep(
+			"step-B",
+			(_: string) => Promise.resolve("b"),
+			compB
+		);
+		const stepC = createStep("step-C", (_: string) => {
+			return Promise.reject(new Error("C failed"));
 		});
 
 		const workflow = createWorkflow("test-wf", async (input: null, ctx) => {
@@ -123,8 +159,9 @@ describe("createStep + createWorkflow", () => {
 	it("eventBus.emit is accessible in steps via ctx.eventBus", async () => {
 		const emittedEvents: string[] = [];
 		const mockBus = {
-			emit: vi.fn().mockImplementation(async (event: { type: string }) => {
+			emit: vi.fn().mockImplementation((event: { type: string }) => {
 				emittedEvents.push(event.type);
+				return Promise.resolve();
 			}),
 		} as unknown as EventBus;
 
@@ -138,7 +175,7 @@ describe("createStep + createWorkflow", () => {
 			return "done";
 		});
 
-		const workflow = createWorkflow("test-wf", async (input: null, ctx) => {
+		const workflow = createWorkflow("test-wf", (input: null, ctx) => {
 			return step1(input, ctx);
 		});
 

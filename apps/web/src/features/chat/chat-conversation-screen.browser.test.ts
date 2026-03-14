@@ -10,7 +10,9 @@ const mockState = vi.hoisted(() => ({
 			{
 				id: "message-1",
 				role: "assistant",
-				parts: [{ type: "text", text: "Hello, how can I help with your fleet?" }],
+				parts: [
+					{ type: "text", text: "Hello, how can I help with your fleet?" },
+				],
 			},
 			{
 				id: "message-2",
@@ -52,7 +54,5 @@ test("renders a loaded chat conversation with a screenshot", async () => {
 		),
 		"Create a new reminder"
 	);
-	await expect
-		.element(page.getByTestId("send-message-button"))
-		.toBeEnabled();
+	await expect.element(page.getByTestId("send-message-button")).toBeEnabled();
 });

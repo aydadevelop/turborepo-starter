@@ -1,15 +1,9 @@
+import { createMutation, createQuery, skipToken } from "@tanstack/svelte-query";
 import { goto } from "$app/navigation";
-import {
-	createMutation,
-	createQuery,
-	skipToken,
-} from "@tanstack/svelte-query";
 
 import { orpc, queryClient } from "$lib/orpc";
+import type { ListingWorkspaceState } from "$lib/orpc-types";
 import { resolveServerPath } from "$lib/server-url";
-import type {
-	ListingWorkspaceState,
-} from "$lib/orpc-types";
 
 import type {
 	ListingWorkspaceInitialServiceFamilyDetails,
@@ -58,7 +52,9 @@ export const createListingWorkspaceQueries = (getListingId: () => string) => ({
 	),
 });
 
-export const createListingWorkspaceMutations = (getListingId: () => string) => ({
+export const createListingWorkspaceMutations = (
+	getListingId: () => string
+) => ({
 	updateListingMutation: createMutation(() =>
 		orpc.listing.update.mutationOptions({
 			onSuccess: async () => {
@@ -227,7 +223,9 @@ export const buildListingWorkspaceInitialValue = (
 
 export const getGoogleCalendarConnectUrl = (returnTo?: string): string => {
 	const base = resolveServerPath("/api/calendar/oauth/google/start");
-	if (returnTo) return `${base}?returnTo=${encodeURIComponent(returnTo)}`;
+	if (returnTo) {
+		return `${base}?returnTo=${encodeURIComponent(returnTo)}`;
+	}
 	return base;
 };
 

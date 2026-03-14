@@ -196,9 +196,7 @@
                 "body": "This is a seeded recurring reminder.",
                 "title": "Recurring reminder",
                 "userId": "seed_user_member",
-                "channels": [
-                  "in_app"
-                ],
+                "channels": ["in_app"],
                 "severity": "info"
               }
             ]
@@ -458,10 +456,7 @@
           "display_name": "Stripe (test)",
           "description": null,
           "is_active": true,
-          "supported_currencies": [
-            "RUB",
-            "USD"
-          ],
+          "supported_currencies": ["RUB", "USD"],
           "default_acquiring_fee_bps": 0,
           "default_platform_fee_bps": 0,
           "min_platform_fee_bps": 0,

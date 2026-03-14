@@ -1,6 +1,10 @@
 import { db as defaultDb } from "@my-app/db";
 import { user } from "@my-app/db/schema/auth";
-import { listing, listingModerationAudit, listingPublication } from "@my-app/db/schema/marketplace";
+import {
+	listing,
+	listingModerationAudit,
+	listingPublication,
+} from "@my-app/db/schema/marketplace";
 import { and, count, eq, isNotNull, isNull, sql } from "drizzle-orm";
 
 import type {
@@ -14,45 +18,46 @@ export async function resolveOrganizationModerationSummary(
 	organizationId: string,
 	db: Db = defaultDb
 ): Promise<OrganizationModerationSummary> {
-	const [approvedRow, reviewPendingRow, unapprovedActiveRow] = await Promise.all([
-		db
-			.select({ count: count() })
-			.from(listing)
-			.where(
-				and(
-					eq(listing.organizationId, organizationId),
-					isNotNull(listing.approvedAt)
+	const [approvedRow, reviewPendingRow, unapprovedActiveRow] =
+		await Promise.all([
+			db
+				.select({ count: count() })
+				.from(listing)
+				.where(
+					and(
+						eq(listing.organizationId, organizationId),
+						isNotNull(listing.approvedAt)
+					)
+				),
+			db
+				.select({
+					count: sql<number>`count(distinct ${listing.id})`,
+				})
+				.from(listing)
+				.innerJoin(
+					listingPublication,
+					and(
+						eq(listingPublication.listingId, listing.id),
+						eq(listingPublication.isActive, true)
+					)
 				)
-			),
-		db
-			.select({
-				count: sql<number>`count(distinct ${listing.id})`,
-			})
-			.from(listing)
-			.innerJoin(
-				listingPublication,
-				and(
-					eq(listingPublication.listingId, listing.id),
-					eq(listingPublication.isActive, true)
-				)
-			)
-			.where(
-				and(
-					eq(listing.organizationId, organizationId),
-					isNull(listing.approvedAt)
-				)
-			),
-		db
-			.select({ count: count() })
-			.from(listing)
-			.where(
-				and(
-					eq(listing.organizationId, organizationId),
-					eq(listing.status, "active"),
-					isNull(listing.approvedAt)
-				)
-			),
-	]);
+				.where(
+					and(
+						eq(listing.organizationId, organizationId),
+						isNull(listing.approvedAt)
+					)
+				),
+			db
+				.select({ count: count() })
+				.from(listing)
+				.where(
+					and(
+						eq(listing.organizationId, organizationId),
+						eq(listing.status, "active"),
+						isNull(listing.approvedAt)
+					)
+				),
+		]);
 
 	return {
 		approvedListingCount: Number(approvedRow[0]?.count ?? 0),
@@ -69,7 +74,9 @@ export async function ensureOrganizationListingExists(
 	const [row] = await db
 		.select({ id: listing.id })
 		.from(listing)
-		.where(and(eq(listing.id, listingId), eq(listing.organizationId, organizationId)))
+		.where(
+			and(eq(listing.id, listingId), eq(listing.organizationId, organizationId))
+		)
 		.limit(1);
 
 	if (!row) {
@@ -89,7 +96,9 @@ export async function setOrganizationListingApproval(
 			approvedAt,
 			updatedAt: new Date(),
 		})
-		.where(and(eq(listing.id, listingId), eq(listing.organizationId, organizationId)))
+		.where(
+			and(eq(listing.id, listingId), eq(listing.organizationId, organizationId))
+		)
 		.returning({ id: listing.id });
 
 	if (!row) {
@@ -108,7 +117,9 @@ export async function resolveOrganizationListingModerationState(
 			approvedAt: listing.approvedAt,
 		})
 		.from(listing)
-		.where(and(eq(listing.id, listingId), eq(listing.organizationId, organizationId)))
+		.where(
+			and(eq(listing.id, listingId), eq(listing.organizationId, organizationId))
+		)
 		.limit(1);
 
 	if (!row) {
@@ -144,7 +155,9 @@ export async function listOrganizationListingModerationAudit(
 			action: listingModerationAudit.action,
 			note: listingModerationAudit.note,
 			actedByUserId: listingModerationAudit.actedByUserId,
-			actedByDisplayName: sql<string | null>`coalesce(${user.name}, ${user.email})`,
+			actedByDisplayName: sql<
+				string | null
+			>`coalesce(${user.name}, ${user.email})`,
 			actedAt: listingModerationAudit.actedAt,
 		})
 		.from(listingModerationAudit)

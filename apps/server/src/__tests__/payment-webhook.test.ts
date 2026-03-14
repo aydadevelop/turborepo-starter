@@ -1,8 +1,3 @@
-import {
-	registerPaymentWebhookAdapter,
-	resetPaymentWebhookRegistry,
-} from "@my-app/payment/webhooks/registry";
-import type { PaymentWebhookAdapter } from "@my-app/payment/webhooks/types";
 import { organization } from "@my-app/db/schema/auth";
 import {
 	booking,
@@ -15,6 +10,11 @@ import {
 	paymentWebhookEvent,
 } from "@my-app/db/schema/marketplace";
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
+import {
+	registerPaymentWebhookAdapter,
+	resetPaymentWebhookRegistry,
+} from "@my-app/payment/webhooks/registry";
+import type { PaymentWebhookAdapter } from "@my-app/payment/webhooks/types";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -290,10 +290,7 @@ describe("paymentWebhookRoutes", () => {
 
 	it("looks up adapter by provider param", async () => {
 		const spy = vi
-			.spyOn(
-				await import("@my-app/payment"),
-				"getPaymentWebhookAdapter"
-			)
+			.spyOn(await import("@my-app/payment"), "getPaymentWebhookAdapter")
 			.mockReturnValue(stubAdapter);
 
 		const { paymentWebhookRoutes } = await import("../routes/payment-webhook");
@@ -341,10 +338,7 @@ describe("paymentWebhookRoutes live ingress", () => {
 			.select()
 			.from(organizationPaymentConfig)
 			.where(
-				eq(
-					organizationPaymentConfig.webhookEndpointId,
-					WEBHOOK_ENDPOINT_ID
-				)
+				eq(organizationPaymentConfig.webhookEndpointId, WEBHOOK_ENDPOINT_ID)
 			)
 			.limit(1);
 		expect(paymentConfig?.validationStatus).toBe("validated");

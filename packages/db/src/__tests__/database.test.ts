@@ -1,10 +1,6 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-	seedMarketplaceScenario,
-	MARKETPLACE_IDS,
-} from "../test/fixtures/marketplace";
-import {
 	affiliateReferral,
 	bookingAffiliateAttribution,
 	bookingAffiliatePayout,
@@ -48,6 +44,10 @@ import {
 	clearTestDatabase,
 	type TestDatabase,
 } from "../test";
+import {
+	MARKETPLACE_IDS,
+	seedMarketplaceScenario,
+} from "../test/fixtures/marketplace";
 
 describe("Test Database Setup", () => {
 	const testDatabase = bootstrapTestDatabase({ seedStrategy: "beforeEach" });
@@ -496,7 +496,7 @@ describe("Test Database Setup", () => {
 					webhookType: "pay",
 					requestSignature: "endpoint-1:pay:tx-1",
 					payload: { transactionId: "tx-1" },
-				}),
+				})
 			).rejects.toThrow();
 		});
 	});
@@ -1067,7 +1067,11 @@ describe("Test Database Setup", () => {
 				.from(booking)
 				.where(eq(booking.id, MARKETPLACE_IDS.bookingId));
 			expect(bookings).toHaveLength(1);
-			const b = bookings[0]!;
+			const [b] = bookings;
+			expect(b).toBeDefined();
+			if (!b) {
+				throw new Error("Expected seeded booking to exist");
+			}
 			expect(b.status).toBe("confirmed");
 			expect(b.paymentStatus).toBe("paid");
 			expect(b.totalPriceCents).toBe(1_200_000);

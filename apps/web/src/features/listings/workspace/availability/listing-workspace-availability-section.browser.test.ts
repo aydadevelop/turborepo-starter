@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { renderComponent } from "../../../../test/browser/render";
 import type { AvailabilityWorkspaceState } from "$lib/orpc-types";
+import { renderComponent } from "../../../../test/browser/render";
 import ListingWorkspaceAvailabilitySection from "./ListingWorkspaceAvailabilitySection.svelte";
 
 const availability: AvailabilityWorkspaceState = {
@@ -41,8 +41,12 @@ test("opens availability actions in dialogs instead of stacking inline forms", a
 	await expect
 		.element(page.getByRole("button", { name: "Add recurring rule" }))
 		.toBeVisible();
-	await expect.element(page.getByRole("button", { name: "Add block" })).toBeVisible();
-	await expect.element(page.getByRole("button", { name: "Add exception" })).toBeVisible();
+	await expect
+		.element(page.getByRole("button", { name: "Add block" }))
+		.toBeVisible();
+	await expect
+		.element(page.getByRole("button", { name: "Add exception" }))
+		.toBeVisible();
 	await expect(document.body).toMatchScreenshot(
 		"listing-workspace-availability-section"
 	);

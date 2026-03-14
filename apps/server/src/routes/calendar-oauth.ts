@@ -1,3 +1,4 @@
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { createContext } from "@my-app/api/context";
 import { hasOrganizationPermission } from "@my-app/api/organization";
 import {
@@ -9,9 +10,8 @@ import {
 } from "@my-app/calendar";
 import { db } from "@my-app/db";
 import { env } from "@my-app/env/server";
-import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { Hono } from "hono";
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 
 const GOOGLE_CALLBACK_PATH = "/api/calendar/oauth/google/callback";
 const GOOGLE_STATE_COOKIE = "calendar_google_oauth_nonce";
@@ -43,7 +43,9 @@ const getGoogleRedirectUri = (): string =>
 	`${getPublicServerBaseUrl()}${GOOGLE_CALLBACK_PATH}`;
 
 const encodeState = (payload: GoogleCalendarOAuthState): string => {
-	const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
+	const encodedPayload = Buffer.from(JSON.stringify(payload)).toString(
+		"base64url"
+	);
 	const signature = createHmac("sha256", env.BETTER_AUTH_SECRET)
 		.update(encodedPayload)
 		.digest("base64url");
@@ -168,7 +170,7 @@ calendarOauthRoutes.get("/api/calendar/oauth/google/start", async (c) => {
 	const userId = context.session?.user?.id;
 	const activeMembership = context.activeMembership;
 
-	if (!userId || !activeMembership) {
+	if (!(userId && activeMembership)) {
 		return c.json({ error: "Unauthorized" }, 401);
 	}
 	if (
@@ -178,7 +180,7 @@ calendarOauthRoutes.get("/api/calendar/oauth/google/start", async (c) => {
 	) {
 		return c.json({ error: "Forbidden" }, 403);
 	}
-	if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+	if (!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)) {
 		return c.json({ error: "Google calendar OAuth is not configured" }, 503);
 	}
 
@@ -247,7 +249,9 @@ calendarOauthRoutes.get("/api/calendar/oauth/google/callback", async (c) => {
 			},
 			code
 		);
-		const profile = await fetchGoogleCalendarAccountProfile(tokenSet.accessToken);
+		const profile = await fetchGoogleCalendarAccountProfile(
+			tokenSet.accessToken
+		);
 		const account = await connectOrganizationCalendarAccount(
 			{
 				organizationId: state.organizationId,

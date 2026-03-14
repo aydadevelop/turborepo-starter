@@ -86,9 +86,13 @@ test("renders members and pending invitations through the shared table surface",
 		.element(page.getByRole("cell", { name: "Dmitry", exact: true }))
 		.toBeInTheDocument();
 	await expect
-		.element(page.getByRole("cell", { name: "captain@example.com", exact: true }))
+		.element(
+			page.getByRole("cell", { name: "captain@example.com", exact: true })
+		)
 		.toBeInTheDocument();
-	await expect.element(page.getByRole("button", { name: "Role" })).toBeInTheDocument();
+	await expect
+		.element(page.getByRole("button", { name: "Role" }))
+		.toBeInTheDocument();
 	await expect
 		.element(page.getByRole("button", { name: "Cancel" }))
 		.toBeInTheDocument();

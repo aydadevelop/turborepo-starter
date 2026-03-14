@@ -41,7 +41,7 @@ vi.mock("$lib/orpc", () => ({
 			},
 			addMyMessage: {
 				mutationOptions: ({ onSuccess }: { onSuccess?: () => void }) => ({
-					mutationFn: async (input: unknown) => {
+					mutationFn: (input: unknown) => {
 						mockState.mutate(input);
 						onSuccess?.();
 						return { id: "message_2" };
@@ -64,8 +64,12 @@ test("renders support ticket detail through the shared screen pattern", async ()
 	await expect
 		.element(browserPage.getByText("Please confirm the marina gate."))
 		.toBeVisible();
-	await expect.element(browserPage.getByRole("button", { name: "Send reply" })).toBeVisible();
-	await expect(document.body).toMatchScreenshot("customer-support-ticket-screen");
+	await expect
+		.element(browserPage.getByRole("button", { name: "Send reply" }))
+		.toBeVisible();
+	await expect(document.body).toMatchScreenshot(
+		"customer-support-ticket-screen"
+	);
 });
 
 test("submits a reply through the screen mutation", async () => {
@@ -74,8 +78,13 @@ test("submits a reply through the screen mutation", async () => {
 
 	renderWithQueryClient(CustomerSupportTicketScreen);
 
-	await userEvent.fill(browserPage.getByPlaceholder("Write a reply…"), "Gate 2?");
-	await userEvent.click(browserPage.getByRole("button", { name: "Send reply" }));
+	await userEvent.fill(
+		browserPage.getByPlaceholder("Write a reply…"),
+		"Gate 2?"
+	);
+	await userEvent.click(
+		browserPage.getByRole("button", { name: "Send reply" })
+	);
 
 	expect(mockState.mutate).toHaveBeenCalledWith({
 		ticketId: "ticket_1",

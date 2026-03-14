@@ -1,4 +1,4 @@
-import { context, trace, type Span } from "@opentelemetry/api";
+import { context, type Span, trace } from "@opentelemetry/api";
 
 /**
  * Structured JSON logger that auto-injects OpenTelemetry trace context.
@@ -19,7 +19,9 @@ function getTraceContext(): {
 	spanId: string | undefined;
 } {
 	const span: Span | undefined = trace.getSpan(context.active());
-	if (!span) return { traceId: undefined, spanId: undefined };
+	if (!span) {
+		return { traceId: undefined, spanId: undefined };
+	}
 	const ctx = span.spanContext();
 	return { traceId: ctx.traceId, spanId: ctx.spanId };
 }
@@ -27,7 +29,7 @@ function getTraceContext(): {
 function emit(
 	level: LogLevel,
 	msg: string,
-	data?: Record<string, unknown>,
+	data?: Record<string, unknown>
 ): void {
 	const { traceId, spanId } = getTraceContext();
 	const entry: Record<string, unknown> = {

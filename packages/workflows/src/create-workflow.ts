@@ -2,15 +2,14 @@ import type { InternalWorkflowContext, WorkflowContext } from "./types";
 
 export const createWorkflow = <TIn, TOut>(
 	name: string,
-	run: (input: TIn, ctx: WorkflowContext) => Promise<TOut>,
+	run: (input: TIn, ctx: WorkflowContext) => Promise<TOut>
 ) => ({
 	name,
 	execute: async (
 		input: TIn,
-		ctx: WorkflowContext,
+		ctx: WorkflowContext
 	): Promise<
-		| { success: true; output: TOut }
-		| { success: false; error: Error }
+		{ success: true; output: TOut } | { success: false; error: Error }
 	> => {
 		const internalCtx: InternalWorkflowContext = { ...ctx, __completed: [] };
 		try {

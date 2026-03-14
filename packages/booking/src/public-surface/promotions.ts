@@ -1,12 +1,12 @@
+import type { QuoteBreakdown } from "@my-app/pricing";
 import {
+	type PreparedPromotionPreviewContext,
 	preparePromotionPreviewContext,
 	previewPreparedPromotionForQuote,
-	type PreparedPromotionPreviewContext,
 } from "@my-app/promotions";
-import type { QuoteBreakdown } from "@my-app/pricing";
 import type { Db, PublicBookingSlotDiscountPreview } from "../types";
 
-export const preparePromotionContext = async (
+export const preparePromotionContext = (
 	input: {
 		organizationId: string;
 		listingId: string;
@@ -14,7 +14,7 @@ export const preparePromotionContext = async (
 		customerUserId?: string;
 		now?: Date;
 	},
-	db: Db,
+	db: Db
 ): Promise<PreparedPromotionPreviewContext | null> => {
 	if (!input.discountCode) {
 		return null;
@@ -28,13 +28,13 @@ export const preparePromotionContext = async (
 			customerUserId: input.customerUserId,
 			now: input.now,
 		},
-		db,
+		db
 	);
 };
 
 export const previewPreparedPromotion = (
 	context: PreparedPromotionPreviewContext | null,
-	quote: QuoteBreakdown,
+	quote: QuoteBreakdown
 ): PublicBookingSlotDiscountPreview | null => {
 	if (!context) {
 		return null;

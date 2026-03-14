@@ -1,6 +1,8 @@
+const DISCOUNT_AMOUNT_RE = /125\.00/;
+
+import { writable } from "svelte/store";
 import { expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { writable } from "svelte/store";
 import type { StorefrontBookingSurface } from "$lib/orpc-types";
 import { renderWithQueryClient } from "../../test/browser/render";
 
@@ -12,7 +14,15 @@ const mockState = vi.hoisted(() => ({
 		totalPriceCents: 13_500,
 		currency: "RUB",
 	})),
-	session: null,
+	session: null as {
+		session: { id: string };
+		user: {
+			id: string;
+			email: string;
+			name: string;
+			isAnonymous: boolean;
+		};
+	} | null,
 	surface: {
 		listingId: "listing_1",
 		serviceFamily: "boat_rent",
@@ -52,7 +62,7 @@ const mockState = vi.hoisted(() => ({
 					currency: "RUB",
 					durationMinutes: 120,
 					baseCents: 12_000,
-					adjustmentCents: 1_000,
+					adjustmentCents: 1000,
 					subtotalCents: 13_000,
 					serviceFeeCents: 0,
 					taxCents: 500,
@@ -63,7 +73,7 @@ const mockState = vi.hoisted(() => ({
 						status: "applied",
 						reasonCode: null,
 						reasonLabel: null,
-						appliedAmountCents: 1_000,
+						appliedAmountCents: 1000,
 						discountedSubtotalCents: 12_000,
 						discountedServiceFeeCents: 0,
 						discountedTaxCents: 500,
@@ -176,9 +186,7 @@ test("renders the composed boat-rent booking surface with slot, pricing, and dis
 
 	await userEvent.fill(page.getByLabelText("Date"), "2030-01-15");
 
-	await expect
-		.element(page.getByText("Live booking surface"))
-		.toBeVisible();
+	await expect.element(page.getByText("Live booking surface")).toBeVisible();
 	await expect.element(page.getByText("1 available")).toBeVisible();
 	await expect.element(page.getByText("1 blocked")).toBeVisible();
 	await expect.element(page.getByText("12:00 → 14:00")).toBeVisible();
@@ -190,11 +198,65 @@ test("renders the composed boat-rent booking surface with slot, pricing, and dis
 		.element(page.getByText("Code SPRING10 applied to the selected slot."))
 		.toBeVisible();
 	await expect.element(page.getByText("Discount (SPRING10)")).toBeVisible();
-	await expect.element(page.getByText(/125\.00/).first()).toBeVisible();
+	await expect
+		.element(page.getByText(DISCOUNT_AMOUNT_RE).first())
+		.toBeVisible();
 	await expect
 		.element(page.getByRole("button", { name: "Sign in to request booking" }))
 		.toBeVisible();
 	await expect(document.body).toMatchScreenshot(
 		"boat-rent-booking-surface-panel"
 	);
+});
+
+test("redirects to login when unauthenticated user clicks submit with selected slot", async () => {
+	renderWithQueryClient(BoatRentBookingSurfacePanel, {
+		listingId: "listing_1",
+		listingName: "Evening Charter",
+	});
+
+	await userEvent.fill(page.getByLabelText("Date"), "2030-01-15");
+
+	await expect
+		.element(page.getByText("Code SPRING10 applied to the selected slot."))
+		.toBeVisible();
+
+	await userEvent.click(
+		page.getByRole("button", { name: "Sign in to request booking" })
+	);
+
+	expect(mockState.goto).toHaveBeenCalledWith(
+		expect.stringContaining("/login?next=")
+	);
+});
+
+test("shows booking submitted confirmation after authenticated user submits", async () => {
+	mockState.session = {
+		session: { id: "session_1" },
+		user: {
+			id: "user_1",
+			email: "user@test.com",
+			name: "Test User",
+			isAnonymous: false,
+		},
+	};
+
+	renderWithQueryClient(BoatRentBookingSurfacePanel, {
+		listingId: "listing_1",
+		listingName: "Evening Charter",
+	});
+
+	await userEvent.fill(page.getByLabelText("Date"), "2030-01-15");
+
+	await expect
+		.element(page.getByRole("button", { name: "Request booking" }))
+		.toBeVisible();
+
+	await userEvent.click(page.getByRole("button", { name: "Request booking" }));
+
+	await expect
+		.element(page.getByText("Booking request submitted"))
+		.toBeVisible();
+	expect(mockState.mutateBooking).toHaveBeenCalledOnce();
+	expect(mockState.invalidateQueries).toHaveBeenCalledOnce();
 });

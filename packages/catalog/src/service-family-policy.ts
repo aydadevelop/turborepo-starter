@@ -1,7 +1,7 @@
+import { getServiceFamilyPolicy as getServiceFamilyPolicyFromFamilies } from "./service-families";
 import type { ListingTypeOption, ListingTypeRow } from "./types";
-import { getServiceFamilyPolicy } from "./service-families";
 
-export { getServiceFamilyPolicy } from "./service-families";
+export const getServiceFamilyPolicy = getServiceFamilyPolicyFromFamilies;
 
 export function toListingTypeOption(input: {
 	defaultAmenityKeys: string[] | null;
@@ -22,7 +22,9 @@ export function toListingTypeOption(input: {
 		metadataJsonSchema: input.metadataJsonSchema,
 		requiredFields: input.requiredFields ?? [],
 		serviceFamily: input.serviceFamily,
-		serviceFamilyPolicy: getServiceFamilyPolicy(input.serviceFamily),
+		serviceFamilyPolicy: getServiceFamilyPolicyFromFamilies(
+			input.serviceFamily
+		),
 		supportedPricingModels: input.supportedPricingModels ?? [],
 		value: input.value,
 	};

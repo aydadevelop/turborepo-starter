@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
+	// biome-ignore lint/performance/noNamespaceImport: shadcn-style card namespace usage is intentional in this component.
 	import * as Card from "@my-app/ui/components/card";
 	import { Input } from "@my-app/ui/components/input";
 	import { Label } from "@my-app/ui/components/label";
+	// biome-ignore lint/performance/noNamespaceImport: shadcn-style native select namespace usage is intentional in this component.
 	import * as NativeSelect from "@my-app/ui/components/native-select";
 	import { Textarea } from "@my-app/ui/components/textarea";
 	import {
@@ -81,7 +83,9 @@
 			return;
 		}
 
-		const availableSlots = surface.slots.filter((slot) => slot.status === "available");
+		const availableSlots = surface.slots.filter(
+			(slot) => slot.status === "available"
+		);
 		if (
 			selectedSlotStartsAt &&
 			availableSlots.some((slot) => slot.startsAt === selectedSlotStartsAt)
@@ -93,22 +97,24 @@
 	});
 
 	const durationOptions = $derived.by(() => {
-		const options =
-			bookingSurfaceQuery.data?.durationOptionsMinutes ?? [60, 120, 180, 240];
+		const options = bookingSurfaceQuery.data?.durationOptionsMinutes ?? [
+			60, 120, 180, 240,
+		];
 		const selected = requestedDurationMinutes;
 		return [...new Set(selected ? [...options, selected] : options)].sort(
-			(left, right) => left - right,
+			(left, right) => left - right
 		);
 	});
 
-	const selectedSlot = $derived.by(() =>
-		bookingSurfaceQuery.data?.slots.find(
-			(slot) => slot.startsAt === selectedSlotStartsAt,
-		) ?? null,
+	const selectedSlot = $derived.by(
+		() =>
+			bookingSurfaceQuery.data?.slots.find(
+				(slot) => slot.startsAt === selectedSlotStartsAt
+			) ?? null
 	);
 
 	const selectedSlotDisplayQuote = $derived.by(() =>
-		selectedSlot?.quote ? getDisplayedBoatRentQuote(selectedSlot.quote) : null,
+		selectedSlot?.quote ? getDisplayedBoatRentQuote(selectedSlot.quote) : null
 	);
 
 	function formatMoney(amountCents: number, currency: string) {
@@ -143,25 +149,29 @@
 				};
 				await queryClient.invalidateQueries({ queryKey: orpc.booking.key() });
 			},
-		}),
+		})
 	);
 
 	const canSubmitBooking = $derived(
 		Boolean(selectedSlot) &&
 			selectedSlot?.status === "available" &&
 			Boolean(selectedSlot.quote) &&
-			!createBooking.isPending,
+			!createBooking.isPending
 	);
 
 	async function submitBookingRequest() {
 		if (!isAuthenticated) {
 			await goto(
-				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`,
+				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
 			);
 			return;
 		}
 
-		if (!selectedSlot || selectedSlot.status !== "available" || !selectedSlot.quote) {
+		if (
+			!selectedSlot ||
+			selectedSlot.status !== "available" ||
+			!selectedSlot.quote
+		) {
 			return;
 		}
 
@@ -193,7 +203,8 @@
 	<Card.Header>
 		<Card.Title>Request this charter</Card.Title>
 		<Card.Description>
-			Choose a date and duration to see live slot availability and price previews for
+			Choose a date and duration to see live slot availability and price
+			previews for
 			{listingName}.
 		</Card.Description>
 	</Card.Header>
@@ -231,15 +242,22 @@
 					<div>
 						<p class="text-sm font-medium">Live booking surface</p>
 						<p class="text-xs text-muted-foreground">
-							Times shown in {bookingSurfaceQuery.data?.timezone ?? "listing timezone"}.
+							Times shown in
+							{bookingSurfaceQuery.data?.timezone ?? "listing timezone"}.
 						</p>
 					</div>
 					{#if bookingSurfaceQuery.data}
 						<div class="text-right text-xs text-muted-foreground">
-							<p>{bookingSurfaceQuery.data.summary.availableSlotCount} available</p>
+							<p>
+								{bookingSurfaceQuery.data.summary.availableSlotCount}
+								available
+							</p>
 							<p>{bookingSurfaceQuery.data.summary.blockedSlotCount} blocked</p>
 							{#if bookingSurfaceQuery.data.summary.specialPricedSlotCount > 0}
-								<p>{bookingSurfaceQuery.data.summary.specialPricedSlotCount} with special pricing</p>
+								<p>
+									{bookingSurfaceQuery.data.summary.specialPricedSlotCount}
+									with special pricing
+								</p>
 							{/if}
 						</div>
 					{/if}
@@ -257,13 +275,15 @@
 				{:else if bookingSurfaceQuery.data}
 					{#if !bookingSurfaceQuery.data.pricingConfigured}
 						<p class="text-sm text-amber-700">
-							This listing does not have active pricing configured yet, so quotes are unavailable.
+							This listing does not have active pricing configured yet, so
+							quotes are unavailable.
 						</p>
 					{/if}
 
 					{#if bookingSurfaceQuery.data.slots.length === 0}
 						<p class="text-sm text-muted-foreground">
-							No slot candidates are available for the selected date and duration.
+							No slot candidates are available for the selected date and
+							duration.
 						</p>
 					{:else}
 						<div class="grid gap-2 sm:grid-cols-2">
@@ -289,7 +309,8 @@
 									<div class="flex items-start justify-between gap-3">
 										<div>
 											<p class="text-sm font-medium">
-												{slot.startsAtLabel} → {slot.endsAtLabel}
+												{slot.startsAtLabel}
+												→ {slot.endsAtLabel}
 											</p>
 											<p class="text-xs text-muted-foreground">
 												{slot.statusLabel}
@@ -316,14 +337,17 @@
 
 									{#if slot.status === "minimum_duration_not_met"}
 										<p class="mt-2 text-xs text-muted-foreground">
-											Minimum duration here is {formatDuration(slot.minimumDurationMinutes)}.
+											Minimum duration here is
+											{formatDuration(slot.minimumDurationMinutes)}.
 										</p>
 									{:else if slot.quote?.discountPreview?.status === "applied"}
 										<p class="mt-2 text-xs text-green-700">
 											Code {slot.quote.discountPreview.code} applied.
 										</p>
 									{:else if slot.status === "blocked" && slot.blockReason}
-										<p class="mt-2 text-xs text-muted-foreground">{slot.blockReason}</p>
+										<p class="mt-2 text-xs text-muted-foreground">
+											{slot.blockReason}
+										</p>
 									{/if}
 								</button>
 							{/each}
@@ -404,12 +428,14 @@
 			</div>
 			{#if appliedDiscountCode}
 				<p class="text-xs text-muted-foreground">
-					Applied code: <span class="font-mono">{appliedDiscountCode.toUpperCase()}</span>
+					Applied code:
+					<span class="font-mono">{appliedDiscountCode.toUpperCase()}</span>
 				</p>
 			{/if}
 			{#if selectedSlot?.quote?.discountPreview?.status === "applied"}
 				<p class="text-xs text-green-700">
-					Code {selectedSlot.quote.discountPreview.code} applied to the selected slot.
+					Code {selectedSlot.quote.discountPreview.code} applied to the selected
+					slot.
 				</p>
 			{:else if selectedSlot?.quote?.discountPreview?.status === "invalid"}
 				<p class="text-xs text-destructive">
@@ -423,11 +449,15 @@
 			<div class="rounded-lg border bg-muted/20 p-4 space-y-2 text-sm">
 				<div class="flex items-center justify-between">
 					<span class="text-muted-foreground">Base</span>
-					<span>{formatMoney(selectedSlot.quote.baseCents, selectedSlot.quote.currency)}</span>
+					<span
+						>{formatMoney(selectedSlot.quote.baseCents, selectedSlot.quote.currency)}</span
+					>
 				</div>
 				<div class="flex items-center justify-between">
 					<span class="text-muted-foreground">Adjustments</span>
-					<span>{formatMoney(selectedSlot.quote.adjustmentCents, selectedSlot.quote.currency)}</span>
+					<span
+						>{formatMoney(selectedSlot.quote.adjustmentCents, selectedSlot.quote.currency)}</span
+					>
 				</div>
 				<div class="flex items-center justify-between">
 					<span class="text-muted-foreground">Subtotal</span>
@@ -462,7 +492,9 @@
 						)}
 					</span>
 				</div>
-				<div class="flex items-center justify-between border-t pt-2 font-medium">
+				<div
+					class="flex items-center justify-between border-t pt-2 font-medium"
+				>
 					<span>Total</span>
 					<span>
 						{formatMoney(
@@ -476,10 +508,13 @@
 		{/if}
 
 		{#if createdBooking}
-			<div class="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+			<div
+				class="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700"
+			>
 				<p class="font-medium">Booking request submitted</p>
 				<p>
-					Request <span class="font-mono">{createdBooking.id}</span> was created for
+					Request <span class="font-mono">{createdBooking.id}</span> was created
+					for
 					{formatMoney(createdBooking.totalPriceCents, createdBooking.currency)}.
 				</p>
 			</div>
@@ -494,12 +529,16 @@
 
 		{#if !isAuthenticated}
 			<p class="text-xs text-muted-foreground">
-				You can explore slots and live pricing now. Signing in is only required when you send the request.
+				You can explore slots and live pricing now. Signing in is only required
+				when you send the request.
 			</p>
 		{/if}
 	</Card.Content>
 	<Card.Footer class="flex flex-col items-stretch gap-3">
-		<Button onclick={() => void submitBookingRequest()} disabled={!canSubmitBooking}>
+		<Button
+			onclick={() => void submitBookingRequest()}
+			disabled={!canSubmitBooking}
+		>
 			{#if createBooking.isPending}
 				Submitting request...
 			{:else if !isAuthenticated}

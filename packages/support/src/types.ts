@@ -1,33 +1,42 @@
 import type { db } from "@my-app/db";
-import type { supportTicket, supportTicketMessage } from "@my-app/db/schema/support";
+import type {
+	supportTicket,
+	supportTicketMessage,
+} from "@my-app/db/schema/support";
 
 export type Db = typeof db;
 export type SupportTicketRow = typeof supportTicket.$inferSelect;
 export type SupportTicketMessageRow = typeof supportTicketMessage.$inferSelect;
 
 export interface CreateSupportTicketInput {
-	organizationId: string;
 	bookingId?: string;
-	customerUserId?: string;
 	createdByUserId?: string;
-	subject: string;
+	customerUserId?: string;
 	description?: string;
+	organizationId: string;
 	priority?: "low" | "normal" | "high" | "urgent";
 	source?: "manual" | "web" | "telegram" | "avito" | "email" | "api";
+	subject: string;
 }
 
 export interface AddTicketMessageInput {
-	ticketId: string;
-	organizationId: string;
 	authorUserId?: string;
-	channel?: "internal" | "web" | "telegram" | "avito" | "email" | "api";
 	body: string;
+	channel?: "internal" | "web" | "telegram" | "avito" | "email" | "api";
 	isInternal?: boolean;
+	organizationId: string;
+	ticketId: string;
 }
 
 export interface ListTicketsFilter {
-	status?: "open" | "pending_customer" | "pending_operator" | "escalated" | "resolved" | "closed";
 	bookingId?: string;
 	limit?: number;
 	offset?: number;
+	status?:
+		| "open"
+		| "pending_customer"
+		| "pending_operator"
+		| "escalated"
+		| "resolved"
+		| "closed";
 }

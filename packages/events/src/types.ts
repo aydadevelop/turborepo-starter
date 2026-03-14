@@ -9,16 +9,16 @@ export interface DomainEventMap {
 		bookingId: string;
 		contactDetails: Record<string, unknown>;
 	};
+	"booking:created": {
+		bookingId: string;
+		listingId: string;
+		customerId: string;
+	};
 	"booking:schedule-updated": {
 		bookingId: string;
 		startsAt: string;
 		endsAt: string;
 		timezone: string | null;
-	};
-	"booking:created": {
-		bookingId: string;
-		listingId: string;
-		customerId: string;
 	};
 	"calendar:organization-connection-readiness-changed": {
 		connectionId: string;

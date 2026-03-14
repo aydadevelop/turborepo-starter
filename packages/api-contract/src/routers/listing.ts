@@ -166,7 +166,8 @@ const listListingsInputSchema = z.object({
 		.optional(),
 });
 
-const listListingsOutputSchema = createCollectionOutputSchema(listingOutputSchema);
+const listListingsOutputSchema =
+	createCollectionOutputSchema(listingOutputSchema);
 
 const listAvailableTypesOutputSchema = z.object({
 	defaultValue: z.string().nullable(),

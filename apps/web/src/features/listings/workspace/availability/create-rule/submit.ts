@@ -6,7 +6,9 @@ import type { CreateAvailabilityRuleFormValues } from "./types";
 export type CreateAvailabilityRuleInput = OrpcInputs["availability"]["addRule"];
 
 function parseMinute(time: string): number {
-	const [hours, minutes] = time.split(":").map((part) => Number.parseInt(part, 10));
+	const [hours, minutes] = time
+		.split(":")
+		.map((part) => Number.parseInt(part, 10));
 	return hours * 60 + minutes;
 }
 

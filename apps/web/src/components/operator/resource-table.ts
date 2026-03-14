@@ -1,33 +1,39 @@
 import {
-	createColumnHelper,
-	createTable,
-	getCoreRowModel,
-	type ColumnDef,
-	type RowData,
+	createColumnHelper as createColumnHelperBase,
+	createTable as createTableBase,
+	getCoreRowModel as getCoreRowModelBase,
+	type ColumnDef as TanStackColumnDef,
+	type RowData as TanStackRowData,
 } from "@tanstack/table-core";
 import type { Component } from "svelte";
 
-export type ResourceTableColumnMeta = {
-	headerClass?: string;
-	cellClass?: string;
+export interface ResourceTableColumnMeta {
 	align?: "left" | "center" | "right";
-};
+	cellClass?: string;
+	headerClass?: string;
+}
+
+export type RowData = TanStackRowData;
+export type ColumnDef<
+	TData extends RowData = RowData,
+	TValue = unknown,
+> = TanStackColumnDef<TData, TValue>;
 
 export type ResourceTableRowAttributes = Record<
 	string,
 	string | number | boolean | undefined
 >;
 
-export type ResourceRenderedComponent<
+export interface ResourceRenderedComponent<
 	Props extends Record<string, unknown> = Record<string, unknown>,
-> = {
+> {
+	component: Component<Props>;
 	kind: "component";
-	component: Component<any>;
 	props: Props;
-};
+}
 
 export const renderComponent = <Props extends Record<string, unknown>>(
-	component: Component<any>,
+	component: Component<Props>,
 	props: Props
 ): ResourceRenderedComponent<Props> => ({
 	kind: "component",
@@ -43,5 +49,6 @@ export const isRenderedComponent = (
 	"kind" in value &&
 	(value as { kind?: unknown }).kind === "component";
 
-export { createColumnHelper, createTable, getCoreRowModel };
-export type { ColumnDef, RowData };
+export const createColumnHelper = createColumnHelperBase;
+export const createTable = createTableBase;
+export const getCoreRowModel = getCoreRowModelBase;

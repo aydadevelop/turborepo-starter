@@ -35,12 +35,14 @@ describe("Schema governance", () => {
 	it("keeps marketplace.ts as a stable barrel over bounded-context modules", () => {
 		const marketplaceBarrel = readFileSync(
 			path.join(schemaDir, "marketplace.ts"),
-			"utf8",
+			"utf8"
 		);
 
-		expect(marketplaceBarrel).toContain('export * from "./marketplace/shared";');
 		expect(marketplaceBarrel).toContain(
-			'export * from "./marketplace/bookings";',
+			'export * from "./marketplace/shared";'
+		);
+		expect(marketplaceBarrel).toContain(
+			'export * from "./marketplace/bookings";'
 		);
 		expect(marketplaceBarrel).not.toContain("pgTable(");
 	});

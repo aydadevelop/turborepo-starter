@@ -58,13 +58,23 @@ vi.mock("$lib/orpc", () => ({
 				},
 				listMembers: {
 					queryOptions: () => ({
-						queryKey: ["admin", "organizations", "members", mockState.params.id],
+						queryKey: [
+							"admin",
+							"organizations",
+							"members",
+							mockState.params.id,
+						],
 						queryFn: async () => mockState.members,
 					}),
 				},
 				listInvitations: {
 					queryOptions: () => ({
-						queryKey: ["admin", "organizations", "invitations", mockState.params.id],
+						queryKey: [
+							"admin",
+							"organizations",
+							"invitations",
+							mockState.params.id,
+						],
 						queryFn: async () => mockState.invitations,
 					}),
 				},
@@ -84,7 +94,9 @@ test("renders organization members and invitations through the shared admin surf
 		.toBeVisible();
 	await page.getByRole("tab", { name: "Invitations (1)" }).click();
 	await expect
-		.element(page.getByRole("cell", { name: "captain@example.com", exact: true }))
+		.element(
+			page.getByRole("cell", { name: "captain@example.com", exact: true })
+		)
 		.toBeVisible();
 	await expect(document.body).toMatchScreenshot("organization-detail-screen");
 });

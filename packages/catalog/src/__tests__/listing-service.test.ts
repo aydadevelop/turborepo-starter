@@ -576,8 +576,14 @@ describe("listListings", () => {
 
 	it("applies search and sort to the listing collection", async () => {
 		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
-		await createListing(makeInput({ slug: "sunset-cruise", name: "Sunset Cruise" }), db);
-		await createListing(makeInput({ slug: "harbor-tour", name: "Harbor Tour" }), db);
+		await createListing(
+			makeInput({ slug: "sunset-cruise", name: "Sunset Cruise" }),
+			db
+		);
+		await createListing(
+			makeInput({ slug: "harbor-tour", name: "Harbor Tour" }),
+			db
+		);
 
 		const results = await listListings(
 			{

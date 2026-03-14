@@ -11,15 +11,23 @@ import {
 import { timestamps } from "./columns";
 
 export const workflowStatusValues = ["running", "completed", "failed"] as const;
-export const workflowStatusEnum = pgEnum("workflow_status", workflowStatusValues);
+export const workflowStatusEnum = pgEnum(
+	"workflow_status",
+	workflowStatusValues
+);
 
-export const workflowStepStatusValues = ["running", "completed", "failed"] as const;
-export const workflowStepStatusEnum = pgEnum("workflow_step_status", workflowStepStatusValues);
+export const workflowStepStatusValues = [
+	"running",
+	"completed",
+	"failed",
+] as const;
+export const workflowStepStatusEnum = pgEnum(
+	"workflow_step_status",
+	workflowStepStatusValues
+);
 
 export const workflowExecution = pgTable("workflow_execution", {
-	id: text("id")
-		.primaryKey()
-		.default(sql`gen_random_uuid()`),
+	id: text("id").primaryKey().default(sql`gen_random_uuid()`),
 	workflowName: text("workflow_name").notNull(),
 	idempotencyKey: text("idempotency_key").notNull().unique(),
 	status: workflowStatusEnum("status").notNull().default("running"),
@@ -33,9 +41,7 @@ export const workflowExecution = pgTable("workflow_execution", {
 export const workflowStepLog = pgTable(
 	"workflow_step_log",
 	{
-		id: text("id")
-			.primaryKey()
-			.default(sql`gen_random_uuid()`),
+		id: text("id").primaryKey().default(sql`gen_random_uuid()`),
 		executionId: text("execution_id")
 			.notNull()
 			.references(() => workflowExecution.id, { onDelete: "cascade" }),
@@ -52,5 +58,5 @@ export const workflowStepLog = pgTable(
 			mode: "date",
 		}),
 	},
-	(table) => [index("workflow_step_log_ix_execution_id").on(table.executionId)],
+	(table) => [index("workflow_step_log_ix_execution_id").on(table.executionId)]
 );

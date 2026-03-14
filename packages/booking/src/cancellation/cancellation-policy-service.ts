@@ -6,7 +6,10 @@ import {
 	defaultBookingCancellationPolicyProfile,
 } from "./policy-templates";
 
-export type { BookingCancellationEvidence, BookingCancellationPolicyProfile };
+export type {
+	BookingCancellationEvidence,
+	BookingCancellationPolicyProfile,
+} from "./policy-templates";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 
@@ -21,39 +24,39 @@ type CancellationPolicyCode =
 type CancellationPolicySource = "default_profile" | "reason_override";
 
 export interface CancellationPolicyInput {
-	bookingId: string;
-	organizationId: string;
-	startsAt: Date;
-	endsAt: Date;
-	capturedAmountCents: number;
 	alreadyRefundedCents: number;
+	bookingId: string;
+	capturedAmountCents: number;
+	endsAt: Date;
+	evidence?: BookingCancellationEvidence[];
 	/** The actor initiating the cancellation. */
 	initiatorRole: "customer" | "owner" | "system";
-	reasonCode?: BookingCancellationReasonCode;
-	evidence?: BookingCancellationEvidence[];
+	/** Defaults to `new Date()` if not provided. */
+	now?: Date;
+	organizationId: string;
 	/**
 	 * Optional policy profile override. When omitted, the default profile is used.
 	 * Callers should load the organization's profile and pass it here.
 	 */
 	policyProfile?: BookingCancellationPolicyProfile;
-	/** Defaults to `new Date()` if not provided. */
-	now?: Date;
+	reasonCode?: BookingCancellationReasonCode;
+	startsAt: Date;
 }
 
 export interface CancellationPolicyDecision {
-	bookingId: string;
 	actor: "customer" | "owner" | "system";
+	alreadyRefundedCents: number;
+	bookingId: string;
+	capturedAmountCents: number;
+	hoursUntilStart: number;
 	policyCode: CancellationPolicyCode;
 	policyLabel: string;
 	policySource: CancellationPolicySource;
-	refundPercent: number;
-	suggestedRefundCents: number;
-	hoursUntilStart: number;
-	capturedAmountCents: number;
-	alreadyRefundedCents: number;
-	refundableBaseCents: number;
 	reasonCode?: BookingCancellationReasonCode;
 	reasonLabel?: string;
+	refundableBaseCents: number;
+	refundPercent: number;
+	suggestedRefundCents: number;
 }
 
 // ─── Pure helpers ──────────────────────────────────────────────────────────
@@ -69,12 +72,18 @@ const resolveDefaultPolicyByActor = (params: {
 	now: Date;
 	bookingStartsAt: Date;
 	policyProfile: BookingCancellationPolicyProfile;
-}): { policyCode: CancellationPolicyCode; policyLabel: string; refundPercent: number } => {
+}): {
+	policyCode: CancellationPolicyCode;
+	policyLabel: string;
+	refundPercent: number;
+} => {
 	if (params.actor === "owner") {
 		return {
 			policyCode: "owner_default_refund",
 			policyLabel: "Owner cancellation policy",
-			refundPercent: clampPercent(params.policyProfile.owner.defaultRefundPercent),
+			refundPercent: clampPercent(
+				params.policyProfile.owner.defaultRefundPercent
+			),
 		};
 	}
 
@@ -91,7 +100,10 @@ const resolveDefaultPolicyByActor = (params: {
 	}
 
 	// customer
-	if (params.hoursUntilStart >= params.policyProfile.customer.fullRefundHoursBeforeStart) {
+	if (
+		params.hoursUntilStart >=
+		params.policyProfile.customer.fullRefundHoursBeforeStart
+	) {
 		return {
 			policyCode: "customer_early_full_refund",
 			policyLabel: "Customer early cancellation",
@@ -99,18 +111,25 @@ const resolveDefaultPolicyByActor = (params: {
 		};
 	}
 
-	if (params.hoursUntilStart >= params.policyProfile.customer.partialRefundHoursBeforeStart) {
+	if (
+		params.hoursUntilStart >=
+		params.policyProfile.customer.partialRefundHoursBeforeStart
+	) {
 		return {
 			policyCode: "customer_standard_partial_refund",
 			policyLabel: "Customer standard cancellation",
-			refundPercent: clampPercent(params.policyProfile.customer.partialRefundPercent),
+			refundPercent: clampPercent(
+				params.policyProfile.customer.partialRefundPercent
+			),
 		};
 	}
 
 	return {
 		policyCode: "customer_late_refund",
 		policyLabel: "Customer late cancellation",
-		refundPercent: clampPercent(params.policyProfile.customer.lateRefundPercent),
+		refundPercent: clampPercent(
+			params.policyProfile.customer.lateRefundPercent
+		),
 	};
 };
 
@@ -119,18 +138,20 @@ const resolveReasonConfig = (params: {
 	reasonCode?: BookingCancellationReasonCode;
 	evidence?: BookingCancellationEvidence[];
 }) => {
-	if (!params.reasonCode) return null;
+	if (!params.reasonCode) {
+		return null;
+	}
 
 	const reasonConfig = bookingCancellationReasonCatalog[params.reasonCode];
 	if (!reasonConfig.allowedActors.includes(params.actor)) {
 		throw new Error(
-			`CANCELLATION_REASON_NOT_ALLOWED: reason ${params.reasonCode} is not allowed for actor ${params.actor}`,
+			`CANCELLATION_REASON_NOT_ALLOWED: reason ${params.reasonCode} is not allowed for actor ${params.actor}`
 		);
 	}
 
 	if (reasonConfig.requiresEvidence && (params.evidence?.length ?? 0) === 0) {
 		throw new Error(
-			`CANCELLATION_REASON_REQUIRES_EVIDENCE: reason ${params.reasonCode} requires evidence`,
+			`CANCELLATION_REASON_REQUIRES_EVIDENCE: reason ${params.reasonCode} requires evidence`
 		);
 	}
 
@@ -144,13 +165,18 @@ const resolveReasonConfig = (params: {
  * constructing the correct policy profile before calling this function.
  */
 export function evaluateCancellationPolicy(
-	input: CancellationPolicyInput,
+	input: CancellationPolicyInput
 ): CancellationPolicyDecision {
 	const now = input.now ?? new Date();
-	const policyProfile = input.policyProfile ?? defaultBookingCancellationPolicyProfile;
+	const policyProfile =
+		input.policyProfile ?? defaultBookingCancellationPolicyProfile;
 
-	const hoursUntilStart = (input.startsAt.getTime() - now.getTime()) / MS_PER_HOUR;
-	const refundableBaseCents = Math.max(input.capturedAmountCents - input.alreadyRefundedCents, 0);
+	const hoursUntilStart =
+		(input.startsAt.getTime() - now.getTime()) / MS_PER_HOUR;
+	const refundableBaseCents = Math.max(
+		input.capturedAmountCents - input.alreadyRefundedCents,
+		0
+	);
 
 	const defaultPolicy = resolveDefaultPolicyByActor({
 		actor: input.initiatorRole,
@@ -166,11 +192,14 @@ export function evaluateCancellationPolicy(
 		evidence: input.evidence,
 	});
 
-	const reasonOverridePercent = reasonConfig?.refundPercentOverrideByActor?.[input.initiatorRole];
-	const refundPercent = clampPercent(reasonOverridePercent ?? defaultPolicy.refundPercent);
+	const reasonOverridePercent =
+		reasonConfig?.refundPercentOverrideByActor?.[input.initiatorRole];
+	const refundPercent = clampPercent(
+		reasonOverridePercent ?? defaultPolicy.refundPercent
+	);
 	const suggestedRefundCents = Math.min(
 		refundableBaseCents,
-		roundDownPercent(refundableBaseCents, refundPercent),
+		roundDownPercent(refundableBaseCents, refundPercent)
 	);
 
 	return {
@@ -181,7 +210,10 @@ export function evaluateCancellationPolicy(
 				? defaultPolicy.policyCode
 				: "reason_override_refund",
 		policyLabel: reasonConfig?.label ?? defaultPolicy.policyLabel,
-		policySource: reasonOverridePercent === undefined ? "default_profile" : "reason_override",
+		policySource:
+			reasonOverridePercent === undefined
+				? "default_profile"
+				: "reason_override",
 		refundPercent,
 		suggestedRefundCents,
 		hoursUntilStart: Number(hoursUntilStart.toFixed(2)),

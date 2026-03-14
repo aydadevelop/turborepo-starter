@@ -46,14 +46,10 @@
 			{/if}
 		</DialogHeader>
 
-		<div class="space-y-4 py-2">
-			{@render children()}
-		</div>
+		<div class="space-y-4 py-2">{@render children()}</div>
 
 		{#if footer}
-			<DialogFooter>
-				{@render footer()}
-			</DialogFooter>
+			<DialogFooter> {@render footer()} </DialogFooter>
 		{/if}
 	</DialogContent>
 </DialogRoot>

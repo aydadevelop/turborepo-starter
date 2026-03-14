@@ -5,8 +5,8 @@ import {
 	addTicketMessage,
 	assignTicket,
 	createSupportTicket,
-	getOperatorSupportSummary,
 	getCustomerTicketThread,
+	getOperatorSupportSummary,
 	getOperatorTicketThread,
 	getTicket,
 	listCustomerTickets,
@@ -138,7 +138,7 @@ const getSupportActorContext = (context: {
 	} | null;
 }) => ({
 	actorUserId: context.session?.user?.id ?? undefined,
-	eventBus: context.eventBus ?? new EventBus(context.notificationQueue),
+	eventBus: context.eventBus ?? new EventBus(),
 });
 
 const throwSupportNotFound = (error: unknown) => {
@@ -268,7 +268,7 @@ export const supportRouter = {
 
 	getOperatorSummary: organizationPermissionProcedure({
 		support: ["read"],
-	}).support.getOperatorSummary.handler(async ({ context }) => {
+	}).support.getOperatorSummary.handler(({ context }) => {
 		return getOperatorSupportSummary(
 			context.activeMembership.organizationId,
 			db

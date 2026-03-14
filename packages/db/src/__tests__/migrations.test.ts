@@ -15,6 +15,8 @@ import { describe, expect, it } from "vitest";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.resolve(__dirname, "../../src/migrations");
+const MIGRATION_DDL_RE =
+	/CREATE TABLE|CREATE TYPE|ALTER TABLE|CREATE (UNIQUE )?INDEX/i;
 
 describe("Migration artifacts", () => {
 	it("migrations directory exists and is committed", () => {
@@ -48,15 +50,18 @@ describe("Migration artifacts", () => {
 
 		for (const entry of entries) {
 			const sqlPath = path.join(migrationsDir, entry, "migration.sql");
-			if (!existsSync(sqlPath)) continue;
+			if (!existsSync(sqlPath)) {
+				continue;
+			}
 
 			const content = readFileSync(sqlPath, "utf-8").trim();
-			expect(content.length, `${entry}/migration.sql should not be empty`).toBeGreaterThan(0);
+			expect(
+				content.length,
+				`${entry}/migration.sql should not be empty`
+			).toBeGreaterThan(0);
 			// Must contain at least one DDL statement. Index-only migrations are valid.
 			expect(
-				/CREATE TABLE|CREATE TYPE|ALTER TABLE|CREATE (UNIQUE )?INDEX/i.test(
-					content,
-				),
+				MIGRATION_DDL_RE.test(content),
 				`${entry}/migration.sql should contain DDL statements`
 			).toBe(true);
 		}
@@ -104,7 +109,7 @@ describe("Migration artifacts", () => {
 			})
 			.join("\n");
 
-		expect(allSql).toContain('CREATE EXTENSION IF NOT EXISTS btree_gist;');
+		expect(allSql).toContain("CREATE EXTENSION IF NOT EXISTS btree_gist;");
 		expect(allSql).toContain(
 			'ADD CONSTRAINT "booking_exclude_active_listing_overlap"'
 		);

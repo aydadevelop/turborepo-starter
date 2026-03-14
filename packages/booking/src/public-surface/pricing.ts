@@ -44,9 +44,12 @@ export const resolveSlotQuote = (params: {
 			endsAt: params.endsAt,
 			passengers: params.passengers,
 		},
-		params.pricingContext,
+		params.pricingContext
 	);
-	const discountPreview = previewPreparedPromotion(params.promotionContext, quote);
+	const discountPreview = previewPreparedPromotion(
+		params.promotionContext,
+		quote
+	);
 
 	return toPublicQuote({
 		quote,

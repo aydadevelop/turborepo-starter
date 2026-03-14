@@ -102,11 +102,11 @@ export const listingAvailabilityRule = pgTable(
 		),
 		check(
 			"listing_availability_rule_ck_day_of_week",
-			sql`${table.dayOfWeek} between 0 and 6`,
+			sql`${table.dayOfWeek} between 0 and 6`
 		),
 		check(
 			"listing_availability_rule_ck_minute_range",
-			sql`${table.startMinute} >= 0 and ${table.startMinute} < 1440 and ${table.endMinute} > ${table.startMinute} and ${table.endMinute} <= 1440`,
+			sql`${table.startMinute} >= 0 and ${table.startMinute} < 1440 and ${table.endMinute} > ${table.startMinute} and ${table.endMinute} <= 1440`
 		),
 	]
 );
@@ -148,7 +148,7 @@ export const listingAvailabilityException = pgTable(
 					and ${table.endMinute} > ${table.startMinute}
 					and ${table.endMinute} <= 1440
 				)
-			)`,
+			)`
 		),
 	]
 );
@@ -185,13 +185,13 @@ export const listingAvailabilityBlock = pgTable(
 	(table) => [
 		index("listing_availability_block_ix_listing_id").on(table.listingId),
 		index("listing_availability_block_ix_calendar_connection_id").on(
-			table.calendarConnectionId,
+			table.calendarConnectionId
 		),
 		index("listing_availability_block_ix_starts_at").on(table.startsAt),
 		index("listing_availability_block_ix_source").on(table.source),
 		check(
 			"listing_availability_block_ck_window",
-			sql`${table.endsAt} > ${table.startsAt}`,
+			sql`${table.endsAt} > ${table.startsAt}`
 		),
 	]
 );
@@ -217,11 +217,11 @@ export const listingMinimumDurationRule = pgTable(
 		index("listing_minimum_duration_rule_ix_listing_id").on(table.listingId),
 		check(
 			"listing_minimum_duration_rule_ck_time_bounds",
-			sql`${table.startHour} between 0 and 23 and ${table.endHour} between 0 and 23 and ${table.startMinute} between 0 and 59 and ${table.endMinute} between 0 and 59`,
+			sql`${table.startHour} between 0 and 23 and ${table.endHour} between 0 and 23 and ${table.startMinute} between 0 and 59 and ${table.endMinute} between 0 and 59`
 		),
 		check(
 			"listing_minimum_duration_rule_ck_positive_duration",
-			sql`${table.minimumDurationMinutes} > 0 and ((${table.endHour} * 60) + ${table.endMinute}) > ((${table.startHour} * 60) + ${table.startMinute})`,
+			sql`${table.minimumDurationMinutes} > 0 and ((${table.endHour} * 60) + ${table.endMinute}) > ((${table.startHour} * 60) + ${table.startMinute})`
 		),
 	]
 );
@@ -238,10 +238,9 @@ export const organizationCalendarAccount = pgTable(
 		externalAccountId: text("external_account_id").notNull(),
 		accountEmail: text("account_email"),
 		displayName: text("display_name"),
-		status: calendarAccountStatusEnum("status")
-			.notNull()
-			.default("connected"),
-		providerMetadata: jsonb("provider_metadata").$type<Record<string, unknown>>(),
+		status: calendarAccountStatusEnum("status").notNull().default("connected"),
+		providerMetadata:
+			jsonb("provider_metadata").$type<Record<string, unknown>>(),
 		lastSyncedAt: timestamp("last_synced_at", {
 			withTimezone: true,
 			mode: "date",
@@ -369,9 +368,7 @@ export const listingCalendarConnection = pgTable(
 		index("listing_calendar_connection_ix_sync_status").on(table.syncStatus),
 		uniqueIndex("listing_calendar_connection_uq_primary_listing")
 			.on(table.listingId)
-			.where(
-				sql`${table.isPrimary} = true and ${table.isActive} = true`,
-			),
+			.where(sql`${table.isPrimary} = true and ${table.isActive} = true`),
 	]
 );
 

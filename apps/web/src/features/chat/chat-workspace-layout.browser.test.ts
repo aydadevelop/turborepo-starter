@@ -63,7 +63,8 @@ import ChatWorkspaceLayout from "./ChatWorkspaceLayout.svelte";
 
 test("renders the chat workspace layout with a loaded-state screenshot", async () => {
 	const children = createRawSnippet(() => ({
-		render: () => '<div class="p-6" data-testid="chat-layout-child">Select a chat</div>',
+		render: () =>
+			'<div class="p-6" data-testid="chat-layout-child">Select a chat</div>',
 	}));
 
 	renderWithQueryClient(ChatWorkspaceLayout, { children });

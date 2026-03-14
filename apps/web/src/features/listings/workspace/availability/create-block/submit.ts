@@ -3,7 +3,8 @@ import type { OrpcInputs } from "$lib/orpc-types";
 
 import type { CreateAvailabilityBlockFormValues } from "./types";
 
-export type CreateAvailabilityBlockInput = OrpcInputs["availability"]["addBlock"];
+export type CreateAvailabilityBlockInput =
+	OrpcInputs["availability"]["addBlock"];
 
 export function buildCreateAvailabilityBlockInput(
 	listingId: string,

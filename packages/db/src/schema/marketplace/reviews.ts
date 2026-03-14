@@ -50,12 +50,12 @@ export const listingReview = pgTable(
 	(table) => [
 		index("listing_review_ix_listing_id_status").on(
 			table.listingId,
-			table.status,
+			table.status
 		),
 		index("listing_review_ix_organization_id").on(table.organizationId),
 		index("listing_review_ix_reviewer_user_id").on(table.reviewerUserId),
 		uniqueIndex("listing_review_uq_booking_id").on(table.bookingId),
-	],
+	]
 );
 
 export const listingReviewResponse = pgTable(
@@ -73,5 +73,5 @@ export const listingReviewResponse = pgTable(
 	},
 	(table) => [
 		uniqueIndex("listing_review_response_uq_review_id").on(table.reviewId),
-	],
+	]
 );
