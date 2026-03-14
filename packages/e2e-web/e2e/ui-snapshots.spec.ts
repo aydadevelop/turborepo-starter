@@ -1,5 +1,18 @@
 import { expect, test } from "@playwright/test";
 
+const settleVisualState = async (
+	page: import("@playwright/test").Page,
+): Promise<void> => {
+	await page.waitForLoadState("networkidle");
+	await page.evaluate(async () => {
+		if ("fonts" in document) {
+			await document.fonts.ready;
+		}
+	});
+	await page.evaluate(() => window.scrollTo(0, 0));
+	await page.waitForTimeout(150);
+};
+
 /**
  * Visual UI snapshot tests for public pages.
  * These run automatically after every agent turn via the Copilot agentStop hook.
@@ -12,14 +25,17 @@ import { expect, test } from "@playwright/test";
 test.describe("UI snapshots — public pages", () => {
 	test("landing page", async ({ page }) => {
 		await page.goto("/");
-		// Wait for any initial animations / hydration to settle
-		await page.waitForLoadState("networkidle");
-		await expect(page).toHaveScreenshot("landing.png", { fullPage: true });
+		await settleVisualState(page);
+		await expect(page).toHaveScreenshot("landing.png", {
+			fullPage: true,
+			animations: "disabled",
+			caret: "hide",
+		});
 	});
 
 	test("login page", async ({ page }) => {
 		await page.goto("/login");
-		await page.waitForLoadState("networkidle");
+		await settleVisualState(page);
 		await expect(page.getByTestId("login-heading")).toBeVisible();
 		await expect(page.getByTestId("login-email-input")).toBeVisible();
 	});
