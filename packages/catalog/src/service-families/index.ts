@@ -11,7 +11,6 @@ import type {
 import { boatRentServiceFamilyPolicy } from "./boat-rent";
 import { excursionsServiceFamilyPolicy } from "./excursions";
 
-// biome-ignore lint/performance/noBarrelFile: Internal service-family aggregator re-exports policy helpers for catalog modules.
 export {
 	boatRentServiceFamilyPolicy,
 	normalizeBoatRentProfileInput,
@@ -32,13 +31,13 @@ const SERVICE_FAMILY_POLICIES: Record<
 };
 
 export function getServiceFamilyPolicy(
-	serviceFamily: ListingServiceFamily
+	serviceFamily: ListingServiceFamily,
 ): ListingServiceFamilyPolicy {
 	return SERVICE_FAMILY_POLICIES[serviceFamily];
 }
 
 export function getEmptyBoatRentProfileState(
-	listingId: string
+	listingId: string,
 ): ListingBoatRentProfileState {
 	return {
 		listingId,
@@ -53,7 +52,7 @@ export function getEmptyBoatRentProfileState(
 }
 
 export function getEmptyExcursionProfileState(
-	listingId: string
+	listingId: string,
 ): ListingExcursionProfileState {
 	return {
 		listingId,

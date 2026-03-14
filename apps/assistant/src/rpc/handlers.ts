@@ -19,7 +19,7 @@ const rpcHandler = new RPCHandler(assistantRouter, {
 
 const createServerClient = (
 	cookie: string,
-	fetchFn: typeof fetch
+	fetchFn: typeof fetch,
 ): AppContractClient => {
 	const link = new RPCLink({
 		url: `${env.SERVER_URL}/rpc`,

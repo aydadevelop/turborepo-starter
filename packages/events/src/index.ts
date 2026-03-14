@@ -1,4 +1,3 @@
-// biome-ignore lint/performance/noBarrelFile: Package-level events entrypoint re-exports supported event APIs.
 export {
 	clearEventPushers,
 	EventBus,

@@ -66,7 +66,7 @@ describe.skipIf(!hasContractEnv)("s3 storage provider contract", () => {
 		expect(signedUpload?.headers?.["content-type"]).toBe("text/plain");
 		if (!signedUpload) {
 			throw new Error(
-				"Expected getSignedUploadUrl() to return a signed upload."
+				"Expected getSignedUploadUrl() to return a signed upload.",
 			);
 		}
 

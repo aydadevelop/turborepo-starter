@@ -14,7 +14,7 @@ type Db = typeof defaultDb;
 
 const mapEventToNotificationInput = async (
 	event: DomainEvent,
-	db: Db
+	db: Db,
 ): Promise<EmitNotificationEventInput | null> => {
 	switch (event.type) {
 		case "booking:confirmed":
@@ -62,7 +62,7 @@ const mapEventToNotificationInput = async (
 
 export const registerNotificationEventPusher = (
 	queue?: NotificationQueueProducer,
-	db?: Db
+	db?: Db,
 ): void => {
 	const resolvedDb = db ?? defaultDb;
 	registerEventPusher(async (event) => {

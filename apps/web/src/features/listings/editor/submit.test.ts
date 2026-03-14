@@ -69,7 +69,7 @@ describe("listing editor submit helpers", () => {
 			{
 				mode: "create",
 				listingTypeOptions,
-			}
+			},
 		);
 
 		expect(result).toEqual({

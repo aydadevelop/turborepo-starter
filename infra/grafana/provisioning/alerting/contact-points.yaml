@@ -19,7 +19,7 @@ contactPoints:
         type: telegram
         settings:
           bottoken: ${GRAFANA_TELEGRAM_BOT_TOKEN}
-          chatid: "-5037202969"   # dev group: "grafana logs" — update in .env too
+          chatid: "-5037202969" # dev group: "grafana logs" — update in .env too
           message: |
             🚨 *{{ .CommonLabels.alertname }}*
             Status: {{ .Status | toUpper }}
@@ -36,7 +36,7 @@ contactPoints:
         type: telegram
         settings:
           bottoken: ${GRAFANA_TELEGRAM_BOT_TOKEN}
-          chatid: "-4990956985"   # prod group: "grafana_errors_prod" — update in .env too
+          chatid: "-4990956985" # prod group: "grafana_errors_prod" — update in .env too
           message: |
             🚨 *{{ .CommonLabels.alertname }}*
             Status: {{ .Status | toUpper }}

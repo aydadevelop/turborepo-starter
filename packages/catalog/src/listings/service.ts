@@ -28,7 +28,7 @@ import {
 
 async function assertListingTypeAvailableForOrganization(
 	input: Pick<CreateListingInput, "organizationId" | "listingTypeSlug">,
-	db: Db
+	db: Db,
 ): Promise<NonNullable<Awaited<ReturnType<typeof findListingTypeBySlug>>>> {
 	const [typeRow, hasOrgSpecificTypes, orgTypeRow] = await Promise.all([
 		findListingTypeBySlug(input.listingTypeSlug, db),
@@ -36,7 +36,7 @@ async function assertListingTypeAvailableForOrganization(
 		findOrganizationListingType(
 			input.organizationId,
 			input.listingTypeSlug,
-			db
+			db,
 		),
 	]);
 
@@ -59,7 +59,7 @@ function assertServiceFamilyDetailsCompatibility(
 	>["serviceFamily"],
 	input:
 		| Pick<CreateListingInput, "serviceFamilyDetails">
-		| Pick<UpdateListingInput, "serviceFamilyDetails">
+		| Pick<UpdateListingInput, "serviceFamilyDetails">,
 ) {
 	if (serviceFamily !== "boat_rent" && input.serviceFamilyDetails?.boatRent) {
 		throw new CatalogError(CATALOG_ERROR_CODES.listingFamilyDetailsMismatch);
@@ -71,7 +71,7 @@ function assertServiceFamilyDetailsCompatibility(
 
 export async function createListing(
 	input: CreateListingInput,
-	db: Db
+	db: Db,
 ): Promise<ListingRow> {
 	const typeRow = await assertListingTypeAvailableForOrganization(input, db);
 	assertServiceFamilyDetailsCompatibility(typeRow.serviceFamily, input);
@@ -92,7 +92,7 @@ export async function createListing(
 					status: "draft",
 					isActive: true,
 				},
-				transactionDb
+				transactionDb,
 			);
 
 			if (typeRow.serviceFamily === "boat_rent") {
@@ -102,7 +102,7 @@ export async function createListing(
 						organizationId: row.organizationId,
 						profile: input.serviceFamilyDetails?.boatRent,
 					},
-					transactionDb
+					transactionDb,
 				);
 			}
 			if (typeRow.serviceFamily === "excursions") {
@@ -112,7 +112,7 @@ export async function createListing(
 						organizationId: row.organizationId,
 						profile: input.serviceFamilyDetails?.excursion,
 					},
-					transactionDb
+					transactionDb,
 				);
 			}
 
@@ -125,12 +125,12 @@ export async function createListing(
 
 export async function updateListing(
 	input: UpdateListingInput,
-	db: Db
+	db: Db,
 ): Promise<ListingRow> {
 	const current = await findListingForOrganization(
 		input.id,
 		input.organizationId,
-		db
+		db,
 	);
 	if (!current) {
 		throw new CatalogError(CATALOG_ERROR_CODES.notFound);
@@ -175,7 +175,7 @@ export async function updateListing(
 					organizationId: updated.organizationId,
 					profile: input.serviceFamilyDetails.boatRent,
 				},
-				transactionDb
+				transactionDb,
 			);
 		}
 		if (typeRow.serviceFamily === "excursions" && input.serviceFamilyDetails) {
@@ -185,7 +185,7 @@ export async function updateListing(
 					organizationId: updated.organizationId,
 					profile: input.serviceFamilyDetails.excursion,
 				},
-				transactionDb
+				transactionDb,
 			);
 		}
 
@@ -201,7 +201,7 @@ export async function updateListing(
 
 export function listListings(
 	input: ListListingsInput,
-	db: Db
+	db: Db,
 ): Promise<ListingCollectionResult> {
 	return listListingsForOrganization(input, db);
 }
@@ -209,7 +209,7 @@ export function listListings(
 export async function getListing(
 	id: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingRow> {
 	const row = await findListingForOrganization(id, organizationId, db);
 	if (!row) {

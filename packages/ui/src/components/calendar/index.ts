@@ -18,23 +18,23 @@ import PrevButton from "./calendar-prev-button.svelte";
 import YearSelect from "./calendar-year-select.svelte";
 
 export {
-	Day,
+	Caption,
 	Cell,
+	Day,
 	Grid,
-	Header,
-	Months,
-	GridRow,
-	Heading,
 	GridBody,
 	GridHead,
+	GridRow,
 	HeadCell,
+	Header,
+	Heading,
+	Month,
+	MonthSelect,
+	Months,
+	Nav,
 	NextButton,
 	PrevButton,
-	Nav,
-	Month,
-	YearSelect,
-	MonthSelect,
-	Caption,
 	//
 	Root as Calendar,
+	YearSelect,
 };

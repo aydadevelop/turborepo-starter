@@ -120,7 +120,7 @@ const sampleNotification = {
 };
 
 const createStubAdapter = (
-	overrides: Partial<PaymentWebhookAdapter> = {}
+	overrides: Partial<PaymentWebhookAdapter> = {},
 ): PaymentWebhookAdapter => ({
 	provider: "cloudpayments",
 	supportedWebhookTypes: new Set([
@@ -159,9 +159,8 @@ const setupLiveWebhookRoute = async () => {
 	}));
 
 	const registry = await import("@my-app/payment/webhooks/registry");
-	const { CloudPaymentsWebhookAdapter } = await import(
-		"@my-app/payment/webhooks/cloudpayments/index"
-	);
+	const { CloudPaymentsWebhookAdapter } =
+		await import("@my-app/payment/webhooks/cloudpayments/index");
 
 	registry.resetPaymentWebhookRegistry();
 	const adapter = new CloudPaymentsWebhookAdapter({
@@ -191,7 +190,7 @@ describe("paymentWebhookRoutes", () => {
 
 		const response = await paymentWebhookRoutes.request(
 			"/api/payments/webhook/unknown/check",
-			{ method: "POST" }
+			{ method: "POST" },
 		);
 
 		expect(response.status).toBe(404);
@@ -205,7 +204,7 @@ describe("paymentWebhookRoutes", () => {
 
 		const response = await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/unknown",
-			{ method: "POST" }
+			{ method: "POST" },
 		);
 
 		expect(response.status).toBe(404);
@@ -213,9 +212,8 @@ describe("paymentWebhookRoutes", () => {
 	});
 
 	it("returns 401 on authentication failure", async () => {
-		const { WebhookAuthError } = await import(
-			"@my-app/payment/webhooks/errors"
-		);
+		const { WebhookAuthError } =
+			await import("@my-app/payment/webhooks/errors");
 		stubAdapter = createStubAdapter({
 			authenticateWebhook: vi.fn(() => {
 				throw new WebhookAuthError("Invalid credentials");
@@ -227,7 +225,7 @@ describe("paymentWebhookRoutes", () => {
 
 		const response = await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/check",
-			{ method: "POST" }
+			{ method: "POST" },
 		);
 
 		expect(response.status).toBe(401);
@@ -235,9 +233,8 @@ describe("paymentWebhookRoutes", () => {
 	});
 
 	it("returns 400 on payload parse failure", async () => {
-		const { WebhookPayloadError } = await import(
-			"@my-app/payment/webhooks/errors"
-		);
+		const { WebhookPayloadError } =
+			await import("@my-app/payment/webhooks/errors");
 		stubAdapter = createStubAdapter({
 			parseWebhookBody: vi
 				.fn()
@@ -249,7 +246,7 @@ describe("paymentWebhookRoutes", () => {
 
 		const response = await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/pay",
-			{ method: "POST" }
+			{ method: "POST" },
 		);
 
 		expect(response.status).toBe(400);
@@ -268,7 +265,7 @@ describe("paymentWebhookRoutes", () => {
 
 		const response = await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/pay",
-			{ method: "POST" }
+			{ method: "POST" },
 		);
 
 		expect(response.status).toBe(400);
@@ -280,11 +277,11 @@ describe("paymentWebhookRoutes", () => {
 
 		await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/check",
-			{ method: "POST" }
+			{ method: "POST" },
 		);
 
 		expect(stubAdapter.authenticateWebhook).toHaveBeenCalledWith(
-			expect.any(Request)
+			expect.any(Request),
 		);
 	});
 
@@ -297,7 +294,7 @@ describe("paymentWebhookRoutes", () => {
 
 		await paymentWebhookRoutes.request(
 			"/api/payments/webhook/cloudpayments/check",
-			{ method: "POST" }
+			{ method: "POST" },
 		);
 
 		expect(spy).toHaveBeenCalledWith("cloudpayments");
@@ -320,7 +317,7 @@ describe("paymentWebhookRoutes live ingress", () => {
 				method: "POST",
 				headers: createBasicAuthHeaders(),
 				body: JSON.stringify(livePayNotification),
-			}
+			},
 		);
 
 		expect(response.status).toBe(200);
@@ -338,7 +335,7 @@ describe("paymentWebhookRoutes live ingress", () => {
 			.select()
 			.from(organizationPaymentConfig)
 			.where(
-				eq(organizationPaymentConfig.webhookEndpointId, WEBHOOK_ENDPOINT_ID)
+				eq(organizationPaymentConfig.webhookEndpointId, WEBHOOK_ENDPOINT_ID),
 			)
 			.limit(1);
 		expect(paymentConfig?.validationStatus).toBe("validated");
@@ -356,7 +353,7 @@ describe("paymentWebhookRoutes live ingress", () => {
 				method: "POST",
 				headers: createBasicAuthHeaders(),
 				body: JSON.stringify(livePayNotification),
-			}
+			},
 		);
 
 		expect(response.status).toBe(400);
@@ -376,7 +373,7 @@ describe("paymentWebhookRoutes live ingress", () => {
 				method: "POST",
 				headers: createBasicAuthHeaders(),
 				body: JSON.stringify(livePayNotification),
-			}
+			},
 		);
 		const secondResponse = await paymentWebhookRoutes.request(
 			`/api/payments/webhook/cloudpayments/pay?endpointId=${WEBHOOK_ENDPOINT_ID}`,
@@ -384,7 +381,7 @@ describe("paymentWebhookRoutes live ingress", () => {
 				method: "POST",
 				headers: createBasicAuthHeaders(),
 				body: JSON.stringify(livePayNotification),
-			}
+			},
 		);
 
 		expect(firstResponse.status).toBe(200);
@@ -399,8 +396,8 @@ describe("paymentWebhookRoutes live ingress", () => {
 			.where(
 				eq(
 					paymentWebhookEvent.requestSignature,
-					`${WEBHOOK_ENDPOINT_ID}:pay:${livePayNotification.TransactionId}`
-				)
+					`${WEBHOOK_ENDPOINT_ID}:pay:${livePayNotification.TransactionId}`,
+				),
 			);
 		expect(webhookEvents).toHaveLength(1);
 
@@ -410,8 +407,8 @@ describe("paymentWebhookRoutes live ingress", () => {
 			.where(
 				eq(
 					bookingPaymentAttempt.providerIntentId,
-					String(livePayNotification.TransactionId)
-				)
+					String(livePayNotification.TransactionId),
+				),
 			);
 		expect(paymentAttempts).toHaveLength(1);
 	});

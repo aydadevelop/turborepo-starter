@@ -3,7 +3,7 @@ import type { PricingWorkspaceState } from "$lib/orpc-types";
 import type { CreatePricingProfileFormValues } from "./types";
 
 export function getCreatePricingProfileDefaults(
-	pricing: PricingWorkspaceState | null | undefined
+	pricing: PricingWorkspaceState | null | undefined,
 ): CreatePricingProfileFormValues {
 	return {
 		name: "",

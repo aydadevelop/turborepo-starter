@@ -1,22 +1,20 @@
 {
-  "name": "@my-app/proxy",
-  "private": true,
-  "type": "module",
-  "exports": {
-    ".": "./src/tunnel.ts"
-  },
-  "scripts": {
-    "check-types": "tsc --noEmit -p tsconfig.json",
-    "lint": "cd ../.. && biome check --config-path biome.json packages/proxy",
-    "lint:fix": "cd ../.. && biome check --config-path biome.json packages/proxy --write"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
-    "@my-app/config": "workspace:*",
-    "@ngrok/ngrok": "^1.4.1",
-    "@types/http-proxy": "^1.17.14",
-    "http-proxy": "^1.18.1",
-    "typescript": "^5",
-    "ultracite": "^7.2.3"
-  }
+	"name": "@my-app/proxy",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/tunnel.ts"
+	},
+	"scripts": {
+		"check-types": "tsc --noEmit -p tsconfig.json",
+		"lint": "cd ../.. && oxlint packages/proxy",
+		"lint:fix": "cd ../.. && oxlint --fix packages/proxy"
+	},
+	"devDependencies": {
+		"@my-app/config": "workspace:*",
+		"@ngrok/ngrok": "^1.4.1",
+		"@types/http-proxy": "^1.17.14",
+		"http-proxy": "^1.18.1",
+		"typescript": "^5"
+	}
 }

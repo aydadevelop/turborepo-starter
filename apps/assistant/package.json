@@ -1,36 +1,34 @@
 {
-  "name": "assistant",
-  "type": "module",
-  "main": "src/index.ts",
-  "scripts": {
-    "build": "tsdown",
-    "dev": "bun --watch src/index.ts",
-    "start:test": "bun src/index.ts",
-    "check-types": "tsc -b",
-    "lint": "cd ../.. && biome check --config-path biome.json apps/assistant",
-    "lint:fix": "cd ../.. && biome check --config-path biome.json apps/assistant --write",
-    "test": "vitest run",
-    "test:watch": "vitest --watch"
-  },
-  "dependencies": {
-    "@hono/node-server": "^1.14.4",
-    "@my-app/assistant": "workspace:*",
-    "@my-app/auth": "workspace:*",
-    "@my-app/env": "workspace:*",
-    "@my-app/telemetry": "workspace:*",
-    "@orpc/client": "^1.12.2",
-    "@orpc/server": "^1.12.2",
-    "hono": "^4.8.2"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
-    "@my-app/api-contract": "workspace:*",
-    "@my-app/config": "workspace:*",
-    "@my-app/vitest-config": "workspace:*",
-    "@types/node": "^22.19.11",
-    "tsdown": "^0.21.0",
-    "typescript": "^5",
-    "ultracite": "^7.2.3",
-    "vitest": "^4.0.18"
-  }
+	"name": "assistant",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"build": "tsdown",
+		"dev": "bun --watch src/index.ts",
+		"start:test": "bun src/index.ts",
+		"check-types": "tsc -b",
+		"lint": "cd ../.. && oxlint apps/assistant",
+		"lint:fix": "cd ../.. && oxlint --fix apps/assistant",
+		"test": "vitest run",
+		"test:watch": "vitest --watch"
+	},
+	"dependencies": {
+		"@hono/node-server": "^1.14.4",
+		"@my-app/assistant": "workspace:*",
+		"@my-app/auth": "workspace:*",
+		"@my-app/env": "workspace:*",
+		"@my-app/telemetry": "workspace:*",
+		"@orpc/client": "^1.12.2",
+		"@orpc/server": "^1.12.2",
+		"hono": "^4.8.2"
+	},
+	"devDependencies": {
+		"@my-app/api-contract": "workspace:*",
+		"@my-app/config": "workspace:*",
+		"@my-app/vitest-config": "workspace:*",
+		"@types/node": "^22.19.11",
+		"tsdown": "^0.21.0",
+		"typescript": "^5",
+		"vitest": "^4.0.18"
+	}
 }

@@ -8,7 +8,7 @@ const { serverURL: SERVER_URL } = getPlaywrightRuntimeEnv();
 const signInAndSaveState = async (
 	page: import("@playwright/test").Page,
 	credentials: { email: string; password: string },
-	storagePath: string
+	storagePath: string,
 ) => {
 	// Setup only needs a navigable document before API sign-in; waiting for full
 	// `load` can flake under dev-server warmup.
@@ -23,7 +23,7 @@ const signInAndSaveState = async (
 
 	if (!response.ok()) {
 		throw new Error(
-			`Auth setup: sign-in as ${credentials.email} failed with ${response.status()}`
+			`Auth setup: sign-in as ${credentials.email} failed with ${response.status()}`,
 		);
 	}
 
@@ -38,6 +38,6 @@ setup("authenticate as operator", async ({ page }) => {
 	await signInAndSaveState(
 		page,
 		E2E_BASELINE.operator,
-		"e2e/.auth/operator.json"
+		"e2e/.auth/operator.json",
 	);
 });

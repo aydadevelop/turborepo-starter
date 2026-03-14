@@ -17,7 +17,7 @@ type TableWithIdAndOrg = TableWithId & { organizationId: PgColumn };
  */
 export const insertAndReturn = async <T extends PgTable>(
 	table: T,
-	values: InferInsertModel<T>
+	values: InferInsertModel<T>,
 ): Promise<InferSelectModel<T>> => {
 	const rows = (await db
 		.insert(table)
@@ -40,11 +40,10 @@ export const requireManaged = async <T extends TableWithIdAndOrg>(
 	table: T,
 	id: string,
 	organizationId: string,
-	errorMessage?: string
+	errorMessage?: string,
 ): Promise<InferSelectModel<T>> => {
 	const [row] = await db
 		.select()
-		// biome-ignore lint/suspicious/noExplicitAny: Drizzle requires cast for generic PgTable in .from()
 		.from(table as any)
 		.where(and(eq(table.id, id), eq(table.organizationId, organizationId)))
 		.limit(1);
@@ -68,11 +67,10 @@ export const requireOwned = async <T extends PgTable>(
 	value1: string,
 	column2: PgColumn,
 	value2: string,
-	errorMessage?: string
+	errorMessage?: string,
 ): Promise<InferSelectModel<T>> => {
 	const [row] = await db
 		.select()
-		// biome-ignore lint/suspicious/noExplicitAny: Drizzle requires cast for generic PgTable in .from()
 		.from(table as any)
 		.where(and(eq(column1, value1), eq(column2, value2)))
 		.limit(1);
@@ -91,7 +89,7 @@ export const requireOwned = async <T extends PgTable>(
  * Always includes `updatedAt: new Date()`.
  */
 export const buildUpdatePayload = <T extends Record<string, unknown>>(
-	fields: T
+	fields: T,
 ): Record<string, unknown> => {
 	const sanitized: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(fields)) {

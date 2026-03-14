@@ -26,7 +26,7 @@ export const tasksRouter = {
 				intervalSeconds: input.intervalSeconds,
 				runCount: input.runCount,
 			},
-			context.recurringTaskQueue
+			context.recurringTaskQueue,
 		);
 
 		const startsAt = new Date(Date.now() + input.initialDelaySeconds * 1000);

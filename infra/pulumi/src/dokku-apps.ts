@@ -28,7 +28,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 	constructor(
 		name: string,
 		args: DokkuAppsArgs,
-		opts?: pulumi.ComponentResourceOptions
+		opts?: pulumi.ComponentResourceOptions,
 	) {
 		super("myapp:infra:DokkuApps", name, {}, opts);
 
@@ -46,7 +46,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 				// Re-run on every `pulumi up` so the token stays fresh
 				triggers: [args.ghcrToken],
 			},
-			{ parent: this }
+			{ parent: this },
 		);
 
 		// ── Postgres database ─────────────────────────────────────────────────
@@ -62,7 +62,7 @@ export class DokkuApps extends pulumi.ComponentResource {
         echo "db-ok"
       `,
 			},
-			{ parent: this, protect: true }
+			{ parent: this, protect: true },
 		);
 
 		// ── Global Dokku domain ───────────────────────────────────────────────
@@ -72,7 +72,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 				connection: conn,
 				create: `dokku domains:set-global ${domain}`,
 			},
-			{ parent: this }
+			{ parent: this },
 		);
 
 		// ── Let's Encrypt email ───────────────────────────────────────────────
@@ -82,7 +82,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 				connection: conn,
 				create: `dokku letsencrypt:set --global email admin@${domain}`,
 			},
-			{ parent: this }
+			{ parent: this },
 		);
 
 		// ── Internal Docker network for cross-app communication ─────────────
@@ -95,7 +95,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 				connection: conn,
 				create: `dokku network:create internal 2>/dev/null || true && echo "internal-network-ok"`,
 			},
-			{ parent: this }
+			{ parent: this },
 		);
 
 		// ── App definitions ───────────────────────────────────────────────────
@@ -152,7 +152,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 					connection: conn,
 					create: `dokku apps:create ${app.name} 2>/dev/null || true && echo "created"`,
 				},
-				{ parent: this, dependsOn: [globalDomain] }
+				{ parent: this, dependsOn: [globalDomain] },
 			);
 
 			// Attach to internal network — registers the APP.PROC_TYPE DNS alias
@@ -165,7 +165,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 					connection: conn,
 					create: `dokku network:set ${app.name} attach-post-create internal`,
 				},
-				{ parent: this, dependsOn: [create, internalNetwork] }
+				{ parent: this, dependsOn: [create, internalNetwork] },
 			);
 
 			// Set domain
@@ -175,7 +175,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 					connection: conn,
 					create: `dokku domains:set ${app.name} ${app.domain}`,
 				},
-				{ parent: this, dependsOn: [create] }
+				{ parent: this, dependsOn: [create] },
 			);
 
 			// Set port mapping
@@ -185,7 +185,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 					connection: conn,
 					create: `dokku ports:set ${app.name} http:80:${app.port} https:443:${app.port}`,
 				},
-				{ parent: this, dependsOn: [create] }
+				{ parent: this, dependsOn: [create] },
 			);
 
 			// Set build args (--file is not needed: git:from-image generates its own Dockerfile)
@@ -197,7 +197,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 						? `dokku docker-options:add ${app.name} build "--build-arg APP=${app.buildArg}"`
 						: "true",
 				},
-				{ parent: this, dependsOn: [create] }
+				{ parent: this, dependsOn: [create] },
 			);
 
 			// Install per-app nginx sigil so HTTPS listens on 127.0.0.1:8443 (sslh target)
@@ -226,7 +226,7 @@ export class DokkuApps extends pulumi.ComponentResource {
           echo "sigil-${app.name}-updated"
         `,
 				},
-				{ parent: this, dependsOn: [create, setPort] }
+				{ parent: this, dependsOn: [create, setPort] },
 			);
 
 			// Link Postgres
@@ -236,7 +236,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 					connection: conn,
 					create: `dokku postgres:link myapp-db ${app.name} 2>/dev/null || true`,
 				},
-				{ parent: this, dependsOn: [create, db] }
+				{ parent: this, dependsOn: [create, db] },
 			);
 
 			// Set environment variables
@@ -251,8 +251,8 @@ export class DokkuApps extends pulumi.ComponentResource {
 			const envString = pulumi
 				.all(
 					Object.entries(mergedEnv).map(([k, v]) =>
-						pulumi.output(v).apply((val) => `${k}=${val}`)
-					)
+						pulumi.output(v).apply((val) => `${k}=${val}`),
+					),
 				)
 				.apply((pairs) => pairs.join(" "));
 
@@ -264,7 +264,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 					update: pulumi.interpolate`dokku config:set ${app.name} ${envString}`,
 					triggers: [envString],
 				},
-				{ parent: this, dependsOn: [create] }
+				{ parent: this, dependsOn: [create] },
 			);
 
 			// SSL via Let's Encrypt — depends on installSigil so the cert-issuance nginx
@@ -275,7 +275,7 @@ export class DokkuApps extends pulumi.ComponentResource {
 					connection: conn,
 					create: `dokku letsencrypt:enable ${app.name} 2>/dev/null || true`,
 				},
-				{ parent: this, dependsOn: [setDomain, letsencrypt, installSigil] }
+				{ parent: this, dependsOn: [setDomain, letsencrypt, installSigil] },
 			);
 
 			appResources.push(ssl, attachNetwork);
@@ -289,9 +289,9 @@ export class DokkuApps extends pulumi.ComponentResource {
 			`${name}-letsencrypt-cron`,
 			{
 				connection: conn,
-				create: `dokku letsencrypt:cron-job --add`,
+				create: "dokku letsencrypt:cron-job --add",
 			},
-			{ parent: this, dependsOn: appResources }
+			{ parent: this, dependsOn: appResources },
 		);
 
 		// ── Observability: Loki + Grafana (Docker containers) ─────────────────
@@ -311,7 +311,7 @@ export class DokkuApps extends pulumi.ComponentResource {
         echo "loki-ok"
       `,
 			},
-			{ parent: this }
+			{ parent: this },
 		);
 
 		const grafana = new command.remote.Command(
@@ -336,7 +336,7 @@ export class DokkuApps extends pulumi.ComponentResource {
         echo "grafana-ok"
       `,
 			},
-			{ parent: this, dependsOn: [loki] }
+			{ parent: this, dependsOn: [loki] },
 		);
 
 		// ── smtp4dev (staging mail capture) ───────────────────────────────────
@@ -357,7 +357,7 @@ export class DokkuApps extends pulumi.ComponentResource {
         echo "smtp-ok"
       `,
 			},
-			{ parent: this }
+			{ parent: this },
 		);
 
 		// Get the DATABASE_URL from Dokku

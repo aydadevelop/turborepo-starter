@@ -9,7 +9,7 @@ interface PaymentWebhookEnvironment {
 let configured = false;
 
 export const configurePaymentWebhookAdaptersFromEnv = (
-	environment: PaymentWebhookEnvironment
+	environment: PaymentWebhookEnvironment,
 ) => {
 	if (configured) {
 		return;
@@ -20,7 +20,7 @@ export const configurePaymentWebhookAdaptersFromEnv = (
 
 	if (publicId && apiSecret) {
 		registerPaymentWebhookAdapter(
-			new CloudPaymentsWebhookAdapter({ publicId, apiSecret })
+			new CloudPaymentsWebhookAdapter({ publicId, apiSecret }),
 		);
 	}
 

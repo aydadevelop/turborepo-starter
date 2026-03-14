@@ -1,21 +1,26 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
 import {
 	listing,
 	listingPricingProfile,
 	listingPricingRule,
 } from "@my-app/db/schema/marketplace";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 
 import type { Db, PricingWorkspaceState } from "./types";
 
 async function verifyListingOwnership(
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<void> {
 	const [row] = await db
 		.select({ id: listing.id })
 		.from(listing)
-		.where(and(eq(listing.id, listingId), eq(listing.organizationId, organizationId)))
+		.where(
+			and(
+				eq(listing.id, listingId),
+				eq(listing.organizationId, organizationId),
+			),
+		)
 		.limit(1);
 
 	if (!row) {
@@ -26,7 +31,7 @@ async function verifyListingOwnership(
 export async function getPricingWorkspaceState(
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<PricingWorkspaceState> {
 	await verifyListingOwnership(listingId, organizationId, db);
 
@@ -36,8 +41,8 @@ export async function getPricingWorkspaceState(
 		.where(
 			and(
 				eq(listingPricingProfile.listingId, listingId),
-				isNull(listingPricingProfile.archivedAt)
-			)
+				isNull(listingPricingProfile.archivedAt),
+			),
 		);
 
 	const profileIds = profiles.map((profile) => profile.id);
@@ -50,7 +55,9 @@ export async function getPricingWorkspaceState(
 					.where(inArray(listingPricingRule.pricingProfileId, profileIds));
 
 	const profileRuleSummaries = profiles.map((profile) => {
-		const profileRules = rules.filter((rule) => rule.pricingProfileId === profile.id);
+		const profileRules = rules.filter(
+			(rule) => rule.pricingProfileId === profile.id,
+		);
 		return {
 			profileId: profile.id,
 			totalRuleCount: profileRules.length,

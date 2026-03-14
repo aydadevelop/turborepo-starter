@@ -1,4 +1,3 @@
-// biome-ignore lint/performance/noBarrelFile: Package-level payment entrypoint re-exports supported payment APIs.
 export * from "./adapters/cloudpayments";
 export * from "./payment-service";
 export * from "./provider";

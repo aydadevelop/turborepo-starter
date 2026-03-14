@@ -16,23 +16,23 @@ export const consentContract = {
 					consentVersion: z.string(),
 					consentedAt: z.coerce.date(),
 					isCurrent: z.boolean(),
-				})
+				}),
 			),
 			required: z.array(consentTypeSchema),
 			missing: z.array(consentTypeSchema),
-		})
+		}),
 	),
 
 	accept: oc
 		.input(
 			z.object({
 				consentTypes: z.array(consentTypeSchema).min(1).max(3),
-			})
+			}),
 		)
 		.output(
 			z.object({
 				accepted: z.array(consentTypeSchema),
-			})
+			}),
 		),
 };
 

@@ -11,7 +11,6 @@
 import type { TestDatabase } from "../index";
 import { seedMarketplaceBaselineScenario } from "./scenarios/marketplace-baseline";
 
-// biome-ignore lint/performance/noBarrelFile: Test fixture compatibility entrypoint re-exports shared marketplace fixture helpers.
 export {
 	createMarketplaceFixtureClock,
 	DEFAULT_MARKETPLACE_ANCHOR_DATE,
@@ -25,7 +24,7 @@ export interface MarketplaceFixtureSeedOptions {
 
 export const seedMarketplaceScenario = async (
 	db: TestDatabase,
-	options: MarketplaceFixtureSeedOptions = {}
+	options: MarketplaceFixtureSeedOptions = {},
 ) => {
 	const scenario = await seedMarketplaceBaselineScenario(db, options);
 	return scenario.ids;

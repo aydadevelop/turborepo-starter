@@ -242,7 +242,7 @@ describe("organization onboarding overlay", () => {
 				actorUserId: MODERATOR_USER_ID,
 				note: "Approved after marina details review",
 			},
-			db
+			db,
 		);
 		expect(approved.isApproved).toBe(true);
 		expect(approved.approvedAt).not.toBeNull();
@@ -254,7 +254,7 @@ describe("organization onboarding overlay", () => {
 				actorUserId: MODERATOR_USER_ID,
 				note: "Approval cleared after content change",
 			},
-			db
+			db,
 		);
 		expect(cleared).toEqual({
 			listingId: "overlay-listing-moderation",
@@ -265,7 +265,7 @@ describe("organization onboarding overlay", () => {
 		const audit = await getOrganizationListingModerationAudit(
 			"overlay-listing-moderation",
 			ORG_ID,
-			db
+			db,
 		);
 		expect(audit).toMatchObject([
 			{
@@ -306,7 +306,7 @@ describe("organization onboarding overlay", () => {
 				channelType: "own_site",
 			},
 			WORKFLOW_CONTEXT,
-			db
+			db,
 		);
 
 		expect(published).toEqual({
@@ -320,7 +320,7 @@ describe("organization onboarding overlay", () => {
 			"overlay-listing-distribution",
 			ORG_ID,
 			WORKFLOW_CONTEXT,
-			db
+			db,
 		);
 
 		expect(unpublished).toEqual({

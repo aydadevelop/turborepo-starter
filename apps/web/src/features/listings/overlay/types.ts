@@ -28,16 +28,16 @@ export interface OrganizationOverlayActions {
 		note?: string;
 	}) => boolean | undefined | Promise<boolean | undefined>;
 	onCreateManualOverride: (
-		input: ManualOverrideInput
+		input: ManualOverrideInput,
 	) => boolean | undefined | Promise<boolean | undefined>;
 	onPublishListingToChannel: (
-		input: DistributionActionInput
+		input: DistributionActionInput,
 	) => boolean | undefined | Promise<boolean | undefined>;
 	onResolveManualOverride: (
-		id: string
+		id: string,
 	) => boolean | undefined | Promise<boolean | undefined>;
 	onUnpublishListing: (
-		listingId: string
+		listingId: string,
 	) => boolean | undefined | Promise<boolean | undefined>;
 }
 

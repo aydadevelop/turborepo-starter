@@ -21,7 +21,7 @@ export const createOrgAccountScenario = async (
 		orgName?: string;
 		orgSlug?: string;
 		password?: string;
-	} = {}
+	} = {},
 ): Promise<OrgAccountScenario> => {
 	const password = overrides.password ?? "test-password-123";
 	const user = await testData.createUser({

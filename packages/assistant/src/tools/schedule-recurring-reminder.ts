@@ -3,7 +3,7 @@ import z from "zod";
 import { orpcMutationTool } from "../lib/orpc-tool";
 
 export const createScheduleRecurringReminderTool = (
-	client: AppContractClient
+	client: AppContractClient,
 ) =>
 	orpcMutationTool(
 		z.object({
@@ -18,5 +18,5 @@ export const createScheduleRecurringReminderTool = (
 		async (input) => {
 			const result = await client.tasks.scheduleRecurringReminder(input);
 			return result;
-		}
+		},
 	);

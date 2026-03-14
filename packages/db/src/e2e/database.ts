@@ -33,7 +33,7 @@ export const deriveE2EDatabaseUrl = (connectionString: string): string => {
 };
 
 export const resolvePlaywrightDatabaseUrl = (
-	env: NodeJS.ProcessEnv = process.env
+	env: NodeJS.ProcessEnv = process.env,
 ): string => {
 	if (env.PLAYWRIGHT_DATABASE_URL) {
 		return env.PLAYWRIGHT_DATABASE_URL;
@@ -47,7 +47,7 @@ export const resolvePlaywrightDatabaseUrl = (
 };
 
 export const isLikelySharedLocalDevDatabase = (
-	connectionString: string
+	connectionString: string,
 ): boolean => {
 	const parsed = new URL(connectionString);
 	const port = parsed.port ? Number(parsed.port) : 5432;
@@ -61,7 +61,7 @@ export const isLikelySharedLocalDevDatabase = (
 
 export const assertSafeE2EDatabaseUrl = (
 	connectionString: string,
-	env: NodeJS.ProcessEnv = process.env
+	env: NodeJS.ProcessEnv = process.env,
 ): string => {
 	if (env[E2E_UNSAFE_ALLOW_SHARED_DB_ENV] === "1") {
 		return connectionString;
@@ -76,12 +76,12 @@ export const assertSafeE2EDatabaseUrl = (
 			`Refusing to run E2E bootstrap against the default dev database: ${maskConnectionString(connectionString)}`,
 			`Set PLAYWRIGHT_DATABASE_URL to a dedicated database such as "${E2E_DEFAULT_DATABASE_URL}"`,
 			`or explicitly override with ${E2E_UNSAFE_ALLOW_SHARED_DB_ENV}=1 if you really want to reuse the shared dev DB.`,
-		].join("\n")
+		].join("\n"),
 	);
 };
 
 export const resolveSafePlaywrightDatabaseUrl = (
-	env: NodeJS.ProcessEnv = process.env
+	env: NodeJS.ProcessEnv = process.env,
 ): string => assertSafeE2EDatabaseUrl(resolvePlaywrightDatabaseUrl(env), env);
 
 export const resolveAdminDatabaseUrl = (connectionString: string): string => {
@@ -115,7 +115,7 @@ export const waitForDatabase = async ({
 	}
 
 	throw new Error(
-		`Timed out waiting for PostgreSQL at ${maskConnectionString(connectionString)}`
+		`Timed out waiting for PostgreSQL at ${maskConnectionString(connectionString)}`,
 	);
 };
 
@@ -127,7 +127,7 @@ export const ensureDatabaseExists = async ({
 	const databaseName = getDatabaseName(connectionString);
 	if (!databaseName) {
 		throw new Error(
-			`Cannot ensure database for connection string without database name: ${maskConnectionString(connectionString)}`
+			`Cannot ensure database for connection string without database name: ${maskConnectionString(connectionString)}`,
 		);
 	}
 
@@ -139,7 +139,7 @@ export const ensureDatabaseExists = async ({
 	try {
 		const existing = await client.query(
 			"SELECT 1 FROM pg_database WHERE datname = $1",
-			[databaseName]
+			[databaseName],
 		);
 		if (existing.rowCount && existing.rowCount > 0) {
 			return false;

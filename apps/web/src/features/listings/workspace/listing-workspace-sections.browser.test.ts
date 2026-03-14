@@ -322,7 +322,7 @@ describe("ListingWorkspaceSections", () => {
 			.toBeVisible();
 		await expect
 			.element(
-				page.getByText("Core listing details and current family policy.")
+				page.getByText("Core listing details and current family policy."),
 			)
 			.toBeVisible();
 		await expect.element(page.getByText("Sochi Marine Station")).toBeVisible();
@@ -361,7 +361,7 @@ describe("ListingWorkspaceSections", () => {
 			.element(connectLink)
 			.toHaveAttribute(
 				"href",
-				"http://localhost:43100/api/calendar/oauth/google/start"
+				"http://localhost:43100/api/calendar/oauth/google/start",
 			);
 
 		await rendered.cleanup();
@@ -507,7 +507,7 @@ describe("ListingWorkspaceSections", () => {
 
 		await page.getByLabelText("Name").fill("Evening Charter Plus");
 		const dialogForm = document.querySelector(
-			'[role="dialog"] form'
+			'[role="dialog"] form',
 		) as HTMLFormElement | null;
 		dialogForm?.requestSubmit();
 

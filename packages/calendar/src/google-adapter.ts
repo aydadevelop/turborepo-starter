@@ -1,6 +1,6 @@
 import type {
-	CalendarAccountConfig,
 	BusySlot,
+	CalendarAccountConfig,
 	CalendarAdapter,
 	CalendarConnectionConfig,
 	CalendarEventInput,
@@ -117,19 +117,17 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 
 	constructor(
 		serviceAccountKey: Record<string, unknown>,
-		oauthClient?: GoogleOAuthClientConfig | null
+		oauthClient?: GoogleOAuthClientConfig | null,
 	) {
-		if (
-			!(serviceAccountKey.client_email && serviceAccountKey.private_key)
-		) {
+		if (serviceAccountKey.client_email && serviceAccountKey.private_key) {
+			this.serviceAccountKey =
+				serviceAccountKey as unknown as GoogleServiceAccountCredentials;
+		} else {
 			// Allow empty credentials for local/test environments
 			this.serviceAccountKey = {
 				client_email: "",
 				private_key: "",
 			};
-		} else {
-			this.serviceAccountKey =
-				serviceAccountKey as unknown as GoogleServiceAccountCredentials;
 		}
 		this.oauthClient = oauthClient ?? null;
 		this.eventsScope = DEFAULT_EVENTS_SCOPE;
@@ -166,13 +164,23 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 		const url = `https://www.googleapis.com/calendar/v3/calendars/${encodedCalendarId}/events/${encodedEventId}`;
 
 		const payload: Record<string, unknown> = {};
-		if (input.title !== undefined) payload.summary = input.title;
-		if (input.description !== undefined) payload.description = input.description;
+		if (input.title !== undefined) {
+			payload.summary = input.title;
+		}
+		if (input.description !== undefined) {
+			payload.description = input.description;
+		}
 		if (input.startsAt && input.timezone) {
-			payload.start = { dateTime: input.startsAt.toISOString(), timeZone: input.timezone };
+			payload.start = {
+				dateTime: input.startsAt.toISOString(),
+				timeZone: input.timezone,
+			};
 		}
 		if (input.endsAt && input.timezone) {
-			payload.end = { dateTime: input.endsAt.toISOString(), timeZone: input.timezone };
+			payload.end = {
+				dateTime: input.endsAt.toISOString(),
+				timeZone: input.timezone,
+			};
 		}
 		if (input.metadata) {
 			payload.extendedProperties = { private: input.metadata };
@@ -227,9 +235,7 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 			timezone: item.timeZone ?? null,
 			isPrimary: item.primary ?? false,
 			isHidden: item.hidden ?? false,
-			metadata: item.description
-				? { description: item.description }
-				: null,
+			metadata: item.description ? { description: item.description } : null,
 		}));
 	}
 
@@ -292,14 +298,23 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 		return this.serviceAccountKey;
 	}
 
-	private buildEventPayload(input: CalendarEventInput): Record<string, unknown> {
+	private buildEventPayload(
+		input: CalendarEventInput,
+	): Record<string, unknown> {
 		const payload: Record<string, unknown> = {
 			summary: input.title,
-			start: { dateTime: input.startsAt.toISOString(), timeZone: input.timezone },
+			start: {
+				dateTime: input.startsAt.toISOString(),
+				timeZone: input.timezone,
+			},
 			end: { dateTime: input.endsAt.toISOString(), timeZone: input.timezone },
 		};
-		if (input.description) payload.description = input.description;
-		if (input.metadata) payload.extendedProperties = { private: input.metadata };
+		if (input.description) {
+			payload.description = input.description;
+		}
+		if (input.metadata) {
+			payload.extendedProperties = { private: input.metadata };
+		}
 		if (input.attendeeEmails?.length) {
 			payload.attendees = input.attendeeEmails.map((email) => ({ email }));
 		}
@@ -313,7 +328,7 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 		return {
 			eventId: event.id,
 			calendarId,
-			syncedAt: event.updated ? (new Date(event.updated)) : new Date(),
+			syncedAt: event.updated ? new Date(event.updated) : new Date(),
 			iCalUid: event.iCalUID,
 			version: event.etag?.replaceAll('"', ""),
 		};
@@ -367,7 +382,10 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 		}, this.requestTimeoutMs);
 
 		try {
-			return await this.fetchImpl(url, { ...request, signal: controller.signal });
+			return await this.fetchImpl(url, {
+				...request,
+				signal: controller.signal,
+			});
 		} finally {
 			clearTimeout(timeoutId);
 		}
@@ -418,7 +436,7 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 
 	private async getOAuthAccessToken(
 		scope: string,
-		credentials: GoogleOAuthCredentials
+		credentials: GoogleOAuthCredentials,
 	): Promise<string> {
 		const cacheKey = `oauth:${credentials.externalAccountId ?? credentials.accountEmail ?? credentials.refreshToken ?? "default"}:${scope}`;
 		const cached = this.accessTokenCache.get(cacheKey);
@@ -443,7 +461,7 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 		if (!credentials.refreshToken) {
 			throw new Error("GOOGLE_CALENDAR_OAUTH_MISSING_REFRESH_TOKEN");
 		}
-		if (!this.oauthClient?.clientId || !this.oauthClient.clientSecret) {
+		if (!(this.oauthClient?.clientId && this.oauthClient.clientSecret)) {
 			throw new Error("GOOGLE_CALENDAR_OAUTH_CLIENT_NOT_CONFIGURED");
 		}
 
@@ -459,13 +477,13 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 				method: "POST",
 				headers: { "Content-Type": "application/x-www-form-urlencoded" },
 				body: body.toString(),
-			}
+			},
 		);
 
 		if (!response.ok) {
 			const responseBody = await response.text();
 			throw new Error(
-				`GOOGLE_CALENDAR_OAUTH_REFRESH_ERROR: ${response.status} ${response.statusText}: ${responseBody}`
+				`GOOGLE_CALENDAR_OAUTH_REFRESH_ERROR: ${response.status} ${response.statusText}: ${responseBody}`,
 			);
 		}
 
@@ -479,12 +497,14 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 	}
 
 	private isOAuthCredentials(
-		credentials: GoogleOAuthCredentials | GoogleServiceAccountCredentials
+		credentials: GoogleOAuthCredentials | GoogleServiceAccountCredentials,
 	): credentials is GoogleOAuthCredentials {
 		return !("client_email" in credentials && "private_key" in credentials);
 	}
 
-	private parseExpiresAt(value: GoogleOAuthCredentials["expiresAt"]): number | null {
+	private parseExpiresAt(
+		value: GoogleOAuthCredentials["expiresAt"],
+	): number | null {
 		if (typeof value === "number" && Number.isFinite(value)) {
 			return value;
 		}
@@ -513,7 +533,10 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 			exp: nowSeconds + 3600,
 		};
 
-		const encodedHeader = this.base64UrlEncodeJson({ alg: "RS256", typ: "JWT" });
+		const encodedHeader = this.base64UrlEncodeJson({
+			alg: "RS256",
+			typ: "JWT",
+		});
 		const encodedPayload = this.base64UrlEncodeJson(payload);
 		const unsignedJwt = `${encodedHeader}.${encodedPayload}`;
 

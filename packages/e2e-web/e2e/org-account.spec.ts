@@ -21,10 +21,10 @@ test.describe("Org Account Setup Helpers", () => {
 
 		await expect(page.getByTestId("org-heading")).toBeVisible();
 		await expect(page.getByTestId("org-team-members-title")).toContainText(
-			"Members (1)"
+			"Members (1)",
 		);
 		await expect(
-			page.locator(`[data-testid="org-member-email-${scenario.user.id}"]`)
+			page.locator(`[data-testid="org-member-email-${scenario.user.id}"]`),
 		).toContainText(scenario.user.email);
 	});
 });

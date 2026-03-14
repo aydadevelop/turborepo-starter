@@ -1,8 +1,5 @@
-// biome-ignore lint/performance/noNamespaceImport: Pulumi command resources are clearer when namespaced.
 import * as command from "@pulumi/command";
-// biome-ignore lint/performance/noNamespaceImport: This Pulumi entrypoint uses namespaced helpers throughout.
 import * as pulumi from "@pulumi/pulumi";
-// biome-ignore lint/performance/noNamespaceImport: Pulumi TLS resources follow the same namespaced pattern as the rest of infra.
 import * as tls from "@pulumi/tls";
 import { DnsRecords } from "./dns";
 import { DokkuApps } from "./dokku-apps";
@@ -27,11 +24,11 @@ const storageEnabled = storageConfig.getBoolean("enabled") ?? false;
 const supportEmailEnabled = supportEmailConfig.getBoolean("enabled") ?? false;
 const requireSupportEmailValue = (
 	value: string | undefined,
-	key: string
+	key: string,
 ): string => {
 	if (!value || value.length === 0) {
 		throw new Error(
-			`supportEmail.${key} is required when supportEmail.enabled is true.`
+			`supportEmail.${key} is required when supportEmail.enabled is true.`,
 		);
 	}
 
@@ -39,7 +36,7 @@ const requireSupportEmailValue = (
 };
 const requireStorageValue = (
 	value: string | undefined,
-	key: string
+	key: string,
 ): string => {
 	if (!value || value.length === 0) {
 		throw new Error(`storage.${key} is required when storage.enabled is true.`);
@@ -50,7 +47,7 @@ const requireStorageValue = (
 
 const requireStorageSecret = (
 	value: pulumi.Output<string> | undefined,
-	key: string
+	key: string,
 ): pulumi.Output<string> => {
 	if (!value) {
 		throw new Error(`storage.${key} is required when storage.enabled is true.`);
@@ -63,7 +60,7 @@ const storageAccountId = storageEnabled
 	? requireStorageValue(
 			storageConfig.get("cloudflareAccountId") ??
 				process.env.CLOUDFLARE_ACCOUNT_ID,
-			"cloudflareAccountId"
+			"cloudflareAccountId",
 		)
 	: (storageConfig.get("cloudflareAccountId") ??
 		process.env.CLOUDFLARE_ACCOUNT_ID ??
@@ -76,7 +73,7 @@ const storagePublicDomain =
 const supportEmailWorkerScriptName = supportEmailEnabled
 	? requireSupportEmailValue(
 			supportEmailConfig.get("workerScriptName"),
-			"workerScriptName"
+			"workerScriptName",
 		)
 	: (supportEmailConfig.get("workerScriptName") ?? "");
 const supportEmailLocalPart = supportEmailConfig.get("localPart") ?? "support";
@@ -88,13 +85,13 @@ const optionalSecret = (key: string) =>
 const storageS3AccessKeyId = storageEnabled
 	? requireStorageSecret(
 			storageConfig.getSecret("s3AccessKeyId"),
-			"s3AccessKeyId"
+			"s3AccessKeyId",
 		)
 	: pulumi.output("");
 const storageS3SecretAccessKey = storageEnabled
 	? requireStorageSecret(
 			storageConfig.getSecret("s3SecretAccessKey"),
-			"s3SecretAccessKey"
+			"s3SecretAccessKey",
 		)
 	: pulumi.output("");
 
@@ -135,7 +132,7 @@ const bootstrap = new VpsBootstrap(
 		initPassword: vps.password,
 		deployPublicKey: deployKey.publicKeyOpenssh,
 	},
-	{ dependsOn: [vps] }
+	{ dependsOn: [vps] },
 );
 
 // ── Step 2: Configure Dokku apps ────────────────────────────────────────────
@@ -185,7 +182,7 @@ const apps = new DokkuApps(
 				storageConfig.get("signedUrlTtlSeconds") ?? "900",
 		},
 	},
-	{ dependsOn: [bootstrap] }
+	{ dependsOn: [bootstrap] },
 );
 
 // ── Step 3: DNS records (Cloudflare) ────────────────────────────────────────
@@ -200,7 +197,7 @@ const storage = storageEnabled
 				publicDomain: storagePublicDomain,
 				zoneId,
 			},
-			{ dependsOn: [dns] }
+			{ dependsOn: [dns] },
 		)
 	: undefined;
 
@@ -213,13 +210,13 @@ const supportEmailRouting = supportEmailEnabled
 				workerScriptName: supportEmailWorkerScriptName,
 				zoneId,
 			},
-			{ dependsOn: [dns] }
+			{ dependsOn: [dns] },
 		)
 	: undefined;
 
 // ── Step 4: Sync deployment config to GitHub Actions secrets ────────────────
 const sshKeyB64 = deployKey.privateKeyOpenssh.apply((k) =>
-	Buffer.from(k).toString("base64")
+	Buffer.from(k).toString("base64"),
 );
 const ghRepo = config.get("ghRepo") ?? "aydadevelop/turborepo-starter";
 new command.local.Command(
@@ -236,7 +233,7 @@ new command.local.Command(
   `,
 		triggers: [vpsIp, sshUser, String(sshPort), sshKeyB64],
 	},
-	{ dependsOn: [bootstrap, apps, dns] }
+	{ dependsOn: [bootstrap, apps, dns] },
 );
 
 // ── Exports ─────────────────────────────────────────────────────────────────

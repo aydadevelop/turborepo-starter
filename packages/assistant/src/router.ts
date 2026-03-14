@@ -119,7 +119,7 @@ export const assistantRouter = o.router({
 			system: createSystemPrompt(),
 			messages: await convertToModelMessages(
 				input.messages as unknown as UIMessage[],
-				{ ignoreIncompleteToolCalls: true }
+				{ ignoreIncompleteToolCalls: true },
 			),
 			tools,
 			stopWhen: stepCountIs(10),
@@ -187,7 +187,7 @@ export const assistantRouter = o.router({
 			});
 
 			return { id, title: input.title };
-		}
+		},
 	),
 
 	listChats: authenticatedProcedure.listChats.handler(async ({ context }) => {
@@ -244,12 +244,12 @@ export const assistantRouter = o.router({
 					id: m.id,
 					role: m.role as UIMessage["role"],
 					parts: sanitizeParts(
-						m.parts as UIMessage["parts"]
+						m.parts as UIMessage["parts"],
 					) as unknown as Record<string, unknown>[],
 					createdAt: m.createdAt.toISOString(),
 				})),
 			};
-		}
+		},
 	),
 
 	deleteChat: authenticatedProcedure.deleteChat.handler(
@@ -272,7 +272,7 @@ export const assistantRouter = o.router({
 			await db.delete(assistantChat).where(eq(assistantChat.id, input.chatId));
 
 			return { success: true };
-		}
+		},
 	),
 
 	updateChatTitle: authenticatedProcedure.updateChatTitle.handler(
@@ -298,7 +298,7 @@ export const assistantRouter = o.router({
 				.where(eq(assistantChat.id, input.chatId));
 
 			return { success: true };
-		}
+		},
 	),
 });
 

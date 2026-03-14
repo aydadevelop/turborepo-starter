@@ -45,7 +45,7 @@ export const assistantContract = {
 			z.object({
 				chatId: z.string(),
 				messages: z.array(uiMessageSchema),
-			})
+			}),
 		)
 		.output(eventIterator(chatOutputSchema)),
 

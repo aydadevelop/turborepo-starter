@@ -22,9 +22,9 @@ peer = false
 [test]
 preload = ["./scripts/bun-test-guard.ts"]
 testPathIgnorePatterns = [
-  "**/*.spec.ts",
-  "**/e2e/**",
-  "**/yt-consumers.test.ts",
-  "**/app.test.ts",
-  "**/payment-webhook.test.ts",
+	"**/*.spec.ts",
+	"**/e2e/**",
+	"**/yt-consumers.test.ts",
+	"**/app.test.ts",
+	"**/payment-webhook.test.ts",
 ]

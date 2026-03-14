@@ -3,7 +3,7 @@ import { listOrganizationAvailableListingTypes } from "./repository";
 
 export function listAvailableListingTypes(
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingTypeOptionsResult> {
 	return listOrganizationAvailableListingTypes(organizationId, db);
 }

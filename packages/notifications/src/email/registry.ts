@@ -10,7 +10,7 @@ export const getEmailProvider = (providerId: string): EmailProvider => {
 	const provider = emailProviderRegistry.get(providerId);
 	if (!provider) {
 		throw new Error(
-			`EmailProvider "${providerId}" is not registered. Call registerEmailProvider() at startup.`
+			`EmailProvider "${providerId}" is not registered. Call registerEmailProvider() at startup.`,
 		);
 	}
 

@@ -9,11 +9,11 @@ import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-	FakeCalendarAdapter,
 	attachCalendarSourceToListing,
 	clearCalendarAdapterRegistry,
 	connectOrganizationCalendarAccount,
 	disconnectOrganizationCalendarAccount,
+	FakeCalendarAdapter,
 	getCalendarWorkspaceState,
 	listOrganizationCalendarAccounts,
 	refreshOrganizationCalendarSources,
@@ -89,7 +89,7 @@ describe("organization calendar account flow", () => {
 				displayName: "Fleet Calendar",
 				createdByUserId: USER_ID,
 			},
-			db
+			db,
 		);
 
 		await db.insert(listingCalendarConnection).values({
@@ -113,24 +113,17 @@ describe("organization calendar account flow", () => {
 				accountEmail: "fleet-updated@example.com",
 				displayName: "Fleet Calendar Updated",
 			},
-			db
+			db,
 		);
 
 		expect(reconnected.id).toBe(account.id);
 		expect(reconnected.accountEmail).toBe("fleet-updated@example.com");
 
-		const accounts = await listOrganizationCalendarAccounts(
-			ORG_ID,
-			db
-		);
+		const accounts = await listOrganizationCalendarAccounts(ORG_ID, db);
 		expect(accounts).toHaveLength(1);
 		expect(accounts[0]?.status).toBe("connected");
 
-		const workspace = await getCalendarWorkspaceState(
-			LISTING_ID,
-			ORG_ID,
-			db
-		);
+		const workspace = await getCalendarWorkspaceState(LISTING_ID, ORG_ID, db);
 		expect(workspace.accountCount).toBe(1);
 		expect(workspace.connectedAccountCount).toBe(1);
 		expect(workspace.accounts[0]?.displayName).toBe("Fleet Calendar Updated");
@@ -153,7 +146,7 @@ describe("organization calendar account flow", () => {
 					},
 				},
 			},
-			db
+			db,
 		);
 
 		await connectOrganizationCalendarAccount(
@@ -168,7 +161,7 @@ describe("organization calendar account flow", () => {
 					},
 				},
 			},
-			db
+			db,
 		);
 
 		const [persisted] = await db
@@ -177,12 +170,14 @@ describe("organization calendar account flow", () => {
 			.where(eq(organizationCalendarAccount.id, account.id))
 			.limit(1);
 
-		const credentials = (persisted?.providerMetadata as {
-			credentials?: {
-				accessToken?: string;
-				refreshToken?: string;
-			};
-		} | null)?.credentials;
+		const credentials = (
+			persisted?.providerMetadata as {
+				credentials?: {
+					accessToken?: string;
+					refreshToken?: string;
+				};
+			} | null
+		)?.credentials;
 
 		expect(credentials?.accessToken).toBe("access-token-2");
 		expect(credentials?.refreshToken).toBe("refresh-token-1");
@@ -198,13 +193,13 @@ describe("organization calendar account flow", () => {
 				externalAccountId: "google-account-2",
 				accountEmail: "ops@example.com",
 			},
-			db
+			db,
 		);
 
 		const disconnected = await disconnectOrganizationCalendarAccount(
 			account.id,
 			ORG_ID,
-			db
+			db,
 		);
 
 		expect(disconnected.status).toBe("disconnected");
@@ -247,13 +242,13 @@ describe("organization calendar account flow", () => {
 					},
 				},
 			},
-			db
+			db,
 		);
 
 		const sources = await refreshOrganizationCalendarSources(
 			account.id,
 			ORG_ID,
-			db
+			db,
 		);
 
 		expect(sources).toHaveLength(2);
@@ -272,7 +267,9 @@ describe("organization calendar account flow", () => {
 		const [primarySource] = await db
 			.select()
 			.from(organizationCalendarSource)
-			.where(eq(organizationCalendarSource.externalCalendarId, "calendar-primary"))
+			.where(
+				eq(organizationCalendarSource.externalCalendarId, "calendar-primary"),
+			)
 			.limit(1);
 
 		expect(primarySource?.name).toBe("Primary fleet calendar");
@@ -284,7 +281,7 @@ describe("organization calendar account flow", () => {
 				sourceId: sources[0]!.id,
 				createdByUserId: USER_ID,
 			},
-			db
+			db,
 		);
 
 		expect(connection.calendarAccountId).toBe(account.id);
@@ -303,7 +300,7 @@ describe("organization calendar account flow", () => {
 		expect(workspace.sourceCount).toBe(2);
 		expect(workspace.activeSourceCount).toBe(2);
 		expect(workspace.sources.map((source) => source.name)).toContain(
-			"Primary fleet calendar"
+			"Primary fleet calendar",
 		);
 		expect(workspace.connections[0]?.calendarSourceId).toBe(sources[0]!.id);
 	});

@@ -6,6 +6,6 @@ const port = Number(process.env.ASSISTANT_PORT ?? process.env.PORT ?? 3001);
 
 serve({ fetch: app.fetch, port }, (info) => {
 	console.log(
-		`Assistant server listening on http://${info.address}:${info.port}`
+		`Assistant server listening on http://${info.address}:${info.port}`,
 	);
 });

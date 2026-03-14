@@ -18,20 +18,20 @@ interface DeleteOrganizationArgs {
 interface UpdateOrganizationDependencies {
 	invalidateOrganizationStructure: () => Promise<unknown>;
 	updateOrganization: (
-		args: UpdateOrganizationArgs
+		args: UpdateOrganizationArgs,
 	) => Promise<{ error: unknown }>;
 }
 
 interface DeleteOrganizationDependencies {
 	deleteOrganization: (
-		args: DeleteOrganizationArgs
+		args: DeleteOrganizationArgs,
 	) => Promise<{ error: unknown }>;
 	invalidateOrganizationStructure: () => Promise<unknown>;
 }
 
 export async function submitOrganizationSettings(
 	deps: UpdateOrganizationDependencies,
-	input: OrganizationSettingsInput
+	input: OrganizationSettingsInput,
 ): Promise<MutationResult<void>> {
 	const parsed = organizationSettingsSchema.safeParse(input);
 	if (!parsed.success) {
@@ -62,7 +62,7 @@ export async function submitOrganizationSettings(
 
 export async function deleteOrganizationRecord(
 	deps: DeleteOrganizationDependencies,
-	organizationId?: string
+	organizationId?: string,
 ): Promise<MutationResult<void>> {
 	if (!organizationId) {
 		return { ok: false, message: "Organization not found. Please try again." };

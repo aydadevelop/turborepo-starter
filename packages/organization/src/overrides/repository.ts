@@ -10,7 +10,7 @@ import type {
 
 export function listActiveOrganizationManualOverrides(
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationManualOverrideRow[]> {
 	return db
 		.select()
@@ -18,14 +18,14 @@ export function listActiveOrganizationManualOverrides(
 		.where(
 			and(
 				eq(organizationManualOverride.organizationId, organizationId),
-				eq(organizationManualOverride.isActive, true)
-			)
+				eq(organizationManualOverride.isActive, true),
+			),
 		);
 }
 
 export async function insertOrganizationManualOverride(
 	input: typeof organizationManualOverride.$inferInsert,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationManualOverrideRow> {
 	const [row] = await db
 		.insert(organizationManualOverride)
@@ -43,7 +43,7 @@ export async function resolveOrganizationManualOverride(
 	id: string,
 	organizationId: string,
 	resolvedByUserId: string | null,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationManualOverrideRow | null> {
 	const [row] = await db
 		.update(organizationManualOverride)
@@ -56,8 +56,8 @@ export async function resolveOrganizationManualOverride(
 		.where(
 			and(
 				eq(organizationManualOverride.id, id),
-				eq(organizationManualOverride.organizationId, organizationId)
-			)
+				eq(organizationManualOverride.organizationId, organizationId),
+			),
 		)
 		.returning();
 
@@ -66,7 +66,7 @@ export async function resolveOrganizationManualOverride(
 
 export async function resolveOrganizationManualOverrideSummary(
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationManualOverrideSummary> {
 	const items = await listActiveOrganizationManualOverrides(organizationId, db);
 	return {

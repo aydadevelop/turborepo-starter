@@ -8,7 +8,7 @@ export type CreateAvailabilityBlockInput =
 
 export function buildCreateAvailabilityBlockInput(
 	listingId: string,
-	values: CreateAvailabilityBlockFormValues
+	values: CreateAvailabilityBlockFormValues,
 ): MutationResult<CreateAvailabilityBlockInput> {
 	const startsAt = new Date(values.startsAt);
 	const endsAt = new Date(values.endsAt);

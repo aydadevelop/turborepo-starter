@@ -72,6 +72,6 @@ export const tracingMiddleware = os.middleware(({ next, path }) => {
 			} finally {
 				span.end();
 			}
-		}
+		},
 	);
 });

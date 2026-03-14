@@ -20,7 +20,7 @@ const clipIntervalToWindow = (
 	start: number,
 	end: number,
 	windowStart?: Date,
-	windowEnd?: Date
+	windowEnd?: Date,
 ): { start: number; end: number } | null => {
 	let s = start;
 	let e = end;
@@ -72,7 +72,7 @@ export const mergeBusyIntervals = (
 	intervals: BusyInterval[],
 	windowStart?: Date,
 	windowEnd?: Date,
-	bufferMinutes = 0
+	bufferMinutes = 0,
 ): BusyInterval[] => {
 	if (intervals.length === 0) {
 		return [];
@@ -86,7 +86,7 @@ export const mergeBusyIntervals = (
 			iv.startsAt.getTime() - bufferMs,
 			iv.endsAt.getTime() + bufferMs,
 			windowStart,
-			windowEnd
+			windowEnd,
 		);
 		if (clipped) {
 			processed.push({
@@ -111,7 +111,7 @@ export const mergeBusyIntervals = (
 export const findFreeGaps = (
 	dayStart: Date,
 	dayEnd: Date,
-	busyIntervals: BusyInterval[]
+	busyIntervals: BusyInterval[],
 ): FreeGap[] => {
 	const gaps: FreeGap[] = [];
 	let cursor = dayStart.getTime();
@@ -152,7 +152,7 @@ export const findFreeGaps = (
 export const extractSlotsFromGaps = (
 	gaps: FreeGap[],
 	durationMinutes: number,
-	stepMinutes = 30
+	stepMinutes = 30,
 ): TimeSlot[] => {
 	const durationMs = durationMinutes * MINUTE_MS;
 	const stepMs = stepMinutes * MINUTE_MS;
@@ -192,7 +192,7 @@ export const calculateAvailableSlots = (params: {
 		params.busyIntervals,
 		params.dayStart,
 		params.dayEnd,
-		params.bufferMinutes
+		params.bufferMinutes,
 	);
 	const gaps = findFreeGaps(params.dayStart, params.dayEnd, mergedBusy);
 	const minDuration = params.minimumDurationMinutes ?? params.durationMinutes;
@@ -200,6 +200,6 @@ export const calculateAvailableSlots = (params: {
 	return extractSlotsFromGaps(
 		qualifyingGaps,
 		params.durationMinutes,
-		params.stepMinutes
+		params.stepMinutes,
 	);
 };

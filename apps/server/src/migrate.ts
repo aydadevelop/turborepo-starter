@@ -3,7 +3,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 const db = drizzle(
 	process.env.DATABASE_URL ??
-		"postgresql://postgres:postgres@localhost:5432/myapp"
+		"postgresql://postgres:postgres@localhost:5432/myapp",
 );
 
 console.log("Running DB migrations...");

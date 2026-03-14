@@ -29,7 +29,7 @@ app.get("/metrics", printMetrics);
 
 const logRequest = async (
 	c: Parameters<Parameters<typeof app.use>[1]>[0],
-	next: () => Promise<void>
+	next: () => Promise<void>,
 ) => {
 	const start = Date.now();
 	await next();

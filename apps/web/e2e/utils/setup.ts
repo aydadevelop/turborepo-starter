@@ -11,7 +11,7 @@ export interface E2EState {
 
 const withQuery = (
 	route: string,
-	query?: Record<string, string | number | boolean>
+	query?: Record<string, string | number | boolean>,
 ): string => {
 	if (!query || Object.keys(query).length === 0) {
 		return route;
@@ -27,7 +27,7 @@ const withQuery = (
 export const goto = async (
 	page: Page,
 	route: string,
-	state?: E2EState
+	state?: E2EState,
 ): Promise<void> => {
 	if (state?.viewport) {
 		await page.setViewportSize(state.viewport);
@@ -50,7 +50,7 @@ export const goto = async (
 					window.sessionStorage.setItem(key, value);
 				}
 			},
-			{ local: state.localStorage, session: state.sessionStorage }
+			{ local: state.localStorage, session: state.sessionStorage },
 		);
 	}
 
@@ -65,7 +65,8 @@ export const goto = async (
 			error.message.includes("ERR_CONNECTION_REFUSED")
 		) {
 			throw new Error(
-				`Cannot reach frontend at ${baseURL}${target}. Start the frontend (bun run dev:vite --workspace web) then rerun tests.`
+				`Cannot reach frontend at ${baseURL}${target}. Start the frontend (bun run dev:vite --workspace web) then rerun tests.`,
+				{ cause: error },
 			);
 		}
 		throw error;

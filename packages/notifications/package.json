@@ -1,52 +1,50 @@
 {
-  "name": "@my-app/notifications",
-  "type": "module",
-  "exports": {
-    "./email": {
-      "default": "./src/email/index.ts"
-    },
-    "./email/*": {
-      "default": "./src/email/*.ts"
-    },
-    "./contracts": {
-      "default": "./src/contracts.ts"
-    },
-    "./events-bridge": {
-      "default": "./src/events-bridge.ts"
-    },
-    "./pusher": {
-      "default": "./src/pusher.ts"
-    },
-    "./preferences": {
-      "default": "./src/preferences.ts"
-    },
-    "./processor": {
-      "default": "./src/processor.ts"
-    }
-  },
-  "scripts": {
-    "check-types": "tsc --noEmit -p tsconfig.json",
-    "lint": "cd ../.. && biome check --config-path biome.json packages/notifications",
-    "lint:fix": "cd ../.. && biome check --config-path biome.json packages/notifications --write",
-    "test": "vitest run --passWithNoTests",
-    "test:integration:smtp4dev": "SMTP4DEV_INTEGRATION=1 vitest run src/email/__tests__/smtp.integration.test.ts",
-    "test:watch": "vitest --watch"
-  },
-  "dependencies": {
-    "@my-app/db": "workspace:*",
-    "@my-app/env": "workspace:*",
-    "@my-app/events": "workspace:*",
-    "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
-    "nodemailer": "^7.0.10",
-    "zod": "^4.1.13"
-  },
-  "devDependencies": {
-    "@types/nodemailer": "^7.0.3",
-    "@biomejs/biome": "^2.4.7",
-    "@my-app/config": "workspace:*",
-    "@my-app/vitest-config": "workspace:*",
-    "typescript": "^5",
-    "ultracite": "^7.2.3",
-    "vitest": "^4.0.18"
-  }
+	"name": "@my-app/notifications",
+	"type": "module",
+	"exports": {
+		"./email": {
+			"default": "./src/email/index.ts"
+		},
+		"./email/*": {
+			"default": "./src/email/*.ts"
+		},
+		"./contracts": {
+			"default": "./src/contracts.ts"
+		},
+		"./events-bridge": {
+			"default": "./src/events-bridge.ts"
+		},
+		"./pusher": {
+			"default": "./src/pusher.ts"
+		},
+		"./preferences": {
+			"default": "./src/preferences.ts"
+		},
+		"./processor": {
+			"default": "./src/processor.ts"
+		}
+	},
+	"scripts": {
+		"check-types": "tsc --noEmit -p tsconfig.json",
+		"lint": "cd ../.. && oxlint packages/notifications",
+		"lint:fix": "cd ../.. && oxlint --fix packages/notifications",
+		"test": "vitest run --passWithNoTests",
+		"test:integration:smtp4dev": "SMTP4DEV_INTEGRATION=1 vitest run src/email/__tests__/smtp.integration.test.ts",
+		"test:watch": "vitest --watch"
+	},
+	"dependencies": {
+		"@my-app/db": "workspace:*",
+		"@my-app/env": "workspace:*",
+		"@my-app/events": "workspace:*",
+		"drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+		"nodemailer": "^7.0.10",
+		"zod": "^4.1.13"
+	},
+	"devDependencies": {
+		"@my-app/config": "workspace:*",
+		"@my-app/vitest-config": "workspace:*",
+		"@types/nodemailer": "^7.0.3",
+		"typescript": "^5",
+		"vitest": "^4.0.18"
+	}
 }

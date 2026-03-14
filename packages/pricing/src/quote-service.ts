@@ -21,17 +21,15 @@ export function applyDiscountToQuote(
 		quote.subtotalCents - normalizedDiscount,
 	);
 	const discountedServiceFeeCents = Math.round(
-		(discountedSubtotalCents * quote.pricingFactors.serviceFeeBps) / 10000,
+		(discountedSubtotalCents * quote.pricingFactors.serviceFeeBps) / 10_000,
 	);
 	const discountedTaxCents = Math.round(
 		((discountedSubtotalCents + discountedServiceFeeCents) *
 			quote.pricingFactors.taxBps) /
-			10000,
+			10_000,
 	);
 	const discountedTotalCents =
-		discountedSubtotalCents +
-		discountedServiceFeeCents +
-		discountedTaxCents;
+		discountedSubtotalCents + discountedServiceFeeCents + discountedTaxCents;
 
 	return {
 		...quote,
@@ -48,7 +46,9 @@ export async function calculateQuote(
 	db: Db,
 ): Promise<QuoteBreakdown> {
 	const context = await resolveDefaultPricingContext(input.listingId, db);
-	if (!context) throw new Error("NO_PRICING_PROFILE");
+	if (!context) {
+		throw new Error("NO_PRICING_PROFILE");
+	}
 
 	return calculateQuoteFromResolvedPricing(input, context);
 }
@@ -60,7 +60,7 @@ export function calculateQuoteFromResolvedPricing(
 	const { profile, rules } = context;
 
 	const durationMinutes = Math.round(
-		(input.endsAt.getTime() - input.startsAt.getTime()) / 60000,
+		(input.endsAt.getTime() - input.startsAt.getTime()) / 60_000,
 	);
 	const baseCents = Math.round(
 		(profile.baseHourlyPriceCents * durationMinutes) / 60,
@@ -71,18 +71,24 @@ export function calculateQuoteFromResolvedPricing(
 
 	const applicable = resolveApplicableRules(rules, (rule) => {
 		const cond = rule.conditionJson;
-		if (cond.alwaysApply) return true;
-		if (Array.isArray(cond.days) && !cond.days.includes(bookingDayOfWeek)) return false;
+		if (cond.alwaysApply) {
+			return true;
+		}
+		if (Array.isArray(cond.days) && !cond.days.includes(bookingDayOfWeek)) {
+			return false;
+		}
 		if (
 			typeof cond.minPassengers === "number" &&
 			passengerCount < cond.minPassengers
-		)
+		) {
 			return false;
+		}
 		if (
 			typeof cond.minDurationMinutes === "number" &&
 			durationMinutes < cond.minDurationMinutes
-		)
+		) {
 			return false;
+		}
 		return true;
 	});
 
@@ -97,10 +103,10 @@ export function calculateQuoteFromResolvedPricing(
 
 	const subtotalCents = baseCents + adjustmentCents;
 	const serviceFeeCents = Math.round(
-		(subtotalCents * profile.serviceFeeBps) / 10000,
+		(subtotalCents * profile.serviceFeeBps) / 10_000,
 	);
 	const taxCents = Math.round(
-		((subtotalCents + serviceFeeCents) * profile.taxBps) / 10000,
+		((subtotalCents + serviceFeeCents) * profile.taxBps) / 10_000,
 	);
 	const totalCents = subtotalCents + serviceFeeCents + taxCents;
 

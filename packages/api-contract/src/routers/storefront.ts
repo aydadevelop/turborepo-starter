@@ -13,7 +13,7 @@ const serviceFamilyPolicySchema = z.object({
 			"assets",
 			"calendar",
 			"publish",
-		])
+		]),
 	),
 	defaults: z.object({
 		moderationRequired: z.boolean(),
@@ -168,13 +168,13 @@ export const storefrontContract = {
 				q: z.string().max(200).optional(),
 				limit: z.number().int().min(1).max(100).default(20),
 				offset: z.number().int().min(0).default(0),
-			})
+			}),
 		)
 		.output(
 			z.object({
 				items: z.array(storefrontListItemSchema),
 				total: z.number().int(),
-			})
+			}),
 		),
 
 	get: oc
@@ -200,7 +200,7 @@ export const storefrontContract = {
 				durationMinutes: z.number().int().min(30),
 				passengers: z.number().int().positive().optional(),
 				discountCode: z.string().min(1).max(64).optional(),
-			})
+			}),
 		)
 		.output(bookingSurfaceSchema),
 };

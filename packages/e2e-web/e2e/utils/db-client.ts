@@ -27,26 +27,26 @@ export const createDbClient = async (): Promise<pg.Client> => {
  */
 export const cleanupNamespace = async (
 	client: pg.Client,
-	namespace: string
+	namespace: string,
 ): Promise<void> => {
 	const likePattern = `${namespace}%`;
 
 	for (const table of CLEANUP_TABLES) {
 		await client.query(
 			`DELETE FROM ${quote(table)} WHERE ${quote("id")} LIKE $1`,
-			[likePattern]
+			[likePattern],
 		);
 	}
 
 	// user table — match by email (namespaced) or id
 	await client.query(
 		`DELETE FROM ${quote("user")} WHERE ${quote("email")} LIKE $1 OR ${quote("id")} LIKE $2`,
-		[likePattern, likePattern]
+		[likePattern, likePattern],
 	);
 
 	// todo table — uses numeric IDs; look for metadata or text prefix
 	await client.query(
 		`DELETE FROM ${quote("todo")} WHERE ${quote("text")} LIKE $1`,
-		[likePattern]
+		[likePattern],
 	);
 };

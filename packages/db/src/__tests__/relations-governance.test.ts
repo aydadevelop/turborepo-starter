@@ -13,16 +13,16 @@ describe("Relations governance", () => {
 		const relationsText = readFileSync(relationsFile, "utf8");
 
 		expect(relationsText).toContain(
-			"const baseRelations = defineRelations(schema);"
+			"const baseRelations = defineRelations(schema);",
 		);
 		expect(relationsText).toContain(
-			'import { authRelations } from "./relations/auth";'
+			'import { authRelations } from "./relations/auth";',
 		);
 		expect(relationsText).toContain(
-			'import { marketplaceRelations } from "./relations/marketplace";'
+			'import { marketplaceRelations } from "./relations/marketplace";',
 		);
 		expect(relationsText).toContain(
-			'import { supportRelations } from "./relations/support";'
+			'import { supportRelations } from "./relations/support";',
 		);
 		expect(relationsText).not.toContain("user: {");
 		expect(relationsText).not.toContain("booking: {");

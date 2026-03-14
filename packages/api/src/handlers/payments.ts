@@ -79,7 +79,7 @@ export const paymentsRouter = {
 				eventIdempotencyKey,
 				queued: pusherResult.queued,
 			};
-		}
+		},
 	),
 
 	connectProvider: organizationPermissionProcedure({
@@ -97,7 +97,7 @@ export const paymentsRouter = {
 			{
 				actorUserId: context.session?.user?.id ?? undefined,
 				eventBus: context.eventBus,
-			}
+			},
 		);
 		return {
 			...row,
@@ -112,7 +112,7 @@ export const paymentsRouter = {
 	}).payments.getOrgConfig.handler(async ({ context }) => {
 		const row = await getOrgPaymentConfig(
 			context.activeMembership.organizationId,
-			db
+			db,
 		);
 		if (!row) {
 			return null;
@@ -135,7 +135,7 @@ export const paymentsRouter = {
 					db,
 					{
 						eventBus: context.eventBus,
-					}
+					},
 				);
 				return {
 					processed: result.processed,
@@ -150,6 +150,6 @@ export const paymentsRouter = {
 				}
 				throw e;
 			}
-		}
+		},
 	),
 };

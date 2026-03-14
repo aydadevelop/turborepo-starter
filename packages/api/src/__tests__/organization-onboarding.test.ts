@@ -163,7 +163,7 @@ const createRpcContext = (overrides: Partial<Context> = {}): Context => ({
 const callRpc = async (
 	path: string,
 	json: unknown,
-	contextOverrides: Partial<Context> = {}
+	contextOverrides: Partial<Context> = {},
 ): Promise<{ status: number; body: unknown }> => {
 	const request = new Request(`http://example.test${path}`, {
 		method: "POST",
@@ -199,7 +199,7 @@ describe("organization onboarding + calendar routes", () => {
 		registerOrganizationOverlayProjector(
 			db as unknown as Parameters<
 				typeof registerOrganizationOverlayProjector
-			>[0]
+			>[0],
 		);
 	});
 
@@ -258,7 +258,7 @@ describe("organization onboarding + calendar routes", () => {
 			isComplete: true,
 		});
 		expect(
-			(complete.body as { completedAt: string | null }).completedAt
+			(complete.body as { completedAt: string | null }).completedAt,
 		).not.toBeNull();
 
 		const listConnections = await callRpc("/rpc/calendar/listConnections", {
@@ -282,7 +282,7 @@ describe("organization onboarding + calendar routes", () => {
 
 		const incomplete = await callRpc(
 			"/rpc/organization/getOnboardingStatus",
-			{}
+			{},
 		);
 		expect(incomplete.status).toBe(200);
 		expect(incomplete.body).toMatchObject({
@@ -365,7 +365,7 @@ describe("organization onboarding + calendar routes", () => {
 
 		const listedAfterDisconnect = await callRpc(
 			"/rpc/calendar/listAccounts",
-			{}
+			{},
 		);
 		expect(listedAfterDisconnect.status).toBe(200);
 		expect(listedAfterDisconnect.body).toMatchObject([
@@ -522,7 +522,7 @@ describe("organization onboarding + calendar routes", () => {
 			isApproved: true,
 		});
 		expect(
-			(approved.body as { approvedAt: string | null }).approvedAt
+			(approved.body as { approvedAt: string | null }).approvedAt,
 		).not.toBeNull();
 
 		const published = await callRpc(
@@ -530,7 +530,7 @@ describe("organization onboarding + calendar routes", () => {
 			{
 				listingId: LISTING_ID,
 				channelType: "own_site",
-			}
+			},
 		);
 		expect(published.status).toBe(200);
 		expect(published.body).toEqual({

@@ -37,7 +37,7 @@ export const appContract = {
 				ok: z.literal(true),
 				ts: z.string().datetime(),
 				v: z.string(),
-			})
+			}),
 		),
 
 	privateData: oc
@@ -50,7 +50,7 @@ export const appContract = {
 			z.object({
 				message: z.string(),
 				user: z.record(z.string(), z.unknown()).optional(),
-			})
+			}),
 		),
 
 	canManageOrganization: oc
@@ -65,7 +65,7 @@ export const appContract = {
 				canManageOrganization: z.boolean(),
 				organizationId: z.string(),
 				role: z.string(),
-			})
+			}),
 		),
 
 	admin: adminContract,

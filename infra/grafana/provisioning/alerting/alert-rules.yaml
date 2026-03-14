@@ -7,9 +7,8 @@ groups:
   - orgId: 1
     name: service-health
     folder: App Alerts
-    interval: 1m           # evaluate every minute
+    interval: 1m # evaluate every minute
     rules:
-
       # ── Server service down ────────────────────────────────────────────────
       # Fires when the server container emits no logs for 5 minutes.
       # "No data" is also treated as Alerting (container may be dead).
@@ -178,7 +177,7 @@ groups:
           severity: warning
         annotations:
           summary: "More than 10 errors/min detected across all app services"
-          runbook: "Check Grafana → Explore → Loki: {compose_service=~\"server|assistant|notifications|web\"} |= \"error\""
+          runbook: 'Check Grafana → Explore → Loki: {compose_service=~"server|assistant|notifications|web"} |= "error"'
         data:
           - refId: error_count
             relativeTimeRange: { from: 300, to: 0 }
@@ -194,7 +193,7 @@ groups:
               refId: threshold
               expression: error_count
               conditions:
-                - evaluator: { type: gt, params: [50] }   # >50 errors in 5 min window
+                - evaluator: { type: gt, params: [50] } # >50 errors in 5 min window
                   operator: { type: and }
                   query: { params: [threshold] }
                   reducer: { type: last }

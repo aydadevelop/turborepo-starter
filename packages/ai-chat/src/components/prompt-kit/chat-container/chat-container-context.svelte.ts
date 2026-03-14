@@ -22,7 +22,7 @@ class ChatContainerContext {
 
 	constructor(
 		resizeMode: ResizeMode = "smooth",
-		initialMode: InitialMode = "instant"
+		initialMode: InitialMode = "instant",
 	) {
 		this.#resizeMode = resizeMode;
 		this.#initialMode = initialMode;
@@ -34,7 +34,7 @@ class ChatContainerContext {
 					this.#setupObservers();
 					return () => this.#cleanup();
 				}
-			}
+			},
 		);
 	}
 
@@ -99,7 +99,7 @@ class ChatContainerContext {
 			{
 				threshold: 0,
 				root: this.#element,
-			}
+			},
 		);
 
 		if (this.#sentinel) {
@@ -193,7 +193,7 @@ class ChatContainerContext {
 
 export function setChatContainerContext(
 	resizeMode: ResizeMode = "smooth",
-	initialMode: InitialMode = "instant"
+	initialMode: InitialMode = "instant",
 ): ChatContainerContext {
 	const context = new ChatContainerContext(resizeMode, initialMode);
 	setContext(CHAT_CONTAINER_CONTEXT_KEY, context);
@@ -204,11 +204,11 @@ export function getChatContainerContext(): ChatContainerContext {
 	const context = getContext<ChatContainerContext>(CHAT_CONTAINER_CONTEXT_KEY);
 	if (!context) {
 		throw new Error(
-			"ChatContainerContext must be used within a ChatContainerRoot component"
+			"ChatContainerContext must be used within a ChatContainerRoot component",
 		);
 	}
 	return context;
 }
 
+export type { InitialMode, ResizeMode };
 export { ChatContainerContext };
-export type { ResizeMode, InitialMode };

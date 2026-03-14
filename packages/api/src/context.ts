@@ -46,7 +46,7 @@ export interface OrganizationContext extends Context {
 }
 
 const parseCookiesFromHeader = (
-	cookieHeader: string | null
+	cookieHeader: string | null,
 ): Readonly<Record<string, string>> => {
 	if (!cookieHeader) {
 		return {};
@@ -75,7 +75,7 @@ const parseCookiesFromHeader = (
 };
 
 const getActiveOrganizationMembership = async (
-	session: AuthSession
+	session: AuthSession,
 ): Promise<ActiveOrganizationMembership | null> => {
 	const userId = session?.user?.id;
 	const activeOrganizationId = getActiveOrganizationId(session);
@@ -94,8 +94,8 @@ const getActiveOrganizationMembership = async (
 			.where(
 				and(
 					eq(member.organizationId, activeOrganizationId),
-					eq(member.userId, userId)
-				)
+					eq(member.userId, userId),
+				),
 			)
 			.limit(1);
 
@@ -146,7 +146,7 @@ interface BuildWorkflowContextOptions {
 }
 
 const buildWorkflowContextFromOptions = (
-	options: BuildWorkflowContextOptions
+	options: BuildWorkflowContextOptions,
 ): WorkflowContext => ({
 	organizationId: options.organizationId,
 	actorUserId: options.actorUserId,
@@ -156,14 +156,14 @@ const buildWorkflowContextFromOptions = (
 
 export function buildWorkflowContext(
 	context: OrganizationContext,
-	idempotencyKey: string
+	idempotencyKey: string,
 ): WorkflowContext;
 export function buildWorkflowContext(
-	options: BuildWorkflowContextOptions
+	options: BuildWorkflowContextOptions,
 ): WorkflowContext;
 export function buildWorkflowContext(
 	contextOrOptions: OrganizationContext | BuildWorkflowContextOptions,
-	idempotencyKey?: string
+	idempotencyKey?: string,
 ): WorkflowContext {
 	if (typeof idempotencyKey === "string") {
 		const context = contextOrOptions as OrganizationContext;
@@ -177,7 +177,7 @@ export function buildWorkflowContext(
 	}
 
 	return buildWorkflowContextFromOptions(
-		contextOrOptions as BuildWorkflowContextOptions
+		contextOrOptions as BuildWorkflowContextOptions,
 	);
 }
 
@@ -197,7 +197,7 @@ export async function createContext({
 
 	const activeMembership = await getActiveOrganizationMembership(session);
 	const requestCookies = parseCookiesFromHeader(
-		context.req.raw.headers.get("cookie")
+		context.req.raw.headers.get("cookie"),
 	);
 	const eventBus = new EventBus();
 

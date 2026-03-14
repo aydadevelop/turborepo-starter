@@ -53,7 +53,7 @@ export const session = pgTable(
 			.references(() => user.id, { onDelete: "cascade" }),
 		...timestamps,
 	},
-	(table) => [index("session_userId_idx").on(table.userId)]
+	(table) => [index("session_userId_idx").on(table.userId)],
 );
 
 export const account = pgTable(
@@ -83,7 +83,7 @@ export const account = pgTable(
 		telegramUsername: text("telegram_username"),
 		...timestamps,
 	},
-	(table) => [index("account_userId_idx").on(table.userId)]
+	(table) => [index("account_userId_idx").on(table.userId)],
 );
 
 export const passkey = pgTable(
@@ -109,7 +109,7 @@ export const passkey = pgTable(
 	(table) => [
 		index("passkey_userId_idx").on(table.userId),
 		uniqueIndex("passkey_credential_id_unique").on(table.credentialID),
-	]
+	],
 );
 
 export const verification = pgTable(
@@ -124,7 +124,7 @@ export const verification = pgTable(
 		}).notNull(),
 		...timestamps,
 	},
-	(table) => [index("verification_identifier_idx").on(table.identifier)]
+	(table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
 export const organization = pgTable(
@@ -139,7 +139,7 @@ export const organization = pgTable(
 			.default(sql`now()`)
 			.notNull(),
 	},
-	(table) => [uniqueIndex("organization_slug_unique").on(table.slug)]
+	(table) => [uniqueIndex("organization_slug_unique").on(table.slug)],
 );
 
 export const member = pgTable(
@@ -162,9 +162,9 @@ export const member = pgTable(
 		index("member_userId_idx").on(table.userId),
 		uniqueIndex("member_org_user_unique").on(
 			table.organizationId,
-			table.userId
+			table.userId,
 		),
-	]
+	],
 );
 
 export const invitation = pgTable(
@@ -193,5 +193,5 @@ export const invitation = pgTable(
 		index("invitation_email_idx").on(table.email),
 		index("invitation_status_idx").on(table.status),
 		index("invitation_inviterId_idx").on(table.inviterId),
-	]
+	],
 );

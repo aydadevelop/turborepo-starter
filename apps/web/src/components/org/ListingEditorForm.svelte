@@ -1,4 +1,3 @@
-<!-- biome-ignore-all format: TanStack Form component member syntax not supported -->
 <script lang="ts">
 	import ChevronDown from "@lucide/svelte/icons/chevron-down";
 	import {
@@ -37,10 +36,10 @@
 	import type { ListingTypeOption } from "$lib/orpc-types";
 	import { getListingEditorDefaults } from "../../features/listings/editor/defaults";
 	import { createListingEditorSchema } from "../../features/listings/editor/schema";
-	import { buildListingEditorSubmitValues } from "../../features/listings/editor/submit";
 	import {
 		findListingTypeOption,
 	} from "../../features/listings/editor/shared";
+	import { buildListingEditorSubmitValues } from "../../features/listings/editor/submit";
 	import type {
 		ListingEditorInitialValue,
 		ListingEditorMode,

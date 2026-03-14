@@ -9,7 +9,7 @@ export type OrganizationPermission = Parameters<
 
 export const hasOrganizationPermission = (
 	role: string,
-	permission: OrganizationPermission
+	permission: OrganizationPermission,
 ) => {
 	const roleConfig = organizationRoles[role as OrganizationRoleName];
 

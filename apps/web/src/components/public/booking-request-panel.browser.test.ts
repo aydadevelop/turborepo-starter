@@ -155,7 +155,7 @@ test("shows validation hint when only one datetime field is filled", async () =>
 
 	await expect
 		.element(
-			page.getByText("Choose a valid time range before requesting a quote.")
+			page.getByText("Choose a valid time range before requesting a quote."),
 		)
 		.toBeVisible();
 });
@@ -207,11 +207,11 @@ test("redirects to login when unauthenticated user submits with a valid slot", a
 		.toBeVisible();
 
 	await userEvent.click(
-		page.getByRole("button", { name: "Sign in to request booking" })
+		page.getByRole("button", { name: "Sign in to request booking" }),
 	);
 
 	expect(mockState.goto).toHaveBeenCalledWith(
-		expect.stringContaining("/login?next=")
+		expect.stringContaining("/login?next="),
 	);
 });
 

@@ -17,7 +17,7 @@ interface TeamMutationDependencies {
 
 export async function removeOrganizationMember(
 	deps: TeamMutationDependencies,
-	memberId: string
+	memberId: string,
 ): Promise<MutationResult<void>> {
 	if (!memberId) {
 		return { ok: false, message: "Member not found. Please try again." };
@@ -40,7 +40,7 @@ export async function updateOrganizationMemberRole(
 	input: {
 		memberId: string;
 		role: OrgRole;
-	}
+	},
 ): Promise<MutationResult<void>> {
 	if (!input.memberId) {
 		return { ok: false, message: "Member not found. Please try again." };
@@ -68,7 +68,7 @@ export async function updateOrganizationMemberRole(
 
 export async function cancelOrganizationInvitation(
 	deps: TeamMutationDependencies,
-	invitationId: string
+	invitationId: string,
 ): Promise<MutationResult<void>> {
 	if (!invitationId) {
 		return { ok: false, message: "Invitation not found. Please try again." };

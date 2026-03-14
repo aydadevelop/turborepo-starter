@@ -24,7 +24,7 @@ const toActorContext = (context: WorkflowContext): SupportActorContext => ({
 });
 
 const resolveInboundBody = (
-	input: ProcessInboundSupportIntentInput
+	input: ProcessInboundSupportIntentInput,
 ): string => {
 	if (input.normalizedText?.trim()) {
 		return input.normalizedText.trim();
@@ -39,7 +39,7 @@ const resolveInboundBody = (
 };
 
 const buildInboundSubject = (
-	input: ProcessInboundSupportIntentInput
+	input: ProcessInboundSupportIntentInput,
 ): string => {
 	if (input.defaultSubject?.trim()) {
 		return input.defaultSubject.trim();
@@ -75,7 +75,7 @@ const persistInboundStep = (db: Db) =>
 				payload: input.payload,
 				status: "received",
 			},
-			db
+			db,
 		);
 
 		await emitSupportInboundReceived(toActorContext(ctx), {
@@ -106,7 +106,7 @@ const resolveTicketStep = (db: Db) =>
 			const ticket = await getTicket(
 				input.intent.ticketId,
 				input.intent.organizationId,
-				db
+				db,
 			);
 			return { ...input, ticket };
 		}
@@ -117,7 +117,7 @@ const resolveTicketStep = (db: Db) =>
 				externalThreadId: input.intent.externalThreadId,
 				organizationId: input.intent.organizationId,
 			},
-			db
+			db,
 		);
 
 		if (ticketId) {
@@ -136,7 +136,7 @@ const resolveTicketStep = (db: Db) =>
 				source: input.intent.channel,
 			},
 			db,
-			toActorContext(ctx)
+			toActorContext(ctx),
 		);
 
 		return { ...input, ticket };
@@ -162,12 +162,12 @@ const persistInboundMessageStep = (db: Db) =>
 				attachments: input.intent.attachments,
 			},
 			db,
-			toActorContext(ctx)
+			toActorContext(ctx),
 		);
 		const ticket = await getTicket(
 			input.ticket.id,
 			input.ticket.organizationId,
-			db
+			db,
 		);
 
 		return {
@@ -189,7 +189,7 @@ const markInboundProcessedStep = (db: Db) =>
 				status: "processed",
 				ticketId: input.ticket.id,
 			},
-			db
+			db,
 		);
 
 		await emitSupportInboundProcessed(toActorContext(ctx), {
@@ -231,7 +231,7 @@ export const processInboundSupportWorkflow = (db: Db) => {
 					status: "failed",
 					ticketId: inboundState.intent.ticketId ?? null,
 				},
-				db
+				db,
 			);
 			throw error;
 		}
@@ -241,11 +241,11 @@ export const processInboundSupportWorkflow = (db: Db) => {
 export async function processInboundSupportIntent(
 	input: ProcessInboundSupportIntentInput,
 	db: Db,
-	workflowContext: WorkflowContext
+	workflowContext: WorkflowContext,
 ): Promise<ProcessInboundSupportIntentOutput> {
 	const result = await processInboundSupportWorkflow(db).execute(
 		input,
-		workflowContext
+		workflowContext,
 	);
 
 	if (!result.success) {

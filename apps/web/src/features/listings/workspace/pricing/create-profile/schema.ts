@@ -17,13 +17,13 @@ export const createPricingProfileSchema = z.object({
 		.length(3, "Currency must be a 3-letter code.")
 		.transform((value) => value.toUpperCase()),
 	baseHourlyPriceCents: positiveIntegerString(
-		"Base hourly price must be a positive whole number."
+		"Base hourly price must be a positive whole number.",
 	),
 	minimumHours: positiveIntegerString(
-		"Minimum hours must be a positive whole number."
+		"Minimum hours must be a positive whole number.",
 	),
 	serviceFeeBps: nonNegativeIntegerString(
-		"Service fee must be a non-negative whole number."
+		"Service fee must be a non-negative whole number.",
 	),
 	taxBps: nonNegativeIntegerString("Tax must be a non-negative whole number."),
 	isDefault: z.boolean(),

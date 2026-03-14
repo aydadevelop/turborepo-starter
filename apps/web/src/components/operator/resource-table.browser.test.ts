@@ -1,6 +1,6 @@
+import type { Component } from "svelte";
 import { expect, test } from "vitest";
 import { page } from "vitest/browser";
-import type { Component } from "svelte";
 import { renderComponent } from "../../test/browser/render";
 import ResourceTable from "./ResourceTable.svelte";
 import { type ColumnDef, createColumnHelper } from "./resource-table";

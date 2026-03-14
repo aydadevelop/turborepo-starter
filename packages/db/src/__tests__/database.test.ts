@@ -85,7 +85,7 @@ describe("Test Database Setup", () => {
 					name: "Jane Doe",
 					email: "john@example.com",
 					emailVerified: true,
-				})
+				}),
 			).rejects.toThrow();
 		});
 	});
@@ -145,7 +145,7 @@ describe("Test Database Setup", () => {
 					organizationId: "org-1",
 					userId: "user-1",
 					role: "manager",
-				})
+				}),
 			).rejects.toThrow();
 		});
 
@@ -256,7 +256,7 @@ describe("Test Database Setup", () => {
 					eventType: "task.recurring.tick",
 					idempotencyKey: "notify:org-notify-1:1",
 					payload: { recipients: [] },
-				})
+				}),
 			).rejects.toThrow();
 		});
 
@@ -314,7 +314,7 @@ describe("Test Database Setup", () => {
 					provider: "in_app",
 					attempt: 1,
 					status: "queued",
-				})
+				}),
 			).rejects.toThrow();
 
 			await db.insert(notificationInApp).values({
@@ -367,7 +367,7 @@ describe("Test Database Setup", () => {
 					eventType: "*",
 					channel: "in_app",
 					enabled: false,
-				})
+				}),
 			).rejects.toThrow();
 		});
 	});
@@ -496,7 +496,7 @@ describe("Test Database Setup", () => {
 					webhookType: "pay",
 					requestSignature: "endpoint-1:pay:tx-1",
 					payload: { transactionId: "tx-1" },
-				})
+				}),
 			).rejects.toThrow();
 		});
 	});
@@ -738,7 +738,7 @@ describe("Test Database Setup", () => {
 					externalMessageId: "tg-456",
 					dedupeKey: "tg:chat:123",
 					payload: { text: "Hello again" },
-				})
+				}),
 			).rejects.toThrow();
 		});
 	});
@@ -1007,7 +1007,7 @@ describe("Test Database Setup", () => {
 					penaltyAmountCents: 0,
 					refundAmountCents: 30_000,
 					currency: "RUB",
-				})
+				}),
 			).rejects.toThrow();
 		});
 	});

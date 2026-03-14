@@ -19,13 +19,16 @@ import type {
 async function verifyListingOwnership(
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<void> {
 	const [row] = await db
 		.select({ id: listing.id })
 		.from(listing)
 		.where(
-			and(eq(listing.id, listingId), eq(listing.organizationId, organizationId))
+			and(
+				eq(listing.id, listingId),
+				eq(listing.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 	if (!row) {
@@ -35,7 +38,7 @@ async function verifyListingOwnership(
 
 export async function createAvailabilityRule(
 	input: CreateAvailabilityRuleInput,
-	db: Db
+	db: Db,
 ): Promise<AvailabilityRuleRow> {
 	await verifyListingOwnership(input.listingId, input.organizationId, db);
 	const [row] = await db
@@ -58,7 +61,7 @@ export async function createAvailabilityRule(
 export async function deleteAvailabilityRule(
 	id: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<void> {
 	const [rule] = await db
 		.select()
@@ -77,7 +80,7 @@ export async function deleteAvailabilityRule(
 export async function listAvailabilityRules(
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<AvailabilityRuleRow[]> {
 	await verifyListingOwnership(listingId, organizationId, db);
 	return db
@@ -86,13 +89,13 @@ export async function listAvailabilityRules(
 		.where(eq(listingAvailabilityRule.listingId, listingId))
 		.orderBy(
 			asc(listingAvailabilityRule.dayOfWeek),
-			asc(listingAvailabilityRule.startMinute)
+			asc(listingAvailabilityRule.startMinute),
 		);
 }
 
 export async function createAvailabilityBlock(
 	input: CreateAvailabilityBlockInput,
-	db: Db
+	db: Db,
 ): Promise<AvailabilityBlockRow> {
 	await verifyListingOwnership(input.listingId, input.organizationId, db);
 	const [row] = await db
@@ -116,7 +119,7 @@ export async function createAvailabilityBlock(
 export async function deleteAvailabilityBlock(
 	id: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<void> {
 	const [block] = await db
 		.select()
@@ -134,7 +137,7 @@ export async function deleteAvailabilityBlock(
 
 export async function createAvailabilityException(
 	input: CreateAvailabilityExceptionInput,
-	db: Db
+	db: Db,
 ): Promise<AvailabilityExceptionRow> {
 	await verifyListingOwnership(input.listingId, input.organizationId, db);
 	const [existing] = await db
@@ -143,8 +146,8 @@ export async function createAvailabilityException(
 		.where(
 			and(
 				eq(listingAvailabilityException.listingId, input.listingId),
-				eq(listingAvailabilityException.date, input.date)
-			)
+				eq(listingAvailabilityException.date, input.date),
+			),
 		)
 		.limit(1);
 	if (existing) {
@@ -171,7 +174,7 @@ export async function createAvailabilityException(
 export async function deleteAvailabilityException(
 	id: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<void> {
 	const [exc] = await db
 		.select()
@@ -191,7 +194,7 @@ export async function checkSlotAvailable(
 	listingId: string,
 	startsAt: Date,
 	endsAt: Date,
-	db: Db
+	db: Db,
 ): Promise<boolean> {
 	// Check for overlapping active bookings (not cancelled)
 	const [overlappingBooking] = await db
@@ -202,8 +205,8 @@ export async function checkSlotAvailable(
 				eq(booking.listingId, listingId),
 				not(inArray(booking.status, ["cancelled"])),
 				lt(booking.startsAt, endsAt),
-				gt(booking.endsAt, startsAt)
-			)
+				gt(booking.endsAt, startsAt),
+			),
 		)
 		.limit(1);
 
@@ -220,8 +223,8 @@ export async function checkSlotAvailable(
 				eq(listingAvailabilityBlock.listingId, listingId),
 				eq(listingAvailabilityBlock.isActive, true),
 				lt(listingAvailabilityBlock.startsAt, endsAt),
-				gt(listingAvailabilityBlock.endsAt, startsAt)
-			)
+				gt(listingAvailabilityBlock.endsAt, startsAt),
+			),
 		)
 		.limit(1);
 
@@ -236,7 +239,7 @@ export async function assertSlotAvailable(
 	listingId: string,
 	startsAt: Date,
 	endsAt: Date,
-	db: Db
+	db: Db,
 ): Promise<void> {
 	const available = await checkSlotAvailable(listingId, startsAt, endsAt, db);
 	if (!available) {

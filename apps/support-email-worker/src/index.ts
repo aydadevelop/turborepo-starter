@@ -22,7 +22,7 @@ export default {
 
 	async email(
 		message: SupportEmailWorkerMessage,
-		rawEnv: unknown
+		rawEnv: unknown,
 	): Promise<void> {
 		await handleSupportEmailMessage(message, rawEnv);
 	},
@@ -31,16 +31,16 @@ export default {
 export async function handleSupportEmailMessage(
 	message: SupportEmailWorkerMessage,
 	rawEnv: unknown,
-	fetchImpl: typeof fetch = fetch
+	fetchImpl: typeof fetch = fetch,
 ): Promise<SupportEmailIntakePayload | null> {
 	const env = parseSupportEmailWorkerEnv(rawEnv);
 	const payload = supportEmailIntakePayloadSchema.parse(
-		await buildSupportInboundEmailPayload(message)
+		await buildSupportInboundEmailPayload(message),
 	);
 
 	if (!matchesAllowedRecipients(payload, message, env)) {
 		message.setReject?.(
-			"Recipient is not configured for support email intake."
+			"Recipient is not configured for support email intake.",
 		);
 		return null;
 	}
@@ -48,7 +48,7 @@ export async function handleSupportEmailMessage(
 	const response = await forwardSupportInboundEmail(payload, env, fetchImpl);
 	if (!response.ok) {
 		throw new Error(
-			`SUPPORT_EMAIL_FORWARD_FAILED: ${response.status} ${response.statusText}`
+			`SUPPORT_EMAIL_FORWARD_FAILED: ${response.status} ${response.statusText}`,
 		);
 	}
 
@@ -58,7 +58,7 @@ export async function handleSupportEmailMessage(
 export const forwardSupportInboundEmail = (
 	payload: SupportEmailIntakePayload,
 	env: SupportEmailWorkerEnv,
-	fetchImpl: typeof fetch = fetch
+	fetchImpl: typeof fetch = fetch,
 ): Promise<Response> => {
 	return fetchImpl(env.SUPPORT_EMAIL_WEBHOOK_URL, {
 		method: "POST",
@@ -73,10 +73,10 @@ export const forwardSupportInboundEmail = (
 const matchesAllowedRecipients = (
 	payload: SupportEmailIntakePayload,
 	message: SupportEmailWorkerMessage,
-	env: SupportEmailWorkerEnv
+	env: SupportEmailWorkerEnv,
 ): boolean => {
 	const allowedRecipients = parseAllowedRecipients(
-		env.SUPPORT_EMAIL_ALLOWED_RECIPIENTS
+		env.SUPPORT_EMAIL_ALLOWED_RECIPIENTS,
 	);
 	if (allowedRecipients.length === 0) {
 		return true;
@@ -86,7 +86,7 @@ const matchesAllowedRecipients = (
 	const recipients = new Set(
 		envelopeRecipients.length > 0
 			? envelopeRecipients
-			: payload.to.map((recipient) => recipient.address.toLowerCase())
+			: payload.to.map((recipient) => recipient.address.toLowerCase()),
 	);
 
 	for (const recipient of recipients) {

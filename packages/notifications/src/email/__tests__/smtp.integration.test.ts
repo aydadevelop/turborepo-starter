@@ -28,7 +28,7 @@ describe.skipIf(!runIntegration)("SmtpEmailProvider integration", () => {
 	beforeAll(async () => {
 		if (!(await smtp4devAvailable())) {
 			throw new Error(
-				`smtp4dev API is unavailable at ${smtp4devBaseUrl}. Start docker compose smtp-server first.`
+				`smtp4dev API is unavailable at ${smtp4devBaseUrl}. Start docker compose smtp-server first.`,
 			);
 		}
 	});
@@ -61,13 +61,13 @@ describe.skipIf(!runIntegration)("SmtpEmailProvider integration", () => {
 });
 
 const pollForMessage = async (
-	subject: string
+	subject: string,
 ): Promise<{ id?: string; subject?: string } | null> => {
 	for (let attempt = 0; attempt < 20; attempt += 1) {
 		const response = await fetch(`${smtp4devBaseUrl}/api/messages`);
 		if (!response.ok) {
 			throw new Error(
-				`smtp4dev list request failed: ${response.status} ${response.statusText}`
+				`smtp4dev list request failed: ${response.status} ${response.statusText}`,
 			);
 		}
 

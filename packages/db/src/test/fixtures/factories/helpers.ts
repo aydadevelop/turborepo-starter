@@ -8,7 +8,7 @@ export const upsertFixtureById = async <
 >(
 	db: TestDatabase,
 	table: Parameters<TestDatabase["insert"]>[0] & { id: AnyPgColumn },
-	values: TInsert
+	values: TInsert,
 ): Promise<TSelect> => {
 	const rows = (await db
 		.insert(table)

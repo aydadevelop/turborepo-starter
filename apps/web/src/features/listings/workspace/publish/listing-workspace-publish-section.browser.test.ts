@@ -88,7 +88,7 @@ test("opens moderation and distribution actions in focused dialogs", async () =>
 		.element(page.getByRole("button", { name: "Unpublish all" }))
 		.toBeVisible();
 	await expect(document.body).toMatchScreenshot(
-		"listing-workspace-publish-section"
+		"listing-workspace-publish-section",
 	);
 
 	await userEvent.click(page.getByRole("button", { name: "Approve listing" }));
@@ -99,7 +99,7 @@ test("opens moderation and distribution actions in focused dialogs", async () =>
 
 	await userEvent.click(page.getByRole("button", { name: "Close" }));
 	await userEvent.click(
-		page.getByRole("button", { name: "Publish to channel" })
+		page.getByRole("button", { name: "Publish to channel" }),
 	);
 	await expect
 		.element(page.getByRole("heading", { name: "Publish to channel" }))
@@ -115,7 +115,7 @@ test("opens moderation and distribution actions in focused dialogs", async () =>
 		.toBeVisible();
 
 	await userEvent.click(
-		page.getByRole("button", { name: "Unpublish all" }).nth(1)
+		page.getByRole("button", { name: "Unpublish all" }).nth(1),
 	);
 	expect(onUnpublishListing).toHaveBeenCalledWith("listing-1");
 });

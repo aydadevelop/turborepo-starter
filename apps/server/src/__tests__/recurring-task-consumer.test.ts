@@ -20,9 +20,8 @@ describe("handleRecurringTaskJob", () => {
 
 	it("processes valid task.recurring.tick.v1 messages", async () => {
 		processRecurringTaskTickMock.mockResolvedValue(undefined);
-		const { handleRecurringTaskJob } = await import(
-			"../queues/recurring-task-consumer"
-		);
+		const { handleRecurringTaskJob } =
+			await import("../queues/recurring-task-consumer");
 
 		await handleRecurringTaskJob({
 			kind: "task.recurring.tick.v1",
@@ -39,9 +38,8 @@ describe("handleRecurringTaskJob", () => {
 	});
 
 	it("discards unknown message payloads", async () => {
-		const { handleRecurringTaskJob } = await import(
-			"../queues/recurring-task-consumer"
-		);
+		const { handleRecurringTaskJob } =
+			await import("../queues/recurring-task-consumer");
 
 		await handleRecurringTaskJob({
 			kind: "unknown.message.v1",

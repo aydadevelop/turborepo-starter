@@ -11,7 +11,7 @@ describe("buildCreateAvailabilityExceptionInput", () => {
 				startTime: "",
 				endTime: "",
 				reason: "Storm warning",
-			})
+			}),
 		).toEqual({
 			ok: true,
 			data: {
@@ -31,7 +31,7 @@ describe("buildCreateAvailabilityExceptionInput", () => {
 				startTime: "12:00",
 				endTime: "16:30",
 				reason: "Late departure",
-			})
+			}),
 		).toEqual({
 			ok: true,
 			data: {

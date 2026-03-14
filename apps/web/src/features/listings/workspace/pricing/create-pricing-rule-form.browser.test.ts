@@ -44,11 +44,11 @@ test("submits pricing rule values through the section form contract", async () =
 	await userEvent.selectOptions(page.getByLabelText("Rule type"), "dayOfWeek");
 	await userEvent.fill(
 		page.getByLabelText("Condition JSON"),
-		'{"alwaysApply":true}'
+		'{"alwaysApply":true}',
 	);
 	await userEvent.selectOptions(
 		page.getByLabelText("Adjustment type"),
-		"percent"
+		"percent",
 	);
 	await userEvent.fill(page.getByLabelText("Adjustment value"), "20");
 	await userEvent.fill(page.getByLabelText("Priority"), "10");

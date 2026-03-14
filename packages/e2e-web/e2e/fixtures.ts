@@ -46,7 +46,7 @@ export const test = base.extend<TestFixtures>({
 	},
 
 	testNamespace: [
-		// biome-ignore lint/correctness/noEmptyPattern: Playwright fixture API requires destructuring
+		// oxlint-disable-next-line no-empty-pattern -- Playwright fixture API requires destructuring
 		async ({}, use) => {
 			const id = (++namespaceCounter).toString(36);
 			const ts = Math.floor(Date.now() / 1000).toString(36);
@@ -57,7 +57,7 @@ export const test = base.extend<TestFixtures>({
 
 	testData: async (
 		{ testNamespace }: TestFixtures,
-		use: (f: TestDataFactory) => Promise<void>
+		use: (f: TestDataFactory) => Promise<void>,
 	) => {
 		const factory = new TestDataFactory(testNamespace, serverURL, baseURL);
 		await use(factory);

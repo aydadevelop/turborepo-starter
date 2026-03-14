@@ -11,7 +11,7 @@ test.describe("Dashboard Bookings", () => {
 		await operatorPage.goto(url("/dashboard/bookings"), NAV_OPTIONS);
 
 		await expect(
-			operatorPage.getByRole("heading", { name: "My Bookings" })
+			operatorPage.getByRole("heading", { name: "My Bookings" }),
 		).toBeVisible();
 	});
 
@@ -23,7 +23,7 @@ test.describe("Dashboard Bookings", () => {
 		await expect(operatorPage.getByText("Booking history")).toBeVisible();
 		// The baseline operator has no bookings — the table renders with an empty state.
 		await expect(
-			operatorPage.getByText("You have no bookings yet.")
+			operatorPage.getByText("You have no bookings yet."),
 		).toBeVisible();
 	});
 
@@ -43,7 +43,7 @@ test.describe("Dashboard Bookings", () => {
 		await adminPage.goto(url("/dashboard/bookings"), NAV_OPTIONS);
 
 		await expect(
-			adminPage.getByRole("heading", { name: "My Bookings" })
+			adminPage.getByRole("heading", { name: "My Bookings" }),
 		).toBeVisible();
 		await expect(adminPage.getByText("Booking history")).toBeVisible();
 	});

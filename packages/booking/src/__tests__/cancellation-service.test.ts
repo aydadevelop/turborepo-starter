@@ -126,7 +126,7 @@ const testDbState = bootstrapTestDatabase({
 				amountCents: 10_000,
 				currency: "RUB",
 				processedAt: now,
-			}))
+			})),
 		);
 		// BOOKING_NO_PMT_ID intentionally has NO payment attempts
 	},
@@ -142,7 +142,7 @@ describe("requestCancellation — policy outcomes", () => {
 				organizationId: ORG_ID,
 				initiatedByRole: "customer",
 			},
-			getDb()
+			getDb(),
 		);
 
 		expect(outcome.refundPercent).toBe(100);
@@ -158,7 +158,7 @@ describe("requestCancellation — policy outcomes", () => {
 				organizationId: ORG_ID,
 				initiatedByRole: "customer",
 			},
-			getDb()
+			getDb(),
 		);
 
 		expect(outcome.refundPercent).toBe(80); // 100% - 20% penalty
@@ -173,7 +173,7 @@ describe("requestCancellation — policy outcomes", () => {
 				organizationId: ORG_ID,
 				initiatedByRole: "customer",
 			},
-			getDb()
+			getDb(),
 		);
 
 		expect(outcome.refundPercent).toBe(0); // latePenaltyBps=10_000 → 100% penalty
@@ -188,7 +188,7 @@ describe("requestCancellation — policy outcomes", () => {
 				organizationId: ORG_ID,
 				initiatedByRole: "manager",
 			},
-			getDb()
+			getDb(),
 		);
 
 		expect(outcome.refundPercent).toBe(100);
@@ -203,7 +203,7 @@ describe("requestCancellation — policy outcomes", () => {
 				initiatedByRole: "customer",
 				reasonCode: "CUSTOMER_HEALTH_ISSUE",
 			},
-			getDb()
+			getDb(),
 		);
 
 		expect(outcome.refundPercent).toBe(100);
@@ -222,8 +222,8 @@ describe("requestCancellation — MANAGER_SAFETY_REJECTION", () => {
 					initiatedByRole: "manager",
 					reasonCode: "MANAGER_SAFETY_REJECTION",
 				},
-				getDb()
-			)
+				getDb(),
+			),
 		).rejects.toThrow("EVIDENCE_REQUIRED");
 	});
 
@@ -236,7 +236,7 @@ describe("requestCancellation — MANAGER_SAFETY_REJECTION", () => {
 				reasonCode: "MANAGER_SAFETY_REJECTION",
 				evidence: [{ type: "photo", url: "https://example.com/evidence.jpg" }],
 			},
-			getDb()
+			getDb(),
 		);
 
 		expect(outcome.refundPercent).toBe(0);
@@ -252,7 +252,7 @@ describe("applyCancellation — no captured payments", () => {
 				organizationId: ORG_ID,
 				initiatedByRole: "customer",
 			},
-			getDb()
+			getDb(),
 		);
 
 		expect(outcome.capturedAmountCents).toBe(0);
@@ -262,7 +262,7 @@ describe("applyCancellation — no captured payments", () => {
 			request.id,
 			ORG_ID,
 			APPLIER_USER_ID,
-			getDb()
+			getDb(),
 		);
 
 		// No refund row should be inserted when refundAmountCents=0
@@ -278,7 +278,7 @@ describe("requestCancellation — duplicate guard", () => {
 				organizationId: ORG_ID,
 				initiatedByRole: "customer",
 			},
-			getDb()
+			getDb(),
 		);
 
 		await expect(() =>
@@ -288,8 +288,8 @@ describe("requestCancellation — duplicate guard", () => {
 					organizationId: ORG_ID,
 					initiatedByRole: "customer",
 				},
-				getDb()
-			)
+				getDb(),
+			),
 		).rejects.toThrow("DUPLICATE_REQUEST");
 	});
 });

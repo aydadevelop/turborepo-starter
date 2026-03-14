@@ -1,178 +1,178 @@
 {
-  "__inputs": [],
-  "__requires": [
-    { "type": "datasource", "id": "loki", "name": "Loki", "version": "1.0.0" }
-  ],
-  "uid": "error-monitor",
-  "title": "Error Monitor",
-  "tags": ["logs", "errors", "alerts"],
-  "schemaVersion": 39,
-  "version": 1,
-  "refresh": "30s",
-  "time": { "from": "now-3h", "to": "now" },
-  "templating": {
-    "list": [
-      {
-        "name": "service",
-        "label": "Service",
-        "type": "query",
-        "datasource": { "type": "loki", "uid": "loki" },
-        "definition": "label_values(service)",
-        "query": "label_values(service)",
-        "includeAll": true,
-        "allValue": ".+",
-        "multi": true,
-        "current": { "selected": true, "text": "All", "value": "$__all" },
-        "refresh": 2
-      }
-    ]
-  },
-  "panels": [
-    {
-      "id": 1,
-      "title": "Total Errors (last 1h)",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "loki", "uid": "loki" },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 10 }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "expr": "sum(count_over_time({service=~\"$service\"} |~ `(?i)(error|exception|fatal|panic)` [1h]))",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "title": "Total Warnings (last 1h)",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "loki", "uid": "loki" },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 5 },
-              { "color": "orange", "value": 20 }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "expr": "sum(count_over_time({service=~\"$service\"} |~ `(?i)(warn|warning)` [1h]))",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "title": "Services with Errors",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "loki", "uid": "loki" },
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "textMode": "auto",
-        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 2 }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "expr": "count(sum by(service) (count_over_time({service=~\"$service\"} |~ `(?i)(error|fatal)` [1h])) > 0)",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "title": "Error Rate Over Time",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
-      "datasource": { "type": "loki", "uid": "loki" },
-      "options": {
-        "legend": { "displayMode": "list", "placement": "bottom" }
-      },
-      "fieldConfig": {
-        "defaults": { "unit": "short", "custom": { "lineWidth": 2 } },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "expr": "sum by(service) (count_over_time({service=~\"$service\"} |~ `(?i)(error|exception|fatal|panic)` [$__interval]))",
-          "legendFormat": "{{service}}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 5,
-      "title": "Errors & Exceptions",
-      "type": "logs",
-      "gridPos": { "h": 18, "w": 24, "x": 0, "y": 12 },
-      "datasource": { "type": "loki", "uid": "loki" },
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": true,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": true
-      },
-      "targets": [
-        {
-          "expr": "{service=~\"$service\"} |~ `(?i)(error|exception|fatal|panic)`",
-          "refId": "A"
-        }
-      ]
-    }
-  ]
+	"__inputs": [],
+	"__requires": [
+		{ "type": "datasource", "id": "loki", "name": "Loki", "version": "1.0.0" }
+	],
+	"uid": "error-monitor",
+	"title": "Error Monitor",
+	"tags": ["logs", "errors", "alerts"],
+	"schemaVersion": 39,
+	"version": 1,
+	"refresh": "30s",
+	"time": { "from": "now-3h", "to": "now" },
+	"templating": {
+		"list": [
+			{
+				"name": "service",
+				"label": "Service",
+				"type": "query",
+				"datasource": { "type": "loki", "uid": "loki" },
+				"definition": "label_values(service)",
+				"query": "label_values(service)",
+				"includeAll": true,
+				"allValue": ".+",
+				"multi": true,
+				"current": { "selected": true, "text": "All", "value": "$__all" },
+				"refresh": 2
+			}
+		]
+	},
+	"panels": [
+		{
+			"id": 1,
+			"title": "Total Errors (last 1h)",
+			"type": "stat",
+			"gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+			"datasource": { "type": "loki", "uid": "loki" },
+			"options": {
+				"colorMode": "background",
+				"graphMode": "none",
+				"justifyMode": "center",
+				"textMode": "auto",
+				"reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "short",
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{ "color": "green", "value": null },
+							{ "color": "yellow", "value": 1 },
+							{ "color": "red", "value": 10 }
+						]
+					}
+				},
+				"overrides": []
+			},
+			"targets": [
+				{
+					"expr": "sum(count_over_time({service=~\"$service\"} |~ `(?i)(error|exception|fatal|panic)` [1h]))",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"id": 2,
+			"title": "Total Warnings (last 1h)",
+			"type": "stat",
+			"gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+			"datasource": { "type": "loki", "uid": "loki" },
+			"options": {
+				"colorMode": "background",
+				"graphMode": "none",
+				"justifyMode": "center",
+				"textMode": "auto",
+				"reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "short",
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{ "color": "green", "value": null },
+							{ "color": "yellow", "value": 5 },
+							{ "color": "orange", "value": 20 }
+						]
+					}
+				},
+				"overrides": []
+			},
+			"targets": [
+				{
+					"expr": "sum(count_over_time({service=~\"$service\"} |~ `(?i)(warn|warning)` [1h]))",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"id": 3,
+			"title": "Services with Errors",
+			"type": "stat",
+			"gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+			"datasource": { "type": "loki", "uid": "loki" },
+			"options": {
+				"colorMode": "background",
+				"graphMode": "none",
+				"justifyMode": "center",
+				"textMode": "auto",
+				"reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }
+			},
+			"fieldConfig": {
+				"defaults": {
+					"unit": "short",
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{ "color": "green", "value": null },
+							{ "color": "yellow", "value": 1 },
+							{ "color": "red", "value": 2 }
+						]
+					}
+				},
+				"overrides": []
+			},
+			"targets": [
+				{
+					"expr": "count(sum by(service) (count_over_time({service=~\"$service\"} |~ `(?i)(error|fatal)` [1h])) > 0)",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"id": 4,
+			"title": "Error Rate Over Time",
+			"type": "timeseries",
+			"gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
+			"datasource": { "type": "loki", "uid": "loki" },
+			"options": {
+				"legend": { "displayMode": "list", "placement": "bottom" }
+			},
+			"fieldConfig": {
+				"defaults": { "unit": "short", "custom": { "lineWidth": 2 } },
+				"overrides": []
+			},
+			"targets": [
+				{
+					"expr": "sum by(service) (count_over_time({service=~\"$service\"} |~ `(?i)(error|exception|fatal|panic)` [$__interval]))",
+					"legendFormat": "{{service}}",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"id": 5,
+			"title": "Errors & Exceptions",
+			"type": "logs",
+			"gridPos": { "h": 18, "w": 24, "x": 0, "y": 12 },
+			"datasource": { "type": "loki", "uid": "loki" },
+			"options": {
+				"dedupStrategy": "none",
+				"enableLogDetails": true,
+				"prettifyLogMessage": false,
+				"showCommonLabels": false,
+				"showLabels": true,
+				"showTime": true,
+				"sortOrder": "Descending",
+				"wrapLogMessage": true
+			},
+			"targets": [
+				{
+					"expr": "{service=~\"$service\"} |~ `(?i)(error|exception|fatal|panic)`",
+					"refId": "A"
+				}
+			]
+		}
+	]
 }

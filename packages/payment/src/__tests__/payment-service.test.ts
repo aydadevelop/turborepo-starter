@@ -104,7 +104,7 @@ describe("reconcilePaymentWebhook", () => {
 			WEBHOOK_ENDPOINT_ID,
 			"pay",
 			VALID_PAY_PAYLOAD,
-			getDb()
+			getDb(),
 		);
 
 		expect(result1.processed).toBe(true);
@@ -119,8 +119,8 @@ describe("reconcilePaymentWebhook", () => {
 				and(
 					eq(paymentWebhookEvent.endpointId, WEBHOOK_ENDPOINT_ID),
 					eq(paymentWebhookEvent.status, "processed"),
-					eq(paymentWebhookEvent.webhookType, "pay")
-				)
+					eq(paymentWebhookEvent.webhookType, "pay"),
+				),
 			)
 			.limit(1);
 		expect(processedEvent).toBeDefined();
@@ -137,7 +137,7 @@ describe("reconcilePaymentWebhook", () => {
 			.select()
 			.from(organizationPaymentConfig)
 			.where(
-				eq(organizationPaymentConfig.webhookEndpointId, WEBHOOK_ENDPOINT_ID)
+				eq(organizationPaymentConfig.webhookEndpointId, WEBHOOK_ENDPOINT_ID),
 			)
 			.limit(1);
 		expect(updatedConfig?.validationStatus).toBe("validated");
@@ -152,7 +152,7 @@ describe("reconcilePaymentWebhook", () => {
 			WEBHOOK_ENDPOINT_ID,
 			"pay",
 			VALID_PAY_PAYLOAD,
-			getDb()
+			getDb(),
 		);
 
 		expect(result2.idempotent).toBe(true);
@@ -164,8 +164,8 @@ describe("reconcilePaymentWebhook", () => {
 			.where(
 				eq(
 					paymentWebhookEvent.requestSignature,
-					`${WEBHOOK_ENDPOINT_ID}:pay:${VALID_PAY_PAYLOAD.TransactionId}`
-				)
+					`${WEBHOOK_ENDPOINT_ID}:pay:${VALID_PAY_PAYLOAD.TransactionId}`,
+				),
 			);
 		expect(matchingEvents).toHaveLength(1);
 
@@ -175,8 +175,8 @@ describe("reconcilePaymentWebhook", () => {
 			.where(
 				eq(
 					bookingPaymentAttempt.providerIntentId,
-					String(VALID_PAY_PAYLOAD.TransactionId)
-				)
+					String(VALID_PAY_PAYLOAD.TransactionId),
+				),
 			);
 		expect(matchingAttempts).toHaveLength(1);
 
@@ -184,11 +184,11 @@ describe("reconcilePaymentWebhook", () => {
 			.select()
 			.from(organizationPaymentConfig)
 			.where(
-				eq(organizationPaymentConfig.webhookEndpointId, WEBHOOK_ENDPOINT_ID)
+				eq(organizationPaymentConfig.webhookEndpointId, WEBHOOK_ENDPOINT_ID),
 			)
 			.limit(1);
 		expect(configAfterDuplicate?.validatedAt?.toISOString()).toBe(
-			validatedAtAfterFirstIngress
+			validatedAtAfterFirstIngress,
 		);
 	});
 
@@ -198,8 +198,8 @@ describe("reconcilePaymentWebhook", () => {
 				"unknown-endpoint-xyz",
 				"pay",
 				VALID_PAY_PAYLOAD,
-				getDb()
-			)
+				getDb(),
+			),
 		).rejects.toThrow("ENDPOINT_NOT_FOUND");
 	});
 });

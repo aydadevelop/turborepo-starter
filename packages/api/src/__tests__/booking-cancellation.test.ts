@@ -185,7 +185,7 @@ const createRpcContext = (overrides: Partial<Context> = {}): Context => ({
 
 const callApplyCancellation = async (
 	requestId: string,
-	contextOverrides: Partial<Context> = {}
+	contextOverrides: Partial<Context> = {},
 ): Promise<{ status: number; body: unknown }> => {
 	const request = new Request(
 		"http://example.test/rpc/booking/applyCancellation",
@@ -197,7 +197,7 @@ const callApplyCancellation = async (
 			body: JSON.stringify({
 				json: { requestId },
 			}),
-		}
+		},
 	);
 
 	const result = await rpcHandler.handle(request, {
@@ -218,7 +218,7 @@ const callApplyCancellation = async (
 };
 
 const registerTestProvider = (
-	overrides: Partial<PaymentProvider> = {}
+	overrides: Partial<PaymentProvider> = {},
 ): PaymentProvider => {
 	const provider: PaymentProvider = {
 		providerId: "cloudpayments",
@@ -234,7 +234,7 @@ const registerTestProvider = (
 
 const insertCancellationRequest = async (
 	db: TestDatabase,
-	overrides: Partial<typeof bookingCancellationRequest.$inferInsert> = {}
+	overrides: Partial<typeof bookingCancellationRequest.$inferInsert> = {},
 ): Promise<string> => {
 	const requestId = overrides.id ?? crypto.randomUUID();
 
@@ -262,7 +262,7 @@ const insertCancellationRequest = async (
 
 const insertCapturedAttempt = async (
 	db: TestDatabase,
-	overrides: Partial<typeof bookingPaymentAttempt.$inferInsert> = {}
+	overrides: Partial<typeof bookingPaymentAttempt.$inferInsert> = {},
 ) => {
 	await db.insert(bookingPaymentAttempt).values({
 		id: "api-cancel-payment-attempt-1",
@@ -315,7 +315,7 @@ describe("booking.applyCancellation live handler", () => {
 				providerId: "cloudpayments",
 				publicKey: "pk_live_test",
 				credentials: expect.objectContaining({ apiSecret: "secret_live_test" }),
-			})
+			}),
 		);
 
 		const [updatedBooking] = await db
@@ -347,8 +347,8 @@ describe("booking.applyCancellation live handler", () => {
 			.where(
 				and(
 					eq(bookingRefund.bookingId, BOOKING_ID),
-					eq(bookingRefund.status, "processed")
-				)
+					eq(bookingRefund.status, "processed"),
+				),
 			)
 			.limit(1);
 		expect(refund).toMatchObject({

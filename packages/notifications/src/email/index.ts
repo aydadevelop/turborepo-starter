@@ -2,7 +2,6 @@ export type {
 	FakeEmailProviderOptions,
 	FakeEmailProviderRecord,
 } from "./adapters/fake";
-// biome-ignore lint/performance/noBarrelFile: Package-level notifications email entrypoint re-exports supported provider APIs.
 export { createFakeEmailProvider, FakeEmailProvider } from "./adapters/fake";
 export type { SmtpEmailProviderConfig } from "./adapters/smtp";
 export { createSmtpEmailProvider, SmtpEmailProvider } from "./adapters/smtp";

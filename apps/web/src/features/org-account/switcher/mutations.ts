@@ -9,7 +9,7 @@ interface SwitchOrganizationDependencies {
 
 export async function switchActiveOrganization(
 	deps: SwitchOrganizationDependencies,
-	organizationId: string
+	organizationId: string,
 ): Promise<MutationResult<void>> {
 	if (!organizationId) {
 		return { ok: false, message: "Organization not found. Please try again." };

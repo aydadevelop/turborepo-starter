@@ -25,7 +25,7 @@ export type OrganizationManualOverrideScope =
 	(typeof organizationManualOverrideScopeValues)[number];
 export const organizationManualOverrideScopeEnum = pgEnum(
 	"organization_manual_override_scope",
-	organizationManualOverrideScopeValues
+	organizationManualOverrideScopeValues,
 );
 
 export const organizationSettings = pgTable(
@@ -61,9 +61,9 @@ export const organizationSettings = pgTable(
 	},
 	(table) => [
 		uniqueIndex("organization_settings_uq_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
-	]
+	],
 );
 
 export const organizationOnboarding = pgTable(
@@ -91,10 +91,10 @@ export const organizationOnboarding = pgTable(
 	},
 	(table) => [
 		uniqueIndex("organization_onboarding_uq_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		index("organization_onboarding_ix_is_complete").on(table.isComplete),
-	]
+	],
 );
 
 export const organizationManualOverride = pgTable(
@@ -123,11 +123,11 @@ export const organizationManualOverride = pgTable(
 	},
 	(table) => [
 		index("organization_manual_override_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		index("organization_manual_override_ix_is_active").on(table.isActive),
 		index("organization_manual_override_ix_scope_type").on(table.scopeType),
-	]
+	],
 );
 
 export const listingTypeConfig = pgTable(
@@ -151,7 +151,7 @@ export const listingTypeConfig = pgTable(
 		sortOrder: integer("sort_order").notNull().default(0),
 		...timestamps,
 	},
-	(table) => [uniqueIndex("listing_type_config_uq_slug").on(table.slug)]
+	(table) => [uniqueIndex("listing_type_config_uq_slug").on(table.slug)],
 );
 
 export const organizationListingType = pgTable(
@@ -170,16 +170,16 @@ export const organizationListingType = pgTable(
 	},
 	(table) => [
 		index("organization_listing_type_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		uniqueIndex("organization_listing_type_uq_org_slug").on(
 			table.organizationId,
-			table.listingTypeSlug
+			table.listingTypeSlug,
 		),
 		uniqueIndex("organization_listing_type_uq_default")
 			.on(table.organizationId)
 			.where(sql`${table.isDefault} = true`),
-	]
+	],
 );
 
 export const listingLocation = pgTable(
@@ -199,5 +199,5 @@ export const listingLocation = pgTable(
 	},
 	(table) => [
 		index("listing_location_ix_organization_id").on(table.organizationId),
-	]
+	],
 );

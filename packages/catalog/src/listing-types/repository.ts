@@ -8,7 +8,7 @@ import type { Db, ListingTypeOptionsResult, ListingTypeRow } from "../types";
 
 export async function findListingTypeBySlug(
 	listingTypeSlug: string,
-	db: Db
+	db: Db,
 ): Promise<ListingTypeRow | null> {
 	const [row] = await db
 		.select()
@@ -22,7 +22,7 @@ export async function findListingTypeBySlug(
 export async function findOrganizationListingType(
 	organizationId: string,
 	listingTypeSlug: string,
-	db: Db
+	db: Db,
 ): Promise<{ id: string } | null> {
 	const [row] = await db
 		.select({ id: organizationListingType.id })
@@ -30,8 +30,8 @@ export async function findOrganizationListingType(
 		.where(
 			and(
 				eq(organizationListingType.organizationId, organizationId),
-				eq(organizationListingType.listingTypeSlug, listingTypeSlug)
-			)
+				eq(organizationListingType.listingTypeSlug, listingTypeSlug),
+			),
 		)
 		.limit(1);
 
@@ -40,7 +40,7 @@ export async function findOrganizationListingType(
 
 export async function organizationHasListingTypeConfig(
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<boolean> {
 	const [row] = await db
 		.select({ count: count() })
@@ -67,20 +67,20 @@ export function listActivePlatformListingTypes(db: Db) {
 		.orderBy(
 			asc(listingTypeConfig.sortOrder),
 			asc(listingTypeConfig.label),
-			asc(listingTypeConfig.slug)
+			asc(listingTypeConfig.slug),
 		)
 		.then((rows) =>
-			rows.map((row) => toListingTypeOption({ ...row, isDefault: false }))
+			rows.map((row) => toListingTypeOption({ ...row, isDefault: false })),
 		);
 }
 
 export async function listOrganizationAvailableListingTypes(
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingTypeOptionsResult> {
 	const hasOrgSpecificTypes = await organizationHasListingTypeConfig(
 		organizationId,
-		db
+		db,
 	);
 
 	if (!hasOrgSpecificTypes) {
@@ -105,19 +105,19 @@ export async function listOrganizationAvailableListingTypes(
 		.from(organizationListingType)
 		.innerJoin(
 			listingTypeConfig,
-			eq(organizationListingType.listingTypeSlug, listingTypeConfig.slug)
+			eq(organizationListingType.listingTypeSlug, listingTypeConfig.slug),
 		)
 		.where(
 			and(
 				eq(organizationListingType.organizationId, organizationId),
-				eq(listingTypeConfig.isActive, true)
-			)
+				eq(listingTypeConfig.isActive, true),
+			),
 		)
 		.orderBy(
 			asc(organizationListingType.isDefault),
 			asc(listingTypeConfig.sortOrder),
 			asc(listingTypeConfig.label),
-			asc(listingTypeConfig.slug)
+			asc(listingTypeConfig.slug),
 		);
 
 	const items = rows

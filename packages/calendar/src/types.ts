@@ -21,14 +21,14 @@ export type CalendarAdapterProvider =
 // ─── Input / result types ─────────────────────────────────────────────────────
 
 export interface CalendarEventInput {
-	title: string;
-	description?: string;
-	startsAt: Date;
-	endsAt: Date;
-	timezone: string;
-	organizerId?: string;
 	attendeeEmails?: string[];
+	description?: string;
+	endsAt: Date;
 	metadata?: Record<string, string>;
+	organizerId?: string;
+	startsAt: Date;
+	timezone: string;
+	title: string;
 }
 
 /**
@@ -36,10 +36,10 @@ export interface CalendarEventInput {
  * Contains enough information to link back to the external service.
  */
 export interface CalendarEventPresentation {
-	eventId: string;
 	calendarId: string;
-	syncedAt: Date;
+	eventId: string;
 	iCalUid?: string;
+	syncedAt: Date;
 	version?: string;
 }
 
@@ -49,21 +49,21 @@ export interface CalendarEventPresentation {
  * — adapters must NOT read from process.env directly.
  */
 export interface CalendarConnectionConfig {
-	provider: CalendarAdapterProvider;
-	credentials: Record<string, unknown>;
 	calendarId: string;
+	credentials: Record<string, unknown>;
+	provider: CalendarAdapterProvider;
 }
 
 export interface CalendarAccountConfig {
-	provider: CalendarAdapterProvider;
 	credentials: Record<string, unknown>;
+	provider: CalendarAdapterProvider;
 }
 
 /** A busy time interval returned by listBusySlots. */
 export interface BusySlot {
-	startsAt: Date;
 	endsAt: Date;
 	externalEventId?: string;
+	startsAt: Date;
 }
 
 export type Db = PgAsyncDatabase<
@@ -75,29 +75,28 @@ export type CalendarConnectionRow =
 	typeof listingCalendarConnection.$inferSelect;
 export type CalendarAccountRow =
 	typeof organizationCalendarAccount.$inferSelect;
-export type CalendarSourceRow =
-	typeof organizationCalendarSource.$inferSelect;
+export type CalendarSourceRow = typeof organizationCalendarSource.$inferSelect;
 
 export interface CalendarSourcePresentation {
 	externalCalendarId: string;
+	isHidden?: boolean;
+	isPrimary?: boolean;
+	metadata?: Record<string, unknown> | null;
 	name: string;
 	timezone?: string | null;
-	isPrimary?: boolean;
-	isHidden?: boolean;
-	metadata?: Record<string, unknown> | null;
 }
 
 export interface CalendarWorkspaceState {
 	accountCount: number;
-	connectedAccountCount: number;
 	accounts: CalendarAccountRow[];
-	sourceCount: number;
-	activeSourceCount: number;
-	sources: CalendarSourceRow[];
 	activeConnectionCount: number;
+	activeSourceCount: number;
+	connectedAccountCount: number;
 	connections: CalendarConnectionRow[];
 	hasConnectedCalendar: boolean;
 	providers: CalendarAdapterProvider[];
+	sourceCount: number;
+	sources: CalendarSourceRow[];
 }
 
 // ─── Adapter interface ────────────────────────────────────────────────────────
@@ -115,20 +114,7 @@ export interface CalendarAdapter {
 		config: CalendarConnectionConfig,
 	): Promise<CalendarEventPresentation>;
 
-	updateEvent(
-		eventId: string,
-		input: Partial<CalendarEventInput>,
-		config: CalendarConnectionConfig,
-	): Promise<CalendarEventPresentation>;
-
-	deleteEvent(
-		eventId: string,
-		config: CalendarConnectionConfig,
-	): Promise<void>;
-
-	listCalendars(
-		config: CalendarAccountConfig,
-	): Promise<CalendarSourcePresentation[]>;
+	deleteEvent(eventId: string, config: CalendarConnectionConfig): Promise<void>;
 
 	listBusySlots(
 		calendarId: string,
@@ -136,4 +122,14 @@ export interface CalendarAdapter {
 		to: Date,
 		config: CalendarConnectionConfig,
 	): Promise<BusySlot[]>;
+
+	listCalendars(
+		config: CalendarAccountConfig,
+	): Promise<CalendarSourcePresentation[]>;
+
+	updateEvent(
+		eventId: string,
+		input: Partial<CalendarEventInput>,
+		config: CalendarConnectionConfig,
+	): Promise<CalendarEventPresentation>;
 }

@@ -12,21 +12,21 @@ registerNotificationIntegrations();
 
 serve({ fetch: app.fetch, port }, (info) => {
 	console.log(
-		`Notifications server listening on http://localhost:${info.port}`
+		`Notifications server listening on http://localhost:${info.port}`,
 	);
 });
 
 // Start queue worker in background (non-blocking)
 startBoss()
 	.then((boss) =>
-		registerWorker(boss, NOTIFICATION_QUEUE, handleNotificationJob)
+		registerWorker(boss, NOTIFICATION_QUEUE, handleNotificationJob),
 	)
 	.then(() => console.log("Queue worker started"))
 	.catch((err) =>
 		console.warn(
 			"Queue worker failed to start (DB may be unavailable):",
-			err.message
-		)
+			err.message,
+		),
 	);
 
 const shutdown = async () => {

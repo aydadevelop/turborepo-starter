@@ -73,8 +73,8 @@ const makeLoadCancellationContextStep = (db: Db) =>
 				.where(
 					and(
 						eq(bookingCancellationRequest.id, input.requestId),
-						eq(bookingCancellationRequest.organizationId, input.organizationId)
-					)
+						eq(bookingCancellationRequest.organizationId, input.organizationId),
+					),
 				)
 				.limit(1);
 
@@ -92,8 +92,8 @@ const makeLoadCancellationContextStep = (db: Db) =>
 				.where(
 					and(
 						eq(booking.id, request.bookingId),
-						eq(booking.organizationId, input.organizationId)
-					)
+						eq(booking.organizationId, input.organizationId),
+					),
 				)
 				.limit(1);
 
@@ -102,7 +102,7 @@ const makeLoadCancellationContextStep = (db: Db) =>
 			}
 
 			return { ...input, request, booking: bookingRow };
-		}
+		},
 	);
 
 const makeExecuteRefundStep = (db: Db) =>
@@ -116,11 +116,11 @@ const makeExecuteRefundStep = (db: Db) =>
 			const paymentAttempt = await loadCapturedPaymentAttempt(
 				input.request.bookingId,
 				input.organizationId,
-				db
+				db,
 			);
 			const paymentConfig = await loadActivePaymentConfig(input, db);
 			const provider = getPaymentProvider(
-				paymentConfig.provider as PaymentProviderId
+				paymentConfig.provider as PaymentProviderId,
 			);
 
 			const refundResult = await provider.refundPayment(
@@ -135,9 +135,9 @@ const makeExecuteRefundStep = (db: Db) =>
 					publicKey: paymentConfig.publicKey ?? undefined,
 					credentialKeyVersion: paymentConfig.credentialKeyVersion ?? undefined,
 					credentials: parseStoredCredentials(
-						paymentConfig.encryptedCredentials
+						paymentConfig.encryptedCredentials,
 					),
-				}
+				},
 			);
 
 			const now = new Date();
@@ -206,7 +206,7 @@ const makeExecuteRefundStep = (db: Db) =>
 					updatedAt: new Date(),
 				})
 				.where(eq(bookingRefund.id, output.refund.id));
-		}
+		},
 	);
 
 const makeApplyCancellationStateStep = (db: Db) =>
@@ -237,7 +237,7 @@ const makeApplyCancellationStateStep = (db: Db) =>
 					cancelledByUserId: input.appliedByUserId,
 					cancellationReason: resolveCancellationReason(input.request),
 				},
-				db
+				db,
 			);
 
 			await db
@@ -295,7 +295,7 @@ const makeApplyCancellationStateStep = (db: Db) =>
 					updatedAt: new Date(),
 				})
 				.where(eq(booking.id, output.booking.id));
-		}
+		},
 	);
 
 const makeEmitBookingCancelledStep = () =>
@@ -320,7 +320,7 @@ const makeEmitBookingCancelledStep = () =>
 				refundId: input.refund?.id ?? null,
 				refundExternalId: input.refund?.externalRefundId ?? null,
 			};
-		}
+		},
 	);
 
 /**
@@ -346,14 +346,14 @@ export const processCancellationWorkflow = (db: Db) => {
 			const withRefund = await executeRefundStep(loaded, ctx);
 			const applied = await applyCancellationStateStep(withRefund, ctx);
 			return emitBookingCancelledStep(applied, ctx);
-		}
+		},
 	);
 };
 
 const loadCapturedPaymentAttempt = async (
 	bookingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<CapturedPaymentAttemptRow> => {
 	const [attempt] = await db
 		.select()
@@ -362,12 +362,12 @@ const loadCapturedPaymentAttempt = async (
 			and(
 				eq(bookingPaymentAttempt.bookingId, bookingId),
 				eq(bookingPaymentAttempt.organizationId, organizationId),
-				eq(bookingPaymentAttempt.status, "captured")
-			)
+				eq(bookingPaymentAttempt.status, "captured"),
+			),
 		)
 		.orderBy(
 			desc(bookingPaymentAttempt.processedAt),
-			desc(bookingPaymentAttempt.createdAt)
+			desc(bookingPaymentAttempt.createdAt),
 		)
 		.limit(1);
 
@@ -380,17 +380,17 @@ const loadCapturedPaymentAttempt = async (
 
 const loadActivePaymentConfig = async (
 	input: LoadedCancellationContext,
-	db: Db
+	db: Db,
 ) => {
 	const configSelector = input.booking.merchantPaymentConfigId
 		? and(
 				eq(organizationPaymentConfig.id, input.booking.merchantPaymentConfigId),
 				eq(organizationPaymentConfig.organizationId, input.organizationId),
-				eq(organizationPaymentConfig.isActive, true)
+				eq(organizationPaymentConfig.isActive, true),
 			)
 		: and(
 				eq(organizationPaymentConfig.organizationId, input.organizationId),
-				eq(organizationPaymentConfig.isActive, true)
+				eq(organizationPaymentConfig.isActive, true),
 			);
 
 	const [paymentConfig] = await db
@@ -408,7 +408,7 @@ const loadActivePaymentConfig = async (
 };
 
 const parseStoredCredentials = (
-	encryptedCredentials: string
+	encryptedCredentials: string,
 ): Record<string, unknown> => {
 	const trimmed = encryptedCredentials.trim();
 	if (!trimmed) {

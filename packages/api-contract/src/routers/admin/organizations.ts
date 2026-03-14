@@ -29,7 +29,7 @@ export const updateOrg = oc
 			slug: z.string().trim().min(1).optional(),
 			logo: z.string().trim().optional(),
 			metadata: z.string().trim().optional(),
-		})
+		}),
 	)
 	.output(successOutputSchema);
 
@@ -38,15 +38,15 @@ export const listMembers = oc
 	.input(
 		paginationInput.extend({
 			organizationId: z.string().trim().min(1),
-		})
+		}),
 	)
 	.output(
 		paginatedOutput(
 			memberSchema.extend({
 				userName: z.string().optional(),
 				userEmail: z.string().optional(),
-			})
-		)
+			}),
+		),
 	);
 
 export const updateMemberRole = oc
@@ -55,7 +55,7 @@ export const updateMemberRole = oc
 		z.object({
 			memberId: z.string().trim().min(1),
 			role: z.string().trim().min(1),
-		})
+		}),
 	)
 	.output(successOutputSchema);
 
@@ -72,7 +72,7 @@ export const listInvitations = oc
 			status: z
 				.enum(["pending", "accepted", "rejected", "cancelled"])
 				.optional(),
-		})
+		}),
 	)
 	.output(paginatedOutput(invitationSchema));
 
@@ -83,14 +83,14 @@ export const listUsers = oc
 			search: z.string().trim().optional(),
 			role: z.string().trim().optional(),
 			banned: z.boolean().optional(),
-		})
+		}),
 	)
 	.output(
 		paginatedOutput(
 			userSchema.extend({
 				organizationCount: z.number(),
-			})
-		)
+			}),
+		),
 	);
 
 export const getUser = oc
@@ -102,9 +102,9 @@ export const getUser = oc
 				memberSchema.extend({
 					organizationName: z.string().optional(),
 					organizationSlug: z.string().optional(),
-				})
+				}),
 			),
-		})
+		}),
 	);
 
 export const adminOrganizationsContract = {

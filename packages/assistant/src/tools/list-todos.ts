@@ -12,5 +12,5 @@ export const createListTodosTool = (client: AppContractClient) =>
 				count: todos.length,
 				items: todos.slice(0, limit),
 			};
-		}
+		},
 	);

@@ -29,7 +29,7 @@ function getTraceContext(): {
 function emit(
 	level: LogLevel,
 	msg: string,
-	data?: Record<string, unknown>
+	data?: Record<string, unknown>,
 ): void {
 	const { traceId, spanId } = getTraceContext();
 	const entry: Record<string, unknown> = {

@@ -11,14 +11,14 @@ test("submits recurring availability values through the section form contract", 
 		onSubmit,
 	});
 	await expect(document.body).toMatchScreenshot(
-		"create-availability-rule-form"
+		"create-availability-rule-form",
 	);
 
 	await userEvent.selectOptions(page.getByLabelText("Day"), "5");
 	await userEvent.fill(page.getByLabelText("Start time"), "10:30");
 	await userEvent.fill(page.getByLabelText("End time"), "18:00");
 	await userEvent.click(
-		page.getByRole("button", { name: "Add recurring rule" })
+		page.getByRole("button", { name: "Add recurring rule" }),
 	);
 
 	expect(onSubmit).toHaveBeenCalledWith({

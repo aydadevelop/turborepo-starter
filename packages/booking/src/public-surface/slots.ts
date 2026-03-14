@@ -14,8 +14,10 @@ import {
 	zonedLocalDateTimeToUtc,
 } from "./availability";
 
-export interface RawPublicBookingSurfaceSlot
-	extends Omit<PublicBookingSurfaceSlot, "quote"> {
+export interface RawPublicBookingSurfaceSlot extends Omit<
+	PublicBookingSurfaceSlot,
+	"quote"
+> {
 	endsAtDate: Date;
 	startsAtDate: Date;
 }
@@ -42,10 +44,10 @@ export const buildRawSlots = (params: {
 			const startsAtDate = zonedLocalDateTimeToUtc(
 				params.date,
 				minute,
-				params.listingTimezone
+				params.listingTimezone,
 			);
 			const endsAtDate = new Date(
-				startsAtDate.getTime() + params.durationMinutes * 60_000
+				startsAtDate.getTime() + params.durationMinutes * 60_000,
 			);
 			const requiredMinimumDuration = resolveRequiredMinimumDuration({
 				baseMinimumDurationMinutes: params.baseMinimumDurationMinutes,
@@ -56,7 +58,7 @@ export const buildRawSlots = (params: {
 			const overlap = findBusyWindow(
 				params.busyWindows,
 				startsAtDate,
-				endsAtDate
+				endsAtDate,
 			);
 
 			let status: PublicBookingSlotStatus = "available";

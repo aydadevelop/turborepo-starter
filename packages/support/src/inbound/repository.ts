@@ -10,7 +10,7 @@ import type {
 
 export async function insertInboundMessage(
 	values: InboundMessageInsert,
-	db: Db
+	db: Db,
 ): Promise<InboundMessageRow> {
 	const [row] = await db
 		.insert(inboundMessage)
@@ -31,7 +31,7 @@ export async function findTicketIdByExternalThread(
 		externalThreadId?: string | null;
 		organizationId: string;
 	},
-	db: Db
+	db: Db,
 ): Promise<string | null> {
 	if (!input.externalThreadId) {
 		return null;
@@ -45,8 +45,8 @@ export async function findTicketIdByExternalThread(
 				eq(inboundMessage.organizationId, input.organizationId),
 				eq(inboundMessage.channel, input.channel),
 				eq(inboundMessage.externalThreadId, input.externalThreadId),
-				isNotNull(inboundMessage.ticketId)
-			)
+				isNotNull(inboundMessage.ticketId),
+			),
 		)
 		.orderBy(desc(inboundMessage.receivedAt))
 		.limit(1);
@@ -62,7 +62,7 @@ export async function updateInboundProcessingState(
 		status: InboundMessageStatus;
 		ticketId?: string | null;
 	},
-	db: Db
+	db: Db,
 ): Promise<InboundMessageRow> {
 	const [row] = await db
 		.update(inboundMessage)

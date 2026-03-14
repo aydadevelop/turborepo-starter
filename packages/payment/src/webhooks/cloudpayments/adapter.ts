@@ -37,7 +37,7 @@ const parseFormValue = (key: string, value: unknown): unknown => {
 };
 
 const parseFormEncodedBody = async (
-	request: Request
+	request: Request,
 ): Promise<CloudPaymentsNotification> => {
 	const formData = await request.formData();
 	const raw: Record<string, unknown> = {};
@@ -50,7 +50,7 @@ const parseFormEncodedBody = async (
 };
 
 const parseBody = async (
-	request: Request
+	request: Request,
 ): Promise<CloudPaymentsNotification> => {
 	const contentType = request.headers.get("Content-Type") ?? "";
 
@@ -64,7 +64,7 @@ const parseBody = async (
 	}
 
 	throw new WebhookPayloadError(
-		`Unsupported Content-Type: ${contentType}. Expected application/json or application/x-www-form-urlencoded`
+		`Unsupported Content-Type: ${contentType}. Expected application/json or application/x-www-form-urlencoded`,
 	);
 };
 
@@ -144,7 +144,7 @@ export class CloudPaymentsWebhookAdapter implements PaymentWebhookAdapter {
 		const encodedHmac = createRequestHmac(rawBody, this.apiSecret);
 		const contentType = request.headers.get("Content-Type") ?? "";
 		const decodedPayload = contentType.includes(
-			"application/x-www-form-urlencoded"
+			"application/x-www-form-urlencoded",
 		)
 			? decodeFormEncodedBody(rawBody)
 			: rawBody;
@@ -167,7 +167,7 @@ export class CloudPaymentsWebhookAdapter implements PaymentWebhookAdapter {
 
 	processWebhook(
 		webhookType: string,
-		payload: unknown
+		payload: unknown,
 	): Promise<PaymentWebhookResult> {
 		const notification = cloudPaymentsNotificationSchema.parse(payload);
 		console.log("[CloudPayments webhook]", {

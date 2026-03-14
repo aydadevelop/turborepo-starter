@@ -82,7 +82,7 @@ const resolveDefaultPolicyByActor = (params: {
 			policyCode: "owner_default_refund",
 			policyLabel: "Owner cancellation policy",
 			refundPercent: clampPercent(
-				params.policyProfile.owner.defaultRefundPercent
+				params.policyProfile.owner.defaultRefundPercent,
 			),
 		};
 	}
@@ -119,7 +119,7 @@ const resolveDefaultPolicyByActor = (params: {
 			policyCode: "customer_standard_partial_refund",
 			policyLabel: "Customer standard cancellation",
 			refundPercent: clampPercent(
-				params.policyProfile.customer.partialRefundPercent
+				params.policyProfile.customer.partialRefundPercent,
 			),
 		};
 	}
@@ -128,7 +128,7 @@ const resolveDefaultPolicyByActor = (params: {
 		policyCode: "customer_late_refund",
 		policyLabel: "Customer late cancellation",
 		refundPercent: clampPercent(
-			params.policyProfile.customer.lateRefundPercent
+			params.policyProfile.customer.lateRefundPercent,
 		),
 	};
 };
@@ -145,13 +145,13 @@ const resolveReasonConfig = (params: {
 	const reasonConfig = bookingCancellationReasonCatalog[params.reasonCode];
 	if (!reasonConfig.allowedActors.includes(params.actor)) {
 		throw new Error(
-			`CANCELLATION_REASON_NOT_ALLOWED: reason ${params.reasonCode} is not allowed for actor ${params.actor}`
+			`CANCELLATION_REASON_NOT_ALLOWED: reason ${params.reasonCode} is not allowed for actor ${params.actor}`,
 		);
 	}
 
 	if (reasonConfig.requiresEvidence && (params.evidence?.length ?? 0) === 0) {
 		throw new Error(
-			`CANCELLATION_REASON_REQUIRES_EVIDENCE: reason ${params.reasonCode} requires evidence`
+			`CANCELLATION_REASON_REQUIRES_EVIDENCE: reason ${params.reasonCode} requires evidence`,
 		);
 	}
 
@@ -165,7 +165,7 @@ const resolveReasonConfig = (params: {
  * constructing the correct policy profile before calling this function.
  */
 export function evaluateCancellationPolicy(
-	input: CancellationPolicyInput
+	input: CancellationPolicyInput,
 ): CancellationPolicyDecision {
 	const now = input.now ?? new Date();
 	const policyProfile =
@@ -175,7 +175,7 @@ export function evaluateCancellationPolicy(
 		(input.startsAt.getTime() - now.getTime()) / MS_PER_HOUR;
 	const refundableBaseCents = Math.max(
 		input.capturedAmountCents - input.alreadyRefundedCents,
-		0
+		0,
 	);
 
 	const defaultPolicy = resolveDefaultPolicyByActor({
@@ -195,11 +195,11 @@ export function evaluateCancellationPolicy(
 	const reasonOverridePercent =
 		reasonConfig?.refundPercentOverrideByActor?.[input.initiatorRole];
 	const refundPercent = clampPercent(
-		reasonOverridePercent ?? defaultPolicy.refundPercent
+		reasonOverridePercent ?? defaultPolicy.refundPercent,
 	);
 	const suggestedRefundCents = Math.min(
 		refundableBaseCents,
-		roundDownPercent(refundableBaseCents, refundPercent)
+		roundDownPercent(refundableBaseCents, refundPercent),
 	);
 
 	return {

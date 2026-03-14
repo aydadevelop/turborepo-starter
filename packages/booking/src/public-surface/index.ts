@@ -23,7 +23,7 @@ import { summarizeSlots } from "./summary";
 export async function getPublicBookingSurface(
 	input: PublicBookingSurfaceInput,
 	db: Db,
-	options?: { now?: Date; customerUserId?: string }
+	options?: { now?: Date; customerUserId?: string },
 ): Promise<PublicBookingSurface> {
 	const weekday = getWeekdayForDateString(input.date);
 	const listingRow = await loadPublicBookingSurfaceListing(input.listingId, db);
@@ -31,7 +31,7 @@ export async function getPublicBookingSurface(
 	const dayEnd = zonedLocalDateTimeToUtc(
 		nextDateString(input.date),
 		0,
-		listingRow.timezone
+		listingRow.timezone,
 	);
 	const queryState = await loadPublicBookingSurfaceState(
 		{
@@ -41,7 +41,7 @@ export async function getPublicBookingSurface(
 			weekday,
 		},
 		listingRow,
-		db
+		db,
 	);
 
 	const availabilityWindows = resolveAvailabilityWindows({
@@ -69,7 +69,7 @@ export async function getPublicBookingSurface(
 			[
 				queryState.listing.minimumDurationMinutes,
 				...rawSlots.map((slot) => slot.minimumDurationMinutes),
-			].sort((left, right) => left - right)
+			].sort((left, right) => left - right),
 		),
 	];
 	const promotionContext = await preparePromotionContext(
@@ -80,7 +80,7 @@ export async function getPublicBookingSurface(
 			customerUserId: options?.customerUserId,
 			now: options?.now,
 		},
-		db
+		db,
 	);
 
 	const slots = rawSlots.map((slot) => {

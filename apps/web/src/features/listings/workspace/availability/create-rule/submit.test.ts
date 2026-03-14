@@ -9,7 +9,7 @@ describe("buildCreateAvailabilityRuleInput", () => {
 				dayOfWeek: "5",
 				startTime: "10:30",
 				endTime: "18:00",
-			})
+			}),
 		).toEqual({
 			ok: true,
 			data: {
@@ -27,7 +27,7 @@ describe("buildCreateAvailabilityRuleInput", () => {
 				dayOfWeek: "5",
 				startTime: "18:00",
 				endTime: "10:30",
-			})
+			}),
 		).toEqual({
 			ok: false,
 			message: "End time must be later than start time.",

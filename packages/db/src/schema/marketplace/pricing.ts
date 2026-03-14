@@ -48,7 +48,7 @@ export const listingPricingProfile = pgTable(
 			.where(sql`${table.isDefault} = true and ${table.archivedAt} is null`),
 		check(
 			"listing_pricing_profile_ck_positive_amounts",
-			sql`${table.baseHourlyPriceCents} > 0 and ${table.minimumHours} > 0`
+			sql`${table.baseHourlyPriceCents} > 0 and ${table.minimumHours} > 0`,
 		),
 		check(
 			"listing_pricing_profile_ck_bps_range",
@@ -56,13 +56,13 @@ export const listingPricingProfile = pgTable(
 				and ${table.serviceFeeBps} between 0 and 10000
 				and ${table.affiliateFeeBps} between 0 and 10000
 				and ${table.taxBps} between 0 and 10000
-				and ${table.acquiringFeeBps} between 0 and 10000`
+				and ${table.acquiringFeeBps} between 0 and 10000`,
 		),
 		check(
 			"listing_pricing_profile_ck_valid_window",
-			sql`${table.validFrom} is null or ${table.validTo} is null or ${table.validTo} > ${table.validFrom}`
+			sql`${table.validFrom} is null or ${table.validTo} is null or ${table.validTo} > ${table.validFrom}`,
 		),
-	]
+	],
 );
 
 export const listingPricingRule = pgTable(
@@ -89,9 +89,9 @@ export const listingPricingRule = pgTable(
 	(table) => [
 		index("listing_pricing_rule_ix_listing_id").on(table.listingId),
 		index("listing_pricing_rule_ix_pricing_profile_id").on(
-			table.pricingProfileId
+			table.pricingProfileId,
 		),
-	]
+	],
 );
 
 export const platformFeeConfig = pgTable(
@@ -112,5 +112,5 @@ export const platformFeeConfig = pgTable(
 	(table) => [
 		index("platform_fee_config_ix_currency").on(table.currency),
 		index("platform_fee_config_ix_is_active").on(table.isActive),
-	]
+	],
 );

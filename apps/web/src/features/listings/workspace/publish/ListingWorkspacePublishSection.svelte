@@ -1,4 +1,3 @@
-<!-- biome-ignore-all format: section composition -->
 <script lang="ts">
 	import { Badge } from "@my-app/ui/components/badge";
 	import { Button } from "@my-app/ui/components/button";
@@ -10,15 +9,14 @@
 		CardTitle,
 	} from "@my-app/ui/components/card";
 	import { Separator } from "@my-app/ui/components/separator";
-	import ConfirmActionDialog from "../../../../components/admin/ConfirmActionDialog.svelte";
-	import WorkspaceActionDialog from "../shared/WorkspaceActionDialog.svelte";
-	import ListingDistributionActionForm from "./ListingDistributionActionForm.svelte";
-	import ListingModerationActionForm from "./ListingModerationActionForm.svelte";
-
 	import type {
 		ListingModerationAuditEntry,
 		ListingWorkspaceState,
 	} from "$lib/orpc-types";
+	import ConfirmActionDialog from "../../../../components/admin/ConfirmActionDialog.svelte";
+	import WorkspaceActionDialog from "../shared/WorkspaceActionDialog.svelte";
+	import ListingDistributionActionForm from "./ListingDistributionActionForm.svelte";
+	import ListingModerationActionForm from "./ListingModerationActionForm.svelte";
 
 	let {
 		workspace,

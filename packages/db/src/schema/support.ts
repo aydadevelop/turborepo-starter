@@ -80,27 +80,27 @@ export const inboundMessageStatusValues = [
 
 export const supportTicketStatusEnum = pgEnum(
 	"support_ticket_status",
-	supportTicketStatusValues
+	supportTicketStatusValues,
 );
 export const supportTicketPriorityEnum = pgEnum(
 	"support_ticket_priority",
-	supportTicketPriorityValues
+	supportTicketPriorityValues,
 );
 export const supportTicketSourceEnum = pgEnum(
 	"support_ticket_source",
-	supportTicketSourceValues
+	supportTicketSourceValues,
 );
 export const supportMessageChannelEnum = pgEnum(
 	"support_message_channel",
-	supportMessageChannelValues
+	supportMessageChannelValues,
 );
 export const inboundMessageChannelEnum = pgEnum(
 	"inbound_message_channel",
-	inboundMessageChannelValues
+	inboundMessageChannelValues,
 );
 export const inboundMessageStatusEnum = pgEnum(
 	"inbound_message_status",
-	inboundMessageStatusValues
+	inboundMessageStatusValues,
 );
 
 /**
@@ -151,7 +151,7 @@ export const supportTicket = pgTable(
 		index("support_ticket_ix_due_at").on(table.dueAt),
 		index("support_ticket_ix_booking_id").on(table.bookingId),
 		index("support_ticket_ix_customer_user_id").on(table.customerUserId),
-	]
+	],
 );
 
 /**
@@ -176,7 +176,7 @@ export const supportTicketMessage = pgTable(
 		/** Link to the inbound message that generated this ticket message (if any). */
 		inboundMessageId: text("inbound_message_id").references(
 			() => inboundMessage.id,
-			{ onDelete: "set null" }
+			{ onDelete: "set null" },
 		),
 		channel: supportMessageChannelEnum("channel").notNull().default("internal"),
 		body: text("body").notNull(),
@@ -191,11 +191,11 @@ export const supportTicketMessage = pgTable(
 		index("support_ticket_message_ix_ticket_id").on(table.ticketId),
 		index("support_ticket_message_ix_organization_id").on(table.organizationId),
 		index("support_ticket_message_ix_inbound_message_id").on(
-			table.inboundMessageId
+			table.inboundMessageId,
 		),
 		index("support_ticket_message_ix_channel").on(table.channel),
 		index("support_ticket_message_ix_created_at").on(table.createdAt),
-	]
+	],
 );
 
 /**
@@ -239,7 +239,7 @@ export const inboundMessage = pgTable(
 		index("inbound_message_ix_received_at").on(table.receivedAt),
 		uniqueIndex("inbound_message_uq_channel_dedupe").on(
 			table.channel,
-			table.dedupeKey
+			table.dedupeKey,
 		),
-	]
+	],
 );

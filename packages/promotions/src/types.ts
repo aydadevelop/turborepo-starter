@@ -7,7 +7,8 @@ import type { DiscountedQuoteBreakdown, QuoteBreakdown } from "@my-app/pricing";
 
 export type Db = typeof db;
 export type DiscountCodeRow = typeof bookingDiscountCode.$inferSelect;
-export type DiscountApplicationRow = typeof bookingDiscountApplication.$inferSelect;
+export type DiscountApplicationRow =
+	typeof bookingDiscountApplication.$inferSelect;
 
 export const promotionErrorCodes = [
 	"PROMOTION_CODE_NOT_FOUND",
@@ -23,27 +24,27 @@ export const promotionErrorCodes = [
 export type PromotionErrorCode = (typeof promotionErrorCodes)[number];
 
 export interface PromotionResolutionInput {
-	organizationId: string;
-	listingId: string;
-	discountCode: string;
 	customerUserId?: string;
-	subtotalCents: number;
+	discountCode: string;
+	listingId: string;
 	now?: Date;
+	organizationId: string;
+	subtotalCents: number;
 }
 
 export interface PromotionResolution {
+	appliedAmountCents: number;
 	code: string;
-	discountCodeId: string | null;
-	name: string | null;
 	description: string | null;
+	discountCodeId: string | null;
 	discountType: DiscountCodeRow["discountType"] | null;
 	discountValue: number | null;
 	maxDiscountCents: number | null;
 	minimumSubtotalCents: number | null;
-	status: "applied" | "invalid";
+	name: string | null;
 	reasonCode: PromotionErrorCode | null;
 	reasonLabel: string | null;
-	appliedAmountCents: number;
+	status: "applied" | "invalid";
 }
 
 export type PromotionQuotePreview =

@@ -13,7 +13,7 @@ interface InvitationMutationDependencies {
 
 export async function acceptOrganizationInvitation(
 	deps: InvitationMutationDependencies,
-	invitationId: string
+	invitationId: string,
 ): Promise<MutationResult<void>> {
 	if (!invitationId) {
 		return { ok: false, message: "Invitation not found. Please try again." };
@@ -33,7 +33,7 @@ export async function acceptOrganizationInvitation(
 
 export async function rejectOrganizationInvitation(
 	deps: InvitationMutationDependencies,
-	invitationId: string
+	invitationId: string,
 ): Promise<MutationResult<void>> {
 	if (!invitationId) {
 		return { ok: false, message: "Invitation not found. Please try again." };

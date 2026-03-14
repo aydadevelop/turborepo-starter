@@ -42,7 +42,7 @@ const listingEditorBaseSchema = z.object({
 		.max(200)
 		.regex(
 			/^[a-z0-9-]+$/,
-			"Slug can only contain lowercase letters, numbers, and hyphens."
+			"Slug can only contain lowercase letters, numbers, and hyphens.",
 		),
 	timezone: z
 		.string()
@@ -50,14 +50,14 @@ const listingEditorBaseSchema = z.object({
 		.min(1, "Timezone is required.")
 		.refine(
 			(value) => isSupportedTimezone(value),
-			"Use a valid IANA timezone such as UTC or Europe/Berlin."
+			"Use a valid IANA timezone such as UTC or Europe/Berlin.",
 		),
 });
 
 const addCustomIssue = (
 	ctx: Parameters<Parameters<typeof listingEditorBaseSchema.superRefine>[0]>[1],
 	path: string[],
-	message: string
+	message: string,
 ) => {
 	ctx.addIssue({
 		code: "custom",
@@ -70,11 +70,10 @@ export function createListingEditorSchema({
 	mode,
 	listingTypeOptions,
 }: ListingEditorContext) {
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: service-family-specific validation is intentionally centralized in this form schema.
 	return listingEditorBaseSchema.superRefine((value, ctx) => {
 		const selectedListingType = findListingTypeOption(
 			listingTypeOptions,
-			value.listingTypeSlug
+			value.listingTypeSlug,
 		);
 
 		if (mode === "create" && !selectedListingType) {
@@ -83,7 +82,7 @@ export function createListingEditorSchema({
 				["listingTypeSlug"],
 				listingTypeOptions.length === 0
 					? "No listing types are currently available for this organization."
-					: "Select a listing type."
+					: "Select a listing type.",
 			);
 		}
 
@@ -96,7 +95,7 @@ export function createListingEditorSchema({
 			const capacityResult = parsePositiveInteger(
 				value.boatRentCapacity,
 				"Capacity is required for boat-rent listings.",
-				"Capacity must be a positive whole number for boat-rent listings."
+				"Capacity must be a positive whole number for boat-rent listings.",
 			);
 			if (!capacityResult.ok) {
 				addCustomIssue(ctx, ["boatRentCapacity"], capacityResult.message);
@@ -106,7 +105,7 @@ export function createListingEditorSchema({
 				addCustomIssue(
 					ctx,
 					["boatRentBasePort"],
-					"Base port is required for boat-rent listings."
+					"Base port is required for boat-rent listings.",
 				);
 			}
 
@@ -114,7 +113,7 @@ export function createListingEditorSchema({
 				addCustomIssue(
 					ctx,
 					["boatRentDepartureArea"],
-					"Departure area is required for boat-rent listings."
+					"Departure area is required for boat-rent listings.",
 				);
 			}
 		}
@@ -124,27 +123,27 @@ export function createListingEditorSchema({
 				addCustomIssue(
 					ctx,
 					["excursionMeetingPoint"],
-					"Meeting point is required for excursion listings."
+					"Meeting point is required for excursion listings.",
 				);
 			}
 
 			const durationResult = parsePositiveInteger(
 				value.excursionDurationMinutes,
 				"Duration is required for excursion listings.",
-				"Duration must be a positive whole number of minutes for excursion listings."
+				"Duration must be a positive whole number of minutes for excursion listings.",
 			);
 			if (!durationResult.ok) {
 				addCustomIssue(
 					ctx,
 					["excursionDurationMinutes"],
-					durationResult.message
+					durationResult.message,
 				);
 			}
 
 			const groupSizeResult = parsePositiveInteger(
 				value.excursionMaxGroupSize,
 				"Max group size is required for excursion listings.",
-				"Max group size must be a positive whole number for excursion listings."
+				"Max group size must be a positive whole number for excursion listings.",
 			);
 			if (!groupSizeResult.ok) {
 				addCustomIssue(ctx, ["excursionMaxGroupSize"], groupSizeResult.message);
@@ -154,7 +153,7 @@ export function createListingEditorSchema({
 				addCustomIssue(
 					ctx,
 					["excursionPrimaryLanguage"],
-					"Primary language is required for excursion listings."
+					"Primary language is required for excursion listings.",
 				);
 			}
 		}

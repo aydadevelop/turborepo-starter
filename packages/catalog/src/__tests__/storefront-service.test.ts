@@ -154,7 +154,7 @@ beforeAll(() => {
 		createFakeStorageProvider({
 			providerId: LISTING_PUBLIC_STORAGE_PROVIDER,
 			publicBaseUrl: `https://media.example.test/${LISTING_PUBLIC_STORAGE_PROVIDER}`,
-		})
+		}),
 	);
 });
 
@@ -169,7 +169,7 @@ describe("searchPublishedListings", () => {
 
 		expect(result.items.length).toBe(2);
 		expect(result.items.map((item) => item.id)).toEqual(
-			expect.arrayContaining([LISTING_ID, EXCURSION_ID])
+			expect.arrayContaining([LISTING_ID, EXCURSION_ID]),
 		);
 		expect(result.total).toBe(2);
 	});
@@ -185,7 +185,7 @@ describe("searchPublishedListings", () => {
 		const db = testDbState.db as unknown as Db;
 		const result = await searchPublishedListings(
 			{ type: LISTING_TYPE_SLUG },
-			db
+			db,
 		);
 		expect(result.items.length).toBe(1);
 
@@ -214,7 +214,7 @@ describe("searchPublishedListings", () => {
 		const db = testDbState.db as unknown as Db;
 		const result = await searchPublishedListings(
 			{ type: EXCURSION_TYPE_SLUG },
-			db
+			db,
 		);
 
 		expect(result.items).toHaveLength(1);
@@ -261,7 +261,7 @@ describe("getPublishedListing", () => {
 	it("throws NOT_FOUND for an unpublished listing", async () => {
 		const db = testDbState.db as unknown as Db;
 		await expect(getPublishedListing(UNPUBLISHED_ID, db)).rejects.toThrow(
-			"NOT_FOUND"
+			"NOT_FOUND",
 		);
 	});
 
@@ -285,7 +285,7 @@ describe("getPublishedListing", () => {
 	it("throws NOT_FOUND for a non-existent listing", async () => {
 		const db = testDbState.db as unknown as Db;
 		await expect(getPublishedListing("does-not-exist", db)).rejects.toThrow(
-			"NOT_FOUND"
+			"NOT_FOUND",
 		);
 	});
 });

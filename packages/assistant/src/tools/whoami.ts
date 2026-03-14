@@ -3,7 +3,7 @@ import z from "zod";
 import { orpcTool } from "../lib/orpc-tool";
 
 const getUserName = (
-	user: Record<string, unknown> | undefined
+	user: Record<string, unknown> | undefined,
 ): string | null => {
 	if (!user) {
 		return null;
@@ -48,5 +48,5 @@ export const createWhoAmITool = (client: AppContractClient) =>
 				organizationId,
 				isAuthenticated: Boolean(user),
 			};
-		}
+		},
 	);

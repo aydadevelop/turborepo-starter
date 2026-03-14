@@ -1,30 +1,28 @@
 {
-  "name": "@my-app/vitest-config",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "main": "dist/index.js",
-  "types": "src/index.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./src/index.ts"
-    }
-  },
-  "scripts": {
-    "build": "tsdown",
-    "check-types": "tsc --noEmit -p tsconfig.json",
-    "lint": "cd ../.. && biome check --config-path biome.json packages/vitest-config",
-    "lint:fix": "cd ../.. && biome check --config-path biome.json packages/vitest-config --write"
-  },
-  "dependencies": {
-    "vitest": "^4.0.18"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
-    "@my-app/config": "workspace:*",
-    "tsdown": "^0.21.0",
-    "typescript": "^5",
-    "ultracite": "^7.2.3"
-  }
+	"name": "@my-app/vitest-config",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "src/index.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./src/index.ts"
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check-types": "tsc --noEmit -p tsconfig.json",
+		"lint": "cd ../.. && oxlint packages/vitest-config",
+		"lint:fix": "cd ../.. && oxlint --fix packages/vitest-config"
+	},
+	"dependencies": {
+		"vitest": "^4.0.18"
+	},
+	"devDependencies": {
+		"@my-app/config": "workspace:*",
+		"tsdown": "^0.21.0",
+		"typescript": "^5"
+	}
 }

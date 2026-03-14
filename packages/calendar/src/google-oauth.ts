@@ -1,4 +1,5 @@
-const GOOGLE_OAUTH_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
+const GOOGLE_OAUTH_AUTHORIZE_URL =
+	"https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
 const GOOGLE_CALENDAR_OAUTH_SCOPE = [
@@ -15,10 +16,10 @@ export interface GoogleOAuthClientConfig {
 
 export interface GoogleOAuthTokenSet {
 	accessToken: string;
-	refreshToken: string | null;
-	tokenType: string;
-	scope: string;
 	expiresAt: number;
+	refreshToken: string | null;
+	scope: string;
+	tokenType: string;
 }
 
 export interface GoogleOAuthAccountProfile {
@@ -45,7 +46,7 @@ interface GoogleOAuthUserInfoResponse {
 
 export function buildGoogleCalendarAccountAuthorizationUrl(
 	config: Pick<GoogleOAuthClientConfig, "clientId" | "redirectUri">,
-	state: string
+	state: string,
 ): string {
 	const url = new URL(GOOGLE_OAUTH_AUTHORIZE_URL);
 	url.searchParams.set("access_type", "offline");
@@ -61,7 +62,7 @@ export function buildGoogleCalendarAccountAuthorizationUrl(
 
 export async function exchangeGoogleCalendarOAuthCode(
 	config: GoogleOAuthClientConfig,
-	code: string
+	code: string,
 ): Promise<GoogleOAuthTokenSet> {
 	const body = new URLSearchParams();
 	body.set("client_id", config.clientId);
@@ -80,7 +81,7 @@ export async function exchangeGoogleCalendarOAuthCode(
 
 	if (!response.ok) {
 		throw new Error(
-			`GOOGLE_CALENDAR_OAUTH_TOKEN_ERROR: ${response.status} ${response.statusText}`
+			`GOOGLE_CALENDAR_OAUTH_TOKEN_ERROR: ${response.status} ${response.statusText}`,
 		);
 	}
 
@@ -95,7 +96,7 @@ export async function exchangeGoogleCalendarOAuthCode(
 }
 
 export async function fetchGoogleCalendarAccountProfile(
-	accessToken: string
+	accessToken: string,
 ): Promise<GoogleOAuthAccountProfile> {
 	const response = await fetch(GOOGLE_USERINFO_URL, {
 		method: "GET",
@@ -106,7 +107,7 @@ export async function fetchGoogleCalendarAccountProfile(
 
 	if (!response.ok) {
 		throw new Error(
-			`GOOGLE_CALENDAR_OAUTH_PROFILE_ERROR: ${response.status} ${response.statusText}`
+			`GOOGLE_CALENDAR_OAUTH_PROFILE_ERROR: ${response.status} ${response.statusText}`,
 		);
 	}
 

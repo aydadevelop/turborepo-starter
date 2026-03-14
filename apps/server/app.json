@@ -1,15 +1,15 @@
 {
-  "healthchecks": {
-    "web": [
-      {
-        "type": "startup",
-        "name": "server /health",
-        "description": "Checking if the app responds to the /health endpoint",
-        "path": "/health",
-        "attempts": 5,
-        "wait": 2,
-        "timeout": 5
-      }
-    ]
-  }
+	"healthchecks": {
+		"web": [
+			{
+				"type": "startup",
+				"name": "server /health",
+				"description": "Checking if the app responds to the /health endpoint",
+				"path": "/health",
+				"attempts": 5,
+				"wait": 2,
+				"timeout": 5
+			}
+		]
+	}
 }

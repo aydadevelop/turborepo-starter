@@ -31,7 +31,7 @@ type TicketCondition =
 const buildTicketSearchCondition = (search: string) => {
 	const searchCondition = or(
 		ilike(supportTicket.subject, `%${search}%`),
-		ilike(supportTicket.description, `%${search}%`)
+		ilike(supportTicket.description, `%${search}%`),
 	);
 	if (!searchCondition) {
 		throw new Error("Failed to build support ticket search condition");
@@ -45,7 +45,7 @@ const buildOverdueStatusesCondition = () => {
 		eq(supportTicket.status, "open"),
 		eq(supportTicket.status, "pending_customer"),
 		eq(supportTicket.status, "pending_operator"),
-		eq(supportTicket.status, "escalated")
+		eq(supportTicket.status, "escalated"),
 	);
 	if (!overdueStatuses) {
 		throw new Error("Failed to build overdue support ticket status condition");
@@ -56,7 +56,7 @@ const buildOverdueStatusesCondition = () => {
 
 const buildOrganizationTicketConditions = (
 	organizationId: string,
-	input: SupportTicketListInput<ListOrgTicketsFilter>
+	input: SupportTicketListInput<ListOrgTicketsFilter>,
 ): TicketCondition[] => {
 	const filter = input.filter ?? {};
 	const search = input.search?.trim();
@@ -78,7 +78,7 @@ const buildOrganizationTicketConditions = (
 	}
 	if (filter.assignedToUserId) {
 		conditions.push(
-			eq(supportTicket.assignedToUserId, filter.assignedToUserId)
+			eq(supportTicket.assignedToUserId, filter.assignedToUserId),
 		);
 	}
 	if (filter.customerUserId) {
@@ -101,7 +101,7 @@ const buildOrganizationTicketConditions = (
 
 const buildCustomerTicketConditions = (
 	customerUserId: string,
-	input: CustomerSupportTicketListInput
+	input: CustomerSupportTicketListInput,
 ): TicketCondition[] => {
 	const filter = input.filter ?? {};
 	const search = input.search?.trim();
@@ -123,7 +123,7 @@ const buildCustomerTicketConditions = (
 };
 
 const resolveOrganizationTicketOrderBy = (
-	sort: SupportTicketListInput<ListOrgTicketsFilter>["sort"]
+	sort: SupportTicketListInput<ListOrgTicketsFilter>["sort"],
 ) => {
 	const direction = sort?.dir ?? "desc";
 
@@ -154,7 +154,7 @@ const resolveOrganizationTicketOrderBy = (
 };
 
 const resolveCustomerTicketOrderBy = (
-	sort: CustomerSupportTicketListInput["sort"]
+	sort: CustomerSupportTicketListInput["sort"],
 ) => {
 	const direction = sort?.dir ?? "desc";
 
@@ -176,7 +176,7 @@ const resolveCustomerTicketOrderBy = (
 
 export async function insertTicket(
 	values: SupportTicketInsert,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow> {
 	const [row] = await db.insert(supportTicket).values(values).returning();
 	if (!row) {
@@ -189,7 +189,7 @@ export async function insertTicket(
 export async function findTicketForOrganization(
 	ticketId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow | null> {
 	const [row] = await db
 		.select()
@@ -197,8 +197,8 @@ export async function findTicketForOrganization(
 		.where(
 			and(
 				eq(supportTicket.id, ticketId),
-				eq(supportTicket.organizationId, organizationId)
-			)
+				eq(supportTicket.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 
@@ -208,7 +208,7 @@ export async function findTicketForOrganization(
 export async function findTicketForCustomer(
 	ticketId: string,
 	customerUserId: string,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow | null> {
 	const [row] = await db
 		.select()
@@ -216,8 +216,8 @@ export async function findTicketForCustomer(
 		.where(
 			and(
 				eq(supportTicket.id, ticketId),
-				eq(supportTicket.customerUserId, customerUserId)
-			)
+				eq(supportTicket.customerUserId, customerUserId),
+			),
 		)
 		.limit(1);
 
@@ -227,7 +227,7 @@ export async function findTicketForCustomer(
 export async function listOrganizationTickets(
 	organizationId: string,
 	input: SupportTicketListInput<ListOrgTicketsFilter>,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketCollectionResult> {
 	const page = input.page ?? { limit: 50, offset: 0 };
 	const conditions = buildOrganizationTicketConditions(organizationId, input);
@@ -256,7 +256,7 @@ export async function listOrganizationTickets(
 export async function listCustomerOwnedTickets(
 	customerUserId: string,
 	input: CustomerSupportTicketListInput,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketCollectionResult> {
 	const page = input.page ?? { limit: 50, offset: 0 };
 	const conditions = buildCustomerTicketConditions(customerUserId, input);
@@ -286,7 +286,7 @@ export async function updateTicket(
 	ticketId: string,
 	organizationId: string,
 	values: Partial<SupportTicketInsert>,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow | null> {
 	const [row] = await db
 		.update(supportTicket)
@@ -294,8 +294,8 @@ export async function updateTicket(
 		.where(
 			and(
 				eq(supportTicket.id, ticketId),
-				eq(supportTicket.organizationId, organizationId)
-			)
+				eq(supportTicket.organizationId, organizationId),
+			),
 		)
 		.returning();
 

@@ -14,7 +14,7 @@ function parseMinute(time: string): number {
 
 export function buildCreateAvailabilityRuleInput(
 	listingId: string,
-	values: CreateAvailabilityRuleFormValues
+	values: CreateAvailabilityRuleFormValues,
 ): MutationResult<CreateAvailabilityRuleInput> {
 	const dayOfWeek = Number.parseInt(values.dayOfWeek, 10);
 	if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {

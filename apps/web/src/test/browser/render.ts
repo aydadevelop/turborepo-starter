@@ -42,7 +42,7 @@ export const cleanupBrowserMounts = async () => {
 
 export const renderComponent = <Props extends Record<string, unknown>>(
 	component: Component<Props>,
-	props: Props
+	props: Props,
 ) => {
 	const target = document.createElement("div");
 	document.body.append(target);
@@ -62,7 +62,7 @@ export const renderComponent = <Props extends Record<string, unknown>>(
 
 export const renderWithQueryClient = <Props extends Record<string, unknown>>(
 	component: Component<Props>,
-	props?: Props
+	props?: Props,
 ) => {
 	const target = document.createElement("div");
 	document.body.append(target);
@@ -75,8 +75,9 @@ export const renderWithQueryClient = <Props extends Record<string, unknown>>(
 		target,
 		props: {
 			client,
-			component:
-				component as unknown as BrowserRenderable<Record<string, unknown>>,
+			component: component as unknown as BrowserRenderable<
+				Record<string, unknown>
+			>,
 			props: (props ?? {}) as Record<string, unknown>,
 		},
 	});

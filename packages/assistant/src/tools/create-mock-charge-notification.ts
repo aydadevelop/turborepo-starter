@@ -13,5 +13,5 @@ export const createMockChargeNotificationTool = (client: AppContractClient) =>
 		async (input) => {
 			const result = await client.payments.createMockChargeNotification(input);
 			return result;
-		}
+		},
 	);

@@ -24,7 +24,7 @@ export interface ScheduleRecurringTaskInput {
 
 export const scheduleRecurringTask = async (
 	input: ScheduleRecurringTaskInput,
-	queue?: RecurringTaskQueueProducer
+	queue?: RecurringTaskQueueProducer,
 ) => {
 	if (!queue) {
 		return { queued: false };
@@ -43,7 +43,7 @@ export const scheduleRecurringTask = async (
 			remainingRuns: input.runCount,
 			runNumber: 1,
 		}),
-		{ delaySeconds: input.initialDelaySeconds }
+		{ delaySeconds: input.initialDelaySeconds },
 	);
 
 	return { queued: true };
@@ -56,7 +56,7 @@ export interface ProcessRecurringTaskTickOptions {
 }
 
 export const processRecurringTaskTick = async (
-	options: ProcessRecurringTaskTickOptions
+	options: ProcessRecurringTaskTickOptions,
 ) => {
 	const { message, notificationQueue, recurringTaskQueue } = options;
 
@@ -97,6 +97,6 @@ export const processRecurringTaskTick = async (
 			remainingRuns: message.remainingRuns - 1,
 			runNumber: message.runNumber + 1,
 		}),
-		{ delaySeconds: message.intervalSeconds }
+		{ delaySeconds: message.intervalSeconds },
 	);
 };

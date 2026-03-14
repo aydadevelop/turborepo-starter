@@ -15,7 +15,7 @@ describe("toProcessInboundSupportIntentFromEmail", () => {
 				text: "Following up on the booking",
 				to: [{ address: "support@example.com" }],
 			},
-			"org_123"
+			"org_123",
 		);
 
 		expect(intent.externalMessageId).toBe("message@example.com");

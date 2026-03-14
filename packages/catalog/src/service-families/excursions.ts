@@ -116,7 +116,7 @@ export const excursionsServiceFamilyPolicy: ListingServiceFamilyPolicy = {
 };
 
 export function normalizeExcursionProfileInput(
-	input?: ListingExcursionProfileInput | null
+	input?: ListingExcursionProfileInput | null,
 ): ListingExcursionProfileInput {
 	return {
 		meetingPoint: input?.meetingPoint?.trim() || null,
@@ -131,7 +131,7 @@ export function normalizeExcursionProfileInput(
 }
 
 export function toStorefrontExcursionSummary(
-	profile: ListingExcursionProfileState | null
+	profile: ListingExcursionProfileState | null,
 ): StorefrontExcursionSummary | null {
 	if (!profile) {
 		return null;

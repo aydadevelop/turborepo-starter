@@ -49,7 +49,7 @@ export interface ParityResult<TOutput> {
  * the legacy output.
  */
 export const createParityTest = <TInput, TOutput>(
-	decl: ParityDeclaration<TInput, TOutput>
+	decl: ParityDeclaration<TInput, TOutput>,
 ): (() => Promise<void>) => {
 	return async () => {
 		for (const input of decl.inputs) {
@@ -63,7 +63,6 @@ export const createParityTest = <TInput, TOutput>(
 				: JSON.stringify(legacy) === JSON.stringify(extracted);
 
 			// Provide a rich failure message
-			// biome-ignore lint/suspicious/noMisplacedAssertion: this callback is returned to Vitest and executed inside it().
 			expect(
 				pass,
 				[
@@ -72,7 +71,7 @@ export const createParityTest = <TInput, TOutput>(
 					`Input: ${JSON.stringify(input)}`,
 					`Legacy: ${JSON.stringify(legacy)}`,
 					`Extracted: ${JSON.stringify(extracted)}`,
-				].join("\n")
+				].join("\n"),
 			).toBe(true);
 		}
 	};

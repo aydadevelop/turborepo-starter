@@ -6,14 +6,14 @@ describe("formatOrgAccountError", () => {
 		expect(
 			formatOrgAccountError(
 				{ error: { message: "Invitation already exists." } },
-				"fallback"
-			)
+				"fallback",
+			),
 		).toBe("Invitation already exists.");
 	});
 
 	it("uses Error messages when present", () => {
 		expect(formatOrgAccountError(new Error("No access."), "fallback")).toBe(
-			"No access."
+			"No access.",
 		);
 	});
 

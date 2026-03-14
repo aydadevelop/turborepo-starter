@@ -23,7 +23,7 @@ export type MutationResult<T = void> =
  */
 export function formatMutationError(
 	error: unknown,
-	fallback = "Something went wrong. Please try again."
+	fallback = "Something went wrong. Please try again.",
 ): string {
 	if (typeof error === "string" && error.trim().length > 0) {
 		return error;

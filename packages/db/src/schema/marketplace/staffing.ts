@@ -33,13 +33,13 @@ export const listingStaffAssignment = pgTable(
 		index("listing_staff_assignment_ix_listing_id").on(table.listingId),
 		index("listing_staff_assignment_ix_member_id").on(table.memberId),
 		index("listing_staff_assignment_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		uniqueIndex("listing_staff_assignment_uq_listing_member").on(
 			table.listingId,
-			table.memberId
+			table.memberId,
 		),
-	]
+	],
 );
 
 export const bookingStaffAssignment = pgTable(
@@ -65,11 +65,11 @@ export const bookingStaffAssignment = pgTable(
 		index("booking_staff_assignment_ix_booking_id").on(table.bookingId),
 		index("booking_staff_assignment_ix_member_id").on(table.memberId),
 		index("booking_staff_assignment_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		uniqueIndex("booking_staff_assignment_uq_booking_member").on(
 			table.bookingId,
-			table.memberId
+			table.memberId,
 		),
-	]
+	],
 );

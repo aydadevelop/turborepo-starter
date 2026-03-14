@@ -18,7 +18,7 @@ export class SupportError extends Error {
 
 export const isSupportErrorCode = (
 	error: unknown,
-	code: SupportErrorCode
+	code: SupportErrorCode,
 ): boolean =>
 	(error instanceof SupportError && error.code === code) ||
 	(error instanceof Error && error.message === code);

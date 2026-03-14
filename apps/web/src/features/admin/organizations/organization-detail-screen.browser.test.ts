@@ -95,7 +95,7 @@ test("renders organization members and invitations through the shared admin surf
 	await page.getByRole("tab", { name: "Invitations (1)" }).click();
 	await expect
 		.element(
-			page.getByRole("cell", { name: "captain@example.com", exact: true })
+			page.getByRole("cell", { name: "captain@example.com", exact: true }),
 		)
 		.toBeVisible();
 	await expect(document.body).toMatchScreenshot("organization-detail-screen");

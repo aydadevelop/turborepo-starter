@@ -15,7 +15,7 @@ describe("boat-rent booking surface helpers", () => {
 				requestedDurationMinutes: 120,
 				passengerCount: 4,
 				appliedDiscountCode: " spring10 ",
-			})
+			}),
 		).toBeNull();
 
 		expect(
@@ -25,7 +25,7 @@ describe("boat-rent booking surface helpers", () => {
 				requestedDurationMinutes: 120,
 				passengerCount: 4,
 				appliedDiscountCode: " spring10 ",
-			})
+			}),
 		).toEqual({
 			listingId: "listing_1",
 			date: "2030-01-15",
@@ -48,7 +48,7 @@ describe("boat-rent booking surface helpers", () => {
 				notes: "Sunset cruise",
 				specialRequests: "Champagne",
 				discountCode: " save10 ",
-			})
+			}),
 		).toBeNull();
 
 		expect(
@@ -87,7 +87,7 @@ describe("boat-rent booking surface helpers", () => {
 				notes: "Sunset cruise",
 				specialRequests: "Champagne",
 				discountCode: " save10 ",
-			})
+			}),
 		).toEqual({
 			listingId: "listing_1",
 			startsAt: "2030-01-15T10:00:00.000Z",
@@ -132,7 +132,7 @@ describe("boat-rent booking surface helpers", () => {
 					discountedTaxCents: 324,
 					discountedTotalCents: 11_664,
 				},
-			})
+			}),
 		).toEqual({
 			appliedDiscountCode: "SPRING10",
 			discountAmountCents: 1200,

@@ -1,5 +1,4 @@
 <script lang="ts">
-	// biome-ignore lint/performance/noNamespaceImport: shadcn-style alert namespace usage is intentional in this component.
 	import * as Alert from "@my-app/ui/components/alert";
 	import { Button } from "@my-app/ui/components/button";
 	import { Input } from "@my-app/ui/components/input";

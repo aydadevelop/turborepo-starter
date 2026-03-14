@@ -15,7 +15,7 @@ export async function registerWorker<T extends object>(
 	boss: PgBoss,
 	queueName: string,
 	handler: (data: T) => Promise<void>,
-	options?: WorkerOptions
+	options?: WorkerOptions,
 ): Promise<string> {
 	await boss.createQueue(`${queueName}-dlq`);
 
@@ -36,6 +36,6 @@ export async function registerWorker<T extends object>(
 			for (const job of jobs) {
 				await handler(job.data);
 			}
-		}
+		},
 	);
 }

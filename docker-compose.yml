@@ -67,7 +67,11 @@ services:
     volumes:
       - seaweedfs_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9333/cluster/status >/dev/null 2>&1 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:9333/cluster/status >/dev/null 2>&1 || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -136,7 +140,13 @@ services:
       seaweedfs-init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "bun", "--eval", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "bun",
+          "--eval",
+          "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -170,7 +180,13 @@ services:
       server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "bun", "--eval", "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "bun",
+          "--eval",
+          "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -192,7 +208,7 @@ services:
     environment:
       PORT: 3002
       DATABASE_URL: postgresql://postgres:postgres@db:5432/myapp
-      SERVER_URL: http://server:3000       # internal Docker network — bypasses Traefik
+      SERVER_URL: http://server:3000 # internal Docker network — bypasses Traefik
       EMAIL_BACKEND: smtp
       EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@localhost}
       EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-My App}
@@ -216,7 +232,13 @@ services:
       smtp-server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "bun", "--eval", "fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "bun",
+          "--eval",
+          "fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -243,7 +265,13 @@ services:
       server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "bun", "--eval", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "bun",
+          "--eval",
+          "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -255,7 +283,7 @@ services:
     image: rnwood/smtp4dev:v3
     restart: unless-stopped
     ports:
-      - "127.0.0.1:5025:80"    # web UI — view captured emails at http://localhost:5025
+      - "127.0.0.1:5025:80" # web UI — view captured emails at http://localhost:5025
       - "127.0.0.1:${SMTP4DEV_SMTP_PORT:-2525}:25" # host-visible SMTP for provider integration tests
     environment:
       ServerOptions__Urls: "http://*:80"
@@ -313,7 +341,7 @@ services:
       GF_SMTP_HOST: ${SMTP_HOST:-smtp-server}:${SMTP_PORT:-25}
       GF_SMTP_FROM_ADDRESS: ${SMTP_FROM:-grafana@smtp-server.local}
       GF_SMTP_FROM_NAME: "Grafana Alerts"
-      GF_SMTP_SKIP_VERIFY: "true"   # smtp4dev has no TLS; disable in prod if relay requires it
+      GF_SMTP_SKIP_VERIFY: "true" # smtp4dev has no TLS; disable in prod if relay requires it
     volumes:
       - grafana_data:/var/lib/grafana
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -344,8 +372,8 @@ services:
     volumes:
       - ./infra/grafana/alloy.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro   # cgroup → container ID resolution
-      - /var/lib/docker:/var/lib/docker:ro  # cAdvisor container layer metadata
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro # cgroup → container ID resolution
+      - /var/lib/docker:/var/lib/docker:ro # cAdvisor container layer metadata
     depends_on:
       loki:
         condition: service_healthy
@@ -359,9 +387,9 @@ services:
       - ./infra/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
       - tempo_data:/var/tempo
     ports:
-      - "127.0.0.1:3200:3200"   # Tempo HTTP / query frontend
-      - "127.0.0.1:4317:4317"   # OTLP gRPC receiver
-      - "127.0.0.1:4318:4318"   # OTLP HTTP receiver
+      - "127.0.0.1:3200:3200" # Tempo HTTP / query frontend
+      - "127.0.0.1:4317:4317" # OTLP gRPC receiver
+      - "127.0.0.1:4318:4318" # OTLP HTTP receiver
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3200/ready || exit 1"]
       interval: 10s

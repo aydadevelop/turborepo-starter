@@ -1,195 +1,195 @@
 {
-  "$schema": "https://turbo.build/schema.json",
-  "ui": "tui",
-  "globalEnv": ["CI"],
-  "globalPassThroughEnv": [
-    "BASE_PATH",
-    "STAGE",
-    "BETTER_AUTH_SECRET",
-    "BETTER_AUTH_URL",
-    "SERVER_URL",
-    "ASSISTANT_URL",
-    "CORS_ORIGIN",
-    "DATABASE_URL",
-    "OPEN_ROUTER_API_KEY",
-    "AI_MODEL",
-    "POLAR_ACCESS_TOKEN",
-    "CLOUDPAYMENTS_PUBLIC_ID",
-    "PUBLIC_CLOUDPAYMENTS_PUBLIC_ID",
-    "CLOUDPAYMENTS_API_SECRET",
-    "EMAIL_BACKEND",
-    "EMAIL_FROM_ADDRESS",
-    "EMAIL_FROM_NAME",
-    "EMAIL_REPLY_TO",
-    "SMTP_HOST",
-    "SMTP_PORT",
-    "SMTP_SECURE",
-    "SMTP_IGNORE_TLS",
-    "SMTP_USER",
-    "SMTP_PASS",
-    "SUPPORT_EMAIL_INTAKE_SECRET",
-    "SUPPORT_EMAIL_INTAKE_ORGANIZATION_ID",
-    "STORAGE_BACKEND",
-    "STORAGE_PUBLIC_BASE_URL",
-    "STORAGE_LOCAL_DIR",
-    "STORAGE_S3_ENDPOINT",
-    "STORAGE_S3_REGION",
-    "STORAGE_S3_BUCKET",
-    "STORAGE_S3_ACCESS_KEY_ID",
-    "STORAGE_S3_SECRET_ACCESS_KEY",
-    "STORAGE_S3_FORCE_PATH_STYLE",
-    "STORAGE_SIGNED_URL_TTL_SECONDS",
-    "TELEGRAM_BOT_TOKEN",
-    "TELEGRAM_BOT_USERNAME",
-    "TELEGRAM_BOT_API_BASE_URL"
-  ],
-  "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**", ".svelte-kit/**", "build/**"]
-    },
-    "build:rolldown": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**", ".svelte-kit/**", "build/**"]
-    },
-    "analyze:bundle": {
-      "dependsOn": ["build"],
-      "cache": false
-    },
-    "analyze:bundle:rolldown": {
-      "dependsOn": ["build:rolldown"],
-      "cache": false
-    },
-    "//#format-and-lint": {},
-    "//#format-and-lint:fix": {
-      "cache": false
-    },
-    "lint": {},
-    "lint:fix": {
-      "cache": false
-    },
-    "check-types": {},
-    "test": {
-      "dependsOn": ["^build"]
-    },
-    "test:bundle-size": {
-      "dependsOn": ["build"]
-    },
-    "test:bundle-size:rolldown": {
-      "dependsOn": ["build:rolldown"]
-    },
-    "test:deps": {},
-    "test:perf": {
-      "dependsOn": ["^build"],
-      "cache": false,
-      "passThroughEnv": ["PLAYWRIGHT_*", "BASE_PATH", "PERF_*"]
-    },
-    "test:watch": {
-      "cache": false,
-      "persistent": true
-    },
-    "test:e2e": {
-      "dependsOn": ["^build"],
-      "cache": false,
-      "passThroughEnv": [
-        "PLAYWRIGHT_*",
-        "BASE_PATH",
-        "PLAYWRIGHT_SKIP_SEED",
-        "PLAYWRIGHT_SEED_SCENARIO",
-        "PLAYWRIGHT_SEED_ANCHOR_DATE"
-      ]
-    },
-    "test:e2e:external": {
-      "dependsOn": ["^build"],
-      "cache": false,
-      "passThroughEnv": [
-        "PLAYWRIGHT_*",
-        "BASE_PATH",
-        "PLAYWRIGHT_SKIP_SEED",
-        "PLAYWRIGHT_SEED_SCENARIO",
-        "PLAYWRIGHT_SEED_ANCHOR_DATE"
-      ]
-    },
-    "test:e2e:ui": {
-      "dependsOn": ["^build"],
-      "cache": false,
-      "persistent": true,
-      "passThroughEnv": [
-        "PLAYWRIGHT_*",
-        "BASE_PATH",
-        "PLAYWRIGHT_SKIP_SEED",
-        "PLAYWRIGHT_SEED_SCENARIO",
-        "PLAYWRIGHT_SEED_ANCHOR_DATE"
-      ]
-    },
-    "test:e2e:ui:external": {
-      "dependsOn": ["^build"],
-      "cache": false,
-      "persistent": true,
-      "passThroughEnv": [
-        "PLAYWRIGHT_*",
-        "BASE_PATH",
-        "PLAYWRIGHT_SKIP_SEED",
-        "PLAYWRIGHT_SEED_SCENARIO",
-        "PLAYWRIGHT_SEED_ANCHOR_DATE"
-      ]
-    },
-    "dev": {
-      "env": [
-        "STAGE",
-        "SERVER_PORT",
-        "NOTIFICATIONS_PORT",
-        "ASSISTANT_PORT",
-        "OPEN_ROUTER_API_KEY",
-        "PUBLIC_SERVER_URL",
-        "PUBLIC_ASSISTANT_URL"
-      ],
-      "cache": false,
-      "persistent": true
-    },
-    "start:test": {
-      "env": [
-        "STAGE",
-        "SERVER_PORT",
-        "NOTIFICATIONS_PORT",
-        "ASSISTANT_PORT",
-        "OPEN_ROUTER_API_KEY",
-        "AI_MODEL",
-        "SERVER_URL",
-        "PUBLIC_SERVER_URL",
-        "PUBLIC_ASSISTANT_URL"
-      ],
-      "cache": false,
-      "persistent": true
-    },
-    "dev:vite": {
-      "cache": false,
-      "persistent": true
-    },
-    "dev:rolldown": {
-      "cache": false,
-      "persistent": true
-    },
-    "db:push": {
-      "cache": false
-    },
-    "db:studio": {
-      "cache": false,
-      "persistent": true
-    },
-    "db:migrate": {
-      "cache": false
-    },
-    "db:generate": {
-      "cache": false
-    },
-    "db:reset:local": {
-      "cache": false
-    },
-    "db:seed": {
-      "cache": false
-    }
-  }
+	"$schema": "https://turbo.build/schema.json",
+	"ui": "tui",
+	"globalEnv": ["CI"],
+	"globalPassThroughEnv": [
+		"BASE_PATH",
+		"STAGE",
+		"BETTER_AUTH_SECRET",
+		"BETTER_AUTH_URL",
+		"SERVER_URL",
+		"ASSISTANT_URL",
+		"CORS_ORIGIN",
+		"DATABASE_URL",
+		"OPEN_ROUTER_API_KEY",
+		"AI_MODEL",
+		"POLAR_ACCESS_TOKEN",
+		"CLOUDPAYMENTS_PUBLIC_ID",
+		"PUBLIC_CLOUDPAYMENTS_PUBLIC_ID",
+		"CLOUDPAYMENTS_API_SECRET",
+		"EMAIL_BACKEND",
+		"EMAIL_FROM_ADDRESS",
+		"EMAIL_FROM_NAME",
+		"EMAIL_REPLY_TO",
+		"SMTP_HOST",
+		"SMTP_PORT",
+		"SMTP_SECURE",
+		"SMTP_IGNORE_TLS",
+		"SMTP_USER",
+		"SMTP_PASS",
+		"SUPPORT_EMAIL_INTAKE_SECRET",
+		"SUPPORT_EMAIL_INTAKE_ORGANIZATION_ID",
+		"STORAGE_BACKEND",
+		"STORAGE_PUBLIC_BASE_URL",
+		"STORAGE_LOCAL_DIR",
+		"STORAGE_S3_ENDPOINT",
+		"STORAGE_S3_REGION",
+		"STORAGE_S3_BUCKET",
+		"STORAGE_S3_ACCESS_KEY_ID",
+		"STORAGE_S3_SECRET_ACCESS_KEY",
+		"STORAGE_S3_FORCE_PATH_STYLE",
+		"STORAGE_SIGNED_URL_TTL_SECONDS",
+		"TELEGRAM_BOT_TOKEN",
+		"TELEGRAM_BOT_USERNAME",
+		"TELEGRAM_BOT_API_BASE_URL"
+	],
+	"tasks": {
+		"build": {
+			"dependsOn": ["^build"],
+			"inputs": ["$TURBO_DEFAULT$", ".env*"],
+			"outputs": ["dist/**", ".svelte-kit/**", "build/**"]
+		},
+		"build:rolldown": {
+			"dependsOn": ["^build"],
+			"inputs": ["$TURBO_DEFAULT$", ".env*"],
+			"outputs": ["dist/**", ".svelte-kit/**", "build/**"]
+		},
+		"analyze:bundle": {
+			"dependsOn": ["build"],
+			"cache": false
+		},
+		"analyze:bundle:rolldown": {
+			"dependsOn": ["build:rolldown"],
+			"cache": false
+		},
+		"//#format-and-lint": {},
+		"//#format-and-lint:fix": {
+			"cache": false
+		},
+		"lint": {},
+		"lint:fix": {
+			"cache": false
+		},
+		"check-types": {},
+		"test": {
+			"dependsOn": ["^build"]
+		},
+		"test:bundle-size": {
+			"dependsOn": ["build"]
+		},
+		"test:bundle-size:rolldown": {
+			"dependsOn": ["build:rolldown"]
+		},
+		"test:deps": {},
+		"test:perf": {
+			"dependsOn": ["^build"],
+			"cache": false,
+			"passThroughEnv": ["PLAYWRIGHT_*", "BASE_PATH", "PERF_*"]
+		},
+		"test:watch": {
+			"cache": false,
+			"persistent": true
+		},
+		"test:e2e": {
+			"dependsOn": ["^build"],
+			"cache": false,
+			"passThroughEnv": [
+				"PLAYWRIGHT_*",
+				"BASE_PATH",
+				"PLAYWRIGHT_SKIP_SEED",
+				"PLAYWRIGHT_SEED_SCENARIO",
+				"PLAYWRIGHT_SEED_ANCHOR_DATE"
+			]
+		},
+		"test:e2e:external": {
+			"dependsOn": ["^build"],
+			"cache": false,
+			"passThroughEnv": [
+				"PLAYWRIGHT_*",
+				"BASE_PATH",
+				"PLAYWRIGHT_SKIP_SEED",
+				"PLAYWRIGHT_SEED_SCENARIO",
+				"PLAYWRIGHT_SEED_ANCHOR_DATE"
+			]
+		},
+		"test:e2e:ui": {
+			"dependsOn": ["^build"],
+			"cache": false,
+			"persistent": true,
+			"passThroughEnv": [
+				"PLAYWRIGHT_*",
+				"BASE_PATH",
+				"PLAYWRIGHT_SKIP_SEED",
+				"PLAYWRIGHT_SEED_SCENARIO",
+				"PLAYWRIGHT_SEED_ANCHOR_DATE"
+			]
+		},
+		"test:e2e:ui:external": {
+			"dependsOn": ["^build"],
+			"cache": false,
+			"persistent": true,
+			"passThroughEnv": [
+				"PLAYWRIGHT_*",
+				"BASE_PATH",
+				"PLAYWRIGHT_SKIP_SEED",
+				"PLAYWRIGHT_SEED_SCENARIO",
+				"PLAYWRIGHT_SEED_ANCHOR_DATE"
+			]
+		},
+		"dev": {
+			"env": [
+				"STAGE",
+				"SERVER_PORT",
+				"NOTIFICATIONS_PORT",
+				"ASSISTANT_PORT",
+				"OPEN_ROUTER_API_KEY",
+				"PUBLIC_SERVER_URL",
+				"PUBLIC_ASSISTANT_URL"
+			],
+			"cache": false,
+			"persistent": true
+		},
+		"start:test": {
+			"env": [
+				"STAGE",
+				"SERVER_PORT",
+				"NOTIFICATIONS_PORT",
+				"ASSISTANT_PORT",
+				"OPEN_ROUTER_API_KEY",
+				"AI_MODEL",
+				"SERVER_URL",
+				"PUBLIC_SERVER_URL",
+				"PUBLIC_ASSISTANT_URL"
+			],
+			"cache": false,
+			"persistent": true
+		},
+		"dev:vite": {
+			"cache": false,
+			"persistent": true
+		},
+		"dev:rolldown": {
+			"cache": false,
+			"persistent": true
+		},
+		"db:push": {
+			"cache": false
+		},
+		"db:studio": {
+			"cache": false,
+			"persistent": true
+		},
+		"db:migrate": {
+			"cache": false
+		},
+		"db:generate": {
+			"cache": false
+		},
+		"db:reset:local": {
+			"cache": false
+		},
+		"db:seed": {
+			"cache": false
+		}
+	}
 }

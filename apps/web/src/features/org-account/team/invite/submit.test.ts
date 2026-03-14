@@ -15,7 +15,7 @@ describe("submitInviteMember", () => {
 				email: "captain@example.com",
 				role: "agent",
 				organizationId: "",
-			}
+			},
 		);
 
 		expect(result).toEqual({
@@ -38,7 +38,7 @@ describe("submitInviteMember", () => {
 				email: "captain@example.com",
 				role: "agent",
 				organizationId: "org_123",
-			}
+			},
 		);
 
 		expect(result).toEqual({

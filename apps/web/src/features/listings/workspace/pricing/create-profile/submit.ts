@@ -7,7 +7,7 @@ export type CreatePricingProfileInput = OrpcInputs["pricing"]["createProfile"];
 
 function parsePositiveInteger(
 	value: string,
-	message: string
+	message: string,
 ): MutationResult<number> {
 	const parsed = Number.parseInt(value.trim(), 10);
 	if (!Number.isInteger(parsed) || parsed <= 0) {
@@ -19,7 +19,7 @@ function parsePositiveInteger(
 
 function parseNonNegativeInteger(
 	value: string,
-	message: string
+	message: string,
 ): MutationResult<number> {
 	const parsed = Number.parseInt(value.trim(), 10);
 	if (!Number.isInteger(parsed) || parsed < 0) {
@@ -31,11 +31,11 @@ function parseNonNegativeInteger(
 
 export function buildCreatePricingProfileInput(
 	listingId: string,
-	values: CreatePricingProfileFormValues
+	values: CreatePricingProfileFormValues,
 ): MutationResult<CreatePricingProfileInput> {
 	const baseHourlyPriceResult = parsePositiveInteger(
 		values.baseHourlyPriceCents,
-		"Base hourly price must be a positive whole number."
+		"Base hourly price must be a positive whole number.",
 	);
 	if (!baseHourlyPriceResult.ok) {
 		return baseHourlyPriceResult;
@@ -43,7 +43,7 @@ export function buildCreatePricingProfileInput(
 
 	const minimumHoursResult = parsePositiveInteger(
 		values.minimumHours,
-		"Minimum hours must be a positive whole number."
+		"Minimum hours must be a positive whole number.",
 	);
 	if (!minimumHoursResult.ok) {
 		return minimumHoursResult;
@@ -51,7 +51,7 @@ export function buildCreatePricingProfileInput(
 
 	const serviceFeeBpsResult = parseNonNegativeInteger(
 		values.serviceFeeBps,
-		"Service fee must be a non-negative whole number."
+		"Service fee must be a non-negative whole number.",
 	);
 	if (!serviceFeeBpsResult.ok) {
 		return serviceFeeBpsResult;
@@ -59,7 +59,7 @@ export function buildCreatePricingProfileInput(
 
 	const taxBpsResult = parseNonNegativeInteger(
 		values.taxBps,
-		"Tax must be a non-negative whole number."
+		"Tax must be a non-negative whole number.",
 	);
 	if (!taxBpsResult.ok) {
 		return taxBpsResult;

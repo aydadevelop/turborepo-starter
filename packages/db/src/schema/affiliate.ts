@@ -42,15 +42,15 @@ export const affiliatePayoutStatusValues = [
 
 export const affiliateStatusEnum = pgEnum(
 	"affiliate_status",
-	affiliateStatusValues
+	affiliateStatusValues,
 );
 export const affiliateAttributionSourceEnum = pgEnum(
 	"affiliate_attribution_source",
-	affiliateAttributionSourceValues
+	affiliateAttributionSourceValues,
 );
 export const affiliatePayoutStatusEnum = pgEnum(
 	"affiliate_payout_status",
-	affiliatePayoutStatusValues
+	affiliatePayoutStatusValues,
 );
 
 /**
@@ -67,7 +67,7 @@ export const affiliateReferral = pgTable(
 		/** Optional: affiliate can belong to a partner organization. */
 		affiliateOrganizationId: text("affiliate_organization_id").references(
 			() => organization.id,
-			{ onDelete: "set null" }
+			{ onDelete: "set null" },
 		),
 		code: text("code").notNull(),
 		name: text("name"),
@@ -82,10 +82,10 @@ export const affiliateReferral = pgTable(
 		uniqueIndex("affiliate_referral_uq_code").on(table.code),
 		index("affiliate_referral_ix_affiliate_user_id").on(table.affiliateUserId),
 		index("affiliate_referral_ix_affiliate_organization_id").on(
-			table.affiliateOrganizationId
+			table.affiliateOrganizationId,
 		),
 		index("affiliate_referral_ix_status").on(table.status),
-	]
+	],
 );
 
 /**
@@ -112,13 +112,13 @@ export const bookingAffiliateAttribution = pgTable(
 	},
 	(table) => [
 		uniqueIndex("booking_affiliate_attribution_uq_booking_id").on(
-			table.bookingId
+			table.bookingId,
 		),
 		index("booking_affiliate_attribution_ix_affiliate_user_id").on(
-			table.affiliateUserId
+			table.affiliateUserId,
 		),
 		index("booking_affiliate_attribution_ix_referral_id").on(table.referralId),
-	]
+	],
 );
 
 /**
@@ -153,12 +153,12 @@ export const bookingAffiliatePayout = pgTable(
 	},
 	(table) => [
 		uniqueIndex("booking_affiliate_payout_uq_attribution_id").on(
-			table.attributionId
+			table.attributionId,
 		),
 		index("booking_affiliate_payout_ix_booking_id").on(table.bookingId),
 		index("booking_affiliate_payout_ix_affiliate_user_id").on(
-			table.affiliateUserId
+			table.affiliateUserId,
 		),
 		index("booking_affiliate_payout_ix_status").on(table.status),
-	]
+	],
 );

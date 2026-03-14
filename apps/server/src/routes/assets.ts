@@ -25,8 +25,8 @@ assetRoutes.get("/:providerId/*", async (c) => {
 			and(
 				eq(listingAsset.storageProvider, providerId),
 				eq(listingAsset.storageKey, key),
-				eq(listingAsset.access, "public")
-			)
+				eq(listingAsset.access, "public"),
+			),
 		)
 		.limit(1);
 

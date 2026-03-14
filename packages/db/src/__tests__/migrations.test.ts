@@ -31,21 +31,21 @@ describe("Migration artifacts", () => {
 
 	it("each migration entry contains a migration.sql file", () => {
 		const entries = readdirSync(migrationsDir).filter((e) =>
-			statSync(path.join(migrationsDir, e)).isDirectory()
+			statSync(path.join(migrationsDir, e)).isDirectory(),
 		);
 		expect(entries.length).toBeGreaterThan(0);
 
 		for (const entry of entries) {
 			const sqlPath = path.join(migrationsDir, entry, "migration.sql");
 			expect(existsSync(sqlPath), `${entry}/migration.sql should exist`).toBe(
-				true
+				true,
 			);
 		}
 	});
 
 	it("migration.sql files are non-empty and contain DDL statements", () => {
 		const entries = readdirSync(migrationsDir).filter((e) =>
-			statSync(path.join(migrationsDir, e)).isDirectory()
+			statSync(path.join(migrationsDir, e)).isDirectory(),
 		);
 
 		for (const entry of entries) {
@@ -57,19 +57,19 @@ describe("Migration artifacts", () => {
 			const content = readFileSync(sqlPath, "utf-8").trim();
 			expect(
 				content.length,
-				`${entry}/migration.sql should not be empty`
+				`${entry}/migration.sql should not be empty`,
 			).toBeGreaterThan(0);
 			// Must contain at least one DDL statement. Index-only migrations are valid.
 			expect(
 				MIGRATION_DDL_RE.test(content),
-				`${entry}/migration.sql should contain DDL statements`
+				`${entry}/migration.sql should contain DDL statements`,
 			).toBe(true);
 		}
 	});
 
 	it("baseline migration covers core schema tables", () => {
 		const entries = readdirSync(migrationsDir).filter((e) =>
-			statSync(path.join(migrationsDir, e)).isDirectory()
+			statSync(path.join(migrationsDir, e)).isDirectory(),
 		);
 
 		const allSql = entries
@@ -92,14 +92,14 @@ describe("Migration artifacts", () => {
 		for (const table of requiredTables) {
 			expect(
 				allSql.includes(`CREATE TABLE "${table}"`),
-				`Baseline migrations should include CREATE TABLE "${table}"`
+				`Baseline migrations should include CREATE TABLE "${table}"`,
 			).toBe(true);
 		}
 	});
 
 	it("includes overlap safety nets for booking and availability ranges", () => {
 		const entries = readdirSync(migrationsDir).filter((e) =>
-			statSync(path.join(migrationsDir, e)).isDirectory()
+			statSync(path.join(migrationsDir, e)).isDirectory(),
 		);
 
 		const allSql = entries
@@ -111,10 +111,10 @@ describe("Migration artifacts", () => {
 
 		expect(allSql).toContain("CREATE EXTENSION IF NOT EXISTS btree_gist;");
 		expect(allSql).toContain(
-			'ADD CONSTRAINT "booking_exclude_active_listing_overlap"'
+			'ADD CONSTRAINT "booking_exclude_active_listing_overlap"',
 		);
 		expect(allSql).toContain(
-			'ADD CONSTRAINT "listing_availability_block_exclude_active_overlap"'
+			'ADD CONSTRAINT "listing_availability_block_exclude_active_overlap"',
 		);
 		expect(allSql).toContain("EXCLUDE USING gist");
 	});

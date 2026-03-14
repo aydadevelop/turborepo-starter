@@ -25,20 +25,20 @@ export interface LocalFileStorageProviderOptions {
 const buildPrivateDownloadUrl = (
 	providerId: string,
 	key: string,
-	expiresInSeconds: number
+	expiresInSeconds: number,
 ): string => {
 	const url = new URL(
-		`local-file://${encodeURIComponent(providerId)}/${normalizeStorageKey(key)}`
+		`local-file://${encodeURIComponent(providerId)}/${normalizeStorageKey(key)}`,
 	);
 	url.searchParams.set("expires", String(expiresInSeconds));
 	return url.toString();
 };
 
 export const createLocalFileStorageProvider = (
-	options: LocalFileStorageProviderOptions
+	options: LocalFileStorageProviderOptions,
 ): StorageProvider => {
 	const upload = async (
-		input: StorageUploadInput
+		input: StorageUploadInput,
 	): Promise<StorageUploadResult> => {
 		const key = input.key
 			? normalizeStorageKey(input.key)
@@ -58,7 +58,7 @@ export const createLocalFileStorageProvider = (
 	};
 
 	const getSignedUploadUrl = (
-		input: StorageSignedUploadInput
+		input: StorageSignedUploadInput,
 	): Promise<StorageSignedUploadResult> => {
 		const key = input.key
 			? normalizeStorageKey(input.key)
@@ -103,8 +103,8 @@ export const createLocalFileStorageProvider = (
 				buildPrivateDownloadUrl(
 					options.providerId,
 					ref.key,
-					options_?.expiresInSeconds ?? 900
-				)
+					options_?.expiresInSeconds ?? 900,
+				),
 			);
 		},
 		getSignedUploadUrl,
@@ -120,7 +120,7 @@ export const createLocalFileStorageProvider = (
 
 export const resolveLocalStoragePath = (
 	baseDir: string,
-	key: string
+	key: string,
 ): string => {
 	return path.join(baseDir, normalizeStorageKey(key));
 };

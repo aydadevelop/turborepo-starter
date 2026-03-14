@@ -53,9 +53,9 @@ export const invalidationKeys = {
  */
 export async function invalidateQueryKeys(
 	queryClient: QueryClient,
-	keys: readonly InvalidationKey[]
+	keys: readonly InvalidationKey[],
 ): Promise<void> {
 	await Promise.all(
-		keys.map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+		keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
 	);
 }

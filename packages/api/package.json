@@ -1,63 +1,61 @@
 {
-  "name": "@my-app/api",
-  "type": "module",
-  "exports": {
-    ".": {
-      "default": "./src/index.ts"
-    },
-    "./*": {
-      "default": "./src/*.ts"
-    },
-    "./tasks/*": {
-      "default": "./src/tasks/*.ts"
-    },
-    "./services/*": {
-      "default": "./src/services/*.ts"
-    },
-    "./handlers": {
-      "default": "./src/handlers/index.ts"
-    },
-    "./handlers/*": {
-      "default": "./src/handlers/*.ts"
-    }
-  },
-  "scripts": {
-    "check-types": "tsc --noEmit -p tsconfig.json",
-    "lint": "cd ../.. && biome check --config-path biome.json packages/api",
-    "lint:fix": "cd ../.. && biome check --config-path biome.json packages/api --write",
-    "test": "vitest run",
-    "test:watch": "vitest --watch"
-  },
-  "dependencies": {
-    "@my-app/api-contract": "workspace:*",
-    "@my-app/auth": "workspace:*",
-    "@my-app/booking": "workspace:*",
-    "@my-app/calendar": "workspace:*",
-    "@my-app/catalog": "workspace:*",
-    "@my-app/db": "workspace:*",
-    "@my-app/env": "workspace:*",
-    "@my-app/events": "workspace:*",
-    "@my-app/notifications": "workspace:*",
-    "@my-app/organization": "workspace:*",
-    "@my-app/payment": "workspace:*",
-    "@my-app/pricing": "workspace:*",
-    "@my-app/promotions": "workspace:*",
-    "@my-app/queue": "workspace:*",
-    "@my-app/support": "workspace:*",
-    "@my-app/telemetry": "workspace:*",
-    "@my-app/workflows": "workspace:*",
-    "@orpc/server": "^1.12.2",
-    "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
-    "zod": "^4.1.13"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
-    "@my-app/config": "workspace:*",
-    "@my-app/vitest-config": "workspace:*",
-    "@types/node": "^22.0.0",
-    "hono": "^4.8.2",
-    "typescript": "^5",
-    "ultracite": "^7.2.3",
-    "vitest": "^4.0.18"
-  }
+	"name": "@my-app/api",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./*": {
+			"default": "./src/*.ts"
+		},
+		"./tasks/*": {
+			"default": "./src/tasks/*.ts"
+		},
+		"./services/*": {
+			"default": "./src/services/*.ts"
+		},
+		"./handlers": {
+			"default": "./src/handlers/index.ts"
+		},
+		"./handlers/*": {
+			"default": "./src/handlers/*.ts"
+		}
+	},
+	"scripts": {
+		"check-types": "tsc --noEmit -p tsconfig.json",
+		"lint": "cd ../.. && oxlint packages/api",
+		"lint:fix": "cd ../.. && oxlint --fix packages/api",
+		"test": "vitest run",
+		"test:watch": "vitest --watch"
+	},
+	"dependencies": {
+		"@my-app/api-contract": "workspace:*",
+		"@my-app/auth": "workspace:*",
+		"@my-app/booking": "workspace:*",
+		"@my-app/calendar": "workspace:*",
+		"@my-app/catalog": "workspace:*",
+		"@my-app/db": "workspace:*",
+		"@my-app/env": "workspace:*",
+		"@my-app/events": "workspace:*",
+		"@my-app/notifications": "workspace:*",
+		"@my-app/organization": "workspace:*",
+		"@my-app/payment": "workspace:*",
+		"@my-app/pricing": "workspace:*",
+		"@my-app/promotions": "workspace:*",
+		"@my-app/queue": "workspace:*",
+		"@my-app/support": "workspace:*",
+		"@my-app/telemetry": "workspace:*",
+		"@my-app/workflows": "workspace:*",
+		"@orpc/server": "^1.12.2",
+		"drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+		"zod": "^4.1.13"
+	},
+	"devDependencies": {
+		"@my-app/config": "workspace:*",
+		"@my-app/vitest-config": "workspace:*",
+		"@types/node": "^22.0.0",
+		"hono": "^4.8.2",
+		"typescript": "^5",
+		"vitest": "^4.0.18"
+	}
 }

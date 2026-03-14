@@ -24,10 +24,10 @@ export interface MarketplaceBaselineScenarioOptions {
 
 export const seedMarketplaceBaselineScenario = async (
 	db: TestDatabase,
-	options: MarketplaceBaselineScenarioOptions = {}
+	options: MarketplaceBaselineScenarioOptions = {},
 ) => {
 	const clock = createMarketplaceFixtureClock(
-		options.anchorDate ?? DEFAULT_MARKETPLACE_ANCHOR_DATE
+		options.anchorDate ?? DEFAULT_MARKETPLACE_ANCHOR_DATE,
 	);
 
 	const operatorOrganization = await createOrganizationFixture(db, {

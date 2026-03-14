@@ -16,7 +16,7 @@ import type {
 
 export async function resolveOrganizationModerationSummary(
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationModerationSummary> {
 	const [approvedRow, reviewPendingRow, unapprovedActiveRow] =
 		await Promise.all([
@@ -26,8 +26,8 @@ export async function resolveOrganizationModerationSummary(
 				.where(
 					and(
 						eq(listing.organizationId, organizationId),
-						isNotNull(listing.approvedAt)
-					)
+						isNotNull(listing.approvedAt),
+					),
 				),
 			db
 				.select({
@@ -38,14 +38,14 @@ export async function resolveOrganizationModerationSummary(
 					listingPublication,
 					and(
 						eq(listingPublication.listingId, listing.id),
-						eq(listingPublication.isActive, true)
-					)
+						eq(listingPublication.isActive, true),
+					),
 				)
 				.where(
 					and(
 						eq(listing.organizationId, organizationId),
-						isNull(listing.approvedAt)
-					)
+						isNull(listing.approvedAt),
+					),
 				),
 			db
 				.select({ count: count() })
@@ -54,8 +54,8 @@ export async function resolveOrganizationModerationSummary(
 					and(
 						eq(listing.organizationId, organizationId),
 						eq(listing.status, "active"),
-						isNull(listing.approvedAt)
-					)
+						isNull(listing.approvedAt),
+					),
 				),
 		]);
 
@@ -69,13 +69,16 @@ export async function resolveOrganizationModerationSummary(
 export async function ensureOrganizationListingExists(
 	listingId: string,
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<void> {
 	const [row] = await db
 		.select({ id: listing.id })
 		.from(listing)
 		.where(
-			and(eq(listing.id, listingId), eq(listing.organizationId, organizationId))
+			and(
+				eq(listing.id, listingId),
+				eq(listing.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 
@@ -88,7 +91,7 @@ export async function setOrganizationListingApproval(
 	listingId: string,
 	organizationId: string,
 	approvedAt: Date | null,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<void> {
 	const [row] = await db
 		.update(listing)
@@ -97,7 +100,10 @@ export async function setOrganizationListingApproval(
 			updatedAt: new Date(),
 		})
 		.where(
-			and(eq(listing.id, listingId), eq(listing.organizationId, organizationId))
+			and(
+				eq(listing.id, listingId),
+				eq(listing.organizationId, organizationId),
+			),
 		)
 		.returning({ id: listing.id });
 
@@ -109,7 +115,7 @@ export async function setOrganizationListingApproval(
 export async function resolveOrganizationListingModerationState(
 	listingId: string,
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationListingModerationState> {
 	const [row] = await db
 		.select({
@@ -118,7 +124,10 @@ export async function resolveOrganizationListingModerationState(
 		})
 		.from(listing)
 		.where(
-			and(eq(listing.id, listingId), eq(listing.organizationId, organizationId))
+			and(
+				eq(listing.id, listingId),
+				eq(listing.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 
@@ -135,7 +144,7 @@ export async function resolveOrganizationListingModerationState(
 
 export async function insertOrganizationListingModerationAudit(
 	input: typeof listingModerationAudit.$inferInsert,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<void> {
 	await db.insert(listingModerationAudit).values(input);
 }
@@ -143,7 +152,7 @@ export async function insertOrganizationListingModerationAudit(
 export async function listOrganizationListingModerationAudit(
 	listingId: string,
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationListingModerationAuditEntry[]> {
 	await ensureOrganizationListingExists(listingId, organizationId, db);
 
@@ -165,8 +174,8 @@ export async function listOrganizationListingModerationAudit(
 		.where(
 			and(
 				eq(listingModerationAudit.listingId, listingId),
-				eq(listingModerationAudit.organizationId, organizationId)
-			)
+				eq(listingModerationAudit.organizationId, organizationId),
+			),
 		)
 		.orderBy(sql`${listingModerationAudit.actedAt} desc`);
 

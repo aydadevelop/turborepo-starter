@@ -18,7 +18,7 @@ export type RecurringTaskTickMessage = z.infer<
 >;
 
 export const createRecurringTaskTickMessage = (
-	input: RecurringTaskTickMessage
+	input: RecurringTaskTickMessage,
 ): RecurringTaskTickMessage => {
 	return recurringTaskTickMessageSchema.parse(input);
 };

@@ -11,7 +11,7 @@ import { resolveOrganizationBlockerSummary } from "./repository";
 
 export const getOrganizationOverlaySummary = async (
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationOverlaySummary> => {
 	const [
 		onboarding,

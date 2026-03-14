@@ -40,7 +40,7 @@ const parseCliArgs = () => {
 				`  --anchor-date <YYYY-MM-DD>  Stable UTC anchor date (default: ${E2E_DEFAULT_ANCHOR_DATE})`,
 				"  --database-url <url>        PostgreSQL connection string (default: PLAYWRIGHT_DATABASE_URL or derived *_e2e DB)",
 				"  -h, --help                  Show this help message",
-			].join("\n")
+			].join("\n"),
 		);
 		process.exit(0);
 	}
@@ -72,12 +72,12 @@ const resetAndMigrateSchema = async (connectionString: string) => {
 				cwd: dbPackageRoot,
 				stdio: "inherit",
 				env: { ...process.env, DATABASE_URL: connectionString },
-			}
+			},
 		);
 	} catch (error) {
 		const fallback = path.resolve(
 			dbPackageRoot,
-			"../../node_modules/.bin/drizzle-kit"
+			"../../node_modules/.bin/drizzle-kit",
 		);
 		if (!existsSync(fallback)) {
 			throw error;
@@ -104,7 +104,7 @@ export const bootstrapLocalE2EDatabase = async ({
 		E2E_DEFAULT_ANCHOR_DATE;
 	const connectionString = assertSafeE2EDatabaseUrl(
 		databaseUrl ?? resolvePlaywrightDatabaseUrl(process.env),
-		process.env
+		process.env,
 	);
 
 	await waitForDatabase({
@@ -123,7 +123,7 @@ const main = async () => {
 	const options = parseCliArgs();
 	const connectionString = assertSafeE2EDatabaseUrl(
 		options.databaseUrl ?? resolvePlaywrightDatabaseUrl(process.env),
-		process.env
+		process.env,
 	);
 
 	await bootstrapLocalE2EDatabase({
@@ -132,7 +132,7 @@ const main = async () => {
 	});
 
 	console.log(
-		`Bootstrapped local E2E database: ${maskConnectionString(connectionString)}`
+		`Bootstrapped local E2E database: ${maskConnectionString(connectionString)}`,
 	);
 };
 

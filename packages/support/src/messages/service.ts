@@ -42,7 +42,7 @@ const persistMessage = async (
 		inboundMessageId?: string;
 	},
 	db: Db,
-	actorContext?: SupportActorContext
+	actorContext?: SupportActorContext,
 ): Promise<{
 	message: SupportTicketMessageRow;
 	previousStatus: string | null;
@@ -53,7 +53,7 @@ const persistMessage = async (
 		const ticket = await requireTicketForOrganization(
 			input.ticketId,
 			input.organizationId,
-			transactionDb
+			transactionDb,
 		);
 
 		const message = await insertTicketMessage(
@@ -68,12 +68,12 @@ const persistMessage = async (
 				attachments: input.attachments,
 				inboundMessageId: input.inboundMessageId,
 			},
-			transactionDb
+			transactionDb,
 		);
 
 		const nextStatus = getFollowupStatusFromMessage(
 			input.isInternal,
-			input.authorKind
+			input.authorKind,
 		);
 
 		if (!nextStatus || ticket.status === nextStatus) {
@@ -89,7 +89,7 @@ const persistMessage = async (
 			ticket.id,
 			ticket.organizationId,
 			buildTicketStatusPatch(nextStatus, actorContext),
-			transactionDb
+			transactionDb,
 		);
 
 		if (!updatedTicket) {
@@ -124,7 +124,7 @@ const persistMessage = async (
 export async function addTicketMessage(
 	input: AddTicketMessageInput,
 	db: Db,
-	actorContext?: SupportActorContext
+	actorContext?: SupportActorContext,
 ): Promise<SupportTicketMessageRow> {
 	await requireTicketForOrganization(input.ticketId, input.organizationId, db);
 
@@ -141,7 +141,7 @@ export async function addTicketMessage(
 			inboundMessageId: input.inboundMessageId,
 		},
 		db,
-		actorContext
+		actorContext,
 	);
 
 	return result.message;
@@ -150,12 +150,12 @@ export async function addTicketMessage(
 export async function addCustomerTicketMessage(
 	input: AddCustomerTicketMessageInput,
 	db: Db,
-	actorContext?: SupportActorContext
+	actorContext?: SupportActorContext,
 ): Promise<SupportTicketMessageRow> {
 	const ticket = await requireTicketForCustomer(
 		input.ticketId,
 		input.customerUserId,
-		db
+		db,
 	);
 
 	const result = await persistMessage(
@@ -170,7 +170,7 @@ export async function addCustomerTicketMessage(
 			attachments: input.attachments,
 		},
 		db,
-		actorContext
+		actorContext,
 	);
 
 	return result.message;
@@ -179,7 +179,7 @@ export async function addCustomerTicketMessage(
 export async function addInboundTicketMessage(
 	input: AddTicketMessageInput,
 	db: Db,
-	actorContext?: SupportActorContext
+	actorContext?: SupportActorContext,
 ): Promise<SupportTicketMessageRow> {
 	const result = await persistMessage(
 		{
@@ -194,7 +194,7 @@ export async function addInboundTicketMessage(
 			inboundMessageId: input.inboundMessageId,
 		},
 		db,
-		actorContext
+		actorContext,
 	);
 
 	return result.message;
@@ -202,7 +202,7 @@ export async function addInboundTicketMessage(
 
 export function listTicketMessages(
 	ticketId: string,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketMessageRow[]> {
 	return listCustomerVisibleMessages(ticketId, db);
 }
@@ -210,7 +210,7 @@ export function listTicketMessages(
 export async function getOperatorTicketThread(
 	ticketId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<OperatorTicketThread> {
 	const ticket = await getTicket(ticketId, organizationId, db);
 	const messages = await listOperatorMessages(ticketId, organizationId, db);
@@ -220,7 +220,7 @@ export async function getOperatorTicketThread(
 export async function getCustomerTicketThread(
 	ticketId: string,
 	customerUserId: string,
-	db: Db
+	db: Db,
 ): Promise<CustomerTicketThread> {
 	const ticket = await getCustomerTicket(ticketId, customerUserId, db);
 	const messages = await listCustomerVisibleMessages(ticketId, db);

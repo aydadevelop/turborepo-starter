@@ -10,7 +10,7 @@ const prepare = (input: string, group: string, decimal: string): string =>
 const createFormatter = (
 	min: number,
 	max: number,
-	opts: MaskOptions
+	opts: MaskOptions,
 ): Intl.NumberFormat =>
 	new Intl.NumberFormat(opts.number?.locale ?? "en", {
 		minimumFractionDigits: min,
@@ -21,7 +21,7 @@ const createFormatter = (
 export const processNumber = (
 	value: string,
 	masked: boolean,
-	opts: MaskOptions
+	opts: MaskOptions,
 ): string => {
 	const sign =
 		opts.number?.unsigned !== true && value.startsWith("-") ? "-" : "";

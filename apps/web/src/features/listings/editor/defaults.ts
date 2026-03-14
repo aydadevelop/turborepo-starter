@@ -11,7 +11,7 @@ const toOptionalNumberString = (value: number | null | undefined): string =>
 const buildBoatRentDefaults = (
 	boatRentProfile: NonNullable<
 		ListingEditorInitialValue["serviceFamilyDetails"]
-	>["boatRent"]
+	>["boatRent"],
 ) => ({
 	boatRentCapacity: toOptionalNumberString(boatRentProfile?.capacity),
 	boatRentCaptainMode: boatRentProfile?.captainMode ?? "captained_only",
@@ -25,11 +25,11 @@ const buildBoatRentDefaults = (
 const buildExcursionDefaults = (
 	excursionProfile: NonNullable<
 		ListingEditorInitialValue["serviceFamilyDetails"]
-	>["excursion"]
+	>["excursion"],
 ) => ({
 	excursionMeetingPoint: excursionProfile?.meetingPoint ?? "",
 	excursionDurationMinutes: toOptionalNumberString(
-		excursionProfile?.durationMinutes
+		excursionProfile?.durationMinutes,
 	),
 	excursionGroupFormat: excursionProfile?.groupFormat ?? "group",
 	excursionMaxGroupSize: toOptionalNumberString(excursionProfile?.maxGroupSize),

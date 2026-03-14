@@ -3,7 +3,7 @@ import { createProcedureClient } from "@orpc/server";
 import { Hono } from "hono";
 
 const processPaymentWebhookProcedureClient = createProcedureClient(
-	internalServerRouteProcedures.payment.webhookProcess
+	internalServerRouteProcedures.payment.webhookProcess,
 );
 
 export const paymentWebhookRoutes = new Hono();
@@ -19,5 +19,5 @@ paymentWebhookRoutes.post(
 			request: c.req.raw,
 		});
 		return c.json(result.body, result.status);
-	}
+	},
 );

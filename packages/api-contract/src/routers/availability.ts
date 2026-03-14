@@ -60,7 +60,7 @@ export const availabilityContract = {
 				dayOfWeek: z.number().int().min(0).max(6),
 				startMinute: z.number().int().min(0).max(1440),
 				endMinute: z.number().int().min(1).max(1440),
-			})
+			}),
 		)
 		.output(availabilityRuleOutput),
 
@@ -90,7 +90,7 @@ export const availabilityContract = {
 				startsAt: z.string().datetime(),
 				endsAt: z.string().datetime(),
 				reason: z.string().optional(),
-			})
+			}),
 		)
 		.output(availabilityBlockOutput),
 
@@ -109,7 +109,7 @@ export const availabilityContract = {
 				startMinute: z.number().int().optional(),
 				endMinute: z.number().int().optional(),
 				reason: z.string().optional(),
-			})
+			}),
 		)
 		.output(availabilityExceptionOutput),
 
@@ -125,7 +125,7 @@ export const availabilityContract = {
 				listingId: z.string(),
 				startsAt: z.string().datetime(),
 				endsAt: z.string().datetime(),
-			})
+			}),
 		)
 		.output(z.object({ available: z.boolean() })),
 };

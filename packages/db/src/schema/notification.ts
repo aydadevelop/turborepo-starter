@@ -52,23 +52,23 @@ export const notificationSeverityValues = [
 
 export const notificationChannelEnum = pgEnum(
 	"notification_channel",
-	notificationChannelValues
+	notificationChannelValues,
 );
 export const notificationEventStatusEnum = pgEnum(
 	"notification_event_status",
-	notificationEventStatusValues
+	notificationEventStatusValues,
 );
 export const notificationIntentStatusEnum = pgEnum(
 	"notification_intent_status",
-	notificationIntentStatusValues
+	notificationIntentStatusValues,
 );
 export const notificationDeliveryStatusEnum = pgEnum(
 	"notification_delivery_status",
-	notificationDeliveryStatusValues
+	notificationDeliveryStatusValues,
 );
 export const notificationSeverityEnum = pgEnum(
 	"notification_severity",
-	notificationSeverityValues
+	notificationSeverityValues,
 );
 
 export type NotificationChannel = (typeof notificationChannelValues)[number];
@@ -114,9 +114,9 @@ export const notificationEvent = pgTable(
 		index("notification_event_createdAt_idx").on(table.createdAt),
 		uniqueIndex("notification_event_org_idempotency_unique").on(
 			table.organizationId,
-			table.idempotencyKey
+			table.idempotencyKey,
 		),
-	]
+	],
 );
 
 export const notificationIntent = pgTable(
@@ -150,7 +150,7 @@ export const notificationIntent = pgTable(
 		index("notification_intent_recipientUserId_idx").on(table.recipientUserId),
 		index("notification_intent_channel_idx").on(table.channel),
 		index("notification_intent_status_idx").on(table.status),
-	]
+	],
 );
 
 export const notificationDelivery = pgTable(
@@ -182,9 +182,9 @@ export const notificationDelivery = pgTable(
 		index("notification_delivery_status_idx").on(table.status),
 		uniqueIndex("notification_delivery_intent_attempt_unique").on(
 			table.intentId,
-			table.attempt
+			table.attempt,
 		),
-	]
+	],
 );
 
 export const notificationPreference = pgTable(
@@ -214,16 +214,16 @@ export const notificationPreference = pgTable(
 	(table) => [
 		index("notification_preference_userId_idx").on(table.userId),
 		index("notification_preference_organizationId_idx").on(
-			table.organizationId
+			table.organizationId,
 		),
 		index("notification_preference_eventType_idx").on(table.eventType),
 		uniqueIndex("notification_preference_scope_unique").on(
 			table.userId,
 			table.organizationScopeKey,
 			table.eventType,
-			table.channel
+			table.channel,
 		),
-	]
+	],
 );
 
 export const notificationInApp = pgTable(
@@ -261,5 +261,5 @@ export const notificationInApp = pgTable(
 		index("notification_in_app_userId_idx").on(table.userId),
 		index("notification_in_app_viewedAt_idx").on(table.viewedAt),
 		index("notification_in_app_deliveredAt_idx").on(table.deliveredAt),
-	]
+	],
 );

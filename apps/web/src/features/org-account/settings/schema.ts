@@ -7,7 +7,7 @@ export const organizationSettingsSchema = z.object({
 		.trim()
 		.regex(
 			/^$|^[a-z0-9-]+$/,
-			"Slug can only contain lowercase letters, numbers, and hyphens."
+			"Slug can only contain lowercase letters, numbers, and hyphens.",
 		),
 });
 

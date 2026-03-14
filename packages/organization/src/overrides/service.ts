@@ -8,7 +8,7 @@ import {
 
 export const listOrganizationManualOverrides = (
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationManualOverrideRow[]> => {
 	return listActiveOrganizationManualOverrides(organizationId, db);
 };
@@ -23,7 +23,7 @@ export const createOrganizationManualOverride = (
 		scopeType: "organization" | "listing";
 		title: string;
 	},
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationManualOverrideRow> => {
 	const now = new Date();
 	return insertOrganizationManualOverride(
@@ -40,7 +40,7 @@ export const createOrganizationManualOverride = (
 			createdAt: now,
 			updatedAt: now,
 		},
-		db
+		db,
 	);
 };
 
@@ -48,13 +48,13 @@ export const resolveOrganizationManualOverride = async (
 	id: string,
 	organizationId: string,
 	resolvedByUserId: string | null,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationManualOverrideRow> => {
 	const row = await resolveOrganizationManualOverrideRow(
 		id,
 		organizationId,
 		resolvedByUserId,
-		db
+		db,
 	);
 	if (!row) {
 		throw new Error("NOT_FOUND");

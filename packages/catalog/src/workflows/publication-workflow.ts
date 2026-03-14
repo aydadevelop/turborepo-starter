@@ -33,9 +33,9 @@ const makePublishListingStateStep = (db: Db) =>
 			await applyUnpublishListingState(
 				output.listing.id,
 				ctx.organizationId,
-				db
+				db,
 			);
-		}
+		},
 	);
 
 const makeEmitListingPublishedEventStep = () =>
@@ -51,7 +51,7 @@ const makeEmitListingPublishedEventStep = () =>
 			{
 				actorUserId: ctx.actorUserId,
 				eventBus: ctx.eventBus,
-			}
+			},
 		);
 
 		return {
@@ -68,7 +68,7 @@ const makeUnpublishListingStateStep = (db: Db) =>
 		const listing = await applyUnpublishListingState(
 			input.listingId,
 			input.organizationId,
-			db
+			db,
 		);
 
 		return { listing };
@@ -87,7 +87,7 @@ const makeEmitListingUnpublishedEventStep = () =>
 			{
 				actorUserId: ctx.actorUserId,
 				eventBus: ctx.eventBus,
-			}
+			},
 		);
 
 		return { listing: input.listing };
@@ -102,7 +102,7 @@ export const publishListingWorkflow = (db: Db) => {
 		async (input, ctx) => {
 			const published = await publishListingStateStep(input, ctx);
 			return emitListingPublishedEventStep({ ...input, ...published }, ctx);
-		}
+		},
 	);
 };
 
@@ -117,7 +117,7 @@ export const unpublishListingWorkflow = (db: Db) => {
 		const unpublished = await unpublishListingStateStep(input, ctx);
 		return emitListingUnpublishedEventStep(
 			{ ...unpublished, listingId: input.listingId },
-			ctx
+			ctx,
 		);
 	});
 };

@@ -99,15 +99,14 @@
 				headerClass: "w-24",
 			},
 			cell: ({ row }) =>
-				row.original.role !== "admin"
-					? renderComponent(AdminUserActionsCell, {
+				row.original.role === "admin"
+					? null : renderComponent(AdminUserActionsCell, {
 							pending: impersonating,
 							dataTestId: `impersonate-user-${row.original.id}`,
 							onImpersonate: () => {
 								handleImpersonate(row.original.id);
 							},
-						})
-					: null,
+						}),
 		}),
 	];
 </script>

@@ -22,7 +22,7 @@ test("keeps governed fields primary and raw metadata hidden by default", async (
 		.toBeVisible();
 	await expect
 		.element(
-			page.getByText("Required fields for this type: name, slug, timezone")
+			page.getByText("Required fields for this type: name, slug, timezone"),
 		)
 		.toBeVisible();
 	await expect.element(page.getByLabelText("Capacity")).toBeVisible();
@@ -31,13 +31,13 @@ test("keeps governed fields primary and raw metadata hidden by default", async (
 	await expect
 		.element(
 			page.getByText(
-				"Use raw JSON only for listing-type fields that do not yet have a typed editor."
-			)
+				"Use raw JSON only for listing-type fields that do not yet have a typed editor.",
+			),
 		)
 		.toBeVisible();
 	await expect.element(page.getByLabelText("Metadata JSON")).not.toBeVisible();
 	await expect(document.body).toMatchScreenshot(
-		"listing-editor-best-practices-default"
+		"listing-editor-best-practices-default",
 	);
 
 	await userEvent.click(page.getByRole("button", { name: "Edit JSON" }));
@@ -46,13 +46,13 @@ test("keeps governed fields primary and raw metadata hidden by default", async (
 	await expect
 		.element(
 			page.getByText(
-				"Metadata must be a JSON object. Leave it empty unless you need fields that are not modeled directly in the form yet."
-			)
+				"Metadata must be a JSON object. Leave it empty unless you need fields that are not modeled directly in the form yet.",
+			),
 		)
 		.toBeVisible();
 	await expect.element(page.getByText("Boat rent profile")).toBeVisible();
 	await expect(document.body).toMatchScreenshot(
-		"listing-editor-best-practices-advanced-json"
+		"listing-editor-best-practices-advanced-json",
 	);
 });
 
@@ -76,14 +76,14 @@ test("switches to typed excursion fields instead of falling back to generic meta
 	await expect.element(page.getByLabelText("Primary language")).toBeVisible();
 	await expect.element(page.getByText("Excursion profile")).toBeVisible();
 	await expect(document.body).toMatchScreenshot(
-		"listing-editor-best-practices-excursion"
+		"listing-editor-best-practices-excursion",
 	);
 });
 
 test.todo(
-	"shows readiness and moderation state in the listing workspace before publish actions are available"
+	"shows readiness and moderation state in the listing workspace before publish actions are available",
 );
 
 test.todo(
-	"splits pricing, availability, assets, and calendar configuration into dedicated workspace sections instead of one basic form"
+	"splits pricing, availability, assets, and calendar configuration into dedicated workspace sections instead of one basic form",
 );

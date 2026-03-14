@@ -41,7 +41,7 @@ export interface S3StorageProviderOptions {
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 900;
 
 export const createS3StorageProvider = (
-	options: S3StorageProviderOptions
+	options: S3StorageProviderOptions,
 ): StorageProvider => {
 	const clientConfig: S3ClientConfig = {
 		region: options.region,
@@ -59,7 +59,7 @@ export const createS3StorageProvider = (
 	const client = new S3Client(clientConfig);
 
 	const upload = async (
-		input: StorageUploadInput
+		input: StorageUploadInput,
 	): Promise<StorageUploadResult> => {
 		const key = input.key
 			? normalizeStorageKey(input.key)
@@ -74,7 +74,7 @@ export const createS3StorageProvider = (
 				Key: key,
 				Body: toBuffer(input.content),
 				ContentType: input.mimeType,
-			})
+			}),
 		);
 
 		return {
@@ -89,7 +89,7 @@ export const createS3StorageProvider = (
 
 	const getSignedDownloadUrl = (
 		ref: StorageObjectRef,
-		options_?: StorageSignedUrlOptions
+		options_?: StorageSignedUrlOptions,
 	): Promise<string> => {
 		return getSignedUrl(
 			client,
@@ -105,12 +105,12 @@ export const createS3StorageProvider = (
 					options_?.expiresInSeconds ??
 					options.signedUrlExpiresInSeconds ??
 					DEFAULT_SIGNED_URL_TTL_SECONDS,
-			}
+			},
 		);
 	};
 
 	const getSignedUploadUrl = async (
-		input: StorageSignedUploadInput
+		input: StorageSignedUploadInput,
 	): Promise<StorageSignedUploadResult> => {
 		const key = input.key
 			? normalizeStorageKey(input.key)
@@ -138,7 +138,7 @@ export const createS3StorageProvider = (
 					Key: key,
 					ContentType: input.mimeType,
 				}),
-				{ expiresIn: expiresInSeconds }
+				{ expiresIn: expiresInSeconds },
 			),
 			headers: input.mimeType ? { "content-type": input.mimeType } : undefined,
 		};
@@ -152,7 +152,7 @@ export const createS3StorageProvider = (
 				new DeleteObjectCommand({
 					Bucket: options.bucket,
 					Key: normalizeStorageKey(ref.key),
-				})
+				}),
 			);
 		},
 		getPublicUrl(ref) {
@@ -167,7 +167,7 @@ export const createS3StorageProvider = (
 				new GetObjectCommand({
 					Bucket: options.bucket,
 					Key: normalizeStorageKey(ref.key),
-				})
+				}),
 			);
 			const body = result.Body;
 			if (!body) {

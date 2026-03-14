@@ -29,7 +29,7 @@ describe("storage registry", () => {
 
 		expect(uploaded.key).toMatch(REGISTRY_PUBLIC_KEY_RE);
 		expect(resolvePublicObjectUrl("test-provider", uploaded)).toBe(
-			uploaded.publicUrl
+			uploaded.publicUrl,
 		);
 
 		const signedUpload = await getSignedObjectUploadUrl("test-provider", {
@@ -45,7 +45,7 @@ describe("storage registry", () => {
 				filename: "x.txt",
 				content: Buffer.from("x"),
 				access: "public",
-			})
+			}),
 		).toThrow('StorageProvider "missing-provider" is not registered');
 	});
 });

@@ -44,10 +44,10 @@ test.describe("Anonymous Chat Session", () => {
 					const body = sessionResult.json as SessionResponse;
 					const user = body.user;
 					return Boolean(
-						user?.id && (user.isAnonymous ?? user.is_anonymous ?? false)
+						user?.id && (user.isAnonymous ?? user.is_anonymous ?? false),
 					);
 				},
-				{ timeout: 15_000, intervals: [300, 600, 1000] }
+				{ timeout: 15_000, intervals: [300, 600, 1000] },
 			)
 			.toBe(true);
 
@@ -107,10 +107,10 @@ test.describe("Org Creation Cache Invalidation", () => {
 		await page.goto(url("/org/team"));
 		await expect(page.getByTestId("org-heading")).toBeVisible();
 		await expect(page.getByTestId("org-team-members-title")).toContainText(
-			"Members (1)"
+			"Members (1)",
 		);
 		await expect(
-			page.locator('[data-testid^="org-member-email-"]')
+			page.locator('[data-testid^="org-member-email-"]'),
 		).toBeVisible();
 	});
 });

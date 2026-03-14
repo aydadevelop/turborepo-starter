@@ -19,25 +19,25 @@ test("submits listing editor values through the live component contract", async 
 	await userEvent.fill(page.getByLabelText("Slug"), "evening-charter");
 	await userEvent.selectOptions(
 		page.getByLabelText("Timezone"),
-		"Europe/Berlin"
+		"Europe/Berlin",
 	);
 	await userEvent.fill(page.getByLabelText("Capacity"), "10");
 	await userEvent.selectOptions(
 		page.getByLabelText("Captain policy"),
-		"captained_only"
+		"captained_only",
 	);
 	await userEvent.fill(
 		page.getByLabelText("Base port"),
-		"Sochi Marine Station"
+		"Sochi Marine Station",
 	);
 	await userEvent.fill(
 		page.getByLabelText("Departure area"),
-		"Imeretinskaya Bay"
+		"Imeretinskaya Bay",
 	);
 	await userEvent.click(page.getByRole("button", { name: "Edit JSON" }));
 	await userEvent.fill(
 		page.getByLabelText("Metadata JSON"),
-		JSON.stringify({ captainIncluded: true }, null, 2)
+		JSON.stringify({ captainIncluded: true }, null, 2),
 	);
 	await userEvent.click(page.getByRole("button", { name: "Create listing" }));
 
@@ -78,7 +78,7 @@ test("shows a metadata validation error instead of submitting invalid JSON", asy
 		},
 	});
 	await expect(document.body).toMatchScreenshot(
-		"listing-editor-form-invalid-json"
+		"listing-editor-form-invalid-json",
 	);
 
 	await userEvent.click(page.getByRole("button", { name: "Edit JSON" }));
@@ -117,7 +117,7 @@ test("renders and submits typed excursion fields when an excursion type is selec
 		listingTypeOptions,
 	});
 	await expect(document.body).toMatchScreenshot(
-		"listing-editor-form-excursion"
+		"listing-editor-form-excursion",
 	);
 
 	await userEvent.click(page.getByLabelText("Listing type"));
@@ -126,11 +126,11 @@ test("renders and submits typed excursion fields when an excursion type is selec
 	await userEvent.fill(page.getByLabelText("Slug"), "historic-center-walk");
 	await userEvent.selectOptions(
 		page.getByLabelText("Timezone"),
-		"Europe/Berlin"
+		"Europe/Berlin",
 	);
 	await userEvent.fill(
 		page.getByLabelText("Meeting point"),
-		"Central fountain"
+		"Central fountain",
 	);
 	await userEvent.fill(page.getByLabelText("Duration (minutes)"), "180");
 	await userEvent.selectOptions(page.getByLabelText("Group format"), "both");

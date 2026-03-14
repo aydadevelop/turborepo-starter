@@ -59,13 +59,13 @@ describe("EmailNotificationProvider", () => {
 		expect(result.providerRecipient).toBe("agent@example.com");
 		expect(fakeProvider.sent).toHaveLength(1);
 		expect(fakeProvider.sent[0]?.message.subject).toBe(
-			"Support ticket created"
+			"Support ticket created",
 		);
 		expect(fakeProvider.sent[0]?.message.to).toEqual([
 			{ address: "agent@example.com" },
 		]);
 		expect(fakeProvider.sent[0]?.message.text).toContain(
-			"A new support ticket is waiting for review."
+			"A new support ticket is waiting for review.",
 		);
 		expect(fakeProvider.sent[0]?.message.html).toContain("Open notification");
 	});

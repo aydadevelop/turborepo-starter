@@ -65,7 +65,7 @@ describe("notification-center cache helpers", () => {
 		const next = markNotificationListViewedLocally(
 			current,
 			["n1"],
-			"2026-03-10T12:00:00.000Z"
+			"2026-03-10T12:00:00.000Z",
 		);
 
 		expect(next?.items[0]?.viewedAt).toBe("2026-03-10T12:00:00.000Z");

@@ -28,7 +28,7 @@ export interface ListingWorkspaceBasicsActions {
 	listingTypeOptions?: ListingTypeOption[];
 	onUpdateListing?:
 		| ((
-				input: OrpcInputs["listing"]["create"]
+				input: OrpcInputs["listing"]["create"],
 		  ) => boolean | undefined | Promise<boolean | undefined>)
 		| null;
 	updateErrorMessage?: string | null;
@@ -60,7 +60,7 @@ export interface ListingWorkspacePublishActions {
 		| null;
 	onUnpublishListing?:
 		| ((
-				listingId: string
+				listingId: string,
 		  ) => boolean | undefined | Promise<boolean | undefined>)
 		| null;
 }
@@ -132,7 +132,8 @@ export interface ListingWorkspaceAvailabilityActions {
 }
 
 export interface ListingWorkspaceSectionsProps
-	extends ListingWorkspaceBasicsActions,
+	extends
+		ListingWorkspaceBasicsActions,
 		ListingWorkspaceCalendarActions,
 		ListingWorkspacePricingActions,
 		ListingWorkspaceAvailabilityActions,

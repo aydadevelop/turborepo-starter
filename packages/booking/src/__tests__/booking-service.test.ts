@@ -186,7 +186,7 @@ describe("listOrgBookings", () => {
 		const result = await listOrgBookings(
 			ORG_ID,
 			{ filter: { status: "pending" } },
-			getDb()
+			getDb(),
 		);
 		expect(result.items).toHaveLength(1);
 		expect(result.items[0]?.id).toBe(BK_1_ID);
@@ -196,7 +196,7 @@ describe("listOrgBookings", () => {
 		const result = await listOrgBookings(
 			ORG_ID,
 			{ filter: { listingId: LISTING_1_ID } },
-			getDb()
+			getDb(),
 		);
 		expect(result.items).toHaveLength(1);
 		expect(result.items[0]?.id).toBe(BK_1_ID);
@@ -206,7 +206,7 @@ describe("listOrgBookings", () => {
 		const result = await listOrgBookings(
 			ORG_ID,
 			{ filter: { listingId: "nonexistent" } },
-			getDb()
+			getDb(),
 		);
 		expect(result.items).toHaveLength(0);
 		expect(result.total).toBe(0);
@@ -222,7 +222,7 @@ describe("listOrgBookings", () => {
 					dir: "asc",
 				},
 			},
-			getDb()
+			getDb(),
 		);
 
 		expect(result.total).toBe(1);
@@ -242,13 +242,13 @@ describe("getOrgBooking", () => {
 
 	it("throws NOT_FOUND when looking up with wrong org", async () => {
 		await expect(getOrgBooking(BK_1_ID, OTHER_ORG_ID, getDb())).rejects.toThrow(
-			"NOT_FOUND"
+			"NOT_FOUND",
 		);
 	});
 
 	it("throws NOT_FOUND for nonexistent booking id", async () => {
 		await expect(
-			getOrgBooking("nonexistent-id", ORG_ID, getDb())
+			getOrgBooking("nonexistent-id", ORG_ID, getDb()),
 		).rejects.toThrow("NOT_FOUND");
 	});
 });
@@ -511,7 +511,7 @@ describe("createBooking", () => {
 				source: "web",
 				currency: "RUB",
 			},
-			getDb2()
+			getDb2(),
 		);
 
 		expect(row.organizationId).toBe(BK2_ORG_ID);
@@ -528,7 +528,7 @@ describe("createBooking", () => {
 				source: "web",
 				currency: "RUB",
 			},
-			getDb2()
+			getDb2(),
 		);
 		expect(row.status).toBe("pending");
 		expect(row.paymentStatus).toBe("unpaid");
@@ -549,7 +549,7 @@ describe("createBooking", () => {
 				customerUserId: USER_1_ID,
 				discountCode: "save10",
 			},
-			getDb2()
+			getDb2(),
 		);
 
 		expect(row.basePriceCents).toBe(12_000);
@@ -589,8 +589,8 @@ describe("createBooking", () => {
 					source: "web",
 					currency: "RUB",
 				},
-				getDb2()
-			)
+				getDb2(),
+			),
 		).rejects.toThrow("NOT_FOUND");
 	});
 
@@ -604,8 +604,8 @@ describe("createBooking", () => {
 					source: "web",
 					currency: "RUB",
 				},
-				getDb2()
-			)
+				getDb2(),
+			),
 		).rejects.toThrow("PUBLICATION_ORG_MISMATCH");
 	});
 
@@ -619,8 +619,8 @@ describe("createBooking", () => {
 					source: "web",
 					currency: "RUB",
 				},
-				getDb2()
-			)
+				getDb2(),
+			),
 		).rejects.toThrow("SLOT_UNAVAILABLE");
 	});
 
@@ -634,8 +634,8 @@ describe("createBooking", () => {
 					source: "web",
 					currency: "RUB",
 				},
-				getDb2()
-			)
+				getDb2(),
+			),
 		).rejects.toThrow("NO_PRICING_PROFILE");
 	});
 });
@@ -646,7 +646,7 @@ describe("updateBookingStatus", () => {
 	it("transitions pending → confirmed", async () => {
 		const row = await updateBookingStatus(
 			{ id: BK2_PENDING_1_ID, organizationId: BK2_ORG_ID, status: "confirmed" },
-			getDb2()
+			getDb2(),
 		);
 		expect(row.status).toBe("confirmed");
 	});
@@ -660,7 +660,7 @@ describe("updateBookingStatus", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2()
+			getDb2(),
 		);
 		const pusher = vi.fn().mockResolvedValue(undefined);
 		registerEventPusher(pusher);
@@ -677,7 +677,7 @@ describe("updateBookingStatus", () => {
 					eventBus: new EventBus(),
 				},
 			},
-			getDb2()
+			getDb2(),
 		);
 
 		expect(pusher).toHaveBeenCalledWith(
@@ -691,7 +691,7 @@ describe("updateBookingStatus", () => {
 					ownerId: BK2_ORG_ID,
 				},
 			},
-			undefined
+			undefined,
 		);
 	});
 
@@ -705,11 +705,11 @@ describe("updateBookingStatus", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2()
+			getDb2(),
 		);
 		const row = await updateBookingStatus(
 			{ id: created.id, organizationId: BK2_ORG_ID, status: "rejected" },
-			getDb2()
+			getDb2(),
 		);
 		expect(row.status).toBe("rejected");
 	});
@@ -723,7 +723,7 @@ describe("updateBookingStatus", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2()
+			getDb2(),
 		);
 		const row = await updateBookingStatus(
 			{
@@ -732,7 +732,7 @@ describe("updateBookingStatus", () => {
 				status: "cancelled",
 				cancellationReason: "changed mind",
 			},
-			getDb2()
+			getDb2(),
 		);
 		expect(row.status).toBe("cancelled");
 		expect(row.cancelledAt).toBeTruthy();
@@ -748,7 +748,7 @@ describe("updateBookingStatus", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2()
+			getDb2(),
 		);
 		const pusher = vi.fn().mockResolvedValue(undefined);
 		registerEventPusher(pusher);
@@ -766,7 +766,7 @@ describe("updateBookingStatus", () => {
 					eventBus: new EventBus(),
 				},
 			},
-			getDb2()
+			getDb2(),
 		);
 
 		expect(pusher).toHaveBeenCalledWith(
@@ -781,7 +781,7 @@ describe("updateBookingStatus", () => {
 					refundAmountKopeks: 0,
 				},
 			},
-			undefined
+			undefined,
 		);
 	});
 
@@ -792,7 +792,7 @@ describe("updateBookingStatus", () => {
 				organizationId: BK2_ORG_ID,
 				status: "in_progress",
 			},
-			getDb2()
+			getDb2(),
 		);
 		expect(row.status).toBe("in_progress");
 	});
@@ -804,7 +804,7 @@ describe("updateBookingStatus", () => {
 				organizationId: BK2_ORG_ID,
 				status: "completed",
 			},
-			getDb2()
+			getDb2(),
 		);
 		expect(row.status).toBe("completed");
 	});
@@ -818,13 +818,13 @@ describe("updateBookingStatus", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2()
+			getDb2(),
 		);
 		await expect(
 			updateBookingStatus(
 				{ id: created.id, organizationId: BK2_ORG_ID, status: "completed" },
-				getDb2()
-			)
+				getDb2(),
+			),
 		).rejects.toThrow("INVALID_TRANSITION");
 	});
 
@@ -836,8 +836,8 @@ describe("updateBookingStatus", () => {
 					organizationId: BK2_ORG_ID,
 					status: "confirmed",
 				},
-				getDb2()
-			)
+				getDb2(),
+			),
 		).rejects.toThrow("INVALID_TRANSITION");
 	});
 
@@ -849,8 +849,8 @@ describe("updateBookingStatus", () => {
 					organizationId: "wrong-org",
 					status: "confirmed",
 				},
-				getDb2()
-			)
+				getDb2(),
+			),
 		).rejects.toThrow("NOT_FOUND");
 	});
 });
@@ -865,7 +865,7 @@ describe("updateBookingSchedule", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2()
+			getDb2(),
 		);
 
 		const row = await updateBookingSchedule(
@@ -876,7 +876,7 @@ describe("updateBookingSchedule", () => {
 				endsAt: new Date("2030-02-04T16:00:00Z"),
 				timezone: "Europe/Moscow",
 			},
-			getDb2()
+			getDb2(),
 		);
 
 		expect(row.startsAt.toISOString()).toBe("2030-02-04T14:00:00.000Z");
@@ -893,7 +893,7 @@ describe("updateBookingSchedule", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2()
+			getDb2(),
 		);
 
 		const created = await createBooking(
@@ -904,7 +904,7 @@ describe("updateBookingSchedule", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2()
+			getDb2(),
 		);
 
 		await expect(
@@ -915,8 +915,8 @@ describe("updateBookingSchedule", () => {
 					startsAt: new Date("2030-02-05T10:30:00Z"),
 					endsAt: new Date("2030-02-05T11:30:00Z"),
 				},
-				getDb2()
-			)
+				getDb2(),
+			),
 		).rejects.toThrow("BOOKING_OVERLAP");
 	});
 
@@ -929,7 +929,7 @@ describe("updateBookingSchedule", () => {
 				source: "manual",
 				currency: "RUB",
 			},
-			getDb2()
+			getDb2(),
 		);
 		const pusher = vi.fn().mockResolvedValue(undefined);
 		registerEventPusher(pusher);
@@ -948,7 +948,7 @@ describe("updateBookingSchedule", () => {
 					eventBus: new EventBus(),
 				},
 			},
-			getDb2()
+			getDb2(),
 		);
 
 		expect(pusher).toHaveBeenCalledWith(
@@ -964,7 +964,7 @@ describe("updateBookingSchedule", () => {
 					timezone: "UTC",
 				},
 			},
-			undefined
+			undefined,
 		);
 	});
 });

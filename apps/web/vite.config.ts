@@ -14,7 +14,7 @@ export default defineConfig(async () => {
 				fileName: ".svelte-kit/bundle-stats",
 				openAnalyzer: false,
 				defaultSizes: "gzip",
-			}) as unknown as PluginOption
+			}) as unknown as PluginOption,
 		);
 	}
 

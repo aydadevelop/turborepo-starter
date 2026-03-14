@@ -12,7 +12,7 @@ import type {
 
 export async function resolveOrganizationPublishingSummary(
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationPublishingSummary> {
 	const [
 		totalRow,
@@ -32,8 +32,8 @@ export async function resolveOrganizationPublishingSummary(
 			.where(
 				and(
 					eq(listing.organizationId, organizationId),
-					eq(listing.status, "draft")
-				)
+					eq(listing.status, "draft"),
+				),
 			),
 		db
 			.select({
@@ -43,8 +43,8 @@ export async function resolveOrganizationPublishingSummary(
 			.where(
 				and(
 					eq(listingPublication.organizationId, organizationId),
-					eq(listingPublication.isActive, true)
-				)
+					eq(listingPublication.isActive, true),
+				),
 			),
 		db
 			.select({ count: count() })
@@ -52,8 +52,8 @@ export async function resolveOrganizationPublishingSummary(
 			.where(
 				and(
 					eq(listing.organizationId, organizationId),
-					eq(listing.status, "inactive")
-				)
+					eq(listing.status, "inactive"),
+				),
 			),
 		db
 			.select({ count: count() })
@@ -61,8 +61,8 @@ export async function resolveOrganizationPublishingSummary(
 			.where(
 				and(
 					eq(listingPublication.organizationId, organizationId),
-					eq(listingPublication.isActive, true)
-				)
+					eq(listingPublication.isActive, true),
+				),
 			),
 		db
 			.select({
@@ -73,14 +73,14 @@ export async function resolveOrganizationPublishingSummary(
 				listingPublication,
 				and(
 					eq(listingPublication.listingId, listing.id),
-					eq(listingPublication.isActive, true)
-				)
+					eq(listingPublication.isActive, true),
+				),
 			)
 			.where(
 				and(
 					eq(listing.organizationId, organizationId),
-					isNull(listing.approvedAt)
-				)
+					isNull(listing.approvedAt),
+				),
 			),
 	]);
 
@@ -96,7 +96,7 @@ export async function resolveOrganizationPublishingSummary(
 
 export async function resolveOrganizationDistributionSummary(
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationDistributionSummary> {
 	const [ownSiteRow, marketplaceRow, noPublicationRow] = await Promise.all([
 		db
@@ -106,8 +106,8 @@ export async function resolveOrganizationDistributionSummary(
 				and(
 					eq(listingPublication.organizationId, organizationId),
 					eq(listingPublication.isActive, true),
-					eq(listingPublication.channelType, "own_site")
-				)
+					eq(listingPublication.channelType, "own_site"),
+				),
 			),
 		db
 			.select({ count: count() })
@@ -116,8 +116,8 @@ export async function resolveOrganizationDistributionSummary(
 				and(
 					eq(listingPublication.organizationId, organizationId),
 					eq(listingPublication.isActive, true),
-					eq(listingPublication.channelType, "platform_marketplace")
-				)
+					eq(listingPublication.channelType, "platform_marketplace"),
+				),
 			),
 		db
 			.select({ count: count() })
@@ -131,8 +131,8 @@ export async function resolveOrganizationDistributionSummary(
 						where ${listingPublication.listingId} = ${listing.id}
 							and ${listingPublication.organizationId} = ${organizationId}
 							and ${listingPublication.isActive} = true
-					)`
-				)
+					)`,
+				),
 			),
 	]);
 
@@ -146,7 +146,7 @@ export async function resolveOrganizationDistributionSummary(
 export async function resolveOrganizationListingDistributionState(
 	listingId: string,
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationListingDistributionState> {
 	await ensureOrganizationListingExists(listingId, organizationId, db);
 
@@ -159,14 +159,14 @@ export async function resolveOrganizationListingDistributionState(
 			and(
 				eq(listingPublication.listingId, listingId),
 				eq(listingPublication.organizationId, organizationId),
-				eq(listingPublication.isActive, true)
-			)
+				eq(listingPublication.isActive, true),
+			),
 		);
 
 	const activeChannels = rows.map((row) => row.channelType);
 	const supportedChannels = activeChannels.filter(
 		(channelType): channelType is OrganizationPublicationChannelType =>
-			channelType === "own_site" || channelType === "platform_marketplace"
+			channelType === "own_site" || channelType === "platform_marketplace",
 	);
 
 	return {

@@ -31,7 +31,7 @@ describe("message service", () => {
 				subject: "Operator reply ticket",
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 
 		const events: DomainEvent[] = [];
@@ -51,7 +51,7 @@ describe("message service", () => {
 				isInternal: false,
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 
 		const updatedTicket = await getTicket(ticket.id, ORG_ID, getDb());
@@ -71,7 +71,7 @@ describe("message service", () => {
 				subject: "Customer follow-up ticket",
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 
 		await addTicketMessage(
@@ -82,7 +82,7 @@ describe("message service", () => {
 				isInternal: true,
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 		expect((await getTicket(ticket.id, ORG_ID, getDb())).status).toBe("open");
 
@@ -94,11 +94,11 @@ describe("message service", () => {
 				body: "Customer reply",
 			},
 			getDb(),
-			makeActorContext({ actorUserId: CUSTOMER_USER_ID })
+			makeActorContext({ actorUserId: CUSTOMER_USER_ID }),
 		);
 
 		expect((await getTicket(ticket.id, ORG_ID, getDb())).status).toBe(
-			"pending_operator"
+			"pending_operator",
 		);
 	});
 
@@ -110,7 +110,7 @@ describe("message service", () => {
 				subject: "Thread visibility ticket",
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 
 		await addTicketMessage(
@@ -121,7 +121,7 @@ describe("message service", () => {
 				isInternal: true,
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 		await addTicketMessage(
 			{
@@ -132,27 +132,27 @@ describe("message service", () => {
 				isInternal: false,
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 
 		const operatorThread = await getOperatorTicketThread(
 			ticket.id,
 			ORG_ID,
-			getDb()
+			getDb(),
 		);
 		const customerThread = await getCustomerTicketThread(
 			ticket.id,
 			CUSTOMER_USER_ID,
-			getDb()
+			getDb(),
 		);
 
 		expect(operatorThread.messages).toHaveLength(2);
 		expect(operatorThread.messages.some((message) => message.isInternal)).toBe(
-			true
+			true,
 		);
 		expect(customerThread.messages).toHaveLength(1);
 		expect(
-			customerThread.messages.every((message) => !message.isInternal)
+			customerThread.messages.every((message) => !message.isInternal),
 		).toBe(true);
 	});
 });

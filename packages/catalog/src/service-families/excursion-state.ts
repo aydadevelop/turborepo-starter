@@ -10,7 +10,7 @@ import type {
 import { normalizeExcursionProfileInput } from "./excursions";
 
 const toExcursionProfileState = (
-	row: ListingExcursionProfileRow
+	row: ListingExcursionProfileRow,
 ): ListingExcursionProfileState => ({
 	listingId: row.listingId,
 	meetingPoint: row.meetingPoint,
@@ -26,7 +26,7 @@ const toExcursionProfileState = (
 export async function findExcursionProfile(
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingExcursionProfileState | null> {
 	const [row] = await db
 		.select()
@@ -34,8 +34,8 @@ export async function findExcursionProfile(
 		.where(
 			and(
 				eq(listingExcursionProfile.listingId, listingId),
-				eq(listingExcursionProfile.organizationId, organizationId)
-			)
+				eq(listingExcursionProfile.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 
@@ -48,7 +48,7 @@ export async function upsertExcursionProfile(
 		organizationId: string;
 		profile?: ListingExcursionProfileInput | null;
 	},
-	db: Db
+	db: Db,
 ): Promise<ListingExcursionProfileState> {
 	const normalized = normalizeExcursionProfileInput(input.profile);
 	const [row] = await db

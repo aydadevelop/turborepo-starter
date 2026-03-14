@@ -17,7 +17,7 @@ describe("local file storage provider", () => {
 		await Promise.all(
 			createdDirs
 				.splice(0)
-				.map((dir) => rm(dir, { recursive: true, force: true }))
+				.map((dir) => rm(dir, { recursive: true, force: true })),
 		);
 	});
 
@@ -50,7 +50,7 @@ describe("local file storage provider", () => {
 		await provider.deleteObject(uploaded);
 
 		await expect(provider.getObjectBuffer?.(uploaded)).rejects.toThrow(
-			STORAGE_NOT_FOUND_RE
+			STORAGE_NOT_FOUND_RE,
 		);
 	});
 
@@ -75,7 +75,7 @@ describe("local file storage provider", () => {
 		});
 		expect(signedUrl).toContain("local-file://listing-private-v1/");
 		expect(resolveLocalStoragePath(baseDir, uploaded.key)).toContain(
-			uploaded.key
+			uploaded.key,
 		);
 	});
 });

@@ -59,7 +59,7 @@ describe("db-helpers", () => {
 
 		it("throws NOT_FOUND when ID does not exist", async () => {
 			await expect(
-				requireManaged(member, "nonexistent", "org-1")
+				requireManaged(member, "nonexistent", "org-1"),
 			).rejects.toMatchObject({
 				code: "NOT_FOUND",
 			});
@@ -74,7 +74,7 @@ describe("db-helpers", () => {
 			});
 
 			await expect(
-				requireManaged(member, "member-3", "org-wrong")
+				requireManaged(member, "member-3", "org-wrong"),
 			).rejects.toMatchObject({
 				code: "NOT_FOUND",
 			});
@@ -95,7 +95,7 @@ describe("db-helpers", () => {
 				member.id,
 				"member-4",
 				member.organizationId,
-				"org-1"
+				"org-1",
 			);
 			expect(result.id).toBe("member-4");
 		});
@@ -108,8 +108,8 @@ describe("db-helpers", () => {
 					"nope",
 					member.organizationId,
 					"org-1",
-					"Not owned"
-				)
+					"Not owned",
+				),
 			).rejects.toMatchObject({
 				code: "NOT_FOUND",
 				message: "Not owned",

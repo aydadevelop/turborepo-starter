@@ -6,7 +6,7 @@ import { upsertFixtureById } from "./helpers";
 
 export const createOrganizationFixture = (
 	db: TestDatabase,
-	values: InferInsertModel<typeof organization>
+	values: InferInsertModel<typeof organization>,
 ): Promise<typeof organization.$inferSelect> =>
 	upsertFixtureById<
 		InferInsertModel<typeof organization>,
@@ -15,10 +15,10 @@ export const createOrganizationFixture = (
 
 export const createUserFixture = (
 	db: TestDatabase,
-	values: InferInsertModel<typeof user>
+	values: InferInsertModel<typeof user>,
 ): Promise<typeof user.$inferSelect> =>
 	upsertFixtureById<InferInsertModel<typeof user>, typeof user.$inferSelect>(
 		db,
 		user,
-		values
+		values,
 	);

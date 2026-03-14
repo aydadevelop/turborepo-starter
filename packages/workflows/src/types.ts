@@ -19,7 +19,7 @@ export type InternalWorkflowContext = WorkflowContext & {
 
 export type StepFn<TIn, TOut> = ((
 	input: TIn,
-	ctx: WorkflowContext
+	ctx: WorkflowContext,
 ) => Promise<TOut>) & {
 	stepName: string;
 	compensate?: (output: TOut, ctx: WorkflowContext) => Promise<void>;

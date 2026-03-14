@@ -23,7 +23,7 @@ import type {
 async function resolveCancellationPolicy(
 	organizationId: string,
 	listingId: string,
-	db: Db
+	db: Db,
 ): Promise<{
 	freeWindowHours: number;
 	penaltyBps: number;
@@ -37,8 +37,8 @@ async function resolveCancellationPolicy(
 		.where(
 			and(
 				eq(cancellationPolicy.listingId, listingId),
-				eq(cancellationPolicy.isActive, true)
-			)
+				eq(cancellationPolicy.isActive, true),
+			),
 		)
 		.limit(1);
 	if (listingPolicy) {
@@ -53,8 +53,8 @@ async function resolveCancellationPolicy(
 			and(
 				eq(cancellationPolicy.organizationId, organizationId),
 				eq(cancellationPolicy.scope, "organization"),
-				eq(cancellationPolicy.isActive, true)
-			)
+				eq(cancellationPolicy.isActive, true),
+			),
 		)
 		.limit(1);
 	if (orgPolicy) {
@@ -83,7 +83,7 @@ async function resolveCancellationPolicy(
 // SUM of bookingPaymentAttempt.amountCents WHERE status='captured'
 async function fetchCapturedAmountCents(
 	bookingId: string,
-	db: Db
+	db: Db,
 ): Promise<number> {
 	const [row] = await db
 		.select({ total: sum(bookingPaymentAttempt.amountCents) })
@@ -91,8 +91,8 @@ async function fetchCapturedAmountCents(
 		.where(
 			and(
 				eq(bookingPaymentAttempt.bookingId, bookingId),
-				eq(bookingPaymentAttempt.status, "captured")
-			)
+				eq(bookingPaymentAttempt.status, "captured"),
+			),
 		);
 	return Number(row?.total ?? 0);
 }
@@ -101,7 +101,7 @@ async function fetchCapturedAmountCents(
 // SUM of bookingRefund.amountCents WHERE status='processed'
 async function fetchProcessedRefundSumCents(
 	bookingId: string,
-	db: Db
+	db: Db,
 ): Promise<number> {
 	const [row] = await db
 		.select({ total: sum(bookingRefund.amountCents) })
@@ -109,8 +109,8 @@ async function fetchProcessedRefundSumCents(
 		.where(
 			and(
 				eq(bookingRefund.bookingId, bookingId),
-				eq(bookingRefund.status, "processed")
-			)
+				eq(bookingRefund.status, "processed"),
+			),
 		);
 	return Number(row?.total ?? 0);
 }
@@ -125,7 +125,7 @@ function resolveDefaultPolicyByActor(
 		penaltyBps: number;
 		latePenaltyBps: number;
 		latePenaltyWindowHours: number;
-	}
+	},
 ): {
 	policyCode: CancellationPolicyOutcome["policyCode"];
 	policyLabel: string;
@@ -165,7 +165,7 @@ function resolveDefaultPolicyByActor(
 // Returns override refundPercent if reason catalog specifies one for this actor, else null
 function resolveReasonOverride(
 	actor: "customer" | "manager",
-	reasonCode: CancellationReasonCode
+	reasonCode: CancellationReasonCode,
 ): number | null {
 	const entry = cancellationReasonCatalog[reasonCode];
 	if (!entry.allowedActors.includes(actor)) {
@@ -186,11 +186,11 @@ export function computeCancellationPolicyOutcome(
 		latePenaltyBps: number;
 		latePenaltyWindowHours: number;
 	},
-	reasonCode?: CancellationReasonCode
+	reasonCode?: CancellationReasonCode,
 ): CancellationPolicyOutcome {
 	const refundableBaseCents = Math.max(
 		capturedAmountCents - alreadyRefundedCents,
-		0
+		0,
 	);
 	const hoursUntilStart = (startsAt.getTime() - Date.now()) / (1000 * 60 * 60);
 
@@ -212,7 +212,7 @@ export function computeCancellationPolicyOutcome(
 
 	const suggestedRefundCents = Math.min(
 		refundableBaseCents,
-		Math.floor((refundableBaseCents * base.refundPercent) / 100)
+		Math.floor((refundableBaseCents * base.refundPercent) / 100),
 	);
 
 	return {
@@ -235,7 +235,7 @@ export function computeCancellationPolicyOutcome(
 // Does NOT cancel the booking or insert a refund row — that is applyCancellation's job.
 export async function requestCancellation(
 	input: RequestCancellationInput,
-	db: Db
+	db: Db,
 ): Promise<{
 	request: CancellationRequestRow;
 	outcome: CancellationPolicyOutcome;
@@ -247,8 +247,8 @@ export async function requestCancellation(
 		.where(
 			and(
 				eq(booking.id, input.bookingId),
-				eq(booking.organizationId, input.organizationId)
-			)
+				eq(booking.organizationId, input.organizationId),
+			),
 		)
 		.limit(1);
 	if (!row) {
@@ -300,7 +300,7 @@ export async function requestCancellation(
 	const policy = await resolveCancellationPolicy(
 		input.organizationId,
 		row.listingId,
-		db
+		db,
 	);
 	const outcome = computeCancellationPolicyOutcome(
 		input.initiatedByRole,
@@ -308,7 +308,7 @@ export async function requestCancellation(
 		capturedAmountCents,
 		alreadyRefundedCents,
 		policy,
-		input.reasonCode
+		input.reasonCode,
 	);
 
 	// 6. Insert request row with snapshot
@@ -343,7 +343,7 @@ export async function applyCancellation(
 	requestId: string,
 	organizationId: string,
 	appliedByUserId: string,
-	db: Db
+	db: Db,
 ): Promise<{ request: CancellationRequestRow; refundId: string | null }> {
 	const [request] = await db
 		.select()
@@ -351,8 +351,8 @@ export async function applyCancellation(
 		.where(
 			and(
 				eq(bookingCancellationRequest.id, requestId),
-				eq(bookingCancellationRequest.organizationId, organizationId)
-			)
+				eq(bookingCancellationRequest.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 	if (!request) {
@@ -424,7 +424,7 @@ export async function applyCancellation(
 export async function getActiveCancellationRequest(
 	bookingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<CancellationRequestRow | null> {
 	const [row] = await db
 		.select()
@@ -433,8 +433,11 @@ export async function getActiveCancellationRequest(
 			and(
 				eq(bookingCancellationRequest.bookingId, bookingId),
 				eq(bookingCancellationRequest.organizationId, organizationId),
-				notInArray(bookingCancellationRequest.status, ["rejected", "cancelled"])
-			)
+				notInArray(bookingCancellationRequest.status, [
+					"rejected",
+					"cancelled",
+				]),
+			),
 		)
 		.limit(1);
 	return row ?? null;
@@ -442,7 +445,7 @@ export async function getActiveCancellationRequest(
 
 export function listOrgCancellationRequests(
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<CancellationRequestRow[]> {
 	return db
 		.select()

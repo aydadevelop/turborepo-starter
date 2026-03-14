@@ -1,4 +1,3 @@
-// biome-ignore lint/performance/noBarrelFile: Package-level entrypoint for payment webhook modules.
 export { configurePaymentWebhookAdaptersFromEnv } from "./configure";
 export { WebhookAuthError, WebhookPayloadError } from "./errors";
 export {

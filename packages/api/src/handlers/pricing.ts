@@ -35,7 +35,7 @@ export const pricingRouter = {
 				...input,
 				organizationId: context.activeMembership.organizationId,
 			},
-			db
+			db,
 		);
 		return formatProfile(row);
 	}),
@@ -49,7 +49,7 @@ export const pricingRouter = {
 					...input,
 					organizationId: context.activeMembership.organizationId,
 				},
-				db
+				db,
 			);
 			return formatProfile(row);
 		} catch (e) {
@@ -66,7 +66,7 @@ export const pricingRouter = {
 		const rows = await listPricingProfiles(
 			input.listingId,
 			context.activeMembership.organizationId,
-			db
+			db,
 		);
 		return rows.map(formatProfile);
 	}),
@@ -77,7 +77,7 @@ export const pricingRouter = {
 		const state = await getPricingWorkspaceState(
 			input.listingId,
 			context.activeMembership.organizationId,
-			db
+			db,
 		);
 		return {
 			...state,
@@ -93,7 +93,7 @@ export const pricingRouter = {
 				...input,
 				organizationId: context.activeMembership.organizationId,
 			},
-			db
+			db,
 		);
 		return formatRule(row);
 	}),
@@ -105,7 +105,7 @@ export const pricingRouter = {
 			await deletePricingRule(
 				input.id,
 				context.activeMembership.organizationId,
-				db
+				db,
 			);
 		} catch (e) {
 			if (e instanceof Error && e.message === "NOT_FOUND") {
@@ -125,7 +125,7 @@ export const pricingRouter = {
 					endsAt: new Date(input.endsAt),
 					passengers: input.passengers,
 				},
-				db
+				db,
 			);
 		} catch (e) {
 			if (e instanceof Error && e.message === "NO_PRICING_PROFILE") {

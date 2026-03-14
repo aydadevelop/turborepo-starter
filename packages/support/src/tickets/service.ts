@@ -31,7 +31,7 @@ import {
 export async function createTicket(
 	input: CreateSupportTicketInput,
 	db: Db,
-	actorContext?: SupportActorContext
+	actorContext?: SupportActorContext,
 ): Promise<SupportTicketRow> {
 	const row = await insertTicket(
 		{
@@ -47,7 +47,7 @@ export async function createTicket(
 			status: "open",
 			metadata: input.metadata,
 		},
-		db
+		db,
 	);
 
 	await emitSupportTicketCreated(actorContext, row);
@@ -57,7 +57,7 @@ export async function createTicket(
 export function getTicket(
 	ticketId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow> {
 	return requireTicketForOrganization(ticketId, organizationId, db);
 }
@@ -65,7 +65,7 @@ export function getTicket(
 export function getCustomerTicket(
 	ticketId: string,
 	customerUserId: string,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow> {
 	return requireTicketForCustomer(ticketId, customerUserId, db);
 }
@@ -73,7 +73,7 @@ export function getCustomerTicket(
 export function listOrgTickets(
 	organizationId: string,
 	input: SupportTicketListInput<ListOrgTicketsFilter>,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketCollectionResult> {
 	return listOrganizationTickets(organizationId, input, db);
 }
@@ -81,7 +81,7 @@ export function listOrgTickets(
 export function listCustomerTickets(
 	customerUserId: string,
 	input: CustomerSupportTicketListInput,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketCollectionResult> {
 	return listCustomerOwnedTickets(customerUserId, input, db);
 }
@@ -89,12 +89,12 @@ export function listCustomerTickets(
 export async function assignTicket(
 	input: AssignTicketInput,
 	db: Db,
-	actorContext?: SupportActorContext
+	actorContext?: SupportActorContext,
 ): Promise<SupportTicketRow> {
 	const current = await requireTicketForOrganization(
 		input.ticketId,
 		input.organizationId,
-		db
+		db,
 	);
 
 	if (current.assignedToUserId === input.assignedToUserId) {
@@ -107,7 +107,7 @@ export async function assignTicket(
 		{
 			assignedToUserId: input.assignedToUserId,
 		},
-		db
+		db,
 	);
 
 	if (!updated) {
@@ -121,12 +121,12 @@ export async function assignTicket(
 export async function updateTicketStatus(
 	input: UpdateTicketStatusInput,
 	db: Db,
-	actorContext?: SupportActorContext
+	actorContext?: SupportActorContext,
 ): Promise<SupportTicketRow> {
 	const current = await requireTicketForOrganization(
 		input.ticketId,
 		input.organizationId,
-		db
+		db,
 	);
 
 	if (current.status === input.status) {
@@ -137,7 +137,7 @@ export async function updateTicketStatus(
 		input.ticketId,
 		input.organizationId,
 		buildTicketStatusPatch(input.status, actorContext),
-		db
+		db,
 	);
 
 	if (!updated) {
@@ -156,12 +156,12 @@ export async function updateTicketStatus(
 
 export async function updateTicketPriority(
 	input: UpdateTicketPriorityInput,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow> {
 	const current = await requireTicketForOrganization(
 		input.ticketId,
 		input.organizationId,
-		db
+		db,
 	);
 
 	if (current.priority === input.priority) {
@@ -174,7 +174,7 @@ export async function updateTicketPriority(
 		{
 			priority: input.priority,
 		},
-		db
+		db,
 	);
 
 	if (!updated) {
@@ -186,12 +186,12 @@ export async function updateTicketPriority(
 
 export async function updateTicketDueAt(
 	input: UpdateTicketDueAtInput,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow> {
 	const current = await requireTicketForOrganization(
 		input.ticketId,
 		input.organizationId,
-		db
+		db,
 	);
 
 	const unchanged =
@@ -207,7 +207,7 @@ export async function updateTicketDueAt(
 		{
 			dueAt: input.dueAt,
 		},
-		db
+		db,
 	);
 
 	if (!updated) {
@@ -220,7 +220,7 @@ export async function updateTicketDueAt(
 export async function requireTicketForOrganization(
 	ticketId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow> {
 	const row = await findTicketForOrganization(ticketId, organizationId, db);
 	if (!row) {
@@ -233,7 +233,7 @@ export async function requireTicketForOrganization(
 export async function requireTicketForCustomer(
 	ticketId: string,
 	customerUserId: string,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow> {
 	const row = await findTicketForCustomer(ticketId, customerUserId, db);
 	if (!row) {

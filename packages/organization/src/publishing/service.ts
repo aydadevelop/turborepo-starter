@@ -19,7 +19,7 @@ export const publishOrganizationListingToChannel = async (
 		organizationId: string;
 	},
 	workflowContext: WorkflowContext,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationListingDistributionState> => {
 	const result = await publishListingWorkflow(db).execute(
 		{
@@ -27,7 +27,7 @@ export const publishOrganizationListingToChannel = async (
 			organizationId: input.organizationId,
 			channelType: input.channelType,
 		},
-		workflowContext
+		workflowContext,
 	);
 
 	if (!result.success) {
@@ -37,7 +37,7 @@ export const publishOrganizationListingToChannel = async (
 	return resolveOrganizationListingDistributionState(
 		input.listingId,
 		input.organizationId,
-		db
+		db,
 	);
 };
 
@@ -45,7 +45,7 @@ export const unpublishOrganizationListing = async (
 	listingId: string,
 	organizationId: string,
 	workflowContext: WorkflowContext,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationListingDistributionState> => {
 	await ensureOrganizationListingExists(listingId, organizationId, db);
 
@@ -54,7 +54,7 @@ export const unpublishOrganizationListing = async (
 			listingId,
 			organizationId,
 		},
-		workflowContext
+		workflowContext,
 	);
 
 	if (!result.success) {
@@ -64,6 +64,6 @@ export const unpublishOrganizationListing = async (
 	return resolveOrganizationListingDistributionState(
 		listingId,
 		organizationId,
-		db
+		db,
 	);
 };

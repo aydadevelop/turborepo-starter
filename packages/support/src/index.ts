@@ -1,4 +1,3 @@
-// biome-ignore lint/performance/noBarrelFile: Package-level support entrypoint re-exports supported use cases.
 export { processInboundSupportIntent } from "./inbound/workflow";
 export type {
 	InboundSupportIntent,

@@ -8,7 +8,7 @@ import {
 import type { DomainEvent } from "../types";
 
 const makeEvent = (
-	overrides?: Partial<DomainEvent<"booking:created">>
+	overrides?: Partial<DomainEvent<"booking:created">>,
 ): DomainEvent<"booking:created"> => ({
 	type: "booking:created",
 	organizationId: "org-1",

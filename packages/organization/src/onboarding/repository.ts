@@ -15,8 +15,7 @@ export interface OrganizationOnboardingStateInput {
 	paymentConfigured: boolean;
 }
 
-export interface UpsertOrganizationOnboardingInput
-	extends OrganizationOnboardingStateInput {
+export interface UpsertOrganizationOnboardingInput extends OrganizationOnboardingStateInput {
 	completedAt: Date | null;
 	createdAt: Date;
 	id: string;
@@ -28,7 +27,7 @@ export interface UpsertOrganizationOnboardingInput
 
 export async function findOrganizationOnboarding(
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationOnboardingRow | null> {
 	const [row] = await db
 		.select()
@@ -41,7 +40,7 @@ export async function findOrganizationOnboarding(
 
 export async function resolveOrganizationOnboardingState(
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationOnboardingStateInput> {
 	const [paymentRow, calendarRow, publicationRow] = await Promise.all([
 		db
@@ -51,8 +50,8 @@ export async function resolveOrganizationOnboardingState(
 				and(
 					eq(organizationPaymentConfig.organizationId, organizationId),
 					eq(organizationPaymentConfig.isActive, true),
-					eq(organizationPaymentConfig.validationStatus, "validated")
-				)
+					eq(organizationPaymentConfig.validationStatus, "validated"),
+				),
 			)
 			.limit(1),
 		db
@@ -62,8 +61,8 @@ export async function resolveOrganizationOnboardingState(
 				and(
 					eq(listingCalendarConnection.organizationId, organizationId),
 					eq(listingCalendarConnection.isActive, true),
-					isNotNull(listingCalendarConnection.externalCalendarId)
-				)
+					isNotNull(listingCalendarConnection.externalCalendarId),
+				),
 			)
 			.limit(1),
 		db
@@ -72,8 +71,8 @@ export async function resolveOrganizationOnboardingState(
 			.where(
 				and(
 					eq(listingPublication.organizationId, organizationId),
-					eq(listingPublication.isActive, true)
-				)
+					eq(listingPublication.isActive, true),
+				),
 			)
 			.limit(1),
 	]);
@@ -87,7 +86,7 @@ export async function resolveOrganizationOnboardingState(
 
 export async function upsertOrganizationOnboarding(
 	input: UpsertOrganizationOnboardingInput,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationOnboardingRow> {
 	const [row] = await db
 		.insert(organizationOnboarding)

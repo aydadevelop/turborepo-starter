@@ -7,7 +7,7 @@ const API_BASE = "https://www.1gb.ru/api";
 
 function apiGet(
 	path: string,
-	params: Record<string, string> = {}
+	params: Record<string, string> = {},
 ): Promise<any> {
 	const qs = new URLSearchParams(params).toString();
 	const url = `${API_BASE}${path}${qs ? `?${qs}` : ""}`;
@@ -22,7 +22,7 @@ function apiGet(
 						resolve(JSON.parse(data));
 					} catch {
 						reject(
-							new Error(`Invalid JSON from ${path}: ${data.slice(0, 200)}`)
+							new Error(`Invalid JSON from ${path}: ${data.slice(0, 200)}`),
 						);
 					}
 				});
@@ -38,7 +38,7 @@ function md5(input: string): string {
 async function authenticate(
 	token?: string,
 	login?: string,
-	otp?: string
+	otp?: string,
 ): Promise<string> {
 	if (token) {
 		return token;
@@ -90,7 +90,7 @@ async function waitForSsh(ip: string, timeoutMs = 120_000): Promise<void> {
 	}
 	// Don't fail — VPS might still be booting but IP is valid
 	pulumi.log.warn(
-		`SSH not ready on ${ip} after ${timeoutMs / 1000}s — continuing anyway`
+		`SSH not ready on ${ip} after ${timeoutMs / 1000}s — continuing anyway`,
 	);
 }
 
@@ -134,7 +134,7 @@ const oneGbVpsProvider: pulumi.dynamic.ResourceProvider = {
 			String(serverId).startsWith("ERROR")
 		) {
 			throw new Error(
-				`1gb: VPS creation failed: ${JSON.stringify(createResp)}`
+				`1gb: VPS creation failed: ${JSON.stringify(createResp)}`,
 			);
 		}
 
@@ -182,7 +182,7 @@ const oneGbVpsProvider: pulumi.dynamic.ResourceProvider = {
 	async update(
 		id: string,
 		olds: OneGbVpsOutputs,
-		news: OneGbVpsInputs
+		news: OneGbVpsInputs,
 	): Promise<pulumi.dynamic.UpdateResult> {
 		const token = await authenticate(news.token, news.login, news.otp);
 		try {
@@ -211,7 +211,7 @@ const oneGbVpsProvider: pulumi.dynamic.ResourceProvider = {
 
 	async read(
 		id: string,
-		props: OneGbVpsOutputs
+		props: OneGbVpsOutputs,
 	): Promise<pulumi.dynamic.ReadResult> {
 		const token = await authenticate(props.token, props.login, props.otp);
 
@@ -267,7 +267,7 @@ export class OneGbVps extends pulumi.dynamic.Resource {
 	constructor(
 		name: string,
 		args: OneGbVpsArgs,
-		opts?: pulumi.CustomResourceOptions
+		opts?: pulumi.CustomResourceOptions,
 	) {
 		super(
 			oneGbVpsProvider,
@@ -284,7 +284,7 @@ export class OneGbVps extends pulumi.dynamic.Resource {
 				diskGb: args.diskGb ?? 40,
 				template: args.template ?? "nv.lin.ubuntu2404v1",
 			},
-			{ ...opts, protect: true } 
+			{ ...opts, protect: true },
 		);
 	}
 }

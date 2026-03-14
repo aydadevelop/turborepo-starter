@@ -29,7 +29,7 @@ test.describe("Impersonation & Org Switching", () => {
 
 		await expect(adminPage).toHaveURL(ADMIN_USERS_URL_RE, { timeout: 5000 });
 		await expect(
-			adminPage.getByTestId("impersonation-banner")
+			adminPage.getByTestId("impersonation-banner"),
 		).not.toBeVisible();
 	});
 });

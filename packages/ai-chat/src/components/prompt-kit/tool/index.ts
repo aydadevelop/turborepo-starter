@@ -5,20 +5,19 @@ import Content from "./ToolContent.svelte";
 import Details from "./ToolDetails.svelte";
 import Header from "./ToolHeader.svelte";
 
+export * from "./types.js";
 export {
-	Root,
-	Header,
-	Content,
-	Details,
-	Composed,
 	Badge,
+	Badge as ToolBadge,
+	Composed,
+	Composed as ToolComposed,
+	Content,
+	Content as ToolContent,
+	Details,
+	Details as ToolDetails,
+	Header,
+	Header as ToolHeader,
+	Root,
 	//
 	Root as Tool,
-	Header as ToolHeader,
-	Content as ToolContent,
-	Details as ToolDetails,
-	Composed as ToolComposed,
-	Badge as ToolBadge,
 };
-
-export * from "./types.js";

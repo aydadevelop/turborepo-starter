@@ -23,6 +23,6 @@ export interface PaymentProvider {
 
 	refundPayment(
 		input: RefundPaymentInput,
-		config: PaymentExecutionConfig
+		config: PaymentExecutionConfig,
 	): Promise<RefundPaymentResult>;
 }

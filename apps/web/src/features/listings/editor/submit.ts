@@ -12,11 +12,11 @@ import type {
 
 export function buildListingEditorSubmitValues(
 	values: ListingEditorFormValues,
-	{ listingTypeOptions }: ListingEditorContext
+	{ listingTypeOptions }: ListingEditorContext,
 ): MutationResult<ListingEditorSubmitValues> {
 	const selectedListingType = findListingTypeOption(
 		listingTypeOptions,
-		values.listingTypeSlug
+		values.listingTypeSlug,
 	);
 	if (!selectedListingType) {
 		return { ok: false, message: "Select a listing type." };
@@ -33,7 +33,7 @@ export function buildListingEditorSubmitValues(
 		const capacityResult = parsePositiveInteger(
 			values.boatRentCapacity,
 			"Capacity is required for boat-rent listings.",
-			"Capacity must be a positive whole number for boat-rent listings."
+			"Capacity must be a positive whole number for boat-rent listings.",
 		);
 		if (!capacityResult.ok) {
 			return { ok: false, message: capacityResult.message };
@@ -56,7 +56,7 @@ export function buildListingEditorSubmitValues(
 		const durationResult = parsePositiveInteger(
 			values.excursionDurationMinutes,
 			"Duration is required for excursion listings.",
-			"Duration must be a positive whole number of minutes for excursion listings."
+			"Duration must be a positive whole number of minutes for excursion listings.",
 		);
 		if (!durationResult.ok) {
 			return { ok: false, message: durationResult.message };
@@ -65,7 +65,7 @@ export function buildListingEditorSubmitValues(
 		const groupSizeResult = parsePositiveInteger(
 			values.excursionMaxGroupSize,
 			"Max group size is required for excursion listings.",
-			"Max group size must be a positive whole number for excursion listings."
+			"Max group size must be a positive whole number for excursion listings.",
 		);
 		if (!groupSizeResult.ok) {
 			return { ok: false, message: groupSizeResult.message };

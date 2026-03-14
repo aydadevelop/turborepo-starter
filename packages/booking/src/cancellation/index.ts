@@ -4,7 +4,6 @@ export type {
 	CancellationPolicyDecision,
 	CancellationPolicyInput,
 } from "./cancellation-policy-service";
-// biome-ignore lint/performance/noBarrelFile: Cancellation entrypoint re-exports supported cancellation APIs.
 export { evaluateCancellationPolicy } from "./cancellation-policy-service";
 export type {
 	CancellationWorkflowInput,

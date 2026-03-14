@@ -48,7 +48,7 @@ test("opens availability actions in dialogs instead of stacking inline forms", a
 		.element(page.getByRole("button", { name: "Add exception" }))
 		.toBeVisible();
 	await expect(document.body).toMatchScreenshot(
-		"listing-workspace-availability-section"
+		"listing-workspace-availability-section",
 	);
 
 	await userEvent.click(page.getByRole("button", { name: "Add block" }));

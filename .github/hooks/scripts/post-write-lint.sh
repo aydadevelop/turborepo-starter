@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs `bun ultracite fix` after any file write/edit tool call.
+# Runs oxfmt + oxlint --fix after any file write/edit tool call.
 # Input: JSON piped from the agent with toolName and toolArgs.
 
 set -euo pipefail
@@ -14,8 +14,8 @@ case "$TOOL" in
   | edit_notebook_file \
   | str_replace_based_edit_tool \
   | write_file)
-    echo "🔧 [post-write-lint] Running ultracite fix after $TOOL" >&2
-    bun ultracite fix
+    echo "🔧 [post-write-lint] Running oxfmt + oxlint --fix after $TOOL" >&2
+    bunx oxfmt . && bunx oxlint --fix apps/ packages/
     ;;
   *)
     # Non-write tool — skip

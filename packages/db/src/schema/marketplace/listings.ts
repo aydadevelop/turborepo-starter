@@ -64,13 +64,13 @@ export const listing = pgTable(
 		uniqueIndex("listing_uq_org_slug").on(table.organizationId, table.slug),
 		check(
 			"listing_ck_minimums",
-			sql`${table.minimumDurationMinutes} > 0 and ${table.minimumNoticeMinutes} >= 0`
+			sql`${table.minimumDurationMinutes} > 0 and ${table.minimumNoticeMinutes} >= 0`,
 		),
 		check(
 			"listing_ck_working_hours",
-			sql`${table.workingHoursStart} between 0 and 23 and ${table.workingHoursEnd} between 1 and 24 and ${table.workingHoursEnd} > ${table.workingHoursStart}`
+			sql`${table.workingHoursStart} between 0 and 23 and ${table.workingHoursEnd} between 1 and 24 and ${table.workingHoursEnd} > ${table.workingHoursStart}`,
 		),
-	]
+	],
 );
 
 export const listingAmenity = pgTable(
@@ -90,9 +90,9 @@ export const listingAmenity = pgTable(
 		index("listing_amenity_ix_listing_id").on(table.listingId),
 		uniqueIndex("listing_amenity_uq_listing_key").on(
 			table.listingId,
-			table.key
+			table.key,
 		),
-	]
+	],
 );
 
 export const listingModerationAudit = pgTable(
@@ -120,13 +120,13 @@ export const listingModerationAudit = pgTable(
 	(table) => [
 		index("listing_moderation_audit_ix_listing_id").on(table.listingId),
 		index("listing_moderation_audit_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		index("listing_moderation_audit_ix_acted_by_user_id").on(
-			table.actedByUserId
+			table.actedByUserId,
 		),
 		index("listing_moderation_audit_ix_acted_at").on(table.actedAt),
-	]
+	],
 );
 
 export const listingBoatRentProfile = pgTable(
@@ -155,13 +155,13 @@ export const listingBoatRentProfile = pgTable(
 	},
 	(table) => [
 		index("listing_boat_rent_profile_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		check(
 			"listing_boat_rent_profile_ck_capacity",
-			sql`${table.capacity} is null or ${table.capacity} > 0`
+			sql`${table.capacity} is null or ${table.capacity} > 0`,
 		),
-	]
+	],
 );
 
 export const listingExcursionProfile = pgTable(
@@ -187,17 +187,17 @@ export const listingExcursionProfile = pgTable(
 	},
 	(table) => [
 		index("listing_excursion_profile_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		check(
 			"listing_excursion_profile_ck_duration_minutes",
-			sql`${table.durationMinutes} is null or ${table.durationMinutes} > 0`
+			sql`${table.durationMinutes} is null or ${table.durationMinutes} > 0`,
 		),
 		check(
 			"listing_excursion_profile_ck_max_group_size",
-			sql`${table.maxGroupSize} is null or ${table.maxGroupSize} > 0`
+			sql`${table.maxGroupSize} is null or ${table.maxGroupSize} > 0`,
 		),
-	]
+	],
 );
 
 export const listingAsset = pgTable(
@@ -227,5 +227,5 @@ export const listingAsset = pgTable(
 		uniqueIndex("listing_asset_uq_primary_image")
 			.on(table.listingId)
 			.where(sql`${table.isPrimary} = true and ${table.kind} = 'image'`),
-	]
+	],
 );

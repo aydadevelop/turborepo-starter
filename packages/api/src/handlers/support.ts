@@ -182,7 +182,7 @@ export const supportRouter = {
 				source: input.source,
 			},
 			db,
-			getSupportActorContext(context)
+			getSupportActorContext(context),
 		);
 		return formatOperatorTicket(ticket);
 	}),
@@ -201,7 +201,7 @@ export const supportRouter = {
 					isInternal: input.isInternal,
 				},
 				db,
-				getSupportActorContext(context)
+				getSupportActorContext(context),
 			);
 			return formatOperatorMessage(message);
 		} catch (e) {
@@ -216,7 +216,7 @@ export const supportRouter = {
 			const ticket = await getTicket(
 				input.ticketId,
 				context.activeMembership.organizationId,
-				db
+				db,
 			);
 			return formatOperatorTicket(ticket);
 		} catch (e) {
@@ -235,7 +235,7 @@ export const supportRouter = {
 				search: input.search,
 				sort: input.sort,
 			},
-			db
+			db,
 		);
 		return {
 			items: result.items.map(formatOperatorTicket),
@@ -255,7 +255,7 @@ export const supportRouter = {
 			const thread = await getOperatorTicketThread(
 				input.ticketId,
 				context.activeMembership.organizationId,
-				db
+				db,
 			);
 			return {
 				ticket: formatOperatorTicket(thread.ticket),
@@ -271,7 +271,7 @@ export const supportRouter = {
 	}).support.getOperatorSummary.handler(({ context }) => {
 		return getOperatorSupportSummary(
 			context.activeMembership.organizationId,
-			db
+			db,
 		);
 	}),
 
@@ -286,7 +286,7 @@ export const supportRouter = {
 					assignedToUserId: input.assignedToUserId,
 				},
 				db,
-				getSupportActorContext(context)
+				getSupportActorContext(context),
 			);
 			return formatOperatorTicket(ticket);
 		} catch (e) {
@@ -305,7 +305,7 @@ export const supportRouter = {
 					status: input.status,
 				},
 				db,
-				getSupportActorContext(context)
+				getSupportActorContext(context),
 			);
 			return formatOperatorTicket(ticket);
 		} catch (e) {
@@ -323,7 +323,7 @@ export const supportRouter = {
 					organizationId: context.activeMembership.organizationId,
 					priority: input.priority,
 				},
-				db
+				db,
 			);
 			return formatOperatorTicket(ticket);
 		} catch (e) {
@@ -341,7 +341,7 @@ export const supportRouter = {
 					organizationId: context.activeMembership.organizationId,
 					dueAt: input.dueAt ? new Date(input.dueAt) : null,
 				},
-				db
+				db,
 			);
 			return formatOperatorTicket(ticket);
 		} catch (e) {
@@ -360,7 +360,7 @@ export const supportRouter = {
 					search: input.search,
 					sort: input.sort,
 				},
-				db
+				db,
 			);
 			return {
 				items: result.items.map(formatCustomerTicket),
@@ -371,7 +371,7 @@ export const supportRouter = {
 					hasMore: input.page.offset + result.items.length < result.total,
 				},
 			};
-		}
+		},
 	),
 
 	getMyTicket: protectedProcedure.support.getMyTicket.handler(
@@ -381,7 +381,7 @@ export const supportRouter = {
 				const thread = await getCustomerTicketThread(
 					input.ticketId,
 					userId,
-					db
+					db,
 				);
 				return {
 					ticket: formatCustomerTicket(thread.ticket),
@@ -390,7 +390,7 @@ export const supportRouter = {
 			} catch (e) {
 				return throwSupportNotFound(e);
 			}
-		}
+		},
 	),
 
 	addMyMessage: protectedProcedure.support.addMyMessage.handler(
@@ -405,12 +405,12 @@ export const supportRouter = {
 						body: input.body,
 					},
 					db,
-					getSupportActorContext(context)
+					getSupportActorContext(context),
 				);
 				return formatCustomerMessage(message);
 			} catch (e) {
 				return throwSupportNotFound(e);
 			}
-		}
+		},
 	),
 };

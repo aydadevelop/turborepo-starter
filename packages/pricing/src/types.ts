@@ -25,45 +25,45 @@ export interface PricingWorkspaceState {
 }
 
 export interface QuoteBreakdown {
-	listingId: string;
-	profileId: string;
+	adjustmentCents: number;
+	baseCents: number;
 	currency: string;
 	durationMinutes: number;
-	baseCents: number;
-	adjustmentCents: number;
-	subtotalCents: number;
-	serviceFeeCents: number;
-	taxCents: number;
-	totalCents: number;
+	listingId: string;
 	pricingFactors: {
 		serviceFeeBps: number;
 		taxBps: number;
 	};
+	profileId: string;
+	serviceFeeCents: number;
+	subtotalCents: number;
+	taxCents: number;
+	totalCents: number;
 }
 
 export interface DiscountedQuoteBreakdown {
-	listingId: string;
-	profileId: string;
-	currency: string;
-	durationMinutes: number;
-	baseCents: number;
 	adjustmentCents: number;
-	subtotalCents: number;
-	serviceFeeCents: number;
-	taxCents: number;
-	totalCents: number;
+	baseCents: number;
+	currency: string;
 	discountAmountCents: number;
-	discountedSubtotalCents: number;
 	discountedServiceFeeCents: number;
+	discountedSubtotalCents: number;
 	discountedTaxCents: number;
 	discountedTotalCents: number;
+	durationMinutes: number;
+	listingId: string;
+	profileId: string;
+	serviceFeeCents: number;
+	subtotalCents: number;
+	taxCents: number;
+	totalCents: number;
 }
 
 export interface QuoteInput {
-	listingId: string;
-	startsAt: Date;
 	endsAt: Date;
+	listingId: string;
 	passengers?: number;
+	startsAt: Date;
 }
 
 export interface ResolvedPricingContext {
@@ -72,35 +72,35 @@ export interface ResolvedPricingContext {
 }
 
 export interface CreatePricingProfileInput {
-	listingId: string;
-	organizationId: string;
-	name: string;
-	currency: string;
 	baseHourlyPriceCents: number;
+	currency: string;
+	isDefault?: boolean;
+	listingId: string;
 	minimumHours?: number;
+	name: string;
+	organizationId: string;
 	serviceFeeBps?: number;
 	taxBps?: number;
-	isDefault?: boolean;
 }
 
 export interface UpdatePricingProfileInput {
-	id: string;
-	organizationId: string;
-	name?: string;
 	baseHourlyPriceCents?: number;
+	id: string;
+	isDefault?: boolean;
+	name?: string;
+	organizationId: string;
 	serviceFeeBps?: number;
 	taxBps?: number;
-	isDefault?: boolean;
 }
 
 export interface CreatePricingRuleInput {
-	listingId: string;
-	organizationId: string;
-	pricingProfileId: string;
-	name: string;
-	ruleType: string;
-	conditionJson: Record<string, unknown>;
 	adjustmentType: "percent" | "flat_cents";
 	adjustmentValue: number;
+	conditionJson: Record<string, unknown>;
+	listingId: string;
+	name: string;
+	organizationId: string;
+	pricingProfileId: string;
 	priority?: number;
+	ruleType: string;
 }

@@ -13,7 +13,7 @@ describe("buildCreatePricingProfileInput", () => {
 				serviceFeeBps: "500",
 				taxBps: "2000",
 				isDefault: true,
-			})
+			}),
 		).toEqual({
 			ok: true,
 			data: {
@@ -39,7 +39,7 @@ describe("buildCreatePricingProfileInput", () => {
 				serviceFeeBps: "500",
 				taxBps: "2000",
 				isDefault: false,
-			})
+			}),
 		).toEqual({
 			ok: false,
 			message: "Base hourly price must be a positive whole number.",

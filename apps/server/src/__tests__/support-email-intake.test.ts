@@ -67,7 +67,7 @@ const samplePayload = {
 const setupSupportEmailRoute = async (options?: {
 	db?: unknown;
 	env?: Partial<SupportEmailRouteEnv>;
-	processInboundSupportIntent?: typeof import("@my-app/support")["processInboundSupportIntent"];
+	processInboundSupportIntent?: (typeof import("@my-app/support"))["processInboundSupportIntent"];
 }) => {
 	vi.resetModules();
 	vi.doUnmock("@my-app/support");
@@ -85,7 +85,7 @@ const setupSupportEmailRoute = async (options?: {
 		vi.doMock("@my-app/support", async () => {
 			const actual =
 				await vi.importActual<typeof import("@my-app/support")>(
-					"@my-app/support"
+					"@my-app/support",
 				);
 
 			return {
@@ -95,9 +95,8 @@ const setupSupportEmailRoute = async (options?: {
 		});
 	}
 
-	const { supportEmailIntakeRoutes } = await import(
-		"../routes/support-email-intake"
-	);
+	const { supportEmailIntakeRoutes } =
+		await import("../routes/support-email-intake");
 
 	return { supportEmailIntakeRoutes };
 };
@@ -124,7 +123,7 @@ describe("supportEmailIntakeRoutes", () => {
 					"content-type": "application/json",
 				},
 				body: JSON.stringify(samplePayload),
-			}
+			},
 		);
 
 		expect(response.status).toBe(503);
@@ -145,7 +144,7 @@ describe("supportEmailIntakeRoutes", () => {
 					"x-support-email-secret": "wrong-secret",
 				},
 				body: JSON.stringify(samplePayload),
-			}
+			},
 		);
 
 		expect(response.status).toBe(404);
@@ -172,7 +171,7 @@ describe("supportEmailIntakeRoutes", () => {
 						requiredServerEnv.SUPPORT_EMAIL_INTAKE_SECRET,
 				},
 				body: JSON.stringify(samplePayload),
-			}
+			},
 		);
 
 		expect(response.status).toBe(202);
@@ -193,7 +192,7 @@ describe("supportEmailIntakeRoutes", () => {
 			expect.objectContaining({
 				idempotencyKey: "support-email:<reply-message-id@example.com>",
 				organizationId: ORG_ID,
-			})
+			}),
 		);
 	});
 });
@@ -217,7 +216,7 @@ describe("supportEmailIntakeRoutes live ingress", () => {
 						requiredServerEnv.SUPPORT_EMAIL_INTAKE_SECRET,
 				},
 				body: JSON.stringify(samplePayload),
-			}
+			},
 		);
 
 		expect(response.status).toBe(202);
@@ -251,11 +250,11 @@ describe("supportEmailIntakeRoutes live ingress", () => {
 
 		const firstResponse = await supportEmailIntakeRoutes.request(
 			"/api/support/inbound/email",
-			requestInit
+			requestInit,
 		);
 		const secondResponse = await supportEmailIntakeRoutes.request(
 			"/api/support/inbound/email",
-			requestInit
+			requestInit,
 		);
 
 		expect(firstResponse.status).toBe(202);

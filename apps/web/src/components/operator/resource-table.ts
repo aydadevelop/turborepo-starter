@@ -34,7 +34,7 @@ export interface ResourceRenderedComponent<
 
 export const renderComponent = <Props extends Record<string, unknown>>(
 	component: Component<Props>,
-	props: Props
+	props: Props,
 ): ResourceRenderedComponent<Props> => ({
 	kind: "component",
 	component,
@@ -42,7 +42,7 @@ export const renderComponent = <Props extends Record<string, unknown>>(
 });
 
 export const isRenderedComponent = (
-	value: unknown
+	value: unknown,
 ): value is ResourceRenderedComponent =>
 	typeof value === "object" &&
 	value !== null &&

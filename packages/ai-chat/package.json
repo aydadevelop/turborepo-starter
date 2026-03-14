@@ -1,51 +1,49 @@
 {
-  "name": "@my-app/ai-chat",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "svelte": "./src/index.ts",
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "svelte": "./src/index.ts",
-      "default": "./src/index.ts"
-    },
-    "./components/*": {
-      "types": "./src/components/*/index.ts",
-      "svelte": "./src/components/*/index.ts",
-      "default": "./src/components/*/index.ts"
-    }
-  },
-  "scripts": {
-    "check-types": "svelte-check --tsconfig ./tsconfig.json",
-    "lint": "cd ../.. && biome check --config-path biome.json packages/ai-chat",
-    "lint:fix": "cd ../.. && biome check --config-path biome.json packages/ai-chat --write"
-  },
-  "dependencies": {
-    "@ai-sdk/svelte": "^4.0.86",
-    "@my-app/ui": "workspace:*",
-    "@shikijs/themes": "^4.0.1",
-    "ai": "^6.0.86",
-    "isomorphic-dompurify": "^3.0.0-rc.2",
-    "marked": "^17.0.2",
-    "mode-watcher": "^1.1.0",
-    "runed": "^0.37.1",
-    "svelte-streamdown": "^3.0.1"
-  },
-  "peerDependencies": {
-    "svelte": "^5.0.0"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
-    "@my-app/config": "workspace:*",
-    "@my-app/tailwind-config": "workspace:*",
-    "@internationalized/date": "^3.11.0",
-    "@lucide/svelte": "^0.577.0",
-    "bits-ui": "^2.15.5",
-    "svelte": "^5.38.1",
-    "svelte-check": "^4.3.1",
-    "tailwind-variants": "^3.2.2",
-    "typescript": "^5",
-    "ultracite": "^7.2.3"
-  }
+	"name": "@my-app/ai-chat",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"svelte": "./src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"svelte": "./src/index.ts",
+			"default": "./src/index.ts"
+		},
+		"./components/*": {
+			"types": "./src/components/*/index.ts",
+			"svelte": "./src/components/*/index.ts",
+			"default": "./src/components/*/index.ts"
+		}
+	},
+	"scripts": {
+		"check-types": "svelte-check --tsconfig ./tsconfig.json",
+		"lint": "cd ../.. && oxlint packages/ai-chat",
+		"lint:fix": "cd ../.. && oxlint --fix packages/ai-chat"
+	},
+	"dependencies": {
+		"@ai-sdk/svelte": "^4.0.86",
+		"@my-app/ui": "workspace:*",
+		"@shikijs/themes": "^4.0.1",
+		"ai": "^6.0.86",
+		"isomorphic-dompurify": "^3.0.0-rc.2",
+		"marked": "^17.0.2",
+		"mode-watcher": "^1.1.0",
+		"runed": "^0.37.1",
+		"svelte-streamdown": "^3.0.1"
+	},
+	"devDependencies": {
+		"@internationalized/date": "^3.11.0",
+		"@lucide/svelte": "^0.577.0",
+		"@my-app/config": "workspace:*",
+		"@my-app/tailwind-config": "workspace:*",
+		"bits-ui": "^2.15.5",
+		"svelte": "^5.38.1",
+		"svelte-check": "^4.3.1",
+		"tailwind-variants": "^3.2.2",
+		"typescript": "^5"
+	},
+	"peerDependencies": {
+		"svelte": "^5.0.0"
+	}
 }

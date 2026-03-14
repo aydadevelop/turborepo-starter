@@ -68,7 +68,7 @@ test("renders support ticket detail through the shared screen pattern", async ()
 		.element(browserPage.getByRole("button", { name: "Send reply" }))
 		.toBeVisible();
 	await expect(document.body).toMatchScreenshot(
-		"customer-support-ticket-screen"
+		"customer-support-ticket-screen",
 	);
 });
 
@@ -80,10 +80,10 @@ test("submits a reply through the screen mutation", async () => {
 
 	await userEvent.fill(
 		browserPage.getByPlaceholder("Write a reply…"),
-		"Gate 2?"
+		"Gate 2?",
 	);
 	await userEvent.click(
-		browserPage.getByRole("button", { name: "Send reply" })
+		browserPage.getByRole("button", { name: "Send reply" }),
 	);
 
 	expect(mockState.mutate).toHaveBeenCalledWith({

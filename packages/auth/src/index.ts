@@ -101,7 +101,7 @@ const initAuth = () => {
 					image: data.photo_url,
 					email: `tg_${data.id}@telegram.local`,
 				}),
-			})
+			}),
 		);
 	}
 
@@ -145,7 +145,6 @@ const initAuth = () => {
 			databaseHooks: {
 				session: {
 					create: {
-						// biome-ignore lint/suspicious/noExplicitAny: better-auth hook type is not exported
 						before: async (session: any) => {
 							const [firstMembership] = await db
 								.select({ organizationId: schema.member.organizationId })
@@ -164,7 +163,7 @@ const initAuth = () => {
 				},
 			},
 			plugins,
-		})
+		}),
 	);
 };
 
@@ -181,5 +180,5 @@ export const auth: ReturnType<typeof initAuth> = new Proxy(
 			}
 			return (_auth as Record<PropertyKey, unknown>)[prop];
 		},
-	}
+	},
 );

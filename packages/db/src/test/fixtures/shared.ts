@@ -2,7 +2,7 @@ const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
 export const DEFAULT_MARKETPLACE_ANCHOR_DATE = new Date(
-	"2026-03-15T00:00:00.000Z"
+	"2026-03-15T00:00:00.000Z",
 );
 
 export const MARKETPLACE_IDS = {
@@ -31,7 +31,7 @@ const isoOffset = (anchorDate: Date, offsetMs: number): Date =>
 	new Date(anchorDate.getTime() + offsetMs);
 
 export const createMarketplaceFixtureClock = (
-	anchorDate: Date = DEFAULT_MARKETPLACE_ANCHOR_DATE
+	anchorDate: Date = DEFAULT_MARKETPLACE_ANCHOR_DATE,
 ): MarketplaceFixtureClock => ({
 	anchorDate,
 	now: isoOffset(anchorDate, 9 * HOUR_MS),

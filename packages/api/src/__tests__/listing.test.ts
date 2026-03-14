@@ -149,7 +149,7 @@ const createRpcContext = (overrides: Partial<Context> = {}): Context => ({
 const callRpc = async (
 	path: string,
 	json: unknown,
-	contextOverrides: Partial<Context> = {}
+	contextOverrides: Partial<Context> = {},
 ): Promise<{ status: number; body: unknown }> => {
 	const request = new Request(`http://example.test${path}`, {
 		method: "POST",
@@ -364,7 +364,7 @@ describe("listing type option RPCs", () => {
 					supportedPricingModels: [],
 					value: DISABLED_TYPE_SLUG,
 				},
-			])
+			]),
 		);
 	});
 
@@ -462,7 +462,7 @@ describe("listing type option RPCs", () => {
 				result.body as {
 					listingTypes: { items: Record<string, unknown>[] };
 				}
-			).listingTypes.items
+			).listingTypes.items,
 		).toContainEqual(
 			expect.objectContaining({
 				value: ACTIVE_TYPE_SLUG,
@@ -479,7 +479,7 @@ describe("listing type option RPCs", () => {
 						bookingMode: "request",
 					}),
 				}),
-			})
+			}),
 		);
 	});
 });

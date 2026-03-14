@@ -1,6 +1,7 @@
-import { ORPCError } from "@orpc/server";
-import { db } from "@my-app/db";
 import {
+	type AvailabilityBlockRow,
+	type AvailabilityExceptionRow,
+	type AvailabilityRuleRow,
 	checkSlotAvailable,
 	createAvailabilityBlock,
 	createAvailabilityException,
@@ -10,10 +11,9 @@ import {
 	deleteAvailabilityRule,
 	getListingAvailabilityWorkspaceState,
 	listAvailabilityRules,
-	type AvailabilityBlockRow,
-	type AvailabilityExceptionRow,
-	type AvailabilityRuleRow,
 } from "@my-app/booking";
+import { db } from "@my-app/db";
+import { ORPCError } from "@orpc/server";
 
 import { organizationPermissionProcedure, publicProcedure } from "../index";
 
@@ -177,13 +177,15 @@ export const availabilityRouter = {
 		return { success: true };
 	}),
 
-	checkSlot: publicProcedure.availability.checkSlot.handler(async ({ input }) => {
-		const available = await checkSlotAvailable(
-			input.listingId,
-			new Date(input.startsAt),
-			new Date(input.endsAt),
-			db,
-		);
-		return { available };
-	}),
+	checkSlot: publicProcedure.availability.checkSlot.handler(
+		async ({ input }) => {
+			const available = await checkSlotAvailable(
+				input.listingId,
+				new Date(input.startsAt),
+				new Date(input.endsAt),
+				db,
+			);
+			return { available };
+		},
+	),
 };

@@ -1,20 +1,20 @@
 {
-  "version": 1,
-  "skills": {
-    "github-actions": {
-      "source": "bobmatnyc/claude-mpm-skills",
-      "sourceType": "github",
-      "computedHash": "6f6ace43488e5476241409aeb7636cd926222b146be4255752aded52ce0bc8c6"
-    },
-    "pulumi": {
-      "source": "pproenca/dot-skills",
-      "sourceType": "github",
-      "computedHash": "2594c276957d5173b395762b0aa512ec520438995153901c1d5075cc06b61256"
-    },
-    "pulumi-typescript": {
-      "source": "dirien/claude-skills",
-      "sourceType": "github",
-      "computedHash": "5bcb152d8a3b1fe4bfd5d03ce48fca08260c6907e0a397a750c5933d89294504"
-    }
-  }
+	"version": 1,
+	"skills": {
+		"github-actions": {
+			"source": "bobmatnyc/claude-mpm-skills",
+			"sourceType": "github",
+			"computedHash": "6f6ace43488e5476241409aeb7636cd926222b146be4255752aded52ce0bc8c6"
+		},
+		"pulumi": {
+			"source": "pproenca/dot-skills",
+			"sourceType": "github",
+			"computedHash": "2594c276957d5173b395762b0aa512ec520438995153901c1d5075cc06b61256"
+		},
+		"pulumi-typescript": {
+			"source": "dirien/claude-skills",
+			"sourceType": "github",
+			"computedHash": "5bcb152d8a3b1fe4bfd5d03ce48fca08260c6907e0a397a750c5933d89294504"
+		}
+	}
 }

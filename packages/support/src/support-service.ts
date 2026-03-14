@@ -11,7 +11,7 @@ import type {
 
 export async function createSupportTicket(
 	input: CreateSupportTicketInput,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow> {
 	const [row] = await db
 		.insert(supportTicket)
@@ -38,7 +38,7 @@ export async function createSupportTicket(
 
 export async function addTicketMessage(
 	input: AddTicketMessageInput,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketMessageRow> {
 	// Verify ticket belongs to the organization
 	const [ticket] = await db
@@ -47,8 +47,8 @@ export async function addTicketMessage(
 		.where(
 			and(
 				eq(supportTicket.id, input.ticketId),
-				eq(supportTicket.organizationId, input.organizationId)
-			)
+				eq(supportTicket.organizationId, input.organizationId),
+			),
 		)
 		.limit(1);
 
@@ -79,7 +79,7 @@ export async function addTicketMessage(
 export async function getTicket(
 	id: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow> {
 	const [row] = await db
 		.select()
@@ -87,8 +87,8 @@ export async function getTicket(
 		.where(
 			and(
 				eq(supportTicket.id, id),
-				eq(supportTicket.organizationId, organizationId)
-			)
+				eq(supportTicket.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 
@@ -102,7 +102,7 @@ export async function getTicket(
 export function listOrgTickets(
 	organizationId: string,
 	filter: ListTicketsFilter,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow[]> {
 	const conditions = [eq(supportTicket.organizationId, organizationId)];
 
@@ -132,7 +132,7 @@ export function listOrgTickets(
 export function listCustomerTickets(
 	customerUserId: string,
 	filter: ListTicketsFilter,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow[]> {
 	const conditions = [eq(supportTicket.customerUserId, customerUserId)];
 
@@ -162,7 +162,7 @@ export function listCustomerTickets(
 export async function getCustomerTicket(
 	ticketId: string,
 	customerUserId: string,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketRow> {
 	const [row] = await db
 		.select()
@@ -170,8 +170,8 @@ export async function getCustomerTicket(
 		.where(
 			and(
 				eq(supportTicket.id, ticketId),
-				eq(supportTicket.customerUserId, customerUserId)
-			)
+				eq(supportTicket.customerUserId, customerUserId),
+			),
 		)
 		.limit(1);
 
@@ -184,7 +184,7 @@ export async function getCustomerTicket(
 
 export function listTicketMessages(
 	ticketId: string,
-	db: Db
+	db: Db,
 ): Promise<SupportTicketMessageRow[]> {
 	return db
 		.select()
@@ -192,8 +192,8 @@ export function listTicketMessages(
 		.where(
 			and(
 				eq(supportTicketMessage.ticketId, ticketId),
-				eq(supportTicketMessage.isInternal, false)
-			)
+				eq(supportTicketMessage.isInternal, false),
+			),
 		)
 		.orderBy(supportTicketMessage.createdAt);
 }

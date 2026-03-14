@@ -14,13 +14,10 @@ vi.mock("@my-app/db", () => ({
 
 import { organization, user } from "@my-app/db/schema/auth";
 import { listing, listingTypeConfig } from "@my-app/db/schema/marketplace";
-// biome-ignore lint/correctness/noUnresolvedImports: Workspace package subpath export resolves at runtime and is used across existing API tests.
 import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import { RPCHandler } from "@orpc/server/fetch";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-// biome-ignore lint/correctness/useImportExtensions: Package tsconfig does not enable allowImportingTsExtensions.
 import type { Context } from "../context";
-// biome-ignore lint/correctness/useImportExtensions: Package tsconfig does not enable allowImportingTsExtensions.
 import { appRouter } from "../handlers/index";
 
 const ORG_ID = "api-availability-org-1";
@@ -138,7 +135,7 @@ const createRpcContext = (overrides: Partial<Context> = {}): Context => ({
 const callRpc = async (
 	path: string,
 	json: unknown,
-	contextOverrides: Partial<Context> = {}
+	contextOverrides: Partial<Context> = {},
 ): Promise<{ status: number; body: unknown }> => {
 	const request = new Request(`http://example.test${path}`, {
 		method: "POST",

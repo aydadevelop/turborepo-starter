@@ -1,4 +1,3 @@
-// biome-ignore lint/performance/noBarrelFile: Package-level booking entrypoint re-exports supported booking APIs.
 export * from "./action-policy";
 export * from "./availability/index";
 export * from "./booking-service";

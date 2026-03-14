@@ -10,16 +10,16 @@ import {
 } from "./types";
 
 const organizationOverlayEventTypeSet = new Set<DomainEventType>(
-	organizationOverlayEventTypes
+	organizationOverlayEventTypes,
 );
 
 const isOrganizationOverlayEventType = (
-	type: DomainEventType
+	type: DomainEventType,
 ): type is OrganizationOverlayEventType =>
 	organizationOverlayEventTypeSet.has(type);
 
 export const registerOrganizationOverlayProjector = (
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): void => {
 	registerEventPusher(async (event) => {
 		if (!isOrganizationOverlayEventType(event.type)) {

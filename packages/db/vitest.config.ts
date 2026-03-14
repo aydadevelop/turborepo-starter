@@ -8,5 +8,5 @@ export default mergeConfig(
 			// Pool threads can cause issues with native pg modules
 			pool: "forks",
 		},
-	})
+	}),
 );

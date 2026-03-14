@@ -1,36 +1,34 @@
 {
-  "name": "@my-app/e2e-web",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev:web:e2e": "turbo run dev:vite --filter=web -- --mode e2e --host localhost --port 43173 --strictPort",
-    "dev:web:e2e:clean": "node ../../scripts/e2e-kill-ports.mjs 43173 && bun run dev:web:e2e",
-    "start:server:e2e": "bun ../../scripts/e2e-start-services.mjs --ensure-db --service server",
-    "start:assistant:e2e": "bun ../../scripts/e2e-start-services.mjs --service assistant",
-    "start:notifications:e2e": "bun ../../scripts/e2e-start-services.mjs --service notifications",
-    "start:infra:e2e": "bun ../../scripts/e2e-start-services.mjs --ensure-db --service server --service assistant --service notifications",
-    "dev:infra:e2e": "bun run start:infra:e2e",
-    "dev:infra:e2e:clean": "node ../../scripts/e2e-kill-ports.mjs 43100 43101 43102 && turbo run db:reset:local --filter=@my-app/db && bun run start:infra:e2e",
-    "test:e2e": "node ../../scripts/e2e-kill-ports.mjs && PLAYWRIGHT_REUSE_SERVERS=0 playwright test -c playwright.config.ts",
-    "test:e2e:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 bun run test:e2e",
-    "test:e2e:external": "PLAYWRIGHT_MANAGED_SERVERS=0 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.config.ts",
-    "test:e2e:ui": "node ../../scripts/e2e-kill-ports.mjs && PLAYWRIGHT_REUSE_SERVERS=0 playwright test -c playwright.config.ts --ui",
-    "test:e2e:ui:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 bun run test:e2e:ui",
-    "test:e2e:ui:external": "PLAYWRIGHT_MANAGED_SERVERS=0 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.config.ts --ui"
-  },
-  "dependencies": {
-    "@my-app/env": "workspace:*",
-    "assistant": "*",
-    "notifications": "*",
-    "server": "*",
-    "web": "*"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
-    "@my-app/db": "workspace:*",
-    "@playwright/test": "^1.58.2",
-    "@types/pg": "^8.18.0",
-    "pg": "^8.19.0",
-    "ultracite": "^7.2.4"
-  }
+	"name": "@my-app/e2e-web",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev:web:e2e": "turbo run dev:vite --filter=web -- --mode e2e --host localhost --port 43173 --strictPort",
+		"dev:web:e2e:clean": "node ../../scripts/e2e-kill-ports.mjs 43173 && bun run dev:web:e2e",
+		"start:server:e2e": "bun ../../scripts/e2e-start-services.mjs --ensure-db --service server",
+		"start:assistant:e2e": "bun ../../scripts/e2e-start-services.mjs --service assistant",
+		"start:notifications:e2e": "bun ../../scripts/e2e-start-services.mjs --service notifications",
+		"start:infra:e2e": "bun ../../scripts/e2e-start-services.mjs --ensure-db --service server --service assistant --service notifications",
+		"dev:infra:e2e": "bun run start:infra:e2e",
+		"dev:infra:e2e:clean": "node ../../scripts/e2e-kill-ports.mjs 43100 43101 43102 && turbo run db:reset:local --filter=@my-app/db && bun run start:infra:e2e",
+		"test:e2e": "node ../../scripts/e2e-kill-ports.mjs && PLAYWRIGHT_REUSE_SERVERS=0 playwright test -c playwright.config.ts",
+		"test:e2e:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 bun run test:e2e",
+		"test:e2e:external": "PLAYWRIGHT_MANAGED_SERVERS=0 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.config.ts",
+		"test:e2e:ui": "node ../../scripts/e2e-kill-ports.mjs && PLAYWRIGHT_REUSE_SERVERS=0 playwright test -c playwright.config.ts --ui",
+		"test:e2e:ui:reuse": "PLAYWRIGHT_MANAGED_SERVERS=0 bun run test:e2e:ui",
+		"test:e2e:ui:external": "PLAYWRIGHT_MANAGED_SERVERS=0 PLAYWRIGHT_REUSE_SERVERS=1 playwright test -c playwright.config.ts --ui"
+	},
+	"dependencies": {
+		"@my-app/env": "workspace:*",
+		"assistant": "*",
+		"notifications": "*",
+		"server": "*",
+		"web": "*"
+	},
+	"devDependencies": {
+		"@my-app/db": "workspace:*",
+		"@playwright/test": "^1.58.2",
+		"@types/pg": "^8.18.0",
+		"pg": "^8.19.0"
+	}
 }

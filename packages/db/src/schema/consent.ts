@@ -31,5 +31,5 @@ export const userConsent = pgTable(
 	(table) => [
 		index("user_consent_userId_idx").on(table.userId),
 		index("user_consent_type_idx").on(table.userId, table.consentType),
-	]
+	],
 );

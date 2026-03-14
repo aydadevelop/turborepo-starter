@@ -50,8 +50,8 @@ const listInAppRows = (params: {
 			.where(
 				and(
 					eq(notificationInApp.userId, params.userId),
-					gt(notificationInApp.deliveredAt, new Date(params.sinceMs))
-				)
+					gt(notificationInApp.deliveredAt, new Date(params.sinceMs)),
+				),
 			)
 			.orderBy(desc(notificationInApp.deliveredAt))
 			.limit(params.limit);
@@ -77,8 +77,8 @@ const listEventRows = (params: {
 			.where(
 				and(
 					eq(notificationEvent.organizationId, params.organizationId),
-					gt(notificationEvent.createdAt, new Date(params.sinceMs))
-				)
+					gt(notificationEvent.createdAt, new Date(params.sinceMs)),
+				),
 			)
 			.orderBy(desc(notificationEvent.createdAt))
 			.limit(params.limit);
@@ -101,15 +101,15 @@ const countUnreadInAppByUserId = async (userId: string) => {
 		.where(
 			and(
 				eq(notificationInApp.userId, userId),
-				isNull(notificationInApp.viewedAt)
-			)
+				isNull(notificationInApp.viewedAt),
+			),
 		);
 
 	return Number(rows[0]?.unread ?? 0);
 };
 
 const latestDeliveredAtMs = (
-	rows: (typeof notificationInApp.$inferSelect)[]
+	rows: (typeof notificationInApp.$inferSelect)[],
 ) => {
 	if (rows.length === 0) {
 		return 0;
@@ -127,7 +127,7 @@ const latestCreatedAtMs = (rows: (typeof notificationEvent.$inferSelect)[]) => {
 };
 
 const toInAppNotificationItem = (
-	row: typeof notificationInApp.$inferSelect
+	row: typeof notificationInApp.$inferSelect,
 ): InAppNotificationItem => {
 	return {
 		id: row.id,
@@ -141,7 +141,7 @@ const toInAppNotificationItem = (
 };
 
 const toNotificationEventItem = (
-	row: typeof notificationEvent.$inferSelect
+	row: typeof notificationEvent.$inferSelect,
 ): NotificationEventItem => {
 	return {
 		id: row.id,
@@ -271,7 +271,7 @@ export const notificationsRouter = {
 				items: items.map(toInAppNotificationItem),
 				unread,
 			};
-		}
+		},
 	),
 
 	markViewed: protectedProcedure.notifications.markViewed.handler(
@@ -290,14 +290,14 @@ export const notificationsRouter = {
 				.where(
 					and(
 						eq(notificationInApp.userId, userId),
-						inArray(notificationInApp.id, input.notificationIds)
-					)
+						inArray(notificationInApp.id, input.notificationIds),
+					),
 				);
 
 			return {
 				ok: true,
 			};
-		}
+		},
 	),
 
 	markAllViewed: protectedProcedure.notifications.markAllViewed.handler(
@@ -316,14 +316,14 @@ export const notificationsRouter = {
 				.where(
 					and(
 						eq(notificationInApp.userId, userId),
-						isNull(notificationInApp.viewedAt)
-					)
+						isNull(notificationInApp.viewedAt),
+					),
 				);
 
 			return {
 				ok: true,
 			};
-		}
+		},
 	),
 
 	streamMe: protectedProcedure.notifications.streamMe.handler(async function* ({
@@ -346,7 +346,7 @@ export const notificationsRouter = {
 
 		let cursorMs = Math.max(
 			parseCursorMs(lastEventId),
-			parseCursorMs(input.since)
+			parseCursorMs(input.since),
 		);
 		let failureCount = 0;
 		let nextHeartbeatAt = Date.now() + HEARTBEAT_MS;
@@ -361,7 +361,7 @@ export const notificationsRouter = {
 				{
 					id: cursorMs > 0 ? String(cursorMs) : undefined,
 					retry: ME_POLL_DELAY_MS,
-				}
+				},
 			);
 
 			while (!signal?.aborted) {
@@ -384,7 +384,7 @@ export const notificationsRouter = {
 							},
 							{
 								id: String(cursorMs),
-							}
+							},
 						);
 					}
 
@@ -436,7 +436,7 @@ export const notificationsRouter = {
 
 		let cursorMs = Math.max(
 			parseCursorMs(lastEventId),
-			parseCursorMs(input.since)
+			parseCursorMs(input.since),
 		);
 		let failureCount = 0;
 		let nextHeartbeatAt = Date.now() + HEARTBEAT_MS;
@@ -452,7 +452,7 @@ export const notificationsRouter = {
 				{
 					id: cursorMs > 0 ? String(cursorMs) : undefined,
 					retry: ALL_POLL_DELAY_MS,
-				}
+				},
 			);
 
 			while (!signal?.aborted) {
@@ -476,7 +476,7 @@ export const notificationsRouter = {
 							},
 							{
 								id: String(cursorMs),
-							}
+							},
 						);
 					}
 

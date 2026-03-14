@@ -104,7 +104,7 @@ export const boatRentServiceFamilyPolicy: ListingServiceFamilyPolicy = {
 };
 
 export function normalizeBoatRentProfileInput(
-	input?: ListingBoatRentProfileInput | null
+	input?: ListingBoatRentProfileInput | null,
 ): ListingBoatRentProfileInput {
 	return {
 		capacity: input?.capacity ?? null,
@@ -118,7 +118,7 @@ export function normalizeBoatRentProfileInput(
 }
 
 export function toStorefrontBoatRentSummary(
-	profile: ListingBoatRentProfileState | null
+	profile: ListingBoatRentProfileState | null,
 ): StorefrontBoatRentSummary | null {
 	if (!profile) {
 		return null;

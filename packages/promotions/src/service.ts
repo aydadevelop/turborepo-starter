@@ -1,5 +1,5 @@
-import { applyDiscountToQuote, type QuoteBreakdown } from "@my-app/pricing";
 import { bookingDiscountCode } from "@my-app/db/schema/marketplace";
+import { applyDiscountToQuote, type QuoteBreakdown } from "@my-app/pricing";
 import { sql } from "drizzle-orm";
 
 import {
@@ -40,9 +40,7 @@ export function isPromotionErrorCode(
 	].includes(value);
 }
 
-export function getPromotionErrorLabel(
-	code: PromotionErrorCode,
-): string {
+export function getPromotionErrorLabel(code: PromotionErrorCode): string {
 	switch (code) {
 		case "PROMOTION_CODE_NOT_FOUND":
 			return "Discount code not found.";
@@ -196,12 +194,11 @@ export async function preparePromotionPreviewContext(
 	}
 
 	if (input.customerUserId && discountCode.perCustomerLimit !== null) {
-		const customerUsageCount =
-			await countCustomerApplicationsForDiscountCode(
-				discountCode.id,
-				input.customerUserId,
-				db,
-			);
+		const customerUsageCount = await countCustomerApplicationsForDiscountCode(
+			discountCode.id,
+			input.customerUserId,
+			db,
+		);
 		if (customerUsageCount >= discountCode.perCustomerLimit) {
 			return {
 				status: "invalid",
@@ -281,10 +278,7 @@ async function resolvePromotion(
 ): Promise<PromotionResolution> {
 	const normalizedCode = normalizeDiscountCode(input.discountCode);
 	if (!normalizedCode) {
-		return buildInvalidResolution(
-			normalizedCode,
-			"PROMOTION_CODE_NOT_FOUND",
-		);
+		return buildInvalidResolution(normalizedCode, "PROMOTION_CODE_NOT_FOUND");
 	}
 
 	const discountCode = await findDiscountCodeByOrganizationAndCode(
@@ -294,10 +288,7 @@ async function resolvePromotion(
 	);
 
 	if (!discountCode) {
-		return buildInvalidResolution(
-			normalizedCode,
-			"PROMOTION_CODE_NOT_FOUND",
-		);
+		return buildInvalidResolution(normalizedCode, "PROMOTION_CODE_NOT_FOUND");
 	}
 
 	const now = input.now ?? new Date();
@@ -307,10 +298,7 @@ async function resolvePromotion(
 	}
 
 	if (discountCode.validFrom && now < discountCode.validFrom) {
-		return buildInvalidResolution(
-			normalizedCode,
-			"PROMOTION_CODE_NOT_STARTED",
-		);
+		return buildInvalidResolution(normalizedCode, "PROMOTION_CODE_NOT_STARTED");
 	}
 
 	if (discountCode.validTo && now > discountCode.validTo) {
@@ -338,12 +326,11 @@ async function resolvePromotion(
 	}
 
 	if (input.customerUserId && discountCode.perCustomerLimit !== null) {
-		const customerUsageCount =
-			await countCustomerApplicationsForDiscountCode(
-				discountCode.id,
-				input.customerUserId,
-				db,
-			);
+		const customerUsageCount = await countCustomerApplicationsForDiscountCode(
+			discountCode.id,
+			input.customerUserId,
+			db,
+		);
 		if (customerUsageCount >= discountCode.perCustomerLimit) {
 			return buildInvalidResolution(
 				normalizedCode,

@@ -13,7 +13,7 @@ describe("buildCreatePricingRuleInput", () => {
 				adjustmentType: "percent",
 				adjustmentValue: "20",
 				priority: "10",
-			})
+			}),
 		).toEqual({
 			ok: true,
 			data: {
@@ -39,7 +39,7 @@ describe("buildCreatePricingRuleInput", () => {
 				adjustmentType: "percent",
 				adjustmentValue: "20",
 				priority: "10",
-			})
+			}),
 		).toEqual({
 			ok: false,
 			message: "Condition JSON must be a JSON object.",

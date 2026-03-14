@@ -16,7 +16,7 @@ import { upsertFixtureById } from "./helpers";
 
 export const createListingTypeConfigFixture = (
 	db: TestDatabase,
-	values: InferInsertModel<typeof listingTypeConfig>
+	values: InferInsertModel<typeof listingTypeConfig>,
 ): Promise<typeof listingTypeConfig.$inferSelect> =>
 	upsertFixtureById<
 		InferInsertModel<typeof listingTypeConfig>,
@@ -25,7 +25,7 @@ export const createListingTypeConfigFixture = (
 
 export const createOrganizationSettingsFixture = (
 	db: TestDatabase,
-	values: InferInsertModel<typeof organizationSettings>
+	values: InferInsertModel<typeof organizationSettings>,
 ): Promise<typeof organizationSettings.$inferSelect> =>
 	upsertFixtureById<
 		InferInsertModel<typeof organizationSettings>,
@@ -34,7 +34,7 @@ export const createOrganizationSettingsFixture = (
 
 export const createListingFixture = (
 	db: TestDatabase,
-	values: InferInsertModel<typeof listing>
+	values: InferInsertModel<typeof listing>,
 ): Promise<typeof listing.$inferSelect> =>
 	upsertFixtureById<
 		InferInsertModel<typeof listing>,
@@ -43,7 +43,7 @@ export const createListingFixture = (
 
 export const createListingPricingProfileFixture = (
 	db: TestDatabase,
-	values: InferInsertModel<typeof listingPricingProfile>
+	values: InferInsertModel<typeof listingPricingProfile>,
 ): Promise<typeof listingPricingProfile.$inferSelect> =>
 	upsertFixtureById<
 		InferInsertModel<typeof listingPricingProfile>,
@@ -52,7 +52,7 @@ export const createListingPricingProfileFixture = (
 
 export const createPaymentProviderConfigFixture = (
 	db: TestDatabase,
-	values: InferInsertModel<typeof paymentProviderConfig>
+	values: InferInsertModel<typeof paymentProviderConfig>,
 ): Promise<typeof paymentProviderConfig.$inferSelect> =>
 	upsertFixtureById<
 		InferInsertModel<typeof paymentProviderConfig>,
@@ -61,7 +61,7 @@ export const createPaymentProviderConfigFixture = (
 
 export const createOrganizationPaymentConfigFixture = (
 	db: TestDatabase,
-	values: InferInsertModel<typeof organizationPaymentConfig>
+	values: InferInsertModel<typeof organizationPaymentConfig>,
 ): Promise<typeof organizationPaymentConfig.$inferSelect> =>
 	upsertFixtureById<
 		InferInsertModel<typeof organizationPaymentConfig>,
@@ -70,7 +70,7 @@ export const createOrganizationPaymentConfigFixture = (
 
 export const createListingPublicationFixture = (
 	db: TestDatabase,
-	values: InferInsertModel<typeof listingPublication>
+	values: InferInsertModel<typeof listingPublication>,
 ): Promise<typeof listingPublication.$inferSelect> =>
 	upsertFixtureById<
 		InferInsertModel<typeof listingPublication>,
@@ -79,7 +79,7 @@ export const createListingPublicationFixture = (
 
 export const createCancellationPolicyFixture = (
 	db: TestDatabase,
-	values: InferInsertModel<typeof cancellationPolicy>
+	values: InferInsertModel<typeof cancellationPolicy>,
 ): Promise<typeof cancellationPolicy.$inferSelect> =>
 	upsertFixtureById<
 		InferInsertModel<typeof cancellationPolicy>,
@@ -88,7 +88,7 @@ export const createCancellationPolicyFixture = (
 
 export const createBookingFixture = (
 	db: TestDatabase,
-	values: InferInsertModel<typeof booking>
+	values: InferInsertModel<typeof booking>,
 ): Promise<typeof booking.$inferSelect> =>
 	upsertFixtureById<
 		InferInsertModel<typeof booking>,

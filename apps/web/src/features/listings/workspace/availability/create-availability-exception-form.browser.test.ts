@@ -13,20 +13,20 @@ test("submits availability exception values through the section form contract", 
 		onSubmit,
 	});
 	await expect(document.body).toMatchScreenshot(
-		"create-availability-exception-form"
+		"create-availability-exception-form",
 	);
 
 	await userEvent.fill(page.getByLabelText(DATE_LABEL_RE), "2026-06-03");
 	await userEvent.click(
 		page.getByLabelText(
-			"This date has a partial available window instead of being fully blocked"
-		)
+			"This date has a partial available window instead of being fully blocked",
+		),
 	);
 	await userEvent.fill(page.getByLabelText("Start time"), "12:00");
 	await userEvent.fill(page.getByLabelText("End time"), "16:30");
 	await userEvent.fill(page.getByLabelText("Reason"), "Late departure");
 	await userEvent.click(
-		page.getByRole("button", { name: "Add availability exception" })
+		page.getByRole("button", { name: "Add availability exception" }),
 	);
 
 	await expect.poll(() => onSubmit.mock.calls.length).toBe(1);

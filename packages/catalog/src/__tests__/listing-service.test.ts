@@ -57,7 +57,7 @@ const testDbState = bootstrapTestDatabase({
 });
 
 const makeInput = (
-	overrides?: Partial<Parameters<typeof createListing>[0]>
+	overrides?: Partial<Parameters<typeof createListing>[0]>,
 ) => ({
 	organizationId: ORG_ID,
 	listingTypeSlug: LISTING_TYPE_SLUG,
@@ -87,7 +87,7 @@ describe("createListing", () => {
 				description: "A fine listing",
 				metadata: { capacity: 10 },
 			}),
-			db
+			db,
 		);
 
 		expect(row.description).toBe("A fine listing");
@@ -111,7 +111,7 @@ describe("createListing", () => {
 					},
 				},
 			}),
-			db
+			db,
 		);
 
 		const [profile] = await db
@@ -151,7 +151,7 @@ describe("createListing", () => {
 					},
 				},
 			}),
-			db
+			db,
 		);
 
 		const [profile] = await db
@@ -182,8 +182,8 @@ describe("createListing", () => {
 					slug: "missing-type",
 					listingTypeSlug: "missing-listing-type",
 				}),
-				db
-			)
+				db,
+			),
 		).rejects.toThrow("LISTING_TYPE_NOT_FOUND");
 	});
 
@@ -206,8 +206,8 @@ describe("createListing", () => {
 					slug: "inactive-type",
 					listingTypeSlug: inactiveSlug,
 				}),
-				db
-			)
+				db,
+			),
 		).rejects.toThrow("LISTING_TYPE_INACTIVE");
 	});
 
@@ -236,8 +236,8 @@ describe("createListing", () => {
 					slug: "org-disabled-type",
 					listingTypeSlug: otherTypeSlug,
 				}),
-				db
-			)
+				db,
+			),
 		).rejects.toThrow("LISTING_TYPE_NOT_ENABLED");
 	});
 
@@ -247,7 +247,7 @@ describe("createListing", () => {
 		await createListing(makeInput({ slug: "duplicate-slug" }), db);
 
 		await expect(
-			createListing(makeInput({ slug: "duplicate-slug" }), db)
+			createListing(makeInput({ slug: "duplicate-slug" }), db),
 		).rejects.toThrow("LISTING_SLUG_CONFLICT");
 	});
 });
@@ -303,7 +303,7 @@ describe("listAvailableListingTypes", () => {
 					supportedPricingModels: [],
 					value: EXCURSION_TYPE_SLUG,
 				},
-			])
+			]),
 		);
 	});
 
@@ -450,7 +450,7 @@ describe("updateListing", () => {
 				name: "Updated Name",
 				description: "Updated desc",
 			},
-			db
+			db,
 		);
 
 		expect(updated.name).toBe("Updated Name");
@@ -461,7 +461,7 @@ describe("updateListing", () => {
 		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
 		const created = await createListing(
 			makeInput({ slug: "boat-rent-update" }),
-			db
+			db,
 		);
 
 		await updateListing(
@@ -480,7 +480,7 @@ describe("updateListing", () => {
 					},
 				},
 			},
-			db
+			db,
 		);
 
 		const [profile] = await db
@@ -504,7 +504,7 @@ describe("updateListing", () => {
 				slug: "excursion-update",
 				listingTypeSlug: EXCURSION_TYPE_SLUG,
 			}),
-			db
+			db,
 		);
 
 		await updateListing(
@@ -524,7 +524,7 @@ describe("updateListing", () => {
 					},
 				},
 			},
-			db
+			db,
 		);
 
 		const [profile] = await db
@@ -547,14 +547,14 @@ describe("updateListing", () => {
 		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
 		const created = await createListing(
 			makeInput({ slug: "wrong-org-test" }),
-			db
+			db,
 		);
 
 		await expect(
 			updateListing(
 				{ id: created.id, organizationId: "wrong-org", name: "Fail" },
-				db
-			)
+				db,
+			),
 		).rejects.toThrow("NOT_FOUND");
 	});
 });
@@ -578,11 +578,11 @@ describe("listListings", () => {
 		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
 		await createListing(
 			makeInput({ slug: "sunset-cruise", name: "Sunset Cruise" }),
-			db
+			db,
 		);
 		await createListing(
 			makeInput({ slug: "harbor-tour", name: "Harbor Tour" }),
-			db
+			db,
 		);
 
 		const results = await listListings(
@@ -594,7 +594,7 @@ describe("listListings", () => {
 					dir: "asc",
 				},
 			},
-			db
+			db,
 		);
 
 		expect(results.total).toBeGreaterThanOrEqual(1);
@@ -614,7 +614,7 @@ describe("getListing", () => {
 	it("throws NOT_FOUND when not found", async () => {
 		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
 		await expect(getListing("nonexistent-id", ORG_ID, db)).rejects.toThrow(
-			"NOT_FOUND"
+			"NOT_FOUND",
 		);
 	});
 });
@@ -626,7 +626,7 @@ describe("getListingWorkspaceState", () => {
 		>[2];
 		const created = await createListing(
 			makeInput({ slug: "workspace-state" }),
-			db
+			db,
 		);
 
 		await publishListing(
@@ -634,7 +634,7 @@ describe("getListingWorkspaceState", () => {
 				listingId: created.id,
 				organizationId: ORG_ID,
 			},
-			db
+			db,
 		);
 
 		const state = await getListingWorkspaceState(created.id, ORG_ID, db);
@@ -680,7 +680,7 @@ describe("getListingWorkspaceState", () => {
 					},
 				},
 			}),
-			db
+			db,
 		);
 
 		const state = await getListingWorkspaceState(created.id, ORG_ID, db);
@@ -710,12 +710,12 @@ describe("publishListing", () => {
 		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
 		const created = await createListing(
 			makeInput({ slug: "publish-test" }),
-			db
+			db,
 		);
 
 		const { listing: updated, publication } = await publishListing(
 			{ listingId: created.id, organizationId: ORG_ID },
-			db
+			db,
 		);
 
 		expect(updated.status).toBe("active");
@@ -728,7 +728,7 @@ describe("publishListing", () => {
 		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
 		const created = await createListing(
 			makeInput({ slug: "publish-idempotent" }),
-			db
+			db,
 		);
 
 		await publishListing({ listingId: created.id, organizationId: ORG_ID }, db);
@@ -740,8 +740,8 @@ describe("publishListing", () => {
 			.where(
 				and(
 					eq(listingPublication.listingId, created.id),
-					eq(listingPublication.channelType, "platform_marketplace")
-				)
+					eq(listingPublication.channelType, "platform_marketplace"),
+				),
 			);
 
 		expect(pubs.length).toBe(1);
@@ -753,7 +753,7 @@ describe("unpublishListing", () => {
 		const db = testDbState.db as unknown as Parameters<typeof createListing>[1];
 		const created = await createListing(
 			makeInput({ slug: "unpublish-test" }),
-			db
+			db,
 		);
 		await publishListing({ listingId: created.id, organizationId: ORG_ID }, db);
 

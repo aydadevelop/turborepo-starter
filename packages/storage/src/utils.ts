@@ -30,13 +30,13 @@ export const normalizeStorageKey = (key: string): string => {
 	const segments = normalized
 		.split("/")
 		.filter(
-			(segment) => segment.length > 0 && segment !== "." && segment !== ".."
+			(segment) => segment.length > 0 && segment !== "." && segment !== "..",
 		)
 		.map(sanitizePathSegment);
 
 	if (segments.length === 0) {
 		throw new Error(
-			"Storage key must contain at least one valid path segment."
+			"Storage key must contain at least one valid path segment.",
 		);
 	}
 
@@ -52,7 +52,7 @@ export const createStorageObjectKey = (input: {
 	const directorySegments = parsed.dir
 		.split("/")
 		.filter(
-			(segment) => segment.length > 0 && segment !== "." && segment !== ".."
+			(segment) => segment.length > 0 && segment !== "." && segment !== "..",
 		)
 		.map(sanitizePathSegment);
 	const fileStem = sanitizePathSegment(parsed.name || EMPTY_SEGMENT_FALLBACK);
@@ -78,7 +78,7 @@ export const buildObjectUrl = (baseUrl: string, key: string): string => {
 };
 
 export const toBuffer = (
-	content: ArrayBuffer | Buffer | Uint8Array
+	content: ArrayBuffer | Buffer | Uint8Array,
 ): Buffer => {
 	if (Buffer.isBuffer(content)) {
 		return content;
@@ -93,14 +93,14 @@ export const toBuffer = (
 
 export const readStorageFile = (
 	baseDir: string,
-	key: string
+	key: string,
 ): Promise<Buffer> => {
 	return readFile(path.join(baseDir, normalizeStorageKey(key)));
 };
 
 export const removeStorageFile = async (
 	baseDir: string,
-	key: string
+	key: string,
 ): Promise<void> => {
 	const filePath = path.join(baseDir, normalizeStorageKey(key));
 	await rm(filePath, { force: true });
@@ -119,7 +119,7 @@ export const removeStorageFile = async (
 export const writeStorageFile = async (
 	baseDir: string,
 	key: string,
-	buffer: Buffer
+	buffer: Buffer,
 ): Promise<void> => {
 	const filePath = path.join(baseDir, normalizeStorageKey(key));
 	await mkdir(path.dirname(filePath), { recursive: true });

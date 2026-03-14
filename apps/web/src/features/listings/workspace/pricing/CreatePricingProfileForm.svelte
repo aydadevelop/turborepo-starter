@@ -1,4 +1,3 @@
-<!-- biome-ignore-all format: TanStack Form component member syntax not supported -->
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
 	import { Input } from "@my-app/ui/components/input";
@@ -7,9 +6,8 @@
 		Root as NativeSelectRoot,
 	} from "@my-app/ui/components/native-select";
 	import { createForm } from "@tanstack/svelte-form";
-
-	import FormFieldShell from "../../../../components/operator/FormFieldShell.svelte";
 	import type { PricingWorkspaceState } from "$lib/orpc-types";
+	import FormFieldShell from "../../../../components/operator/FormFieldShell.svelte";
 	import { getCreatePricingProfileDefaults } from "./create-profile/defaults";
 	import { createPricingProfileSchema } from "./create-profile/schema";
 	import { buildCreatePricingProfileInput } from "./create-profile/submit";

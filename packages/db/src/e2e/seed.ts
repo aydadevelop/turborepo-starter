@@ -36,7 +36,7 @@ const parseCliArgs = () => {
 				`  --anchor-date <YYYY-MM-DD>  Stable UTC anchor date (default: ${E2E_DEFAULT_ANCHOR_DATE})`,
 				"  --database-url <url>        PostgreSQL connection string (default: PLAYWRIGHT_DATABASE_URL or derived *_e2e DB)",
 				"  -h, --help                  Show this help message",
-			].join("\n")
+			].join("\n"),
 		);
 		process.exit(0);
 	}
@@ -64,13 +64,13 @@ const upsert = async (
 	client: pg.Client,
 	table: string,
 	conflictColumns: string[],
-	row: Record<string, unknown>
+	row: Record<string, unknown>,
 ) => {
 	const columns = Object.keys(row);
 	const values = Object.values(row);
 	const placeholders = columns.map((_, index) => `$${index + 1}`);
 	const updateColumns = columns.filter(
-		(column) => !conflictColumns.includes(column)
+		(column) => !conflictColumns.includes(column),
 	);
 
 	const sql = [
@@ -87,10 +87,10 @@ export const buildE2EBaseline = async (anchorDate: string) => {
 	const anchorDateMs = parseAnchorDate(anchorDate).getTime();
 	const now = new Date(anchorDateMs + 9 * HOUR_MS);
 	const adminPasswordHash = await hashPassword(
-		E2E_BASELINE.users.admin.password
+		E2E_BASELINE.users.admin.password,
 	);
 	const operatorPasswordHash = await hashPassword(
-		E2E_BASELINE.users.operator.password
+		E2E_BASELINE.users.operator.password,
 	);
 
 	return {
@@ -192,7 +192,7 @@ export const buildE2EBaseline = async (anchorDate: string) => {
 
 const writeBaseline = async (
 	client: pg.Client,
-	baseline: Awaited<ReturnType<typeof buildE2EBaseline>>
+	baseline: Awaited<ReturnType<typeof buildE2EBaseline>>,
 ) => {
 	for (const row of baseline.organizations) {
 		await upsert(client, "organization", ["id"], row);
@@ -240,7 +240,7 @@ const main = async () => {
 	const options = parseCliArgs();
 	const connectionString = assertSafeE2EDatabaseUrl(
 		options.databaseUrl ?? resolvePlaywrightDatabaseUrl(process.env),
-		process.env
+		process.env,
 	);
 
 	await ensureDatabaseExists({ connectionString });
@@ -255,7 +255,7 @@ const main = async () => {
 			`Anchor date: ${options.anchorDate}`,
 			`Admin login: ${E2E_BASELINE.users.admin.email} / ${E2E_BASELINE.users.admin.password}`,
 			`Operator login: ${E2E_BASELINE.users.operator.email} / ${E2E_BASELINE.users.operator.password}`,
-		].join("\n")
+		].join("\n"),
 	);
 };
 

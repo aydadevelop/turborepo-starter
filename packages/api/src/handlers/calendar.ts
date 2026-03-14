@@ -80,7 +80,7 @@ export const calendarRouter = {
 				displayName: input.displayName,
 				createdByUserId: context.session?.user?.id,
 			},
-			db
+			db,
 		);
 
 		return formatAccount(row);
@@ -93,7 +93,7 @@ export const calendarRouter = {
 			await disconnectOrganizationCalendarAccount(
 				input.accountId,
 				context.activeMembership.organizationId,
-				db
+				db,
 			);
 			return { success: true };
 		} catch (error) {
@@ -109,7 +109,7 @@ export const calendarRouter = {
 	}).calendar.listAccounts.handler(async ({ context }) => {
 		const rows = await listOrganizationCalendarAccounts(
 			context.activeMembership.organizationId,
-			db
+			db,
 		);
 
 		return rows.map(formatAccount);
@@ -122,7 +122,7 @@ export const calendarRouter = {
 			const rows = await refreshOrganizationCalendarSources(
 				input.accountId,
 				context.activeMembership.organizationId,
-				db
+				db,
 			);
 			return rows.map(formatSource);
 		} catch (error) {
@@ -139,7 +139,7 @@ export const calendarRouter = {
 		const rows = await listOrganizationCalendarSources(
 			context.activeMembership.organizationId,
 			db,
-			input.accountId
+			input.accountId,
 		);
 
 		return rows.map(formatSource);
@@ -161,7 +161,7 @@ export const calendarRouter = {
 				{
 					actorUserId: context.session?.user?.id ?? undefined,
 					eventBus: context.eventBus,
-				}
+				},
 			);
 			return formatConnection(row);
 		} catch (error) {
@@ -187,7 +187,7 @@ export const calendarRouter = {
 				{
 					actorUserId: context.session?.user?.id ?? undefined,
 					eventBus: context.eventBus,
-				}
+				},
 			);
 			return formatConnection(row);
 		} catch (error) {
@@ -209,7 +209,7 @@ export const calendarRouter = {
 				{
 					actorUserId: context.session?.user?.id ?? undefined,
 					eventBus: context.eventBus,
-				}
+				},
 			);
 			return { success: true };
 		} catch (error) {
@@ -227,7 +227,7 @@ export const calendarRouter = {
 			const rows = await listCalendarConnections(
 				input.listingId,
 				context.activeMembership.organizationId,
-				db
+				db,
 			);
 			return rows.map(formatConnection);
 		} catch (error) {
@@ -245,7 +245,7 @@ export const calendarRouter = {
 			const state = await getCalendarWorkspaceState(
 				input.listingId,
 				context.activeMembership.organizationId,
-				db
+				db,
 			);
 			return {
 				...state,
@@ -266,7 +266,7 @@ export const calendarRouter = {
 	}).calendar.getOrgWorkspaceState.handler(async ({ context }) => {
 		const state = await getOrgCalendarWorkspaceState(
 			context.activeMembership.organizationId,
-			db
+			db,
 		);
 		return {
 			accounts: state.accounts.map(formatAccount),
@@ -286,7 +286,7 @@ export const calendarRouter = {
 				input.sourceId,
 				context.activeMembership.organizationId,
 				input.isHidden,
-				db
+				db,
 			);
 			return formatSource(row);
 		} catch (error) {

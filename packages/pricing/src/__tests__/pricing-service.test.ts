@@ -1,12 +1,6 @@
 import { organization } from "@my-app/db/schema/auth";
-import {
-	listing,
-	listingTypeConfig,
-} from "@my-app/db/schema/marketplace";
-import {
-	bootstrapTestDatabase,
-	type TestDatabase,
-} from "@my-app/db/test";
+import { listing, listingTypeConfig } from "@my-app/db/schema/marketplace";
+import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -169,7 +163,12 @@ describe("updatePricingProfile", () => {
 		);
 
 		const updated = await updatePricingProfile(
-			{ id: created.id, organizationId: ORG_ID, name: "Updated", baseHourlyPriceCents: 4000 },
+			{
+				id: created.id,
+				organizationId: ORG_ID,
+				name: "Updated",
+				baseHourlyPriceCents: 4000,
+			},
 			db,
 		);
 
@@ -211,10 +210,14 @@ describe("createPricingRule / deletePricingRule", () => {
 		expect(rule.adjustmentValue).toBe(10);
 		expect(rule.isActive).toBe(true);
 
-		await expect(deletePricingRule(rule.id, ORG_ID, db)).resolves.toBeUndefined();
+		await expect(
+			deletePricingRule(rule.id, ORG_ID, db),
+		).resolves.toBeUndefined();
 	});
 
 	it("throws NOT_FOUND for unknown rule id", async () => {
-		await expect(deletePricingRule("nonexistent", ORG_ID, getDb())).rejects.toThrow("NOT_FOUND");
+		await expect(
+			deletePricingRule("nonexistent", ORG_ID, getDb()),
+		).rejects.toThrow("NOT_FOUND");
 	});
 });

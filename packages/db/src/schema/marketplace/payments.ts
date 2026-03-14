@@ -44,7 +44,7 @@ export const paymentProviderConfig = pgTable(
 	},
 	(table) => [
 		uniqueIndex("payment_provider_config_uq_provider").on(table.provider),
-	]
+	],
 );
 
 export const organizationPaymentConfig = pgTable(
@@ -79,19 +79,19 @@ export const organizationPaymentConfig = pgTable(
 	},
 	(table) => [
 		index("organization_payment_config_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		index("organization_payment_config_ix_provider_config_id").on(
-			table.providerConfigId
+			table.providerConfigId,
 		),
 		uniqueIndex("organization_payment_config_uq_org_provider").on(
 			table.organizationId,
-			table.provider
+			table.provider,
 		),
 		uniqueIndex("organization_payment_config_uq_webhook_endpoint_id").on(
-			table.webhookEndpointId
+			table.webhookEndpointId,
 		),
-	]
+	],
 );
 
 export const paymentWebhookEvent = pgTable(
@@ -115,11 +115,11 @@ export const paymentWebhookEvent = pgTable(
 	(table) => [
 		index("payment_webhook_event_ix_organization_id_created_at").on(
 			table.organizationId,
-			table.createdAt
+			table.createdAt,
 		),
 		index("payment_webhook_event_ix_endpoint_id").on(table.endpointId),
 		uniqueIndex("payment_webhook_event_uq_request_signature")
 			.on(table.requestSignature)
 			.where(sql`${table.requestSignature} is not null`),
-	]
+	],
 );

@@ -11,7 +11,7 @@ describe("submitOrganizationSettings", () => {
 				updateOrganization,
 				invalidateOrganizationStructure,
 			},
-			{ name: "", slug: "valid-slug" }
+			{ name: "", slug: "valid-slug" },
 		);
 
 		expect(result).toEqual({
@@ -32,7 +32,7 @@ describe("submitOrganizationSettings", () => {
 				updateOrganization,
 				invalidateOrganizationStructure,
 			},
-			{ name: "  Charter Ops  ", slug: "  charter-ops  " }
+			{ name: "  Charter Ops  ", slug: "  charter-ops  " },
 		);
 
 		expect(result.ok).toBe(true);
@@ -56,7 +56,7 @@ describe("deleteOrganizationRecord", () => {
 				deleteOrganization,
 				invalidateOrganizationStructure,
 			},
-			undefined
+			undefined,
 		);
 
 		expect(result).toEqual({

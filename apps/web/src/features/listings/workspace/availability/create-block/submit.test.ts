@@ -9,7 +9,7 @@ describe("buildCreateAvailabilityBlockInput", () => {
 				startsAt: "2026-06-01T10:00",
 				endsAt: "2026-06-01T18:00",
 				reason: "Private charter",
-			})
+			}),
 		).toEqual({
 			ok: true,
 			data: {

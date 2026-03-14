@@ -234,6 +234,6 @@ test("renders the public listing detail page with the live boat-rent booking sur
 	await expect.element(page.getByText("Live booking surface")).toBeVisible();
 	await expect.element(page.getByText("Maintenance window")).toBeVisible();
 	await expect(document.body).toMatchScreenshot(
-		"storefront-listing-detail-page"
+		"storefront-listing-detail-page",
 	);
 });

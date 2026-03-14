@@ -51,7 +51,7 @@ export const booking = pgTable(
 			.references(() => organization.id, { onDelete: "restrict" }),
 		merchantPaymentConfigId: text("merchant_payment_config_id").references(
 			() => organizationPaymentConfig.id,
-			{ onDelete: "set null" }
+			{ onDelete: "set null" },
 		),
 		customerUserId: text("customer_user_id").references(() => user.id, {
 			onDelete: "set null",
@@ -111,17 +111,17 @@ export const booking = pgTable(
 		index("booking_ix_starts_at").on(table.startsAt),
 		index("booking_ix_publication_id").on(table.publicationId),
 		index("booking_ix_merchant_organization_id").on(
-			table.merchantOrganizationId
+			table.merchantOrganizationId,
 		),
 		index("booking_ix_merchant_payment_config_id").on(
-			table.merchantPaymentConfigId
+			table.merchantPaymentConfigId,
 		),
 		uniqueIndex("booking_uq_org_source_external_ref").on(
 			table.organizationId,
 			table.source,
-			table.externalRef
+			table.externalRef,
 		),
-	]
+	],
 );
 
 export const bookingDiscountCode = pgTable(
@@ -147,7 +147,7 @@ export const bookingDiscountCode = pgTable(
 		perCustomerLimit: integer("per_customer_limit"),
 		appliesToListingId: text("applies_to_listing_id").references(
 			() => listing.id,
-			{ onDelete: "set null" }
+			{ onDelete: "set null" },
 		),
 		isActive: boolean("is_active").notNull().default(true),
 		createdByUserId: text("created_by_user_id").references(() => user.id, {
@@ -159,11 +159,11 @@ export const bookingDiscountCode = pgTable(
 	(table) => [
 		index("booking_discount_code_ix_organization_id_is_active").on(
 			table.organizationId,
-			table.isActive
+			table.isActive,
 		),
 		uniqueIndex("booking_discount_code_uq_org_code").on(
 			table.organizationId,
-			table.code
+			table.code,
 		),
 		check(
 			"booking_discount_code_ck_positive_values",
@@ -172,18 +172,18 @@ export const bookingDiscountCode = pgTable(
 				and (${table.maxDiscountCents} is null or ${table.maxDiscountCents} > 0)
 				and (${table.usageLimit} is null or ${table.usageLimit} > 0)
 				and (${table.perCustomerLimit} is null or ${table.perCustomerLimit} > 0)
-				and ${table.usageCount} >= 0`
+				and ${table.usageCount} >= 0`,
 		),
 		check(
 			"booking_discount_code_ck_type_range",
 			sql`(${table.discountType} = 'percentage' and ${table.discountValue} between 1 and 100)
-				or (${table.discountType} = 'fixed_cents' and ${table.discountValue} > 0)`
+				or (${table.discountType} = 'fixed_cents' and ${table.discountValue} > 0)`,
 		),
 		check(
 			"booking_discount_code_ck_valid_window",
-			sql`${table.validFrom} is null or ${table.validTo} is null or ${table.validTo} > ${table.validFrom}`
+			sql`${table.validFrom} is null or ${table.validTo} is null or ${table.validTo} > ${table.validFrom}`,
 		),
-	]
+	],
 );
 
 export const bookingDiscountApplication = pgTable(
@@ -208,20 +208,20 @@ export const bookingDiscountApplication = pgTable(
 	(table) => [
 		index("booking_discount_application_ix_booking_id").on(table.bookingId),
 		index("booking_discount_application_ix_discount_code_id").on(
-			table.discountCodeId
+			table.discountCodeId,
 		),
 		index("booking_discount_application_ix_code_id_customer").on(
 			table.discountCodeId,
-			table.customerUserId
+			table.customerUserId,
 		),
 		uniqueIndex("booking_discount_application_uq_booking_id").on(
-			table.bookingId
+			table.bookingId,
 		),
 		check(
 			"booking_discount_application_ck_applied_amount",
-			sql`${table.appliedAmountCents} >= 0`
+			sql`${table.appliedAmountCents} >= 0`,
 		),
-	]
+	],
 );
 
 export const bookingPaymentAttempt = pgTable(
@@ -256,18 +256,18 @@ export const bookingPaymentAttempt = pgTable(
 	(table) => [
 		index("booking_payment_attempt_ix_booking_id").on(table.bookingId),
 		index("booking_payment_attempt_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		index("booking_payment_attempt_ix_status").on(table.status),
 		uniqueIndex("booking_payment_attempt_uq_booking_idempotency").on(
 			table.bookingId,
-			table.idempotencyKey
+			table.idempotencyKey,
 		),
 		uniqueIndex("booking_payment_attempt_uq_provider_intent").on(
 			table.provider,
-			table.providerIntentId
+			table.providerIntentId,
 		),
-	]
+	],
 );
 
 export const bookingShiftRequest = pgTable(
@@ -291,7 +291,7 @@ export const bookingShiftRequest = pgTable(
 			.default("pending"),
 		customerDecisionByUserId: text("customer_decision_by_user_id").references(
 			() => user.id,
-			{ onDelete: "set null" }
+			{ onDelete: "set null" },
 		),
 		customerDecisionAt: timestamp("customer_decision_at", {
 			withTimezone: true,
@@ -303,7 +303,7 @@ export const bookingShiftRequest = pgTable(
 			.default("pending"),
 		managerDecisionByUserId: text("manager_decision_by_user_id").references(
 			() => user.id,
-			{ onDelete: "set null" }
+			{ onDelete: "set null" },
 		),
 		managerDecisionAt: timestamp("manager_decision_at", {
 			withTimezone: true,
@@ -363,7 +363,7 @@ export const bookingShiftRequest = pgTable(
 		}),
 		appliedAt: timestamp("applied_at", { withTimezone: true, mode: "date" }),
 		paymentAdjustmentStatus: paymentAdjustmentStatusEnum(
-			"payment_adjustment_status"
+			"payment_adjustment_status",
 		)
 			.notNull()
 			.default("none"),
@@ -381,7 +381,7 @@ export const bookingShiftRequest = pgTable(
 		index("booking_shift_request_ix_organization_id").on(table.organizationId),
 		index("booking_shift_request_ix_status").on(table.status),
 		uniqueIndex("booking_shift_request_uq_booking_id").on(table.bookingId),
-	]
+	],
 );
 
 export const bookingDispute = pgTable(
@@ -411,7 +411,7 @@ export const bookingDispute = pgTable(
 		index("booking_dispute_ix_booking_id").on(table.bookingId),
 		index("booking_dispute_ix_organization_id").on(table.organizationId),
 		index("booking_dispute_ix_status").on(table.status),
-	]
+	],
 );
 
 export const bookingRefund = pgTable(
@@ -457,9 +457,9 @@ export const bookingRefund = pgTable(
 		index("booking_refund_ix_status").on(table.status),
 		uniqueIndex("booking_refund_uq_provider_external_refund_id").on(
 			table.provider,
-			table.externalRefundId
+			table.externalRefundId,
 		),
-	]
+	],
 );
 
 export const bookingCancellationRequest = pgTable(
@@ -487,7 +487,7 @@ export const bookingCancellationRequest = pgTable(
 			.default("pending"),
 		customerDecisionByUserId: text("customer_decision_by_user_id").references(
 			() => user.id,
-			{ onDelete: "set null" }
+			{ onDelete: "set null" },
 		),
 		customerDecisionAt: timestamp("customer_decision_at", {
 			withTimezone: true,
@@ -499,7 +499,7 @@ export const bookingCancellationRequest = pgTable(
 			.default("pending"),
 		managerDecisionByUserId: text("manager_decision_by_user_id").references(
 			() => user.id,
-			{ onDelete: "set null" }
+			{ onDelete: "set null" },
 		),
 		managerDecisionAt: timestamp("manager_decision_at", {
 			withTimezone: true,
@@ -529,13 +529,13 @@ export const bookingCancellationRequest = pgTable(
 	},
 	(table) => [
 		index("booking_cancellation_request_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		index("booking_cancellation_request_ix_status").on(table.status),
 		uniqueIndex("booking_cancellation_request_uq_booking_id").on(
-			table.bookingId
+			table.bookingId,
 		),
-	]
+	],
 );
 
 export const cancellationPolicy = pgTable(
@@ -566,7 +566,7 @@ export const cancellationPolicy = pgTable(
 		uniqueIndex("cancellation_policy_uq_listing_id").on(table.listingId),
 		uniqueIndex("cancellation_policy_uq_org_scope").on(
 			table.organizationId,
-			table.scope
+			table.scope,
 		),
-	]
+	],
 );

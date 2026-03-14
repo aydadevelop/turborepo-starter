@@ -114,17 +114,17 @@ test("creates and resolves manual overrides through the overlay panel contract",
 	expect(onCreateManualOverride).not.toHaveBeenCalled();
 
 	await userEvent.click(
-		page.getByRole("button", { name: "Publish to channel" })
+		page.getByRole("button", { name: "Publish to channel" }),
 	);
 	await userEvent.selectOptions(
 		page.getByLabelText("Listing", { exact: true }),
-		"listing-1"
+		"listing-1",
 	);
 	(
 		document.querySelector('[role="dialog"] form') as HTMLFormElement | null
 	)?.requestSubmit();
 	await waitForCondition(
-		() => onPublishListingToChannel.mock.calls.length === 1
+		() => onPublishListingToChannel.mock.calls.length === 1,
 	);
 	expect(onPublishListingToChannel).toHaveBeenCalledWith({
 		listingId: "listing-1",
@@ -135,11 +135,11 @@ test("creates and resolves manual overrides through the overlay panel contract",
 	await userEvent.click(page.getByRole("button", { name: "Approve listing" }));
 	await userEvent.selectOptions(
 		page.getByLabelText("Listing", { exact: true }),
-		"listing-2"
+		"listing-2",
 	);
 	await userEvent.fill(
 		page.getByLabelText("Moderation note"),
-		"Ready after compliance review"
+		"Ready after compliance review",
 	);
 	(
 		document.querySelector('[role="dialog"] form') as HTMLFormElement | null
@@ -156,7 +156,7 @@ test("creates and resolves manual overrides through the overlay panel contract",
 	await userEvent.fill(page.getByLabelText("Title"), "Allow manual boarding");
 	await userEvent.fill(
 		page.getByLabelText("Note"),
-		"Temporary operator exception"
+		"Temporary operator exception",
 	);
 	(
 		document.querySelector('[role="dialog"] form') as HTMLFormElement | null

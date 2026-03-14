@@ -1,24 +1,30 @@
-import type { Db, CalendarWorkspaceState } from "./types";
+import { listing } from "@my-app/db/schema/marketplace";
+import { eq } from "drizzle-orm";
+import type { CalendarWorkspaceState, Db } from "./types";
 import {
+	listAllOrgConnections,
 	listCalendarConnections,
 	listOrganizationCalendarAccounts,
 	listOrganizationCalendarSources,
-	listAllOrgConnections,
 } from "./use-cases";
-import { listing } from "@my-app/db/schema/marketplace";
-import { eq } from "drizzle-orm";
 
 export async function getCalendarWorkspaceState(
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<CalendarWorkspaceState> {
 	const accounts = await listOrganizationCalendarAccounts(organizationId, db);
 	const sources = await listOrganizationCalendarSources(organizationId, db);
-	const connections = await listCalendarConnections(listingId, organizationId, db);
-	const activeConnections = connections.filter((connection) => connection.isActive);
+	const connections = await listCalendarConnections(
+		listingId,
+		organizationId,
+		db,
+	);
+	const activeConnections = connections.filter(
+		(connection) => connection.isActive,
+	);
 	const connectedAccounts = accounts.filter(
-		(account) => account.status === "connected"
+		(account) => account.status === "connected",
 	);
 	const activeSources = sources.filter((source) => source.isActive);
 
@@ -32,25 +38,27 @@ export async function getCalendarWorkspaceState(
 		connections,
 		activeConnectionCount: activeConnections.length,
 		hasConnectedCalendar: activeConnections.some(
-			(connection) => connection.externalCalendarId !== null
+			(connection) => connection.externalCalendarId !== null,
 		),
-		providers: [...new Set(activeConnections.map((connection) => connection.provider))],
+		providers: [
+			...new Set(activeConnections.map((connection) => connection.provider)),
+		],
 	};
 }
 
 export interface OrgCalendarWorkspaceState {
 	accounts: Awaited<ReturnType<typeof listOrganizationCalendarAccounts>>;
-	sources: Awaited<ReturnType<typeof listOrganizationCalendarSources>>;
 	connections: Array<
 		Awaited<ReturnType<typeof listAllOrgConnections>>[number] & {
 			listingName: string | null;
 		}
 	>;
+	sources: Awaited<ReturnType<typeof listOrganizationCalendarSources>>;
 }
 
 export async function getOrgCalendarWorkspaceState(
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<OrgCalendarWorkspaceState> {
 	const accounts = await listOrganizationCalendarAccounts(organizationId, db);
 	const sources = await listOrganizationCalendarSources(organizationId, db);

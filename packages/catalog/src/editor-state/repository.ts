@@ -30,7 +30,7 @@ import type {
 
 export async function findOrganizationSettings(
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<OrganizationSettingsRow | null> {
 	const [row] = await db
 		.select()
@@ -43,7 +43,7 @@ export async function findOrganizationSettings(
 
 export async function getListingCreateEditorState(
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingCreateEditorState> {
 	const [listingTypes, settings] = await Promise.all([
 		listOrganizationAvailableListingTypes(organizationId, db),
@@ -61,7 +61,7 @@ export async function getListingCreateEditorState(
 export async function resolveListingWorkspaceState(
 	id: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingWorkspaceState | null> {
 	const listingRow = await findListingForOrganization(id, organizationId, db);
 	if (!listingRow) {
@@ -79,8 +79,8 @@ export async function resolveListingWorkspaceState(
 				and(
 					eq(listingPublication.listingId, id),
 					eq(listingPublication.organizationId, organizationId),
-					eq(listingPublication.isActive, true)
-				)
+					eq(listingPublication.isActive, true),
+				),
 			)
 			.limit(1),
 	]);
@@ -129,12 +129,12 @@ export async function resolveListingWorkspaceState(
 export async function resolveListingAssetWorkspaceState(
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingAssetWorkspaceState | null> {
 	const listingRow = await findListingForOrganization(
 		listingId,
 		organizationId,
-		db
+		db,
 	);
 	if (!listingRow) {
 		return null;

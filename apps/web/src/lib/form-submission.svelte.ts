@@ -80,7 +80,7 @@ export interface FormSubmission<TInput, _TOutput> {
 }
 
 export function createFormSubmission<TInput, TOutput = void>(
-	options: FormSubmissionOptions<TInput, TOutput>
+	options: FormSubmissionOptions<TInput, TOutput>,
 ): FormSubmission<TInput, TOutput> {
 	let error = $state<string | null>(null);
 	let successMessage = $state<string | null>(null);
@@ -118,7 +118,7 @@ export function createFormSubmission<TInput, TOutput = void>(
 			} catch (e) {
 				error = formatMutationError(
 					e,
-					options.errorFallback ?? "Something went wrong. Please try again."
+					options.errorFallback ?? "Something went wrong. Please try again.",
 				);
 			} finally {
 				pending = false;

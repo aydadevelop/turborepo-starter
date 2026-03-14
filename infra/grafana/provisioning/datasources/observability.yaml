@@ -22,8 +22,8 @@ datasources:
       # Cross-signal: traces → logs
       tracesToLogsV2:
         datasourceUid: loki
-        spanStartTimeShift: '-1m'
-        spanEndTimeShift: '1m'
+        spanStartTimeShift: "-1m"
+        spanEndTimeShift: "1m"
         tags:
           - key: service.name
             value: compose_service
@@ -37,7 +37,7 @@ datasources:
             value: job
         queries:
           - name: Request rate
-            query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags}[5m]))'
+            query: "sum(rate(traces_spanmetrics_calls_total{$$__tags}[5m]))"
           - name: Error rate
             query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags,status_code="STATUS_CODE_ERROR"}[5m]))'
       # Service map (derived from spanmetrics)

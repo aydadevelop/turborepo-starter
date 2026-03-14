@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
-	// biome-ignore lint/performance/noNamespaceImport: shadcn-style card namespace usage is intentional in this component.
 	import * as Card from "@my-app/ui/components/card";
 	import { Input } from "@my-app/ui/components/input";
 	import { Label } from "@my-app/ui/components/label";
@@ -34,9 +33,8 @@
 	let contactPhone = $state("");
 	let contactEmail = $state("");
 	let timezone = $state(
-		typeof Intl !== "undefined"
-			? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
-			: "UTC"
+		typeof Intl === "undefined"
+			? "UTC" : Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
 	);
 	let notes = $state("");
 	let specialRequests = $state("");

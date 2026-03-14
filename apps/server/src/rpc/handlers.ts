@@ -134,7 +134,7 @@ export const rpcMiddleware: MiddlewareHandler = async (c, next) => {
 			} finally {
 				span.end();
 			}
-		}
+		},
 	);
 
 	const rpcResult = await rpcHandler.handle(c.req.raw, {

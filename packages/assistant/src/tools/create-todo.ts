@@ -13,5 +13,5 @@ export const createCreateTodoTool = (client: AppContractClient) =>
 				created: true,
 				total: todos.length,
 			};
-		}
+		},
 	);

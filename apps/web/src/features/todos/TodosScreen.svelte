@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
-	// biome-ignore lint/performance/noNamespaceImport: shadcn-style card namespace usage is intentional in this component.
 	import * as Card from "@my-app/ui/components/card";
 	import { Input } from "@my-app/ui/components/input";
 	import {

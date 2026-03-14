@@ -21,7 +21,7 @@ export const browserRequest = async (
 		path: string;
 		method?: "GET" | "POST";
 		body?: Record<string, unknown>;
-	}
+	},
 ): Promise<BrowserFetchResult> =>
 	await page.evaluate(
 		async ({ body, method, path, serverUrl }) => {
@@ -56,12 +56,12 @@ export const browserRequest = async (
 			method: options.method ?? "GET",
 			body: options.body,
 			serverUrl: SERVER_URL,
-		}
+		},
 	);
 
 export const signInWithEmail = async (
 	page: Page,
-	params: { email: string; password: string }
+	params: { email: string; password: string },
 ) => {
 	await page.goto(url("/"));
 
@@ -76,7 +76,7 @@ export const signInWithEmail = async (
 
 	if (!result.ok) {
 		throw new Error(
-			`sign-in failed with ${result.status}: ${result.text || "<empty>"}`
+			`sign-in failed with ${result.status}: ${result.text || "<empty>"}`,
 		);
 	}
 };
@@ -92,7 +92,7 @@ export const rpcRequest = async (
 	options: {
 		path: string;
 		input?: unknown;
-	}
+	},
 ) => {
 	const normalizedPath = options.path.replace(LEADING_SLASHES_RE, "");
 	return await browserRequest(page, {

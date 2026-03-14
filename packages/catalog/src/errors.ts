@@ -24,7 +24,7 @@ export class CatalogError extends Error {
 
 export const isCatalogErrorCode = (
 	error: unknown,
-	code: CatalogErrorCode
+	code: CatalogErrorCode,
 ): boolean =>
 	(error instanceof CatalogError && error.code === code) ||
 	(error instanceof Error && error.message === code);

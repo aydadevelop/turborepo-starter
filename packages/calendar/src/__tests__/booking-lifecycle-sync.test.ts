@@ -14,7 +14,10 @@ import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import { clearEventPushers, emitDomainEvent } from "@my-app/events";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import { clearCalendarAdapterRegistry, registerCalendarAdapter } from "../adapter-registry";
+import {
+	clearCalendarAdapterRegistry,
+	registerCalendarAdapter,
+} from "../adapter-registry";
 import { registerBookingLifecycleSync } from "../booking-lifecycle-sync";
 import { FakeCalendarAdapter } from "../fake-adapter";
 

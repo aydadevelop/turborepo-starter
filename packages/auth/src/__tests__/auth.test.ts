@@ -54,7 +54,7 @@ describe("Authentication", () => {
 						email: "duplicate@example.com",
 						password: "Password456!",
 					},
-				})
+				}),
 			).rejects.toThrow();
 		});
 
@@ -66,7 +66,7 @@ describe("Authentication", () => {
 						email: "test@example.com",
 						password: "weak",
 					},
-				})
+				}),
 			).rejects.toThrow();
 		});
 	});
@@ -104,7 +104,7 @@ describe("Authentication", () => {
 						email: testUser.email,
 						password: "WrongPassword123!",
 					},
-				})
+				}),
 			).rejects.toThrow();
 		});
 	});
@@ -117,7 +117,7 @@ describe("Authentication", () => {
 						email: "nonexistent@example.com",
 						password: "SomePassword123!",
 					},
-				})
+				}),
 			).rejects.toThrow();
 		});
 	});

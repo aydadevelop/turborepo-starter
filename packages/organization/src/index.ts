@@ -1,4 +1,3 @@
-// biome-ignore lint/performance/noBarrelFile: Package-level organization entrypoint re-exports supported overlay APIs.
 export { registerOrganizationOverlayProjector } from "./projector";
 export {
 	approveOrganizationListing,

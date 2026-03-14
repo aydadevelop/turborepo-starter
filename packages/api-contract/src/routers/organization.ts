@@ -190,7 +190,7 @@ export const organizationContract = {
 			z.object({
 				listingId: z.string(),
 				channelType: publicationChannelTypeSchema,
-			})
+			}),
 		)
 		.output(listingDistributionStateOutputSchema),
 

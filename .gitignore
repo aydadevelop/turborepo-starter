@@ -1,3 +1,6 @@
+# Planning artifacts
+.planning
+
 # Dependencies
 node_modules
 .pnp

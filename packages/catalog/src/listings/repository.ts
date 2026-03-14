@@ -17,7 +17,7 @@ const buildListingSearchCondition = (search: string) => {
 	const searchCondition = or(
 		ilike(listing.name, `%${search}%`),
 		ilike(listing.slug, `%${search}%`),
-		ilike(listing.description, `%${search}%`)
+		ilike(listing.description, `%${search}%`),
 	);
 	if (!searchCondition) {
 		throw new Error("Failed to build listing search condition");
@@ -27,7 +27,7 @@ const buildListingSearchCondition = (search: string) => {
 };
 
 const buildListingConditions = (
-	input: ListListingsInput
+	input: ListListingsInput,
 ): ListingCondition[] => {
 	const conditions: ListingCondition[] = [
 		eq(listing.organizationId, input.organizationId),
@@ -71,7 +71,7 @@ const resolveListingOrderBy = (sort: ListListingsInput["sort"]) => {
 
 export async function insertListing(
 	values: ListingInsert,
-	db: Db
+	db: Db,
 ): Promise<ListingRow> {
 	const [row] = await db.insert(listing).values(values).returning();
 	if (!row) {
@@ -84,7 +84,7 @@ export async function insertListing(
 export async function updateListingRow(
 	input: UpdateListingInput,
 	updates: Partial<ListingInsert>,
-	db: Db
+	db: Db,
 ): Promise<ListingRow | null> {
 	const [row] = await db
 		.update(listing)
@@ -92,8 +92,8 @@ export async function updateListingRow(
 		.where(
 			and(
 				eq(listing.id, input.id),
-				eq(listing.organizationId, input.organizationId)
-			)
+				eq(listing.organizationId, input.organizationId),
+			),
 		)
 		.returning();
 
@@ -102,7 +102,7 @@ export async function updateListingRow(
 
 export async function listListingsForOrganization(
 	input: ListListingsInput,
-	db: Db
+	db: Db,
 ): Promise<ListingCollectionResult> {
 	const page = input.page ?? { limit: 20, offset: 0 };
 	const conditions = buildListingConditions(input);
@@ -116,7 +116,7 @@ export async function listListingsForOrganization(
 				.from(listing)
 				.innerJoin(
 					listingTypeConfig,
-					eq(listingTypeConfig.slug, listing.listingTypeSlug)
+					eq(listingTypeConfig.slug, listing.listingTypeSlug),
 				)
 				.where(and(...conditions))
 				.orderBy(orderBy)
@@ -127,7 +127,7 @@ export async function listListingsForOrganization(
 				.from(listing)
 				.innerJoin(
 					listingTypeConfig,
-					eq(listingTypeConfig.slug, listing.listingTypeSlug)
+					eq(listingTypeConfig.slug, listing.listingTypeSlug),
 				)
 				.where(and(...conditions)),
 		]);
@@ -161,7 +161,7 @@ export async function listListingsForOrganization(
 export async function findListingForOrganization(
 	id: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingRow | null> {
 	const [row] = await db
 		.select()

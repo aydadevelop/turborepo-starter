@@ -135,7 +135,7 @@ function buildWhereClause(input: StorefrontListInput) {
 
 export async function searchPublishedListings(
 	input: StorefrontListInput,
-	db: Db
+	db: Db,
 ): Promise<{ items: StorefrontListItem[]; total: number }> {
 	const where = buildWhereClause(input);
 
@@ -175,28 +175,28 @@ export async function searchPublishedListings(
 			and(
 				eq(listingPublication.listingId, listing.id),
 				eq(listingPublication.isActive, true),
-				eq(listingPublication.channelType, "platform_marketplace")
-			)
+				eq(listingPublication.channelType, "platform_marketplace"),
+			),
 		)
 		.innerJoin(
 			listingTypeConfig,
-			eq(listingTypeConfig.slug, listing.listingTypeSlug)
+			eq(listingTypeConfig.slug, listing.listingTypeSlug),
 		)
 		.leftJoin(
 			listingBoatRentProfile,
-			eq(listingBoatRentProfile.listingId, listing.id)
+			eq(listingBoatRentProfile.listingId, listing.id),
 		)
 		.leftJoin(
 			listingExcursionProfile,
-			eq(listingExcursionProfile.listingId, listing.id)
+			eq(listingExcursionProfile.listingId, listing.id),
 		)
 		.leftJoin(
 			listingAsset,
 			and(
 				eq(listingAsset.listingId, listing.id),
 				eq(listingAsset.isPrimary, true),
-				eq(listingAsset.kind, "image")
-			)
+				eq(listingAsset.kind, "image"),
+			),
 		)
 		.where(where)
 		.orderBy(listing.createdAt)
@@ -211,8 +211,8 @@ export async function searchPublishedListings(
 			and(
 				eq(listingPublication.listingId, listing.id),
 				eq(listingPublication.isActive, true),
-				eq(listingPublication.channelType, "platform_marketplace")
-			)
+				eq(listingPublication.channelType, "platform_marketplace"),
+			),
 		)
 		.where(where);
 
@@ -224,7 +224,7 @@ export async function searchPublishedListings(
 
 export async function getPublishedListing(
 	id: string,
-	db: Db
+	db: Db,
 ): Promise<StorefrontListItem> {
 	const [row] = await db
 		.select({
@@ -262,28 +262,28 @@ export async function getPublishedListing(
 			and(
 				eq(listingPublication.listingId, listing.id),
 				eq(listingPublication.isActive, true),
-				eq(listingPublication.channelType, "platform_marketplace")
-			)
+				eq(listingPublication.channelType, "platform_marketplace"),
+			),
 		)
 		.innerJoin(
 			listingTypeConfig,
-			eq(listingTypeConfig.slug, listing.listingTypeSlug)
+			eq(listingTypeConfig.slug, listing.listingTypeSlug),
 		)
 		.leftJoin(
 			listingBoatRentProfile,
-			eq(listingBoatRentProfile.listingId, listing.id)
+			eq(listingBoatRentProfile.listingId, listing.id),
 		)
 		.leftJoin(
 			listingExcursionProfile,
-			eq(listingExcursionProfile.listingId, listing.id)
+			eq(listingExcursionProfile.listingId, listing.id),
 		)
 		.leftJoin(
 			listingAsset,
 			and(
 				eq(listingAsset.listingId, listing.id),
 				eq(listingAsset.isPrimary, true),
-				eq(listingAsset.kind, "image")
-			)
+				eq(listingAsset.kind, "image"),
+			),
 		)
 		.where(and(eq(listing.id, id), eq(listing.isActive, true)))
 		.limit(1);

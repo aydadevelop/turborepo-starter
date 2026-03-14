@@ -24,7 +24,7 @@ export const collectionPageSchema = z.object({
 });
 
 export const createCollectionOutputSchema = <T extends z.ZodTypeAny>(
-	itemSchema: T
+	itemSchema: T,
 ) =>
 	z.object({
 		items: z.array(itemSchema),

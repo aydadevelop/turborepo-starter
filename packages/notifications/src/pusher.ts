@@ -12,7 +12,7 @@ import {
 export interface NotificationQueueProducer {
 	send(
 		message: NotificationQueueMessage,
-		options?: { delaySeconds?: number }
+		options?: { delaySeconds?: number },
 	): Promise<void>;
 }
 
@@ -25,14 +25,14 @@ export interface NotificationEventPublishedHint {
 }
 
 type NotificationEventPublishedListener = (
-	hint: NotificationEventPublishedHint
+	hint: NotificationEventPublishedHint,
 ) => void;
 
 const notificationEventPublishedListeners =
 	new Set<NotificationEventPublishedListener>();
 
 export const subscribeNotificationEventPublished = (
-	listener: NotificationEventPublishedListener
+	listener: NotificationEventPublishedListener,
 ) => {
 	notificationEventPublishedListeners.add(listener);
 	return () => {
@@ -62,8 +62,8 @@ export const notificationsPusher = async (params: {
 		.where(
 			and(
 				eq(notificationEvent.organizationId, input.organizationId),
-				eq(notificationEvent.idempotencyKey, input.idempotencyKey)
-			)
+				eq(notificationEvent.idempotencyKey, input.idempotencyKey),
+			),
 		)
 		.limit(1);
 
@@ -77,7 +77,7 @@ export const notificationsPusher = async (params: {
 
 	const eventId = crypto.randomUUID();
 	const recipientUserIds = Array.from(
-		new Set(input.payload.recipients.map((recipient) => recipient.userId))
+		new Set(input.payload.recipients.map((recipient) => recipient.userId)),
 	);
 	await db.insert(notificationEvent).values({
 		id: eventId,
@@ -130,7 +130,7 @@ export const notificationsPusher = async (params: {
 			const failureReason =
 				error instanceof Error ? error.message : "Queue publish failed";
 			await markEventFailed(
-				`queue_publish_failed:${failureReason}`.slice(0, 2000)
+				`queue_publish_failed:${failureReason}`.slice(0, 2000),
 			);
 		}
 	} else {

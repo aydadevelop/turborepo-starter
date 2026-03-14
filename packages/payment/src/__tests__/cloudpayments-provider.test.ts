@@ -28,7 +28,7 @@ const executionConfig: PaymentExecutionConfig = {
 };
 
 const createTestProvider = (
-	overrides: Partial<PaymentProvider> = {}
+	overrides: Partial<PaymentProvider> = {},
 ): PaymentProvider => ({
 	providerId: "cloudpayments",
 	refundPayment: vi.fn().mockResolvedValue({ externalRefundId: "refund-123" }),
@@ -51,13 +51,13 @@ describe("payment provider registry", () => {
 		expect(result).toEqual({ externalRefundId: "refund-123" });
 		expect(provider.refundPayment).toHaveBeenCalledWith(
 			refundInput,
-			executionConfig
+			executionConfig,
 		);
 	});
 
 	it("throws a clear error when a provider is missing", () => {
 		expect(() => getPaymentProvider("cloudpayments")).toThrow(
-			'PaymentProvider "cloudpayments" is not registered. Call registerPaymentProvider() at startup.'
+			'PaymentProvider "cloudpayments" is not registered. Call registerPaymentProvider() at startup.',
 		);
 	});
 
@@ -66,14 +66,14 @@ describe("payment provider registry", () => {
 		resetPaymentProviderRegistry();
 
 		expect(() => getPaymentProvider("cloudpayments")).toThrow(
-			'PaymentProvider "cloudpayments" is not registered. Call registerPaymentProvider() at startup.'
+			'PaymentProvider "cloudpayments" is not registered. Call registerPaymentProvider() at startup.',
 		);
 	});
 });
 
 const makeJsonResponse = (
 	body: unknown,
-	init: ResponseInit = { status: 200 }
+	init: ResponseInit = { status: 200 },
 ): Response =>
 	new Response(JSON.stringify(body), {
 		status: init.status ?? 200,
@@ -95,7 +95,7 @@ describe("CloudPaymentsPaymentProvider", () => {
 				Success: true,
 				Message: null,
 				Model: { TransactionId: 568 },
-			})
+			}),
 		);
 		const provider = createCloudPaymentsPaymentProvider({ fetch: fetchMock });
 
@@ -110,7 +110,7 @@ describe("CloudPaymentsPaymentProvider", () => {
 				providerId: "cloudpayments",
 				publicKey: "pk_live_test",
 				credentials: { apiSecret: "secret_live_test" },
-			}
+			},
 		);
 
 		expect(result).toEqual({ externalRefundId: "568" });
@@ -136,7 +136,7 @@ describe("CloudPaymentsPaymentProvider", () => {
 				Success: true,
 				Message: null,
 				Model: { TransactionId: 569 },
-			})
+			}),
 		);
 		const provider = new CloudPaymentsPaymentProvider({ fetch: fetchMock });
 		const preciseInput: RefundPaymentInput = {
@@ -176,8 +176,8 @@ describe("CloudPaymentsPaymentProvider", () => {
 				{
 					providerId: "cloudpayments",
 					credentials: {},
-				}
-			)
+				},
+			),
 		).rejects.toThrow("CLOUDPAYMENTS_INVALID_CONFIG: missing public key");
 	});
 
@@ -187,7 +187,7 @@ describe("CloudPaymentsPaymentProvider", () => {
 				new Response("upstream unavailable", {
 					status: 503,
 					statusText: "Service Unavailable",
-				})
+				}),
 			),
 		});
 
@@ -203,10 +203,10 @@ describe("CloudPaymentsPaymentProvider", () => {
 					providerId: "cloudpayments",
 					publicKey: "pk_live_test",
 					credentials: { apiSecret: "secret_live_test" },
-				}
-			)
+				},
+			),
 		).rejects.toThrow(
-			"CLOUDPAYMENTS_HTTP_ERROR: 503 Service Unavailable: upstream unavailable"
+			"CLOUDPAYMENTS_HTTP_ERROR: 503 Service Unavailable: upstream unavailable",
 		);
 	});
 
@@ -217,7 +217,7 @@ describe("CloudPaymentsPaymentProvider", () => {
 					Success: false,
 					Message: "Invalid Amount value",
 					Model: null,
-				})
+				}),
 			),
 		});
 
@@ -233,8 +233,8 @@ describe("CloudPaymentsPaymentProvider", () => {
 					providerId: "cloudpayments",
 					publicKey: "pk_live_test",
 					credentials: { apiSecret: "secret_live_test" },
-				}
-			)
+				},
+			),
 		).rejects.toThrow("CLOUDPAYMENTS_REFUND_FAILED: Invalid Amount value");
 	});
 });

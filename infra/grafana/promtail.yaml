@@ -15,7 +15,8 @@ scrape_configs:
         refresh_interval: 5s
     relabel_configs:
       # Use the compose service label as the "service" log label
-      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+      - source_labels:
+          [__meta_docker_container_label_com_docker_compose_service]
         target_label: service
       # Also keep the raw container name
       - source_labels: [__meta_docker_container_name]
@@ -25,6 +26,7 @@ scrape_configs:
       - source_labels: [__meta_docker_container_log_stream]
         target_label: stream
       # Drop Promtail's own logs to avoid a feedback loop
-      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+      - source_labels:
+          [__meta_docker_container_label_com_docker_compose_service]
         regex: promtail
         action: drop

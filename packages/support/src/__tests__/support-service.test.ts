@@ -100,7 +100,7 @@ describe("createSupportTicket", () => {
 				subject: "My booking issue",
 				description: "I need help",
 			},
-			getDb()
+			getDb(),
 		);
 
 		expect(ticket.organizationId).toBe(ORG_ID);
@@ -116,7 +116,7 @@ describe("addTicketMessage", () => {
 		// Create a ticket in ORG_ID
 		const ticket = await createSupportTicket(
 			{ organizationId: ORG_ID, subject: "Isolation test ticket" },
-			getDb()
+			getDb(),
 		);
 
 		// Try to add message from OTHER_ORG_ID — should throw
@@ -127,8 +127,8 @@ describe("addTicketMessage", () => {
 					organizationId: OTHER_ORG_ID,
 					body: "Unauthorized message attempt",
 				},
-				getDb()
-			)
+				getDb(),
+			),
 		).rejects.toThrow("NOT_FOUND");
 	});
 });
@@ -142,17 +142,17 @@ describe("listOrgTickets", () => {
 				bookingId: BOOKING_ID,
 				subject: "Booking ticket",
 			},
-			getDb()
+			getDb(),
 		);
 		await createSupportTicket(
 			{ organizationId: ORG_ID, subject: "General ticket" },
-			getDb()
+			getDb(),
 		);
 
 		const result = await listOrgTickets(
 			ORG_ID,
 			{ filter: { bookingId: BOOKING_ID } },
-			getDb()
+			getDb(),
 		);
 
 		expect(result.items.length).toBeGreaterThanOrEqual(1);
@@ -168,7 +168,7 @@ describe("listOrgTickets", () => {
 				subject: "Harbor pickup issue",
 				priority: "urgent",
 			},
-			getDb()
+			getDb(),
 		);
 		await createSupportTicket(
 			{
@@ -176,7 +176,7 @@ describe("listOrgTickets", () => {
 				subject: "Cabin photo request",
 				priority: "low",
 			},
-			getDb()
+			getDb(),
 		);
 
 		const result = await listOrgTickets(
@@ -188,7 +188,7 @@ describe("listOrgTickets", () => {
 					dir: "desc",
 				},
 			},
-			getDb()
+			getDb(),
 		);
 
 		expect(result.total).toBe(1);
@@ -201,7 +201,7 @@ describe("listOrgTickets", () => {
 describe("getTicket", () => {
 	it("throws NOT_FOUND when ticket does not exist for org", async () => {
 		await expect(
-			getTicket("nonexistent-ticket-id", ORG_ID, getDb())
+			getTicket("nonexistent-ticket-id", ORG_ID, getDb()),
 		).rejects.toThrow("NOT_FOUND");
 	});
 });
@@ -215,7 +215,7 @@ describe("listCustomerTickets", () => {
 				subject: "Customer ticket",
 				customerUserId: CUSTOMER_USER_ID,
 			},
-			getDb()
+			getDb(),
 		);
 		await createSupportTicket(
 			{
@@ -223,7 +223,7 @@ describe("listCustomerTickets", () => {
 				subject: "Other customer ticket",
 				customerUserId: OTHER_CUSTOMER_USER_ID,
 			},
-			getDb()
+			getDb(),
 		);
 
 		const result = await listCustomerTickets(CUSTOMER_USER_ID, {}, getDb());
@@ -240,7 +240,7 @@ describe("listCustomerTickets", () => {
 		const result = await listCustomerTickets(
 			OTHER_CUSTOMER_USER_ID,
 			{},
-			getDb()
+			getDb(),
 		);
 
 		for (const row of result.items) {
@@ -256,13 +256,13 @@ describe("listCustomerTickets", () => {
 				subject: "Booking-scoped ticket",
 				customerUserId: CUSTOMER_USER_ID,
 			},
-			getDb()
+			getDb(),
 		);
 
 		const result = await listCustomerTickets(
 			CUSTOMER_USER_ID,
 			{ filter: { bookingId: BOOKING_ID } },
-			getDb()
+			getDb(),
 		);
 
 		expect(result.items.length).toBeGreaterThanOrEqual(1);
@@ -280,7 +280,7 @@ describe("getCustomerTicket", () => {
 				subject: "My own ticket",
 				customerUserId: CUSTOMER_USER_ID,
 			},
-			getDb()
+			getDb(),
 		);
 
 		const row = await getCustomerTicket(ticket.id, CUSTOMER_USER_ID, getDb());
@@ -295,11 +295,11 @@ describe("getCustomerTicket", () => {
 				subject: "Someone else's ticket",
 				customerUserId: CUSTOMER_USER_ID,
 			},
-			getDb()
+			getDb(),
 		);
 
 		await expect(
-			getCustomerTicket(ticket.id, OTHER_CUSTOMER_USER_ID, getDb())
+			getCustomerTicket(ticket.id, OTHER_CUSTOMER_USER_ID, getDb()),
 		).rejects.toThrow("NOT_FOUND");
 	});
 });
@@ -308,7 +308,7 @@ describe("listTicketMessages", () => {
 	it("returns only non-internal messages for a ticket", async () => {
 		const ticket = await createSupportTicket(
 			{ organizationId: ORG_ID, subject: "Messages test ticket" },
-			getDb()
+			getDb(),
 		);
 
 		await addTicketMessage(
@@ -318,7 +318,7 @@ describe("listTicketMessages", () => {
 				body: "Public reply",
 				isInternal: false,
 			},
-			getDb()
+			getDb(),
 		);
 		await addTicketMessage(
 			{
@@ -327,7 +327,7 @@ describe("listTicketMessages", () => {
 				body: "Internal note",
 				isInternal: true,
 			},
-			getDb()
+			getDb(),
 		);
 
 		const messages = await listTicketMessages(ticket.id, getDb());

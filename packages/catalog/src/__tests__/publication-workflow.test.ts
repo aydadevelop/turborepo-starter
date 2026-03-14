@@ -50,7 +50,7 @@ const makeListing = async (slug: string, db: TestDatabase) =>
 			name: `Listing ${slug}`,
 			slug,
 		},
-		db as never
+		db as never,
 	);
 
 describe("publication workflows", () => {
@@ -69,7 +69,7 @@ describe("publication workflows", () => {
 				organizationId: ORG_ID,
 				idempotencyKey: "catalog.publish.success",
 				eventBus,
-			}
+			},
 		);
 
 		expect(result.success).toBe(true);
@@ -87,7 +87,7 @@ describe("publication workflows", () => {
 					isReady: true,
 					listingId: created.id,
 				}),
-			})
+			}),
 		);
 	});
 
@@ -107,7 +107,7 @@ describe("publication workflows", () => {
 				organizationId: ORG_ID,
 				idempotencyKey: "catalog.publish.compensate",
 				eventBus: failingEventBus,
-			}
+			},
 		);
 
 		expect(result.success).toBe(false);
@@ -126,8 +126,8 @@ describe("publication workflows", () => {
 			.where(
 				and(
 					eq(listingPublication.listingId, created.id),
-					eq(listingPublication.isActive, true)
-				)
+					eq(listingPublication.isActive, true),
+				),
 			);
 		expect(publications).toHaveLength(0);
 	});
@@ -144,7 +144,7 @@ describe("publication workflows", () => {
 				organizationId: ORG_ID,
 				idempotencyKey: "catalog.publish.prereq",
 				eventBus: new EventBus(),
-			}
+			},
 		);
 
 		const result = await unpublishListingWorkflow(db as never).execute(
@@ -156,7 +156,7 @@ describe("publication workflows", () => {
 				organizationId: ORG_ID,
 				idempotencyKey: "catalog.unpublish.success",
 				eventBus: new EventBus(),
-			}
+			},
 		);
 
 		expect(result.success).toBe(true);

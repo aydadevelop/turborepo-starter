@@ -7,7 +7,6 @@
  */
 import { isTable } from "drizzle-orm";
 import { describe, it } from "vitest";
-// biome-ignore lint/performance/noNamespaceImport: schema parity enumerates all schema exports dynamically.
 import * as schema from "../schema";
 import { createParityTest } from "../test";
 
@@ -112,6 +111,6 @@ describe("Schema parity: Phase 1 baseline", () => {
 			inputs: [null as null],
 			legacyFn: (_input) => PHASE_1_BASELINE_TABLES,
 			extractedFn: (_input) => getExportedTableNames(),
-		})
+		}),
 	);
 });

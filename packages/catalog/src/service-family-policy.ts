@@ -23,7 +23,7 @@ export function toListingTypeOption(input: {
 		requiredFields: input.requiredFields ?? [],
 		serviceFamily: input.serviceFamily,
 		serviceFamilyPolicy: getServiceFamilyPolicyFromFamilies(
-			input.serviceFamily
+			input.serviceFamily,
 		),
 		supportedPricingModels: input.supportedPricingModels ?? [],
 		value: input.value,

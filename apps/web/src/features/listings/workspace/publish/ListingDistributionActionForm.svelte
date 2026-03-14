@@ -1,4 +1,3 @@
-<!-- biome-ignore-all format: TanStack Form component member syntax not supported -->
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
 	import {
@@ -6,8 +5,8 @@
 		Root as NativeSelectRoot,
 	} from "@my-app/ui/components/native-select";
 	import { createForm } from "@tanstack/svelte-form";
-	import FormFieldShell from "../../../../components/operator/FormFieldShell.svelte";
 	import { z } from "zod";
+	import FormFieldShell from "../../../../components/operator/FormFieldShell.svelte";
 
 	const distributionActionSchema = z.object({
 		listingId: z.string().trim().min(1, "Select a listing."),

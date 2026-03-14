@@ -30,7 +30,7 @@ describe("createStep + createWorkflow", () => {
 			async (input: { value: number }, ctx) => {
 				const r1 = await step1(input, ctx);
 				return step2(r1, ctx);
-			}
+			},
 		);
 
 		const result = await workflow.execute({ value: 5 }, makeCtx());
@@ -51,8 +51,8 @@ describe("createStep + createWorkflow", () => {
 			(_input: null) => Promise.resolve({ result: "step-1-output" as string }),
 			compensate1 as (
 				output: { result: string },
-				ctx: WorkflowContext
-			) => Promise<void>
+				ctx: WorkflowContext,
+			) => Promise<void>,
 		);
 
 		const step2 = createStep("step-2", (_input: { result: string }) => {
@@ -74,7 +74,7 @@ describe("createStep + createWorkflow", () => {
 		expect(compensate1).toHaveBeenCalledOnce();
 		expect(compensate1).toHaveBeenCalledWith(
 			{ result: "step-1-output" },
-			expect.objectContaining({ organizationId: "org-1" })
+			expect.objectContaining({ organizationId: "org-1" }),
 		);
 	});
 
@@ -93,12 +93,12 @@ describe("createStep + createWorkflow", () => {
 		const stepA = createStep(
 			"step-A",
 			(_: null) => Promise.resolve("a-output"),
-			compA
+			compA,
 		);
 		const stepB = createStep(
 			"step-B",
 			(_: string) => Promise.resolve("b-output"),
-			compB
+			compB,
 		);
 		const stepC = createStep("step-C", (_: string) => {
 			return Promise.reject(new Error("C exploded"));
@@ -131,12 +131,12 @@ describe("createStep + createWorkflow", () => {
 		const stepA = createStep(
 			"step-A",
 			(_: null) => Promise.resolve("a"),
-			compA
+			compA,
 		);
 		const stepB = createStep(
 			"step-B",
 			(_: string) => Promise.resolve("b"),
-			compB
+			compB,
 		);
 		const stepC = createStep("step-C", (_: string) => {
 			return Promise.reject(new Error("C failed"));

@@ -3,11 +3,11 @@ import type { authClient } from "./auth-client";
 type SessionData = typeof authClient.$Infer.Session;
 
 const isAnonymousUser = (
-	user: SessionData["user"] | null | undefined
+	user: SessionData["user"] | null | undefined,
 ): boolean => Boolean(user?.isAnonymous);
 
 export function hasSessionUser(
-	data: SessionData | null | undefined
+	data: SessionData | null | undefined,
 ): data is NonNullable<SessionData> & {
 	session: object;
 	user: { id: string };
@@ -16,7 +16,7 @@ export function hasSessionUser(
 }
 
 export function hasAuthenticatedSession(
-	data: SessionData | null | undefined
+	data: SessionData | null | undefined,
 ): data is NonNullable<SessionData> & {
 	session: object;
 	user: { id: string };
@@ -29,13 +29,13 @@ export function hasAuthenticatedSession(
 }
 
 export function getSessionUserId(
-	data: SessionData | null | undefined
+	data: SessionData | null | undefined,
 ): string | null {
 	return hasSessionUser(data) ? data.user.id : null;
 }
 
 export function getAuthenticatedUserId(
-	data: SessionData | null | undefined
+	data: SessionData | null | undefined,
 ): string | null {
 	if (!hasSessionUser(data) || isAnonymousUser(data.user)) {
 		return null;

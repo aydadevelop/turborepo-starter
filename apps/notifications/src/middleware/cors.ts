@@ -11,7 +11,7 @@ const corsOrigins = parseCorsOrigins(env.CORS_ORIGIN);
 
 if (corsOrigins.length === 0) {
 	throw new Error(
-		"CORS_ORIGIN is required. Provide a comma-separated list of allowed origins."
+		"CORS_ORIGIN is required. Provide a comma-separated list of allowed origins.",
 	);
 }
 

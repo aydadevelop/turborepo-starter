@@ -128,7 +128,7 @@ export const bookingContract = {
 				specialRequests: z.string().optional(),
 				currency: z.string().optional(),
 				discountCode: z.string().min(1).max(64).optional(),
-			})
+			}),
 		)
 		.output(bookingOutput),
 
@@ -166,7 +166,7 @@ export const bookingContract = {
 				]),
 				cancellationReason: z.string().optional(),
 				cancelledByUserId: z.string().optional(),
-			})
+			}),
 		)
 		.output(bookingOutput),
 
@@ -181,7 +181,7 @@ export const bookingContract = {
 				startsAt: z.string().datetime(),
 				endsAt: z.string().datetime(),
 				timezone: z.string().optional(),
-			})
+			}),
 		)
 		.output(bookingOutput),
 
@@ -212,10 +212,10 @@ export const bookingContract = {
 							type: z.enum(["photo", "document", "video", "other"]),
 							url: z.string().url(),
 							description: z.string().optional(),
-						})
+						}),
 					)
 					.optional(),
-			})
+			}),
 		)
 		.output(
 			z.object({
@@ -258,7 +258,7 @@ export const bookingContract = {
 					refundPercent: z.number(),
 					suggestedRefundCents: z.number().int(),
 				}),
-			})
+			}),
 		),
 
 	applyCancellation: oc
@@ -271,13 +271,13 @@ export const bookingContract = {
 		.input(
 			z.object({
 				requestId: z.string(),
-			})
+			}),
 		)
 		.output(
 			z.object({
 				requestId: z.string(),
 				refundId: z.string().nullable(),
-			})
+			}),
 		),
 
 	getActiveCancellationRequest: oc
@@ -314,7 +314,7 @@ export const bookingContract = {
 					createdAt: z.string().datetime(),
 					updatedAt: z.string().datetime(),
 				})
-				.nullable()
+				.nullable(),
 		),
 
 	listCancellationRequests: oc
@@ -350,7 +350,7 @@ export const bookingContract = {
 					requestedAt: z.string().datetime(),
 					createdAt: z.string().datetime(),
 					updatedAt: z.string().datetime(),
-				})
-			)
+				}),
+			),
 		),
 };

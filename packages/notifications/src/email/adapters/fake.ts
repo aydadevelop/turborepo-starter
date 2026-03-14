@@ -41,5 +41,5 @@ export class FakeEmailProvider implements EmailProvider {
 }
 
 export const createFakeEmailProvider = (
-	options?: FakeEmailProviderOptions
+	options?: FakeEmailProviderOptions,
 ): FakeEmailProvider => new FakeEmailProvider(options);

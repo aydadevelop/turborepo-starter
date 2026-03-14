@@ -18,7 +18,7 @@ export const approveOrganizationListing = (
 		note?: string;
 		organizationId: string;
 	},
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationListingModerationState> => {
 	const actedAt = new Date();
 
@@ -29,7 +29,7 @@ export const approveOrganizationListing = (
 			input.listingId,
 			input.organizationId,
 			actedAt,
-			transactionDb
+			transactionDb,
 		);
 		await insertOrganizationListingModerationAudit(
 			{
@@ -41,12 +41,12 @@ export const approveOrganizationListing = (
 				actedByUserId: input.actorUserId ?? null,
 				actedAt,
 			},
-			transactionDb
+			transactionDb,
 		);
 		return resolveOrganizationListingModerationState(
 			input.listingId,
 			input.organizationId,
-			transactionDb
+			transactionDb,
 		);
 	});
 };
@@ -58,7 +58,7 @@ export const clearOrganizationListingApproval = (
 		note?: string;
 		organizationId: string;
 	},
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationListingModerationState> => {
 	const actedAt = new Date();
 
@@ -69,7 +69,7 @@ export const clearOrganizationListingApproval = (
 			input.listingId,
 			input.organizationId,
 			null,
-			transactionDb
+			transactionDb,
 		);
 		await insertOrganizationListingModerationAudit(
 			{
@@ -81,12 +81,12 @@ export const clearOrganizationListingApproval = (
 				actedByUserId: input.actorUserId ?? null,
 				actedAt,
 			},
-			transactionDb
+			transactionDb,
 		);
 		return resolveOrganizationListingModerationState(
 			input.listingId,
 			input.organizationId,
-			transactionDb
+			transactionDb,
 		);
 	});
 };
@@ -94,7 +94,7 @@ export const clearOrganizationListingApproval = (
 export const getOrganizationListingModerationAudit = (
 	listingId: string,
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationListingModerationAuditEntry[]> => {
 	return listOrganizationListingModerationAudit(listingId, organizationId, db);
 };

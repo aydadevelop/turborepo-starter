@@ -3,13 +3,13 @@ import type { PaymentProvider, PaymentWebhookAdapter } from "./types";
 const adapterRegistry = new Map<PaymentProvider, PaymentWebhookAdapter>();
 
 export const registerPaymentWebhookAdapter = (
-	adapter: PaymentWebhookAdapter
+	adapter: PaymentWebhookAdapter,
 ) => {
 	adapterRegistry.set(adapter.provider, adapter);
 };
 
 export const getPaymentWebhookAdapter = (
-	provider: string
+	provider: string,
 ): PaymentWebhookAdapter | null => {
 	return adapterRegistry.get(provider as PaymentProvider) ?? null;
 };

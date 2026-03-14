@@ -34,7 +34,7 @@ const isLocalRuntime = () => {
 
 const buildIntentDisplayTitle = (
 	eventType: string,
-	recipient: NotificationRecipient
+	recipient: NotificationRecipient,
 ) => {
 	return recipient.title.trim() || eventType;
 };
@@ -112,7 +112,7 @@ export class TelegramProvider implements NotificationProvider {
 		recipient: NotificationRecipient;
 	}): Promise<NotificationProviderResult> {
 		const chatId = String(
-			params.recipient.metadata?.telegramChatId ?? ""
+			params.recipient.metadata?.telegramChatId ?? "",
 		).trim();
 		if (!chatId) {
 			return {
@@ -157,7 +157,7 @@ export class TelegramProvider implements NotificationProvider {
 						chat_id: chatId,
 						text,
 					}),
-				}
+				},
 			);
 			const responseText = await response.text();
 			if (!response.ok) {
@@ -188,7 +188,7 @@ export class TelegramProvider implements NotificationProvider {
 					};
 				}
 				providerMessageId = String(
-					parsed.result?.message_id ?? providerMessageId
+					parsed.result?.message_id ?? providerMessageId,
 				);
 			} catch {
 				// ignore parsing errors and keep fallback providerMessageId
@@ -225,7 +225,7 @@ export class MockVkProvider implements NotificationProvider {
 		recipient: NotificationRecipient;
 	}): Promise<NotificationProviderResult> {
 		const recipientId = String(
-			params.recipient.metadata?.vkPeerId ?? ""
+			params.recipient.metadata?.vkPeerId ?? "",
 		).trim();
 		if (!recipientId) {
 			return Promise.resolve({
@@ -251,7 +251,7 @@ export class MockMaxProvider implements NotificationProvider {
 		recipient: NotificationRecipient;
 	}): Promise<NotificationProviderResult> {
 		const recipientId = String(
-			params.recipient.metadata?.maxUserId ?? ""
+			params.recipient.metadata?.maxUserId ?? "",
 		).trim();
 		if (!recipientId) {
 			return Promise.resolve({
@@ -320,7 +320,7 @@ export class NotificationProcessorService {
 			new MockSmsProvider(),
 		];
 		this.providersByChannel = new Map(
-			providers.map((provider) => [provider.channel, provider])
+			providers.map((provider) => [provider.channel, provider]),
 		);
 	}
 

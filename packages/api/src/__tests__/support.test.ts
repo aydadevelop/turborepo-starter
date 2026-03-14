@@ -166,7 +166,7 @@ const createRpcContext = (overrides: Partial<Context> = {}): Context => ({
 const callRpc = async (
 	path: string,
 	json: unknown,
-	contextOverrides: Partial<Context> = {}
+	contextOverrides: Partial<Context> = {},
 ): Promise<{ status: number; body: unknown }> => {
 	const request = new Request(`http://example.test${path}`, {
 		method: "POST",
@@ -219,7 +219,7 @@ describe("support routes", () => {
 					organizationId: ORG_ID,
 					role: "member",
 				},
-			}
+			},
 		);
 
 		expect(result.status).toBe(403);
@@ -365,7 +365,7 @@ describe("support routes", () => {
 			resolvedByUserId: USER_ID,
 		});
 		expect(
-			(resolved.body as { resolvedAt: string | null }).resolvedAt
+			(resolved.body as { resolvedAt: string | null }).resolvedAt,
 		).not.toBeNull();
 	});
 
@@ -429,14 +429,14 @@ describe("support routes", () => {
 		const thread = await callRpc(
 			"/rpc/support/getMyTicket",
 			{ ticketId: "ticket-customer-1" },
-			customerContext
+			customerContext,
 		);
 		expect(thread.status).toBe(200);
 		expect(
-			(thread.body as { ticket: Record<string, unknown> }).ticket
+			(thread.body as { ticket: Record<string, unknown> }).ticket,
 		).not.toHaveProperty("assignedToUserId");
 		expect(
-			(thread.body as { messages: Array<{ isInternal: boolean }> }).messages
+			(thread.body as { messages: Array<{ isInternal: boolean }> }).messages,
 		).toMatchObject([{ isInternal: false }]);
 
 		const reply = await callRpc(
@@ -445,7 +445,7 @@ describe("support routes", () => {
 				ticketId: "ticket-customer-1",
 				body: "Customer reply",
 			},
-			customerContext
+			customerContext,
 		);
 		expect(reply.status).toBe(200);
 		expect(reply.body).toMatchObject({

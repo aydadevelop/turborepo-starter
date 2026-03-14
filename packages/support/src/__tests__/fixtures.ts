@@ -97,7 +97,7 @@ const testDbState = bootstrapTestDatabase({
 export const getDb = () => testDbState.db as unknown as Db;
 
 export const makeActorContext = (
-	overrides: Partial<SupportActorContext> = {}
+	overrides: Partial<SupportActorContext> = {},
 ): SupportActorContext => ({
 	actorUserId: OPERATOR_USER_ID,
 	eventBus: new EventBus(),
@@ -105,7 +105,7 @@ export const makeActorContext = (
 });
 
 export const makeWorkflowContext = (
-	overrides: Partial<WorkflowContext> = {}
+	overrides: Partial<WorkflowContext> = {},
 ): WorkflowContext => ({
 	organizationId: ORG_ID,
 	actorUserId: OPERATOR_USER_ID,

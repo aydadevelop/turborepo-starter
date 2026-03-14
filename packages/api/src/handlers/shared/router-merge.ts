@@ -1,7 +1,5 @@
 type UnionToIntersection<T> = (
-	T extends unknown
-		? (value: T) => void
-		: never
+	T extends unknown ? (value: T) => void : never
 ) extends (value: infer TResult) => void
 	? TResult
 	: never;

@@ -1,7 +1,7 @@
 import type { ListingTypeOption } from "$lib/orpc-types";
 
 export function getDefaultListingTypeSlug(
-	listingTypeOptions: ListingTypeOption[]
+	listingTypeOptions: ListingTypeOption[],
 ): string {
 	return (
 		listingTypeOptions.find((option) => option.isDefault)?.value ??
@@ -12,7 +12,7 @@ export function getDefaultListingTypeSlug(
 
 export function findListingTypeOption(
 	listingTypeOptions: ListingTypeOption[],
-	value: string
+	value: string,
 ): ListingTypeOption | null {
 	return (
 		listingTypeOptions.find((option) => option.value === value.trim()) ?? null
@@ -20,7 +20,7 @@ export function findListingTypeOption(
 }
 
 export function parseMetadataObject(
-	metadataText: string
+	metadataText: string,
 ):
 	| { ok: true; data: Record<string, unknown> | undefined }
 	| { ok: false; message: string } {
@@ -48,7 +48,7 @@ export function parseMetadataObject(
 export function parsePositiveInteger(
 	value: string,
 	emptyMessage: string,
-	invalidMessage: string
+	invalidMessage: string,
 ): { ok: true; data: number } | { ok: false; message: string } {
 	const normalizedValue = value.trim();
 	if (normalizedValue.length === 0) {

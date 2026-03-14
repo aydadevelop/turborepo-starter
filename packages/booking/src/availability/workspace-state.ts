@@ -11,13 +11,16 @@ import type { AvailabilityWorkspaceState, Db } from "./types";
 async function verifyListingOwnership(
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<void> {
 	const [row] = await db
 		.select({ id: listing.id })
 		.from(listing)
 		.where(
-			and(eq(listing.id, listingId), eq(listing.organizationId, organizationId))
+			and(
+				eq(listing.id, listingId),
+				eq(listing.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 
@@ -29,7 +32,7 @@ async function verifyListingOwnership(
 export async function getAvailabilityWorkspaceState(
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<AvailabilityWorkspaceState> {
 	await verifyListingOwnership(listingId, organizationId, db);
 
@@ -40,7 +43,7 @@ export async function getAvailabilityWorkspaceState(
 			.where(eq(listingAvailabilityRule.listingId, listingId))
 			.orderBy(
 				asc(listingAvailabilityRule.dayOfWeek),
-				asc(listingAvailabilityRule.startMinute)
+				asc(listingAvailabilityRule.startMinute),
 			),
 		db
 			.select()

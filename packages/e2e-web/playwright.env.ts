@@ -80,16 +80,16 @@ export const getPlaywrightRuntimeEnv = (): PlaywrightRuntimeEnv => {
 	const serverURL = readStringEnv("PLAYWRIGHT_SERVER_URL", DEFAULTS.serverURL);
 	const assistantURL = readStringEnv(
 		"PLAYWRIGHT_ASSISTANT_URL",
-		DEFAULTS.assistantURL
+		DEFAULTS.assistantURL,
 	);
 	const notificationsURL = readStringEnv(
 		"PLAYWRIGHT_NOTIFICATIONS_URL",
-		DEFAULTS.notificationsURL
+		DEFAULTS.notificationsURL,
 	);
 	const isCi = Boolean(process.env.CI);
 	const workers = readPositiveIntEnv(
 		"PLAYWRIGHT_WORKERS",
-		isCi ? DEFAULTS.workersCi : DEFAULTS.workersLocal
+		isCi ? DEFAULTS.workersCi : DEFAULTS.workersLocal,
 	);
 	const legacyBackendCommand = process.env.PLAYWRIGHT_BACKEND_SERVER_COMMAND;
 
@@ -112,19 +112,19 @@ export const getPlaywrightRuntimeEnv = (): PlaywrightRuntimeEnv => {
 		reuseExistingServers: !isCi && process.env.PLAYWRIGHT_REUSE_SERVERS !== "0",
 		webServerCommand: readStringEnv(
 			"PLAYWRIGHT_WEB_SERVER_COMMAND",
-			DEFAULTS.webServerCommand
+			DEFAULTS.webServerCommand,
 		),
 		serverCommand: readStringEnv(
 			"PLAYWRIGHT_SERVER_COMMAND",
-			legacyBackendCommand ?? DEFAULTS.serverCommand
+			legacyBackendCommand ?? DEFAULTS.serverCommand,
 		),
 		assistantCommand: readStringEnv(
 			"PLAYWRIGHT_ASSISTANT_COMMAND",
-			DEFAULTS.assistantCommand
+			DEFAULTS.assistantCommand,
 		),
 		notificationsCommand: readStringEnv(
 			"PLAYWRIGHT_NOTIFICATIONS_COMMAND",
-			DEFAULTS.notificationsCommand
+			DEFAULTS.notificationsCommand,
 		),
 		workers,
 	};

@@ -39,7 +39,7 @@ export const getE2ERuntimeEnv = (): E2ERuntimeEnv => {
 	const isCi = Boolean(process.env.CI);
 	const workers = readPositiveIntEnv(
 		"PLAYWRIGHT_WORKERS",
-		isCi ? DEFAULTS.workersCi : DEFAULTS.workersLocal
+		isCi ? DEFAULTS.workersCi : DEFAULTS.workersLocal,
 	);
 
 	process.env.PLAYWRIGHT_BASE_URL = baseURL;
@@ -50,7 +50,7 @@ export const getE2ERuntimeEnv = (): E2ERuntimeEnv => {
 		reuseExistingServers: !isCi && process.env.PLAYWRIGHT_REUSE_SERVERS !== "0",
 		webServerCommand: readStringEnv(
 			"PLAYWRIGHT_WEB_SERVER_COMMAND",
-			DEFAULTS.webServerCommand
+			DEFAULTS.webServerCommand,
 		),
 		workers,
 	};

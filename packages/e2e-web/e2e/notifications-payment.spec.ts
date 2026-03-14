@@ -41,7 +41,7 @@ test.describe("Payments & Notifications", () => {
 			PaymentProvider[]
 		>;
 		expect(
-			providersBody.json.some((item) => item.provider === "cloudpayments")
+			providersBody.json.some((item) => item.provider === "cloudpayments"),
 		).toBe(true);
 
 		const marker = `e2e-payment-${Date.now()}`;
@@ -58,7 +58,7 @@ test.describe("Payments & Notifications", () => {
 			createResult.json as RpcEnvelope<PaymentMockChargeResult>;
 		expect(createBody.json.queued).toBe(true);
 		expect(createBody.json.eventIdempotencyKey).toContain(
-			"payment.mock.charge"
+			"payment.mock.charge",
 		);
 
 		await expect
@@ -77,13 +77,13 @@ test.describe("Payments & Notifications", () => {
 					return notificationsBody.json.items.some(
 						(item) =>
 							item.title.includes("Payment succeeded:") &&
-							item.body?.includes(marker) === true
+							item.body?.includes(marker) === true,
 					);
 				},
 				{
 					timeout: 20_000,
 					intervals: [500, 1000, 1500, 2000],
-				}
+				},
 			)
 			.toBe(true);
 	});

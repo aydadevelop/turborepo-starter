@@ -41,6 +41,6 @@ export const storefrontRouter = {
 				}
 				throw e;
 			}
-		}
+		},
 	),
 };

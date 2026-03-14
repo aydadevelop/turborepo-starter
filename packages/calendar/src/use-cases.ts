@@ -10,8 +10,8 @@ import { getCalendarAdapter } from "./adapter-registry";
 import type {
 	BusySlot,
 	CalendarAccountRow,
-	CalendarConnectionRow,
 	CalendarConnectionConfig,
+	CalendarConnectionRow,
 	CalendarSourceRow,
 	Db,
 } from "./types";
@@ -48,7 +48,7 @@ interface CalendarMutationContext {
 
 const mergeProviderMetadata = (
 	existing: Record<string, unknown> | null,
-	incoming: Record<string, unknown> | null | undefined
+	incoming: Record<string, unknown> | null | undefined,
 ): Record<string, unknown> | null => {
 	if (!existing) {
 		return incoming ?? null;
@@ -81,7 +81,7 @@ const mergeProviderMetadata = (
 };
 
 const getAccountCredentials = (
-	account: Pick<CalendarAccountRow, "providerMetadata">
+	account: Pick<CalendarAccountRow, "providerMetadata">,
 ): Record<string, unknown> => {
 	const metadata = account.providerMetadata;
 	if (!metadata || typeof metadata !== "object") {
@@ -101,7 +101,7 @@ const getConnectionConfig = async (
 		CalendarConnectionRow,
 		"calendarAccountId" | "externalCalendarId" | "provider"
 	>,
-	db: Db
+	db: Db,
 ): Promise<CalendarConnectionConfig> => {
 	if (!connection.externalCalendarId) {
 		throw new Error("CALENDAR_CONNECTION_NO_EXTERNAL_ID");
@@ -130,7 +130,7 @@ const emitCalendarReadinessChanged = async (
 	organizationId: string,
 	connectionId: string,
 	isReady: boolean,
-	context?: CalendarMutationContext
+	context?: CalendarMutationContext,
 ): Promise<void> => {
 	if (!context?.eventBus) {
 		return;
@@ -151,13 +151,16 @@ const emitCalendarReadinessChanged = async (
 const verifyListingOwnership = async (
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<void> => {
 	const [row] = await db
 		.select({ id: listing.id })
 		.from(listing)
 		.where(
-			and(eq(listing.id, listingId), eq(listing.organizationId, organizationId))
+			and(
+				eq(listing.id, listingId),
+				eq(listing.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 
@@ -169,7 +172,7 @@ const verifyListingOwnership = async (
 export async function connectCalendar(
 	input: ConnectCalendarInput,
 	db: Db,
-	context?: CalendarMutationContext
+	context?: CalendarMutationContext,
 ): Promise<CalendarConnectionRow> {
 	await verifyListingOwnership(input.listingId, input.organizationId, db);
 	const [row] = await db
@@ -194,7 +197,7 @@ export async function connectCalendar(
 		input.organizationId,
 		row.id,
 		true,
-		context
+		context,
 	);
 
 	return row;
@@ -203,7 +206,7 @@ export async function connectCalendar(
 export async function attachCalendarSourceToListing(
 	input: AttachCalendarSourceInput,
 	db: Db,
-	context?: CalendarMutationContext
+	context?: CalendarMutationContext,
 ): Promise<CalendarConnectionRow> {
 	await verifyListingOwnership(input.listingId, input.organizationId, db);
 
@@ -213,12 +216,12 @@ export async function attachCalendarSourceToListing(
 		.where(
 			and(
 				eq(organizationCalendarSource.id, input.sourceId),
-				eq(organizationCalendarSource.organizationId, input.organizationId)
-			)
+				eq(organizationCalendarSource.organizationId, input.organizationId),
+			),
 		)
 		.limit(1);
 
-	if (!source || !source.isActive) {
+	if (!(source && source.isActive)) {
 		throw new Error("NOT_FOUND");
 	}
 
@@ -230,8 +233,8 @@ export async function attachCalendarSourceToListing(
 				eq(listingCalendarConnection.listingId, input.listingId),
 				eq(listingCalendarConnection.organizationId, input.organizationId),
 				eq(listingCalendarConnection.calendarSourceId, source.id),
-				eq(listingCalendarConnection.isActive, true)
-			)
+				eq(listingCalendarConnection.isActive, true),
+			),
 		)
 		.limit(1);
 
@@ -260,14 +263,19 @@ export async function attachCalendarSourceToListing(
 		throw new Error("Insert failed");
 	}
 
-	await emitCalendarReadinessChanged(input.organizationId, row.id, true, context);
+	await emitCalendarReadinessChanged(
+		input.organizationId,
+		row.id,
+		true,
+		context,
+	);
 
 	return row;
 }
 
 export async function connectOrganizationCalendarAccount(
 	input: ConnectCalendarAccountInput,
-	db: Db
+	db: Db,
 ): Promise<CalendarAccountRow> {
 	const [existing] = await db
 		.select()
@@ -278,9 +286,9 @@ export async function connectOrganizationCalendarAccount(
 				eq(organizationCalendarAccount.provider, input.provider),
 				eq(
 					organizationCalendarAccount.externalAccountId,
-					input.externalAccountId
-				)
-			)
+					input.externalAccountId,
+				),
+			),
 		)
 		.limit(1);
 
@@ -294,7 +302,7 @@ export async function connectOrganizationCalendarAccount(
 				lastError: null,
 				providerMetadata: mergeProviderMetadata(
 					existing.providerMetadata as Record<string, unknown> | null,
-					input.providerMetadata ?? null
+					input.providerMetadata ?? null,
 				),
 				updatedAt: new Date(),
 			})
@@ -333,7 +341,7 @@ export async function connectOrganizationCalendarAccount(
 export async function disconnectOrganizationCalendarAccount(
 	accountId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<CalendarAccountRow> {
 	const [account] = await db
 		.select()
@@ -341,8 +349,8 @@ export async function disconnectOrganizationCalendarAccount(
 		.where(
 			and(
 				eq(organizationCalendarAccount.id, accountId),
-				eq(organizationCalendarAccount.organizationId, organizationId)
-			)
+				eq(organizationCalendarAccount.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 
@@ -368,7 +376,7 @@ export async function disconnectOrganizationCalendarAccount(
 
 export async function listOrganizationCalendarAccounts(
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<CalendarAccountRow[]> {
 	return db
 		.select()
@@ -379,7 +387,7 @@ export async function listOrganizationCalendarAccounts(
 export async function listOrganizationCalendarSources(
 	organizationId: string,
 	db: Db,
-	accountId?: string
+	accountId?: string,
 ): Promise<CalendarSourceRow[]> {
 	return db
 		.select()
@@ -388,14 +396,14 @@ export async function listOrganizationCalendarSources(
 			accountId
 				? and(
 						eq(organizationCalendarSource.organizationId, organizationId),
-						eq(organizationCalendarSource.calendarAccountId, accountId)
+						eq(organizationCalendarSource.calendarAccountId, accountId),
 					)
-				: eq(organizationCalendarSource.organizationId, organizationId)
+				: eq(organizationCalendarSource.organizationId, organizationId),
 		)
 		.orderBy(
 			desc(organizationCalendarSource.isPrimary),
 			asc(organizationCalendarSource.name),
-			asc(organizationCalendarSource.externalCalendarId)
+			asc(organizationCalendarSource.externalCalendarId),
 		);
 }
 
@@ -403,7 +411,7 @@ export async function setSourceVisibility(
 	sourceId: string,
 	organizationId: string,
 	isHidden: boolean,
-	db: Db
+	db: Db,
 ): Promise<CalendarSourceRow> {
 	const [updated] = await db
 		.update(organizationCalendarSource)
@@ -411,18 +419,20 @@ export async function setSourceVisibility(
 		.where(
 			and(
 				eq(organizationCalendarSource.id, sourceId),
-				eq(organizationCalendarSource.organizationId, organizationId)
-			)
+				eq(organizationCalendarSource.organizationId, organizationId),
+			),
 		)
 		.returning();
-	if (!updated) throw new Error("NOT_FOUND");
+	if (!updated) {
+		throw new Error("NOT_FOUND");
+	}
 	return updated;
 }
 
 export async function refreshOrganizationCalendarSources(
 	accountId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<CalendarSourceRow[]> {
 	const [account] = await db
 		.select()
@@ -430,8 +440,8 @@ export async function refreshOrganizationCalendarSources(
 		.where(
 			and(
 				eq(organizationCalendarAccount.id, accountId),
-				eq(organizationCalendarAccount.organizationId, organizationId)
-			)
+				eq(organizationCalendarAccount.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 
@@ -519,7 +529,7 @@ export async function disconnectCalendar(
 	connectionId: string,
 	organizationId: string,
 	db: Db,
-	context?: CalendarMutationContext
+	context?: CalendarMutationContext,
 ): Promise<CalendarConnectionRow> {
 	const [connection] = await db
 		.select()
@@ -527,8 +537,8 @@ export async function disconnectCalendar(
 		.where(
 			and(
 				eq(listingCalendarConnection.id, connectionId),
-				eq(listingCalendarConnection.organizationId, organizationId)
-			)
+				eq(listingCalendarConnection.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 
@@ -553,7 +563,7 @@ export async function disconnectCalendar(
 export async function listCalendarConnections(
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<CalendarConnectionRow[]> {
 	await verifyListingOwnership(listingId, organizationId, db);
 	return db
@@ -562,8 +572,8 @@ export async function listCalendarConnections(
 		.where(
 			and(
 				eq(listingCalendarConnection.listingId, listingId),
-				eq(listingCalendarConnection.organizationId, organizationId)
-			)
+				eq(listingCalendarConnection.organizationId, organizationId),
+			),
 		);
 }
 
@@ -571,7 +581,7 @@ export async function listCalendarBusySlots(
 	connectionId: string,
 	from: Date,
 	to: Date,
-	db: Db
+	db: Db,
 ): Promise<BusySlot[]> {
 	const rows = await db
 		.select()
@@ -599,7 +609,7 @@ export async function setConnectionPrimary(
 	connectionId: string,
 	organizationId: string,
 	db: Db,
-	_context?: CalendarMutationContext
+	_context?: CalendarMutationContext,
 ): Promise<CalendarConnectionRow> {
 	const [connection] = await db
 		.select()
@@ -608,8 +618,8 @@ export async function setConnectionPrimary(
 			and(
 				eq(listingCalendarConnection.id, connectionId),
 				eq(listingCalendarConnection.organizationId, organizationId),
-				eq(listingCalendarConnection.isActive, true)
-			)
+				eq(listingCalendarConnection.isActive, true),
+			),
 		)
 		.limit(1);
 
@@ -626,8 +636,8 @@ export async function setConnectionPrimary(
 				eq(listingCalendarConnection.listingId, connection.listingId),
 				eq(listingCalendarConnection.organizationId, organizationId),
 				eq(listingCalendarConnection.isPrimary, true),
-				ne(listingCalendarConnection.id, connectionId)
-			)
+				ne(listingCalendarConnection.id, connectionId),
+			),
 		);
 
 	const [row] = await db
@@ -645,7 +655,7 @@ export async function setConnectionPrimary(
 
 export async function listAllOrgConnections(
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<CalendarConnectionRow[]> {
 	return db
 		.select()

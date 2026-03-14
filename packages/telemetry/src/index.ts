@@ -3,7 +3,6 @@ import { resourceFromAttributes } from "@opentelemetry/resources";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { ORPCInstrumentation } from "@orpc/otel";
 
-// biome-ignore lint/performance/noBarrelFile: Package-level telemetry entrypoint re-exports supported observability APIs.
 export { httpInstrumentationMiddleware } from "@hono/otel";
 export { prometheus } from "@hono/prometheus";
 export { log } from "./logger";

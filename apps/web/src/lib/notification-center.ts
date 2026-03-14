@@ -18,7 +18,7 @@ export const notificationDeliveredAtMs = (item: InAppNotificationItem) => {
 
 export const deriveCursorMs = (
 	items: InAppNotificationItem[],
-	fallback = 0
+	fallback = 0,
 ) => {
 	if (items.length === 0) {
 		return fallback;
@@ -34,7 +34,7 @@ export const countUnreadNotifications = (items: InAppNotificationItem[]) => {
 };
 
 export const sortNotificationsByDeliveredAtDesc = (
-	items: InAppNotificationItem[]
+	items: InAppNotificationItem[],
 ) => {
 	return items.slice().sort((left, right) => {
 		return notificationDeliveredAtMs(right) - notificationDeliveredAtMs(left);
@@ -43,7 +43,7 @@ export const sortNotificationsByDeliveredAtDesc = (
 
 export const mergeNotificationItems = (
 	current: InAppNotificationItem[],
-	incoming: InAppNotificationItem[]
+	incoming: InAppNotificationItem[],
 ) => {
 	if (incoming.length === 0) {
 		return current;
@@ -59,13 +59,13 @@ export const mergeNotificationItems = (
 
 	return sortNotificationsByDeliveredAtDesc(Array.from(merged.values())).slice(
 		0,
-		MAX_STORED_NOTIFICATIONS
+		MAX_STORED_NOTIFICATIONS,
 	);
 };
 
 export const mergeNotificationList = (
 	current: NotificationListOutput | undefined,
-	incoming: InAppNotificationItem[]
+	incoming: InAppNotificationItem[],
 ): NotificationListOutput => {
 	const items = mergeNotificationItems(current?.items ?? [], incoming);
 	return {
@@ -77,7 +77,7 @@ export const mergeNotificationList = (
 export const markNotificationsViewedLocally = (
 	items: InAppNotificationItem[],
 	notificationIds: string[],
-	viewedAtIso = new Date().toISOString()
+	viewedAtIso = new Date().toISOString(),
 ) => {
 	if (notificationIds.length === 0) {
 		return items;
@@ -98,7 +98,7 @@ export const markNotificationsViewedLocally = (
 export const markNotificationListViewedLocally = (
 	current: NotificationListOutput | undefined,
 	notificationIds: string[],
-	viewedAtIso = new Date().toISOString()
+	viewedAtIso = new Date().toISOString(),
 ): NotificationListOutput | undefined => {
 	if (!current) {
 		return current;
@@ -107,7 +107,7 @@ export const markNotificationListViewedLocally = (
 	const items = markNotificationsViewedLocally(
 		current.items,
 		notificationIds,
-		viewedAtIso
+		viewedAtIso,
 	);
 
 	return {
@@ -132,7 +132,7 @@ export const formatNotificationDateTime = (value: string) => {
 };
 
 export const notificationSeverityClass = (
-	severity: InAppNotificationItem["severity"]
+	severity: InAppNotificationItem["severity"],
 ) => {
 	if (severity === "success") {
 		return "bg-emerald-500";

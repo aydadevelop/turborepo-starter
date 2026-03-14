@@ -41,7 +41,7 @@ export class TestDataFactory {
 	 * Returns the created user data.
 	 */
 	async createUser(
-		overrides: { name?: string; password?: string } = {}
+		overrides: { name?: string; password?: string } = {},
 	): Promise<CreatedUser> {
 		const n = ++this.userCounter;
 		const email = `${this.namespace}-user-${n}@test.local`;
@@ -55,7 +55,7 @@ export class TestDataFactory {
 
 		if (!result.ok) {
 			throw new Error(
-				`TestDataFactory.createUser failed (${result.status}): ${JSON.stringify(result.json)}`
+				`TestDataFactory.createUser failed (${result.status}): ${JSON.stringify(result.json)}`,
 			);
 		}
 
@@ -92,7 +92,7 @@ export class TestDataFactory {
 	 * Requires a prior `signIn()` call for authentication cookies.
 	 */
 	async createOrganization(
-		overrides: { name?: string; slug?: string } = {}
+		overrides: { name?: string; slug?: string } = {},
 	): Promise<CreatedOrganization> {
 		const n = ++this.orgCounter;
 		const name = overrides.name ?? `${this.namespace} Org ${n}`;
@@ -108,7 +108,7 @@ export class TestDataFactory {
 
 		if (!result.ok) {
 			throw new Error(
-				`TestDataFactory.createOrganization failed (${result.status}): ${JSON.stringify(result.json)}`
+				`TestDataFactory.createOrganization failed (${result.status}): ${JSON.stringify(result.json)}`,
 			);
 		}
 
@@ -132,7 +132,7 @@ export class TestDataFactory {
 			// Cleanup is best-effort — don't fail the test if DB is unreachable
 			console.warn(
 				`[TestDataFactory] cleanup for namespace "${this.namespace}" failed:`,
-				error
+				error,
 			);
 		} finally {
 			if (this.dbClient) {
@@ -153,7 +153,7 @@ export class TestDataFactory {
 
 	private async serverFetch(
 		path: string,
-		options: { method: string; body?: unknown }
+		options: { method: string; body?: unknown },
 	): Promise<ApiResult> {
 		const response = await fetch(`${this.serverURL}${path}`, {
 			method: options.method,
@@ -175,7 +175,7 @@ export class TestDataFactory {
 
 	private async rpcFetch(
 		procedurePath: string,
-		input?: unknown
+		input?: unknown,
 	): Promise<ApiResult> {
 		const normalized = procedurePath.replace(LEADING_SLASHES_RE, "");
 		return await this.serverFetch(`/rpc/${normalized}`, {

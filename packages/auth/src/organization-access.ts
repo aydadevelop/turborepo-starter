@@ -15,7 +15,7 @@ export const organizationStatements = {
 } as const;
 
 export const organizationAccessControl = createAccessControl(
-	organizationStatements
+	organizationStatements,
 );
 
 export const orgOwnerAc = organizationAccessControl.newRole({

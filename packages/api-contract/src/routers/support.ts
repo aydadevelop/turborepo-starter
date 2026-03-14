@@ -248,7 +248,7 @@ export const supportContract = {
 			z.object({
 				ticket: operatorTicketOutput,
 				messages: z.array(operatorMessageOutput),
-			})
+			}),
 		),
 
 	getOperatorSummary: oc
@@ -321,7 +321,7 @@ export const supportContract = {
 			z.object({
 				ticket: customerTicketOutput,
 				messages: z.array(customerMessageOutput),
-			})
+			}),
 		),
 
 	addMyMessage: oc
@@ -335,7 +335,7 @@ export const supportContract = {
 			z.object({
 				ticketId: z.string().trim().min(1),
 				body: z.string().trim().min(1).max(10_000),
-			})
+			}),
 		)
 		.output(customerMessageOutput),
 };

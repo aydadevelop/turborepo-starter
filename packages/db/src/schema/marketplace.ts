@@ -7,7 +7,6 @@
  * in a later phase once the test harness supports extension-aware Postgres.
  */
 
-// biome-ignore lint/performance/noBarrelFile: Schema-level marketplace entrypoint re-exports grouped marketplace tables.
 export * from "./marketplace/bookings";
 export * from "./marketplace/listings";
 export * from "./marketplace/organization";

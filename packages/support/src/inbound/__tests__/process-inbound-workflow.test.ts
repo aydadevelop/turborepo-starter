@@ -38,7 +38,7 @@ describe("inbound workflow", () => {
 				customerUserId: CUSTOMER_USER_ID,
 			},
 			getDb(),
-			makeWorkflowContext()
+			makeWorkflowContext(),
 		);
 
 		expect(output.inbound.status).toBe("processed");
@@ -66,7 +66,7 @@ describe("inbound workflow", () => {
 				payload: {},
 			},
 			getDb(),
-			makeWorkflowContext({ idempotencyKey: "support-inbound-1" })
+			makeWorkflowContext({ idempotencyKey: "support-inbound-1" }),
 		);
 
 		const second = await processInboundSupportIntent(
@@ -80,7 +80,7 @@ describe("inbound workflow", () => {
 				payload: {},
 			},
 			getDb(),
-			makeWorkflowContext({ idempotencyKey: "support-inbound-2" })
+			makeWorkflowContext({ idempotencyKey: "support-inbound-2" }),
 		);
 
 		const tickets = await listOrgTickets(ORG_ID, {}, getDb());
@@ -99,7 +99,7 @@ describe("inbound workflow", () => {
 				payload: {},
 			},
 			getDb(),
-			makeWorkflowContext({ idempotencyKey: "support-inbound-3" })
+			makeWorkflowContext({ idempotencyKey: "support-inbound-3" }),
 		);
 
 		await expect(
@@ -113,8 +113,8 @@ describe("inbound workflow", () => {
 					payload: {},
 				},
 				getDb(),
-				makeWorkflowContext({ idempotencyKey: "support-inbound-4" })
-			)
+				makeWorkflowContext({ idempotencyKey: "support-inbound-4" }),
+			),
 		).rejects.toThrow("DUPLICATE_INBOUND_MESSAGE");
 	});
 });

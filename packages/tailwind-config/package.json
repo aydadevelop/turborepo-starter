@@ -1,14 +1,12 @@
 {
-  "name": "@my-app/tailwind-config",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "exports": {
-    ".": "./shared-styles.css"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
-    "tailwindcss": "^4.1.12",
-    "ultracite": "^7.2.3"
-  }
+	"name": "@my-app/tailwind-config",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./shared-styles.css"
+	},
+	"devDependencies": {
+		"tailwindcss": "^4.1.12"
+	}
 }

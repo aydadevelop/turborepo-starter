@@ -1,12 +1,12 @@
 [
-  {
-    "name": "client-js-total",
-    "path": ".svelte-kit/output/client/_app/immutable/**/*.js",
-    "limit": "700 KB"
-  },
-  {
-    "name": "client-css-total",
-    "path": ".svelte-kit/output/client/_app/immutable/**/*.css",
-    "limit": "20 KB"
-  }
+	{
+		"name": "client-js-total",
+		"path": ".svelte-kit/output/client/_app/immutable/**/*.js",
+		"limit": "700 KB"
+	},
+	{
+		"name": "client-css-total",
+		"path": ".svelte-kit/output/client/_app/immutable/**/*.css",
+		"limit": "20 KB"
+	}
 ]

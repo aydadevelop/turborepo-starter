@@ -50,11 +50,11 @@ export interface StorageProvider {
 
 	getSignedDownloadUrl(
 		ref: StorageObjectRef,
-		options?: StorageSignedUrlOptions
+		options?: StorageSignedUrlOptions,
 	): Promise<string>;
 
 	getSignedUploadUrl?(
-		input: StorageSignedUploadInput
+		input: StorageSignedUploadInput,
 	): Promise<StorageSignedUploadResult>;
 	readonly providerId: string;
 

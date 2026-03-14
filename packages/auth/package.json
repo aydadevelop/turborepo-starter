@@ -1,42 +1,40 @@
 {
-  "name": "@my-app/auth",
-  "type": "module",
-  "exports": {
-    ".": {
-      "default": "./src/index.ts"
-    },
-    "./*": {
-      "default": "./src/*.ts"
-    },
-    "./test": {
-      "default": "./src/test/index.ts"
-    }
-  },
-  "scripts": {
-    "check-types": "tsc --noEmit -p tsconfig.json --composite false --declaration false --declarationMap false",
-    "lint": "cd ../.. && biome check --config-path biome.json packages/auth",
-    "lint:fix": "cd ../.. && biome check --config-path biome.json packages/auth --write",
-    "test": "vitest run",
-    "test:watch": "vitest --watch"
-  },
-  "dependencies": {
-    "@better-auth/drizzle-adapter": "^1.5.0",
-    "@better-auth/passkey": "^1.5.0",
-    "@kubiks/otel-better-auth": "^2.0.2",
-    "@my-app/db": "workspace:*",
-    "@my-app/env": "workspace:*",
-    "better-auth": "^1.5.0",
-    "better-auth-telegram": "^1.4.0",
-    "dotenv": "^17.2.2",
-    "drizzle-orm": "1.0.0-beta.16-2ffd1a5",
-    "zod": "^4.1.13"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
-    "@my-app/config": "workspace:*",
-    "@my-app/vitest-config": "workspace:*",
-    "typescript": "^5",
-    "ultracite": "^7.2.3",
-    "vitest": "^4.0.18"
-  }
+	"name": "@my-app/auth",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		},
+		"./*": {
+			"default": "./src/*.ts"
+		},
+		"./test": {
+			"default": "./src/test/index.ts"
+		}
+	},
+	"scripts": {
+		"check-types": "tsc --noEmit -p tsconfig.json --composite false --declaration false --declarationMap false",
+		"lint": "cd ../.. && oxlint packages/auth",
+		"lint:fix": "cd ../.. && oxlint --fix packages/auth",
+		"test": "vitest run",
+		"test:watch": "vitest --watch"
+	},
+	"dependencies": {
+		"@better-auth/drizzle-adapter": "^1.5.0",
+		"@better-auth/passkey": "^1.5.0",
+		"@kubiks/otel-better-auth": "^2.0.2",
+		"@my-app/db": "workspace:*",
+		"@my-app/env": "workspace:*",
+		"better-auth": "^1.5.0",
+		"better-auth-telegram": "^1.4.0",
+		"dotenv": "^17.2.2",
+		"drizzle-orm": "1.0.0-beta.16-2ffd1a5",
+		"zod": "^4.1.13"
+	},
+	"devDependencies": {
+		"@my-app/config": "workspace:*",
+		"@my-app/vitest-config": "workspace:*",
+		"typescript": "^5",
+		"vitest": "^4.0.18"
+	}
 }

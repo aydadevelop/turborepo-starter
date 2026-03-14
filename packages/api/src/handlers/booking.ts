@@ -121,7 +121,7 @@ export const bookingRouter = {
 						customerUserId,
 						createdByUserId: customerUserId,
 					},
-					db
+					db,
 				);
 				return formatBooking(row);
 			} catch (e) {
@@ -152,7 +152,7 @@ export const bookingRouter = {
 				}
 				throw e;
 			}
-		}
+		},
 	),
 
 	listOrgBookings: organizationPermissionProcedure({
@@ -166,7 +166,7 @@ export const bookingRouter = {
 				search: input.search,
 				sort: input.sort,
 			},
-			db
+			db,
 		);
 		return {
 			items: result.items.map(formatBooking),
@@ -186,7 +186,7 @@ export const bookingRouter = {
 			const row = await getOrgBooking(
 				input.id,
 				context.activeMembership.organizationId,
-				db
+				db,
 			);
 			return formatBooking(row);
 		} catch (e) {
@@ -210,10 +210,10 @@ export const bookingRouter = {
 					cancelledByUserId: input.cancelledByUserId,
 					workflowContext: buildWorkflowContext(
 						context,
-						`booking:${input.status}:${input.id}`
+						`booking:${input.status}:${input.id}`,
 					),
 				},
-				db
+				db,
 			);
 
 			return formatBooking(row);
@@ -245,10 +245,10 @@ export const bookingRouter = {
 					timezone: input.timezone,
 					workflowContext: buildWorkflowContext(
 						context,
-						`booking:schedule-updated:${input.id}:${input.startsAt}:${input.endsAt}`
+						`booking:schedule-updated:${input.id}:${input.startsAt}:${input.endsAt}`,
 					),
 				},
-				db
+				db,
 			);
 
 			return formatBooking(row);
@@ -283,7 +283,7 @@ export const bookingRouter = {
 			const customerUserId = getRequiredSessionUserId(context);
 			const rows = await listCustomerBookings(customerUserId, db);
 			return rows.map(formatBooking);
-		}
+		},
 	),
 
 	requestCancellation: organizationPermissionProcedure({
@@ -300,7 +300,7 @@ export const bookingRouter = {
 					reasonCode: input.reasonCode as CancellationReasonCode | undefined,
 					evidence: input.evidence,
 				},
-				db
+				db,
 			);
 			return { request: formatCancellationRequest(request), outcome };
 		} catch (e) {
@@ -320,7 +320,7 @@ export const bookingRouter = {
 				organizationId: context.activeMembership.organizationId,
 				appliedByUserId: context.session?.user?.id ?? "system",
 			},
-			buildWorkflowContext(context, `booking-cancellation:${input.requestId}`)
+			buildWorkflowContext(context, `booking-cancellation:${input.requestId}`),
 		);
 
 		if (!result.success) {
@@ -342,13 +342,13 @@ export const bookingRouter = {
 			const row = await getActiveCancellationRequest(
 				input.bookingId,
 				context.activeMembership.organizationId,
-				db
+				db,
 			);
 			if (!row) {
 				return null;
 			}
 			return formatCancellationRequest(row);
-		}
+		},
 	),
 
 	listCancellationRequests: organizationPermissionProcedure({
@@ -356,7 +356,7 @@ export const bookingRouter = {
 	}).booking.listCancellationRequests.handler(async ({ context }) => {
 		const rows = await listOrgCancellationRequests(
 			context.activeMembership.organizationId,
-			db
+			db,
 		);
 		return rows.map(formatCancellationRequest);
 	}),

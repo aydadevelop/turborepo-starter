@@ -1,5 +1,4 @@
 <script lang="ts">
-	// biome-ignore lint/performance/noNamespaceImport: shadcn-style tabs namespace usage is intentional in this component.
 	import * as Tabs from "@my-app/ui/components/tabs";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { resolve } from "$app/paths";

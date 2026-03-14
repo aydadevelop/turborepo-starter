@@ -72,7 +72,7 @@ const requireOrganizationPermission = (permission: OrganizationPermission) =>
 
 		const isAllowed = hasOrganizationPermission(
 			context.activeMembership.role,
-			permission
+			permission,
 		);
 
 		if (!isAllowed) {
@@ -83,14 +83,14 @@ const requireOrganizationPermission = (permission: OrganizationPermission) =>
 
 export const sessionProcedure = publicProcedure.use(requireSession);
 export const protectedProcedure = sessionProcedure.use(
-	requireAuthenticatedUser
+	requireAuthenticatedUser,
 );
 export const organizationProcedure = protectedProcedure.use(
-	requireActiveOrganization
+	requireActiveOrganization,
 );
 
 export const organizationPermissionProcedure = (
-	permission: OrganizationPermission
+	permission: OrganizationPermission,
 ) => organizationProcedure.use(requireOrganizationPermission(permission));
 
 export type { OrganizationContext } from "./context";

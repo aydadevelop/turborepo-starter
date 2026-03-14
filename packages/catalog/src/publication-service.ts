@@ -19,7 +19,7 @@ export const emitPublicationReadinessChanged = async (
 	listingId: string,
 	publicationId: string | null,
 	isReady: boolean,
-	context?: PublicationMutationContext
+	context?: PublicationMutationContext,
 ): Promise<void> => {
 	if (!context?.eventBus) {
 		return;
@@ -40,7 +40,7 @@ export const emitPublicationReadinessChanged = async (
 
 export async function applyPublishListingState(
 	input: PublishListingInput,
-	db: Db
+	db: Db,
 ): Promise<{ listing: ListingRow; publication: ListingPublicationRow }> {
 	const channelType = input.channelType ?? "platform_marketplace";
 
@@ -51,8 +51,8 @@ export async function applyPublishListingState(
 		.where(
 			and(
 				eq(listing.id, input.listingId),
-				eq(listing.organizationId, input.organizationId)
-			)
+				eq(listing.organizationId, input.organizationId),
+			),
 		)
 		.limit(1);
 
@@ -79,8 +79,8 @@ export async function applyPublishListingState(
 			and(
 				eq(listingPublication.listingId, input.listingId),
 				eq(listingPublication.channelType, channelType),
-				isNull(listingPublication.channelId)
-			)
+				isNull(listingPublication.channelId),
+			),
 		)
 		.limit(1);
 
@@ -121,14 +121,17 @@ export async function applyPublishListingState(
 export async function applyUnpublishListingState(
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingRow> {
 	// Verify listing exists and belongs to org
 	const [existingListing] = await db
 		.select()
 		.from(listing)
 		.where(
-			and(eq(listing.id, listingId), eq(listing.organizationId, organizationId))
+			and(
+				eq(listing.id, listingId),
+				eq(listing.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 
@@ -159,7 +162,7 @@ export async function applyUnpublishListingState(
 export async function publishListing(
 	input: PublishListingInput,
 	db: Db,
-	context?: PublicationMutationContext
+	context?: PublicationMutationContext,
 ): Promise<{ listing: ListingRow; publication: ListingPublicationRow }> {
 	const result = await applyPublishListingState(input, db);
 
@@ -168,7 +171,7 @@ export async function publishListing(
 		input.listingId,
 		result.publication.id,
 		true,
-		context
+		context,
 	);
 
 	return result;
@@ -178,12 +181,12 @@ export async function unpublishListing(
 	listingId: string,
 	organizationId: string,
 	db: Db,
-	context?: PublicationMutationContext
+	context?: PublicationMutationContext,
 ): Promise<ListingRow> {
 	const result = await applyUnpublishListingState(
 		listingId,
 		organizationId,
-		db
+		db,
 	);
 
 	await emitPublicationReadinessChanged(
@@ -191,7 +194,7 @@ export async function unpublishListing(
 		listingId,
 		null,
 		false,
-		context
+		context,
 	);
 
 	return result;

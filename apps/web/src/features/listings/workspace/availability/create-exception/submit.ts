@@ -17,7 +17,7 @@ function parseMinute(time: string): number {
 
 export function buildCreateAvailabilityExceptionInput(
 	listingId: string,
-	values: CreateAvailabilityExceptionFormValues
+	values: CreateAvailabilityExceptionFormValues,
 ): MutationResult<CreateAvailabilityExceptionInput> {
 	if (!values.date.match(DATE_STRING_RE)) {
 		return { ok: false, message: "Select a valid date." };

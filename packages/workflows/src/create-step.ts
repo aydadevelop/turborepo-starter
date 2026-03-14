@@ -3,7 +3,7 @@ import type { InternalWorkflowContext, StepFn, WorkflowContext } from "./types";
 export const createStep = <TIn, TOut>(
 	name: string,
 	invoke: (input: TIn, ctx: WorkflowContext) => Promise<TOut>,
-	compensate?: (output: TOut, ctx: WorkflowContext) => Promise<void>
+	compensate?: (output: TOut, ctx: WorkflowContext) => Promise<void>,
 ): StepFn<TIn, TOut> => {
 	const stepFn = async (input: TIn, ctx: WorkflowContext): Promise<TOut> => {
 		// ctx is guaranteed to be InternalWorkflowContext at runtime (from createWorkflow)

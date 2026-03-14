@@ -12,8 +12,8 @@ describe("E2E database safety", () => {
 	it("derives a dedicated *_e2e database URL from the default dev connection", () => {
 		expect(
 			deriveE2EDatabaseUrl(
-				"postgresql://postgres:postgres@localhost:5432/myapp"
-			)
+				"postgresql://postgres:postgres@localhost:5432/myapp",
+			),
 		).toBe("postgresql://postgres:postgres@localhost:5432/myapp_e2e");
 	});
 
@@ -21,8 +21,8 @@ describe("E2E database safety", () => {
 		expect(() =>
 			assertSafeE2EDatabaseUrl(
 				"postgresql://postgres:postgres@localhost:5432/myapp",
-				{}
-			)
+				{},
+			),
 		).toThrow(SHARED_DB_ERROR_RE);
 	});
 
@@ -30,8 +30,8 @@ describe("E2E database safety", () => {
 		expect(
 			assertSafeE2EDatabaseUrl(
 				"postgresql://postgres:postgres@localhost:5432/myapp_e2e",
-				{}
-			)
+				{},
+			),
 		).toBe("postgresql://postgres:postgres@localhost:5432/myapp_e2e");
 	});
 
@@ -39,7 +39,7 @@ describe("E2E database safety", () => {
 		expect(
 			resolvePlaywrightDatabaseUrl({
 				DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/myapp",
-			})
+			}),
 		).toBe("postgresql://postgres:postgres@localhost:5432/myapp_e2e");
 	});
 });

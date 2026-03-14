@@ -10,10 +10,12 @@ test.describe("E2E Baseline Auth & Data", () => {
 
 		await expect(adminPage.getByTestId("admin-users-heading")).toBeVisible();
 		await expect(
-			adminPage.getByTestId(`admin-user-row-${E2E_BASELINE.ids.operatorUserId}`)
+			adminPage.getByTestId(
+				`admin-user-row-${E2E_BASELINE.ids.operatorUserId}`,
+			),
 		).toBeVisible();
 		await expect(
-			adminPage.getByTestId(`admin-user-row-${E2E_BASELINE.ids.memberUserId}`)
+			adminPage.getByTestId(`admin-user-row-${E2E_BASELINE.ids.memberUserId}`),
 		).toBeVisible();
 	});
 
@@ -23,7 +25,7 @@ test.describe("E2E Baseline Auth & Data", () => {
 		await operatorPage.goto(url("/dashboard/settings"));
 
 		await expect(
-			operatorPage.getByTestId("account-settings-heading")
+			operatorPage.getByTestId("account-settings-heading"),
 		).toBeVisible();
 	});
 });

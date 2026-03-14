@@ -26,7 +26,7 @@ export class VpsBootstrap extends pulumi.ComponentResource {
 	constructor(
 		name: string,
 		args: VpsBootstrapArgs,
-		opts?: pulumi.ComponentResourceOptions
+		opts?: pulumi.ComponentResourceOptions,
 	) {
 		super("myapp:infra:VpsBootstrap", name, {}, opts);
 
@@ -68,7 +68,7 @@ echo '${args.initPassword}' | sudo -S bash /tmp/setup-root-key.sh
 rm -f /tmp/setup-root-key.sh
 `,
 			},
-			{ parent: this }
+			{ parent: this },
 		);
 
 		// ── Disk expand ───────────────────────────────────────────────────────
@@ -90,7 +90,7 @@ rm -f /tmp/setup-root-key.sh
         fi
       `,
 			},
-			{ parent: this, dependsOn: [installKey] }
+			{ parent: this, dependsOn: [installKey] },
 		);
 
 		// ── Docker ────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ rm -f /tmp/setup-root-key.sh
         echo "docker-ok"
       `,
 			},
-			{ parent: this, dependsOn: [diskExpand] }
+			{ parent: this, dependsOn: [diskExpand] },
 		);
 
 		// ── Dokku ─────────────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ rm -f /tmp/setup-root-key.sh
         /usr/bin/dokku version || true
       `,
 			},
-			{ parent: this, dependsOn: [docker] }
+			{ parent: this, dependsOn: [docker] },
 		);
 
 		// ── Dokku plugins ─────────────────────────────────────────────────────
@@ -149,7 +149,7 @@ rm -f /tmp/setup-root-key.sh
         echo "plugins-ok"
       `,
 			},
-			{ parent: this, dependsOn: [dokku] }
+			{ parent: this, dependsOn: [dokku] },
 		);
 
 		// ── UFW firewall ──────────────────────────────────────────────────────
@@ -169,7 +169,7 @@ rm -f /tmp/setup-root-key.sh
         echo "ufw-ok"
       `,
 			},
-			{ parent: this, dependsOn: [installKey] }
+			{ parent: this, dependsOn: [installKey] },
 		);
 
 		// ── fail2ban ──────────────────────────────────────────────────────────
@@ -185,7 +185,7 @@ rm -f /tmp/setup-root-key.sh
         echo "fail2ban-ok"
       `,
 			},
-			{ parent: this, dependsOn: [installKey] }
+			{ parent: this, dependsOn: [installKey] },
 		);
 
 		// ── SSH hardening ─────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ rm -f /tmp/setup-root-key.sh
 					`echo "ssh-hardened"`,
 				].join(" && "),
 			},
-			{ parent: this, dependsOn: [installKey] }
+			{ parent: this, dependsOn: [installKey] },
 		);
 
 		// ── sslh: multiplex SSH + HTTPS on port 443 ───────────────────────────
@@ -299,7 +299,7 @@ PYEOF
         systemctl is-active sslh && echo "sslh-ok"
       `,
 			},
-			{ parent: this, dependsOn: [plugins] }
+			{ parent: this, dependsOn: [plugins] },
 		);
 
 		this.sslhReady = sslhSetup.stdout;

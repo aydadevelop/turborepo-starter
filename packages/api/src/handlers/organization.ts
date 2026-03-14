@@ -16,7 +16,7 @@ import { buildWorkflowContext } from "../context";
 import { organizationPermissionProcedure } from "../index";
 
 const formatOnboarding = (
-	row: Awaited<ReturnType<typeof getOrganizationOnboardingStatus>>
+	row: Awaited<ReturnType<typeof getOrganizationOnboardingStatus>>,
 ) => ({
 	...row,
 	completedAt: row.completedAt?.toISOString() ?? null,
@@ -90,7 +90,7 @@ export const organizationRouter = {
 	}).organization.getOnboardingStatus.handler(async ({ context }) => {
 		const row = await getOrganizationOnboardingStatus(
 			context.activeMembership.organizationId,
-			db
+			db,
 		);
 
 		return formatOnboarding(row);
@@ -101,7 +101,7 @@ export const organizationRouter = {
 	}).organization.getOverlaySummary.handler(async ({ context }) => {
 		const summary = await getOrganizationOverlaySummary(
 			context.activeMembership.organizationId,
-			db
+			db,
 		);
 
 		return {
@@ -122,7 +122,7 @@ export const organizationRouter = {
 	}).organization.listManualOverrides.handler(async ({ context }) => {
 		const rows = await listOrganizationManualOverrides(
 			context.activeMembership.organizationId,
-			db
+			db,
 		);
 		return rows.map(formatManualOverride);
 	}),
@@ -140,7 +140,7 @@ export const organizationRouter = {
 				note: input.note,
 				createdByUserId: context.session?.user?.id ?? undefined,
 			},
-			db
+			db,
 		);
 		return formatManualOverride(row);
 	}),
@@ -152,7 +152,7 @@ export const organizationRouter = {
 			input.id,
 			context.activeMembership.organizationId,
 			context.session?.user?.id ?? null,
-			db
+			db,
 		);
 		return formatManualOverride(row);
 	}),
@@ -168,7 +168,7 @@ export const organizationRouter = {
 					actorUserId: context.session?.user?.id ?? null,
 					note: input.note,
 				},
-				db
+				db,
 			);
 			return formatListingModerationState(row);
 		} catch (error) {
@@ -187,7 +187,7 @@ export const organizationRouter = {
 					actorUserId: context.session?.user?.id ?? null,
 					note: input.note,
 				},
-				db
+				db,
 			);
 			return formatListingModerationState(row);
 		} catch (error) {
@@ -203,13 +203,13 @@ export const organizationRouter = {
 				const rows = await getOrganizationListingModerationAudit(
 					input.listingId,
 					context.activeMembership.organizationId,
-					db
+					db,
 				);
 				return rows.map(formatListingModerationAuditEntry);
 			} catch (error) {
 				return throwOrganizationRouterError(error);
 			}
-		}
+		},
 	),
 
 	publishListingToChannel: organizationPermissionProcedure({
@@ -225,14 +225,14 @@ export const organizationRouter = {
 					},
 					buildWorkflowContext(
 						context,
-						`organization:publish-listing:${input.listingId}:${input.channelType}`
+						`organization:publish-listing:${input.listingId}:${input.channelType}`,
 					),
-					db
+					db,
 				);
 			} catch (error) {
 				return throwOrganizationRouterError(error);
 			}
-		}
+		},
 	),
 
 	unpublishListing: organizationPermissionProcedure({
@@ -244,9 +244,9 @@ export const organizationRouter = {
 				context.activeMembership.organizationId,
 				buildWorkflowContext(
 					context,
-					`organization:unpublish-listing:${input.listingId}`
+					`organization:unpublish-listing:${input.listingId}`,
 				),
-				db
+				db,
 			);
 		} catch (error) {
 			return throwOrganizationRouterError(error);

@@ -5,17 +5,13 @@ import {
 	listingPricingRule,
 	listingTypeConfig,
 } from "@my-app/db/schema/marketplace";
-import {
-	bootstrapTestDatabase,
-	type TestDatabase,
-} from "@my-app/db/test";
+import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import { describe, expect, it } from "vitest";
-
+import { resolveDefaultPricingContext } from "../pricing-profile";
 import {
 	calculateQuote,
 	calculateQuoteFromResolvedPricing,
 } from "../quote-service";
-import { resolveDefaultPricingContext } from "../pricing-profile";
 import type { Db } from "../types";
 
 const ORG_ID = "pricing-org-1";
@@ -33,7 +29,9 @@ const testDbState = bootstrapTestDatabase({
 			isActive: true,
 			sortOrder: 0,
 		});
-		await db.insert(organization).values({ id: ORG_ID, name: "Org", slug: "pricing-org" });
+		await db
+			.insert(organization)
+			.values({ id: ORG_ID, name: "Org", slug: "pricing-org" });
 		await db.insert(listing).values([
 			{
 				id: LISTING_ID,
@@ -71,7 +69,7 @@ describe("calculateQuote", () => {
 			listingId: LISTING_ID,
 			name: "Base",
 			currency: "USD",
-			baseHourlyPriceCents: 10000,
+			baseHourlyPriceCents: 10_000,
 			serviceFeeBps: 1000,
 			taxBps: 500,
 			isDefault: true,
@@ -80,16 +78,19 @@ describe("calculateQuote", () => {
 		const startsAt = new Date("2026-06-01T10:00:00Z");
 		const endsAt = new Date("2026-06-01T12:00:00Z");
 
-		const quote = await calculateQuote({ listingId: LISTING_ID, startsAt, endsAt }, db);
+		const quote = await calculateQuote(
+			{ listingId: LISTING_ID, startsAt, endsAt },
+			db,
+		);
 
 		expect(quote.durationMinutes).toBe(120);
-		expect(quote.baseCents).toBe(20000);
+		expect(quote.baseCents).toBe(20_000);
 		expect(quote.adjustmentCents).toBe(0);
 		// serviceFeeCents = round(20000 * 1000 / 10000) = 2000
 		expect(quote.serviceFeeCents).toBe(2000);
 		// taxCents = round((20000 + 2000) * 500 / 10000) = round(1100) = 1100
 		expect(quote.taxCents).toBe(1100);
-		expect(quote.totalCents).toBe(23100);
+		expect(quote.totalCents).toBe(23_100);
 		expect(quote.currency).toBe("USD");
 		expect(quote.profileId).toBe("profile-base");
 	});
@@ -114,7 +115,7 @@ describe("calculateQuote", () => {
 			ruleType: "passengerCount",
 			conditionJson: { minPassengers: 4 },
 			adjustmentType: "flat_cents",
-			adjustmentValue: 2_000,
+			adjustmentValue: 2000,
 			priority: 1,
 			isActive: true,
 		});
@@ -127,7 +128,10 @@ describe("calculateQuote", () => {
 			db,
 		);
 
-		const context = await resolveDefaultPricingContext(LISTING_ID_PRELOADED, db);
+		const context = await resolveDefaultPricingContext(
+			LISTING_ID_PRELOADED,
+			db,
+		);
 		if (!context) {
 			throw new Error("Expected resolved pricing context");
 		}
@@ -155,7 +159,7 @@ describe("calculateQuote", () => {
 			listingId: LISTING_ID,
 			name: "With Rule",
 			currency: "USD",
-			baseHourlyPriceCents: 10000,
+			baseHourlyPriceCents: 10_000,
 			serviceFeeBps: 1000,
 			taxBps: 500,
 			isDefault: false,
@@ -179,14 +183,17 @@ describe("calculateQuote", () => {
 			listingId: LISTING_ID,
 			name: "With Rule Default",
 			currency: "USD",
-			baseHourlyPriceCents: 10000,
+			baseHourlyPriceCents: 10_000,
 			serviceFeeBps: 1000,
 			taxBps: 500,
 			isDefault: false,
 		});
 		// Use profile-with-rule as a non-default; test calculateQuote with explicit profileId override
 		// Since calculateQuote uses the default, seed a different listing with the rule profile as default
-		await db.insert(organization).values({ id: "rule-org", name: "Rule Org", slug: "rule-org" }).catch(() => {});
+		await db
+			.insert(organization)
+			.values({ id: "rule-org", name: "Rule Org", slug: "rule-org" })
+			.catch(() => {});
 		await db.insert(listing).values({
 			id: "rule-listing",
 			organizationId: "rule-org",
@@ -199,7 +206,7 @@ describe("calculateQuote", () => {
 			listingId: "rule-listing",
 			name: "Rule Profile",
 			currency: "USD",
-			baseHourlyPriceCents: 10000,
+			baseHourlyPriceCents: 10_000,
 			serviceFeeBps: 1000,
 			taxBps: 500,
 			isDefault: true,
@@ -220,16 +227,19 @@ describe("calculateQuote", () => {
 		const startsAt = new Date("2026-06-01T10:00:00Z");
 		const endsAt = new Date("2026-06-01T12:00:00Z");
 
-		const quote = await calculateQuote({ listingId: "rule-listing", startsAt, endsAt }, db);
+		const quote = await calculateQuote(
+			{ listingId: "rule-listing", startsAt, endsAt },
+			db,
+		);
 
-		expect(quote.baseCents).toBe(20000);
+		expect(quote.baseCents).toBe(20_000);
 		// adjustmentCents = round(20000 * 20 / 100) = 4000
 		expect(quote.adjustmentCents).toBe(4000);
 		// subtotal = 24000; serviceFeeCents = round(24000 * 1000 / 10000) = 2400
 		expect(quote.serviceFeeCents).toBe(2400);
 		// taxCents = round((24000 + 2400) * 500 / 10000) = round(1320) = 1320
 		expect(quote.taxCents).toBe(1320);
-		expect(quote.totalCents).toBe(27720);
+		expect(quote.totalCents).toBe(27_720);
 	});
 
 	it("throws NO_PRICING_PROFILE when listing has no default profile", async () => {

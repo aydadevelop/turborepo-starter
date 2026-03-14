@@ -99,7 +99,7 @@ test("opens calendar discovery actions in a manage dialog", async () => {
 		.element(page.getByRole("button", { name: "Manage calendars" }))
 		.toBeVisible();
 	await expect(document.body).toMatchScreenshot(
-		"listing-workspace-calendar-section"
+		"listing-workspace-calendar-section",
 	);
 
 	await userEvent.click(page.getByRole("button", { name: "Manage calendars" }));
@@ -110,7 +110,7 @@ test("opens calendar discovery actions in a manage dialog", async () => {
 	await expect.element(page.getByText("Fleet Backup").first()).toBeVisible();
 
 	await userEvent.click(
-		page.getByRole("button", { name: "Refresh calendars" })
+		page.getByRole("button", { name: "Refresh calendars" }),
 	);
 	expect(onRefreshCalendarAccountSources).toHaveBeenCalledWith("account-1");
 

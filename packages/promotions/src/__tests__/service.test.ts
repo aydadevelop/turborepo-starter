@@ -121,7 +121,9 @@ describe("promotions service", () => {
 		);
 
 		expect(preview.status).toBe("applied");
-		expect(preview.appliedAmountCents).toBe(Math.round(quote.subtotalCents * 0.1));
+		expect(preview.appliedAmountCents).toBe(
+			Math.round(quote.subtotalCents * 0.1),
+		);
 		if (preview.status !== "applied") {
 			throw new Error("Expected applied preview");
 		}
@@ -151,7 +153,9 @@ describe("promotions service", () => {
 
 		const preview = previewPreparedPromotionForQuote(prepared, quote);
 		expect(preview.status).toBe("applied");
-		expect(preview.appliedAmountCents).toBe(Math.round(quote.subtotalCents * 0.1));
+		expect(preview.appliedAmountCents).toBe(
+			Math.round(quote.subtotalCents * 0.1),
+		);
 	});
 
 	it("returns an invalid preview when the customer limit is exhausted", async () => {

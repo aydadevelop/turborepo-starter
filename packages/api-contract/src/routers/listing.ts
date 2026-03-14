@@ -52,7 +52,7 @@ const listingTypeOptionSchema = z.object({
 				"assets",
 				"calendar",
 				"publish",
-			])
+			]),
 		),
 		profileEditor: z.object({
 			title: z.string(),
@@ -69,10 +69,10 @@ const listingTypeOptionSchema = z.object({
 							z.object({
 								value: z.string(),
 								label: z.string(),
-							})
+							}),
 						)
 						.optional(),
-				})
+				}),
 			),
 		}),
 	}),

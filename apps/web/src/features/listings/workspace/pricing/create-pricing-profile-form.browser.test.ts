@@ -42,13 +42,13 @@ test("submits pricing profile values through the section form contract", async (
 	await userEvent.selectOptions(page.getByLabelText("Currency"), "USD");
 	await userEvent.fill(
 		page.getByLabelText("Base hourly price (cents)"),
-		"250000"
+		"250000",
 	);
 	await userEvent.fill(page.getByLabelText("Minimum hours"), "3");
 	await userEvent.fill(page.getByLabelText("Service fee (bps)"), "500");
 	await userEvent.fill(page.getByLabelText("Tax (bps)"), "2000");
 	await userEvent.click(
-		page.getByRole("button", { name: "Create pricing profile" })
+		page.getByRole("button", { name: "Create pricing profile" }),
 	);
 
 	expect(onSubmit).toHaveBeenCalledWith({

@@ -60,23 +60,23 @@ export const calendarWebhookEventStatusValues = [
 
 export const calendarProviderEnum = pgEnum(
 	"calendar_provider",
-	calendarProviderValues
+	calendarProviderValues,
 );
 export const calendarConnectionSyncStatusEnum = pgEnum(
 	"calendar_connection_sync_status",
-	calendarConnectionSyncStatusValues
+	calendarConnectionSyncStatusValues,
 );
 export const calendarAccountStatusEnum = pgEnum(
 	"calendar_account_status",
-	calendarAccountStatusValues
+	calendarAccountStatusValues,
 );
 export const availabilityBlockSourceEnum = pgEnum(
 	"availability_block_source",
-	availabilityBlockSourceValues
+	availabilityBlockSourceValues,
 );
 export const calendarWebhookEventStatusEnum = pgEnum(
 	"calendar_webhook_event_status",
-	calendarWebhookEventStatusValues
+	calendarWebhookEventStatusValues,
 );
 
 /** Recurring weekly availability windows per listing (e.g. Mon 9:00–18:00). */
@@ -98,17 +98,17 @@ export const listingAvailabilityRule = pgTable(
 		uniqueIndex("listing_availability_rule_uq_listing_day_start").on(
 			table.listingId,
 			table.dayOfWeek,
-			table.startMinute
+			table.startMinute,
 		),
 		check(
 			"listing_availability_rule_ck_day_of_week",
-			sql`${table.dayOfWeek} between 0 and 6`
+			sql`${table.dayOfWeek} between 0 and 6`,
 		),
 		check(
 			"listing_availability_rule_ck_minute_range",
-			sql`${table.startMinute} >= 0 and ${table.startMinute} < 1440 and ${table.endMinute} > ${table.startMinute} and ${table.endMinute} <= 1440`
+			sql`${table.startMinute} >= 0 and ${table.startMinute} < 1440 and ${table.endMinute} > ${table.startMinute} and ${table.endMinute} <= 1440`,
 		),
-	]
+	],
 );
 
 /** One-off date overrides: blocked dates, holiday closures, extended hours. */
@@ -134,7 +134,7 @@ export const listingAvailabilityException = pgTable(
 		index("listing_availability_exception_ix_date").on(table.date),
 		uniqueIndex("listing_availability_exception_uq_listing_date").on(
 			table.listingId,
-			table.date
+			table.date,
 		),
 		check(
 			"listing_availability_exception_ck_minutes",
@@ -148,9 +148,9 @@ export const listingAvailabilityException = pgTable(
 					and ${table.endMinute} > ${table.startMinute}
 					and ${table.endMinute} <= 1440
 				)
-			)`
+			)`,
 		),
-	]
+	],
 );
 
 /** Blocked time slots on a listing (manual blocks, calendar imports, maintenance windows). */
@@ -163,7 +163,7 @@ export const listingAvailabilityBlock = pgTable(
 			.references(() => listing.id, { onDelete: "cascade" }),
 		calendarConnectionId: text("calendar_connection_id").references(
 			() => listingCalendarConnection.id,
-			{ onDelete: "set null" }
+			{ onDelete: "set null" },
 		),
 		source: availabilityBlockSourceEnum("source").notNull().default("manual"),
 		externalRef: text("external_ref"),
@@ -185,15 +185,15 @@ export const listingAvailabilityBlock = pgTable(
 	(table) => [
 		index("listing_availability_block_ix_listing_id").on(table.listingId),
 		index("listing_availability_block_ix_calendar_connection_id").on(
-			table.calendarConnectionId
+			table.calendarConnectionId,
 		),
 		index("listing_availability_block_ix_starts_at").on(table.startsAt),
 		index("listing_availability_block_ix_source").on(table.source),
 		check(
 			"listing_availability_block_ck_window",
-			sql`${table.endsAt} > ${table.startsAt}`
+			sql`${table.endsAt} > ${table.startsAt}`,
 		),
-	]
+	],
 );
 
 /** Minimum duration constraints per time window (e.g. weekends require 3h minimum). */
@@ -217,13 +217,13 @@ export const listingMinimumDurationRule = pgTable(
 		index("listing_minimum_duration_rule_ix_listing_id").on(table.listingId),
 		check(
 			"listing_minimum_duration_rule_ck_time_bounds",
-			sql`${table.startHour} between 0 and 23 and ${table.endHour} between 0 and 23 and ${table.startMinute} between 0 and 59 and ${table.endMinute} between 0 and 59`
+			sql`${table.startHour} between 0 and 23 and ${table.endHour} between 0 and 23 and ${table.startMinute} between 0 and 59 and ${table.endMinute} between 0 and 59`,
 		),
 		check(
 			"listing_minimum_duration_rule_ck_positive_duration",
-			sql`${table.minimumDurationMinutes} > 0 and ((${table.endHour} * 60) + ${table.endMinute}) > ((${table.startHour} * 60) + ${table.startMinute})`
+			sql`${table.minimumDurationMinutes} > 0 and ((${table.endHour} * 60) + ${table.endMinute}) > ((${table.startHour} * 60) + ${table.startMinute})`,
 		),
-	]
+	],
 );
 
 /** External calendar connections for bi-directional sync (Google, Outlook, iCal). */
@@ -253,16 +253,16 @@ export const organizationCalendarAccount = pgTable(
 	},
 	(table) => [
 		index("organization_calendar_account_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		index("organization_calendar_account_ix_provider").on(table.provider),
 		index("organization_calendar_account_ix_status").on(table.status),
 		uniqueIndex("organization_calendar_account_uq_org_provider_external").on(
 			table.organizationId,
 			table.provider,
-			table.externalAccountId
+			table.externalAccountId,
 		),
-	]
+	],
 );
 
 /** Calendars discovered from a connected provider account and available for attachment. */
@@ -296,18 +296,18 @@ export const organizationCalendarSource = pgTable(
 	},
 	(table) => [
 		index("organization_calendar_source_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		index("organization_calendar_source_ix_calendar_account_id").on(
-			table.calendarAccountId
+			table.calendarAccountId,
 		),
 		index("organization_calendar_source_ix_provider").on(table.provider),
 		index("organization_calendar_source_ix_is_active").on(table.isActive),
 		uniqueIndex("organization_calendar_source_uq_account_external").on(
 			table.calendarAccountId,
-			table.externalCalendarId
+			table.externalCalendarId,
 		),
-	]
+	],
 );
 
 /** External calendar connections for bi-directional sync (Google, Outlook, iCal). */
@@ -323,11 +323,11 @@ export const listingCalendarConnection = pgTable(
 			.references(() => organization.id, { onDelete: "cascade" }),
 		calendarAccountId: text("calendar_account_id").references(
 			() => organizationCalendarAccount.id,
-			{ onDelete: "set null" }
+			{ onDelete: "set null" },
 		),
 		calendarSourceId: text("calendar_source_id").references(
 			() => organizationCalendarSource.id,
-			{ onDelete: "set null" }
+			{ onDelete: "set null" },
 		),
 		provider: calendarProviderEnum("provider").notNull(),
 		externalCalendarId: text("external_calendar_id"),
@@ -357,19 +357,19 @@ export const listingCalendarConnection = pgTable(
 	(table) => [
 		index("listing_calendar_connection_ix_listing_id").on(table.listingId),
 		index("listing_calendar_connection_ix_organization_id").on(
-			table.organizationId
+			table.organizationId,
 		),
 		index("listing_calendar_connection_ix_calendar_account_id").on(
-			table.calendarAccountId
+			table.calendarAccountId,
 		),
 		index("listing_calendar_connection_ix_calendar_source_id").on(
-			table.calendarSourceId
+			table.calendarSourceId,
 		),
 		index("listing_calendar_connection_ix_sync_status").on(table.syncStatus),
 		uniqueIndex("listing_calendar_connection_uq_primary_listing")
 			.on(table.listingId)
 			.where(sql`${table.isPrimary} = true and ${table.isActive} = true`),
-	]
+	],
 );
 
 /** Webhook events from external calendar providers (Google push, Outlook subscriptions). */
@@ -401,11 +401,11 @@ export const calendarWebhookEvent = pgTable(
 	},
 	(table) => [
 		index("calendar_webhook_event_ix_connection_id").on(
-			table.calendarConnectionId
+			table.calendarConnectionId,
 		),
 		index("calendar_webhook_event_ix_status").on(table.status),
 		index("calendar_webhook_event_ix_received_at").on(table.receivedAt),
-	]
+	],
 );
 
 /** Per-booking link to external calendar event (export side — booking pushed to calendar). */
@@ -418,7 +418,7 @@ export const bookingCalendarLink = pgTable(
 			.references(() => booking.id, { onDelete: "cascade" }),
 		calendarConnectionId: text("calendar_connection_id").references(
 			() => listingCalendarConnection.id,
-			{ onDelete: "set null" }
+			{ onDelete: "set null" },
 		),
 		provider: calendarProviderEnum("provider").notNull(),
 		providerEventId: text("provider_event_id"),
@@ -433,7 +433,7 @@ export const bookingCalendarLink = pgTable(
 	(table) => [
 		uniqueIndex("booking_calendar_link_uq_booking_id").on(table.bookingId),
 		index("booking_calendar_link_ix_calendar_connection_id").on(
-			table.calendarConnectionId
+			table.calendarConnectionId,
 		),
-	]
+	],
 );

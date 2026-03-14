@@ -16,7 +16,7 @@ export const registerNotificationIntegrations = (): void => {
 	if (env.EMAIL_BACKEND === "smtp") {
 		if (!env.SMTP_HOST.trim()) {
 			throw new Error(
-				"EMAIL_BACKEND is configured as smtp, but SMTP_HOST is empty."
+				"EMAIL_BACKEND is configured as smtp, but SMTP_HOST is empty.",
 			);
 		}
 
@@ -43,13 +43,13 @@ export const registerNotificationIntegrations = (): void => {
 				port: env.SMTP_PORT,
 				providerId: DEFAULT_NOTIFICATION_EMAIL_PROVIDER_ID,
 				secure: env.SMTP_SECURE === "1",
-			})
+			}),
 		);
 	} else {
 		registerEmailProvider(
 			createFakeEmailProvider({
 				providerId: DEFAULT_NOTIFICATION_EMAIL_PROVIDER_ID,
-			})
+			}),
 		);
 	}
 

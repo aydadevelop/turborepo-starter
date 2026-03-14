@@ -6,7 +6,7 @@ import type {
 } from "$lib/orpc-types";
 
 export const normalizeAppliedDiscountCode = (
-	value: string
+	value: string,
 ): string | undefined => {
 	const trimmed = value.trim();
 	return trimmed ? trimmed.toUpperCase() : undefined;
@@ -69,7 +69,7 @@ export const buildBoatRentBookingRequestInput = (params: {
 };
 
 export const getDisplayedBoatRentQuote = (
-	quote: StorefrontBookingSlotQuote
+	quote: StorefrontBookingSlotQuote,
 ): {
 	appliedDiscountCode: string | null;
 	discountAmountCents: number;

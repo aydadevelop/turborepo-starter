@@ -113,7 +113,7 @@ export const internalServerRouteProcedures = {
 
 					console.error(
 						`[PaymentWebhook] Failed to parse ${input.providerName} body`,
-						error
+						error,
 					);
 
 					return {
@@ -139,7 +139,7 @@ export const internalServerRouteProcedures = {
 						endpointId,
 						input.webhookType,
 						payload as Record<string, unknown>,
-						db
+						db,
 					);
 					return {
 						status: 200,
@@ -162,7 +162,7 @@ export const internalServerRouteProcedures = {
 
 					console.error(
 						`[PaymentWebhook] Error processing ${input.providerName}/${input.webhookType}`,
-						error
+						error,
 					);
 
 					return {
@@ -230,13 +230,13 @@ export const internalServerRouteProcedures = {
 					const output = await processInboundSupportIntent(
 						toProcessInboundSupportIntentFromEmail(
 							parsed.data,
-							env.SUPPORT_EMAIL_INTAKE_ORGANIZATION_ID
+							env.SUPPORT_EMAIL_INTAKE_ORGANIZATION_ID,
 						),
 						db,
 						buildWorkflowContext({
 							idempotencyKey: `support-email:${parsed.data.messageId}`,
 							organizationId: env.SUPPORT_EMAIL_INTAKE_ORGANIZATION_ID,
-						})
+						}),
 					);
 
 					return {
@@ -251,7 +251,7 @@ export const internalServerRouteProcedures = {
 					if (
 						isSupportErrorCode(
 							error,
-							SUPPORT_ERROR_CODES.duplicateInboundMessage
+							SUPPORT_ERROR_CODES.duplicateInboundMessage,
 						)
 					) {
 						return {
@@ -265,7 +265,7 @@ export const internalServerRouteProcedures = {
 
 					console.error(
 						"[SupportEmailIntake] Error processing inbound email",
-						error
+						error,
 					);
 
 					return {

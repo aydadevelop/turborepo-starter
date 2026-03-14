@@ -10,7 +10,7 @@ import type {
 async function countByStatus(
 	organizationId: string,
 	status: SupportTicketStatus,
-	db: Db
+	db: Db,
 ): Promise<number> {
 	const [row] = await db
 		.select({ count: count() })
@@ -18,8 +18,8 @@ async function countByStatus(
 		.where(
 			and(
 				eq(supportTicket.organizationId, organizationId),
-				eq(supportTicket.status, status)
-			)
+				eq(supportTicket.status, status),
+			),
 		);
 
 	return Number(row?.count ?? 0);
@@ -27,7 +27,7 @@ async function countByStatus(
 
 export async function getSupportOperatorSummary(
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<SupportOperatorSummary> {
 	const now = new Date();
 	const [
@@ -52,8 +52,8 @@ export async function getSupportOperatorSummary(
 			.where(
 				and(
 					eq(supportTicket.organizationId, organizationId),
-					isNull(supportTicket.assignedToUserId)
-				)
+					isNull(supportTicket.assignedToUserId),
+				),
 			),
 		db
 			.select({ count: count() })
@@ -61,8 +61,8 @@ export async function getSupportOperatorSummary(
 			.where(
 				and(
 					eq(supportTicket.organizationId, organizationId),
-					lt(supportTicket.dueAt, now)
-				)
+					lt(supportTicket.dueAt, now),
+				),
 			),
 	]);
 

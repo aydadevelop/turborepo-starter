@@ -15,7 +15,7 @@ interface InviteMemberDependencies {
 
 export async function submitInviteMember(
 	deps: InviteMemberDependencies,
-	input: InviteMemberInput
+	input: InviteMemberInput,
 ): Promise<MutationResult<{ message: string }>> {
 	const parsed = inviteMemberSchema.safeParse(input);
 	if (!parsed.success) {

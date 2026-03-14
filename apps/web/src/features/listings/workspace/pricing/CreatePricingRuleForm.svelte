@@ -1,4 +1,3 @@
-<!-- biome-ignore-all format: TanStack Form component member syntax not supported -->
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
 	import { Input } from "@my-app/ui/components/input";
@@ -8,9 +7,8 @@
 	} from "@my-app/ui/components/native-select";
 	import { Textarea } from "@my-app/ui/components/textarea";
 	import { createForm } from "@tanstack/svelte-form";
-
-	import FormFieldShell from "../../../../components/operator/FormFieldShell.svelte";
 	import type { PricingWorkspaceState } from "$lib/orpc-types";
+	import FormFieldShell from "../../../../components/operator/FormFieldShell.svelte";
 	import { getCreatePricingRuleDefaults } from "./create-rule/defaults";
 	import { createPricingRuleSchema } from "./create-rule/schema";
 	import { buildCreatePricingRuleInput } from "./create-rule/submit";

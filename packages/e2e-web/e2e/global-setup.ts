@@ -14,7 +14,7 @@ const isLocalBaseURL = (value: string): boolean => {
 export default async function globalSetup(): Promise<void> {
 	if (process.env.PLAYWRIGHT_SKIP_SEED === "1") {
 		console.log(
-			"[playwright:global-setup] Skipping DB seed (PLAYWRIGHT_SKIP_SEED=1)"
+			"[playwright:global-setup] Skipping DB seed (PLAYWRIGHT_SKIP_SEED=1)",
 		);
 		return;
 	}
@@ -24,7 +24,7 @@ export default async function globalSetup(): Promise<void> {
 		process.env.PLAYWRIGHT_DATABASE_URL
 	) {
 		console.log(
-			"[playwright:global-setup] Skipping DB seed because managed services already bootstrap the dedicated E2E database"
+			"[playwright:global-setup] Skipping DB seed because managed services already bootstrap the dedicated E2E database",
 		);
 		return;
 	}
@@ -32,7 +32,7 @@ export default async function globalSetup(): Promise<void> {
 	const baseURL = process.env.PLAYWRIGHT_BASE_URL;
 	if (baseURL && !isLocalBaseURL(baseURL)) {
 		console.log(
-			`[playwright:global-setup] Skipping DB seed for remote base URL (${baseURL})`
+			`[playwright:global-setup] Skipping DB seed for remote base URL (${baseURL})`,
 		);
 		return;
 	}

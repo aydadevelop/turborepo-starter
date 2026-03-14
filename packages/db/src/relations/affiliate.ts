@@ -1,5 +1,4 @@
 import { defineRelationsPart } from "drizzle-orm";
-// biome-ignore lint/performance/noNamespaceImport: defineRelationsPart requires namespace import
 import * as schema from "../schema";
 
 export const affiliateRelations = defineRelationsPart(schema, (r) => ({

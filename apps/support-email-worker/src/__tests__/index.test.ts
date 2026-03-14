@@ -31,7 +31,7 @@ describe("support email worker", () => {
 				SUPPORT_EMAIL_WEBHOOK_URL:
 					"https://api.example.com/api/support/inbound/email",
 			},
-			fetchMock as typeof fetch
+			fetchMock as typeof fetch,
 		);
 
 		expect(payload?.messageId).toBe("sample-message-id@example.com");
@@ -62,7 +62,7 @@ describe("support email worker", () => {
 				SUPPORT_EMAIL_WEBHOOK_URL:
 					"https://api.example.com/api/support/inbound/email",
 			},
-			fetchMock as typeof fetch
+			fetchMock as typeof fetch,
 		);
 
 		expect(payload).toBeNull();
@@ -92,7 +92,7 @@ describe("support email worker", () => {
 				SUPPORT_EMAIL_WEBHOOK_URL:
 					"https://api.example.com/api/support/inbound/email",
 			},
-			fetchMock as typeof fetch
+			fetchMock as typeof fetch,
 		);
 
 		const [, init] = fetchMock.mock.calls[0] ?? [];

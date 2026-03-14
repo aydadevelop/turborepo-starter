@@ -26,7 +26,7 @@ const parseCliArgs = () => {
 				"Options:",
 				"  --database-url <url>  PostgreSQL connection string (default: PLAYWRIGHT_DATABASE_URL or derived *_e2e DB)",
 				"  -h, --help            Show this help message",
-			].join("\n")
+			].join("\n"),
 		);
 		process.exit(0);
 	}
@@ -43,7 +43,7 @@ export const ensurePlaywrightDatabase = async ({
 } = {}) => {
 	const connectionString = assertSafeE2EDatabaseUrl(
 		databaseUrl ?? resolvePlaywrightDatabaseUrl(process.env),
-		process.env
+		process.env,
 	);
 
 	await waitForDatabase({
@@ -60,7 +60,7 @@ const main = async () => {
 	});
 
 	console.log(
-		`${created ? "Created" : "Using"} E2E database: ${maskConnectionString(connectionString)}`
+		`${created ? "Created" : "Using"} E2E database: ${maskConnectionString(connectionString)}`,
 	);
 };
 

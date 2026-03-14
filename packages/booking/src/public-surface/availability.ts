@@ -87,13 +87,13 @@ export const getTimeZoneOffsetMs = (date: Date, timeZone: string): number => {
 export const zonedLocalDateTimeToUtc = (
 	date: string,
 	minuteOfDay: number,
-	timeZone: string
+	timeZone: string,
 ): Date => {
 	const [year, month, day] = date.split("-").map(Number);
 	const hours = Math.floor(minuteOfDay / 60);
 	const minutes = minuteOfDay % 60;
 	const utcGuess = new Date(
-		Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1, hours, minutes, 0, 0)
+		Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1, hours, minutes, 0, 0),
 	);
 	const offset = getTimeZoneOffsetMs(utcGuess, timeZone);
 	return new Date(utcGuess.getTime() - offset);
@@ -104,7 +104,7 @@ export const formatTimeInZone = (date: Date, timeZone: string): string =>
 
 export const mergeMinuteWindows = (windows: MinuteWindow[]): MinuteWindow[] => {
 	const sorted = [...windows].sort(
-		(left, right) => left.startMinute - right.startMinute
+		(left, right) => left.startMinute - right.startMinute,
 	);
 	if (!sorted.length) {
 		return [];
@@ -134,7 +134,7 @@ export const mergeMinuteWindows = (windows: MinuteWindow[]): MinuteWindow[] => {
 
 export const subtractMinuteWindow = (
 	windows: MinuteWindow[],
-	windowToRemove: MinuteWindow
+	windowToRemove: MinuteWindow,
 ): MinuteWindow[] => {
 	const next: MinuteWindow[] = [];
 
@@ -177,7 +177,7 @@ export const resolveAvailabilityWindows = (params: {
 					params.rules.map((rule) => ({
 						startMinute: rule.startMinute,
 						endMinute: rule.endMinute,
-					}))
+					})),
 				)
 			: [
 					{
@@ -249,10 +249,10 @@ export const resolveRequiredMinimumDuration = (params: {
 export const findBusyWindow = (
 	busyWindows: BusyWindow[],
 	startsAt: Date,
-	endsAt: Date
+	endsAt: Date,
 ): BusyWindow | null =>
 	busyWindows.find(
-		(window) => window.startsAt < endsAt && window.endsAt > startsAt
+		(window) => window.startsAt < endsAt && window.endsAt > startsAt,
 	) ?? null;
 
 export const toSlotStatusLabel = (status: PublicBookingSlotStatus): string => {

@@ -11,7 +11,7 @@ export const adminOrganizationsRouter = {
 			const where = input.search
 				? or(
 						like(organization.name, `%${input.search}%`),
-						like(organization.slug, `%${input.search}%`)
+						like(organization.slug, `%${input.search}%`),
 					)
 				: undefined;
 
@@ -27,7 +27,7 @@ export const adminOrganizationsRouter = {
 			]);
 
 			return { items, total: countRows[0]?.value ?? 0 };
-		}
+		},
 	),
 
 	getOrg: adminProcedure.admin.organizations.getOrg.handler(
@@ -45,7 +45,7 @@ export const adminOrganizationsRouter = {
 			}
 
 			return org;
-		}
+		},
 	),
 
 	updateOrg: adminProcedure.admin.organizations.updateOrg.handler(
@@ -66,7 +66,7 @@ export const adminOrganizationsRouter = {
 			}
 
 			return { success: true };
-		}
+		},
 	),
 
 	listMembers: adminProcedure.admin.organizations.listMembers.handler(
@@ -97,7 +97,7 @@ export const adminOrganizationsRouter = {
 				})),
 				total: countRows[0]?.value ?? 0,
 			};
-		}
+		},
 	),
 
 	updateMemberRole: adminProcedure.admin.organizations.updateMemberRole.handler(
@@ -115,7 +115,7 @@ export const adminOrganizationsRouter = {
 			}
 
 			return { success: true };
-		}
+		},
 	),
 
 	removeMember: adminProcedure.admin.organizations.removeMember.handler(
@@ -132,14 +132,14 @@ export const adminOrganizationsRouter = {
 			}
 
 			return { success: true };
-		}
+		},
 	),
 
 	listInvitations: adminProcedure.admin.organizations.listInvitations.handler(
 		async ({ input }) => {
 			const where = and(
 				eq(invitation.organizationId, input.organizationId),
-				input.status ? eq(invitation.status, input.status) : undefined
+				input.status ? eq(invitation.status, input.status) : undefined,
 			);
 
 			const [rows, countRows] = await Promise.all([
@@ -154,7 +154,7 @@ export const adminOrganizationsRouter = {
 			]);
 
 			return { items: rows, total: countRows[0]?.value ?? 0 };
-		}
+		},
 	),
 
 	listUsers: adminProcedure.admin.organizations.listUsers.handler(
@@ -164,7 +164,7 @@ export const adminOrganizationsRouter = {
 			if (input.search) {
 				const searchCondition = or(
 					like(user.name, `%${input.search}%`),
-					like(user.email, `%${input.search}%`)
+					like(user.email, `%${input.search}%`),
 				);
 				if (searchCondition) {
 					conditions.push(searchCondition);
@@ -205,7 +205,7 @@ export const adminOrganizationsRouter = {
 					: [];
 
 			const countMap = new Map(
-				membershipCounts.map((m) => [m.userId, m.orgCount])
+				membershipCounts.map((m) => [m.userId, m.orgCount]),
 			);
 
 			return {
@@ -215,7 +215,7 @@ export const adminOrganizationsRouter = {
 				})),
 				total,
 			};
-		}
+		},
 	),
 
 	getUser: adminProcedure.admin.organizations.getUser.handler(
@@ -248,6 +248,6 @@ export const adminOrganizationsRouter = {
 					organizationSlug: m.organizationSlug ?? undefined,
 				})),
 			};
-		}
+		},
 	),
 };

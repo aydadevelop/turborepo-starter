@@ -68,7 +68,7 @@ const calendarOrgWorkspaceStateOutputSchema = z.object({
 	connections: z.array(
 		calendarConnectionOutputSchema.extend({
 			listingName: z.string().nullable(),
-		})
+		}),
 	),
 });
 
@@ -85,7 +85,7 @@ export const calendarContract = {
 				externalAccountId: z.string().trim().min(1),
 				accountEmail: z.string().email().optional(),
 				displayName: z.string().trim().min(1).optional(),
-			})
+			}),
 		)
 		.output(calendarAccountOutputSchema),
 
@@ -123,7 +123,7 @@ export const calendarContract = {
 		.input(
 			z.object({
 				accountId: z.string().optional(),
-			})
+			}),
 		)
 		.output(z.array(calendarSourceOutputSchema)),
 
@@ -137,7 +137,7 @@ export const calendarContract = {
 				listingId: z.string(),
 				provider: z.enum(["google", "outlook", "ical", "manual"]),
 				calendarId: z.string().trim().min(1),
-			})
+			}),
 		)
 		.output(calendarConnectionOutputSchema),
 
@@ -150,7 +150,7 @@ export const calendarContract = {
 			z.object({
 				listingId: z.string(),
 				sourceId: z.string(),
-			})
+			}),
 		)
 		.output(calendarConnectionOutputSchema),
 
@@ -196,7 +196,7 @@ export const calendarContract = {
 			z.object({
 				sourceId: z.string(),
 				isHidden: z.boolean(),
-			})
+			}),
 		)
 		.output(calendarSourceOutputSchema),
 };

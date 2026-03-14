@@ -40,8 +40,8 @@ export class PreferenceController {
 					inArray(notificationPreference.organizationScopeKey, [
 						"global",
 						params.organizationId,
-					])
-				)
+					]),
+				),
 			);
 
 		const rankPreference = (row: (typeof preferences)[number]) => {
@@ -60,7 +60,7 @@ export class PreferenceController {
 		};
 
 		const topPreference = preferences.sort(
-			(a, b) => rankPreference(b) - rankPreference(a)
+			(a, b) => rankPreference(b) - rankPreference(a),
 		)[0];
 		if (topPreference) {
 			return topPreference.enabled;
@@ -84,13 +84,13 @@ export class PreferenceController {
 						inArray(notificationPreference.organizationScopeKey, [
 							"global",
 							organizationId,
-						])
-					)
+						]),
+					),
 				)
 				.orderBy(
 					asc(notificationPreference.organizationScopeKey),
 					asc(notificationPreference.eventType),
-					asc(notificationPreference.channel)
+					asc(notificationPreference.channel),
 				);
 		}
 
@@ -101,7 +101,7 @@ export class PreferenceController {
 			.orderBy(
 				asc(notificationPreference.organizationScopeKey),
 				asc(notificationPreference.eventType),
-				asc(notificationPreference.channel)
+				asc(notificationPreference.channel),
 			);
 	}
 
@@ -164,8 +164,8 @@ export class PreferenceController {
 					eq(notificationPreference.userId, params.userId),
 					eq(notificationPreference.organizationScopeKey, organizationScopeKey),
 					eq(notificationPreference.eventType, eventType),
-					eq(notificationPreference.channel, params.channel)
-				)
+					eq(notificationPreference.channel, params.channel),
+				),
 			)
 			.limit(1);
 

@@ -79,7 +79,7 @@ describe("Wave 2 schema hardening", () => {
 				id: "onboarding-2",
 				organizationId: ORG_ID,
 				lastRecalculatedAt: new Date("2026-03-10T11:00:00.000Z"),
-			})
+			}),
 		).rejects.toThrow();
 	});
 
@@ -107,7 +107,7 @@ describe("Wave 2 schema hardening", () => {
 				dayOfWeek: 7,
 				startMinute: 600,
 				endMinute: 540,
-			})
+			}),
 		).rejects.toThrow();
 	});
 
@@ -120,7 +120,7 @@ describe("Wave 2 schema hardening", () => {
 					listingId: LISTING_ID,
 					startsAt: new Date("2026-05-01T12:00:00.000Z"),
 					endsAt: new Date("2026-05-01T10:00:00.000Z"),
-				})
+				}),
 		).rejects.toThrow();
 	});
 
@@ -144,7 +144,7 @@ describe("Wave 2 schema hardening", () => {
 				currency: "RUB",
 				baseHourlyPriceCents: 12_000,
 				isDefault: true,
-			})
+			}),
 		).rejects.toThrow();
 	});
 
@@ -170,7 +170,7 @@ describe("Wave 2 schema hardening", () => {
 				externalCalendarId: "cal-2",
 				isPrimary: true,
 				isActive: true,
-			})
+			}),
 		).rejects.toThrow();
 	});
 
@@ -192,7 +192,7 @@ describe("Wave 2 schema hardening", () => {
 				kind: "image",
 				storageKey: "image-2.jpg",
 				isPrimary: true,
-			})
+			}),
 		).rejects.toThrow();
 	});
 
@@ -212,7 +212,7 @@ describe("Wave 2 schema hardening", () => {
 				organizationId: ORG_ID,
 				listingTypeSlug: "wave2-listing-type",
 				isDefault: true,
-			})
+			}),
 		).rejects.toThrow();
 	});
 
@@ -255,7 +255,7 @@ describe("Wave 2 schema hardening", () => {
 			});
 
 		expect(updated?.updatedAt.getTime()).toBeGreaterThan(
-			inserted.updatedAt.getTime()
+			inserted.updatedAt.getTime(),
 		);
 	});
 });

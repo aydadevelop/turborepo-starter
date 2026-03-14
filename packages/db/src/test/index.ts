@@ -5,13 +5,12 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 
 import { relations } from "../relations";
-// biome-ignore lint/performance/noNamespaceImport: pushSchema requires namespace import
 import * as schema from "../schema";
 import { POST_MIGRATION_TRIGGER_STATEMENTS } from "../triggers";
 
 const require_ = createRequire(import.meta.url);
 const { pushSchema } = require_(
-	"drizzle-kit/api-postgres"
+	"drizzle-kit/api-postgres",
 ) as typeof import("drizzle-kit/api-postgres");
 
 const createRawTestDatabase = async () => {
@@ -19,7 +18,6 @@ const createRawTestDatabase = async () => {
 	const db = drizzle({ client, relations });
 
 	// Push schema to in-memory PGlite instance
-	// biome-ignore lint/suspicious/noExplicitAny: pushSchema requires untyped drizzle instance
 	const { apply } = await pushSchema(schema, db as any);
 	await apply();
 	if (POST_MIGRATION_TRIGGER_STATEMENTS.length > 0) {
@@ -58,20 +56,20 @@ export const clearTestDatabase = async (db: TestDatabase): Promise<void> => {
 	`);
 
 	const tables = (result.rows as { tablename: string }[]).map(
-		(r) => r.tablename
+		(r) => r.tablename,
 	);
 
 	if (tables.length > 0) {
 		await db.execute(
 			sql.raw(
-				`TRUNCATE TABLE ${tables.map((t) => `"${t}"`).join(", ")} CASCADE`
-			)
+				`TRUNCATE TABLE ${tables.map((t) => `"${t}"`).join(", ")} CASCADE`,
+			),
 		);
 	}
 };
 
 export const bootstrapTestDatabase = (
-	options: BootstrapTestDatabaseOptions = {}
+	options: BootstrapTestDatabaseOptions = {},
 ): {
 	db: TestDatabase;
 	close: () => Promise<void>;
@@ -131,5 +129,4 @@ export const bootstrapTestDatabase = (
 };
 
 export type { ParityDeclaration, ParityResult } from "./parity";
-// biome-ignore lint/performance/noBarrelFile: Test harness entrypoint re-exports parity utilities for db tests.
 export { createParityTest } from "./parity";

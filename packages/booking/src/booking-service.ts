@@ -29,7 +29,7 @@ const buildBookingSearchCondition = (search: string) => {
 	const condition = or(
 		ilike(booking.contactName, `%${search}%`),
 		ilike(booking.contactEmail, `%${search}%`),
-		ilike(booking.externalRef, `%${search}%`)
+		ilike(booking.externalRef, `%${search}%`),
 	);
 	if (!condition) {
 		throw new Error("Failed to build booking search condition");
@@ -40,7 +40,7 @@ const buildBookingSearchCondition = (search: string) => {
 
 const buildOrgBookingConditions = (
 	organizationId: string,
-	input: ListOrgBookingsInput
+	input: ListOrgBookingsInput,
 ): BookingCondition[] => {
 	const filters = input.filter ?? {};
 	const conditions: BookingCondition[] = [
@@ -97,7 +97,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 export async function listOrgBookings(
 	organizationId: string,
 	input: ListOrgBookingsInput,
-	db: Db
+	db: Db,
 ): Promise<BookingCollectionResult> {
 	const page = input.page ?? { limit: 50, offset: 0 };
 	const conditions = buildOrgBookingConditions(organizationId, input);
@@ -126,7 +126,7 @@ export async function listOrgBookings(
 export async function getOrgBooking(
 	id: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<BookingRow> {
 	const [row] = await db
 		.select()
@@ -141,7 +141,7 @@ export async function getOrgBooking(
 
 export function listCustomerBookings(
 	customerUserId: string,
-	db: Db
+	db: Db,
 ): Promise<BookingRow[]> {
 	return db
 		.select()
@@ -165,8 +165,8 @@ async function resolveBookingContext(listingId: string, db: Db) {
 			and(
 				eq(listingPublication.listingId, listing.id),
 				eq(listingPublication.isActive, true),
-				eq(listingPublication.channelType, "platform_marketplace")
-			)
+				eq(listingPublication.channelType, "platform_marketplace"),
+			),
 		)
 		.where(and(eq(listing.id, listingId), eq(listing.isActive, true)))
 		.limit(1);
@@ -189,19 +189,19 @@ async function resolveBookingContext(listingId: string, db: Db) {
 
 export function createBooking(
 	input: CreateBookingInput,
-	db: Db
+	db: Db,
 ): Promise<BookingRow> {
 	return db.transaction(async (tx) => {
 		const transactionDb = tx as unknown as Db;
 		const bookingContext = await resolveBookingContext(
 			input.listingId,
-			transactionDb
+			transactionDb,
 		);
 		await assertSlotAvailable(
 			input.listingId,
 			input.startsAt,
 			input.endsAt,
-			transactionDb
+			transactionDb,
 		);
 		const quote = await calculateQuote(
 			{
@@ -210,7 +210,7 @@ export function createBooking(
 				endsAt: input.endsAt,
 				passengers: input.passengers,
 			},
-			transactionDb
+			transactionDb,
 		);
 		const promotionClaim = input.discountCode
 			? await resolvePromotionUsageForBooking(
@@ -221,13 +221,13 @@ export function createBooking(
 						customerUserId: input.customerUserId,
 						subtotalCents: quote.subtotalCents,
 					},
-					transactionDb
+					transactionDb,
 				)
 			: null;
 		const discountedQuote = promotionClaim
 			? applyDiscountToQuote(
 					quote,
-					promotionClaim.application.appliedAmountCents
+					promotionClaim.application.appliedAmountCents,
 				)
 			: null;
 		const [row] = await tx
@@ -275,7 +275,7 @@ export function createBooking(
 					customerUserId: input.customerUserId,
 					promotion: promotionClaim,
 				},
-				transactionDb
+				transactionDb,
 			);
 		}
 
@@ -285,7 +285,7 @@ export function createBooking(
 
 export async function updateBookingStatus(
 	input: UpdateBookingStatusInput,
-	db: Db
+	db: Db,
 ): Promise<BookingRow> {
 	const [current] = await db
 		.select()
@@ -293,8 +293,8 @@ export async function updateBookingStatus(
 		.where(
 			and(
 				eq(booking.id, input.id),
-				eq(booking.organizationId, input.organizationId)
-			)
+				eq(booking.organizationId, input.organizationId),
+			),
 		)
 		.limit(1);
 	if (!current) {
@@ -322,8 +322,8 @@ export async function updateBookingStatus(
 		.where(
 			and(
 				eq(booking.id, input.id),
-				eq(booking.organizationId, input.organizationId)
-			)
+				eq(booking.organizationId, input.organizationId),
+			),
 		)
 		.returning();
 	if (!updated) {
@@ -368,7 +368,7 @@ export async function updateBookingStatus(
 
 export async function updateBookingSchedule(
 	input: UpdateBookingScheduleInput,
-	db: Db
+	db: Db,
 ): Promise<BookingRow> {
 	const [current] = await db
 		.select()
@@ -376,8 +376,8 @@ export async function updateBookingSchedule(
 		.where(
 			and(
 				eq(booking.id, input.id),
-				eq(booking.organizationId, input.organizationId)
-			)
+				eq(booking.organizationId, input.organizationId),
+			),
 		)
 		.limit(1);
 	if (!current) {
@@ -396,7 +396,7 @@ export async function updateBookingSchedule(
 			endsAt: input.endsAt,
 			excludeBookingId: current.id,
 		},
-		db
+		db,
 	);
 	await assertNoAvailabilityBlockOverlap(
 		{
@@ -404,7 +404,7 @@ export async function updateBookingSchedule(
 			startsAt: input.startsAt,
 			endsAt: input.endsAt,
 		},
-		db
+		db,
 	);
 
 	const [updated] = await db
@@ -418,8 +418,8 @@ export async function updateBookingSchedule(
 		.where(
 			and(
 				eq(booking.id, input.id),
-				eq(booking.organizationId, input.organizationId)
-			)
+				eq(booking.organizationId, input.organizationId),
+			),
 		)
 		.returning();
 	if (!updated) {

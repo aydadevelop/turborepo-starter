@@ -11,11 +11,11 @@ import type {
 } from "./types";
 
 const getListingWorkspaceInput = (
-	value: string
+	value: string,
 ): { id: string } | typeof skipToken => (value ? { id: value } : skipToken);
 
 const getListingScopedInput = (
-	value: string
+	value: string,
 ): { listingId: string } | typeof skipToken =>
 	value ? { listingId: value } : skipToken;
 
@@ -23,37 +23,37 @@ export const createListingWorkspaceQueries = (getListingId: () => string) => ({
 	workspaceStateQuery: createQuery(() =>
 		orpc.listing.getWorkspaceState.queryOptions({
 			input: getListingWorkspaceInput(getListingId()),
-		})
+		}),
 	),
 	assetWorkspaceQuery: createQuery(() =>
 		orpc.listing.getAssetWorkspaceState.queryOptions({
 			input: getListingWorkspaceInput(getListingId()),
-		})
+		}),
 	),
 	pricingWorkspaceQuery: createQuery(() =>
 		orpc.pricing.getWorkspaceState.queryOptions({
 			input: getListingScopedInput(getListingId()),
-		})
+		}),
 	),
 	availabilityWorkspaceQuery: createQuery(() =>
 		orpc.availability.getWorkspaceState.queryOptions({
 			input: getListingScopedInput(getListingId()),
-		})
+		}),
 	),
 	calendarWorkspaceQuery: createQuery(() =>
 		orpc.calendar.getWorkspaceState.queryOptions({
 			input: getListingScopedInput(getListingId()),
-		})
+		}),
 	),
 	moderationAuditQuery: createQuery(() =>
 		orpc.organization.getListingModerationAudit.queryOptions({
 			input: getListingScopedInput(getListingId()),
-		})
+		}),
 	),
 });
 
 export const createListingWorkspaceMutations = (
-	getListingId: () => string
+	getListingId: () => string,
 ) => ({
 	updateListingMutation: createMutation(() =>
 		orpc.listing.update.mutationOptions({
@@ -61,7 +61,7 @@ export const createListingWorkspaceMutations = (
 				await queryClient.invalidateQueries({ queryKey: orpc.listing.key() });
 				await goto("/org/listings");
 			},
-		})
+		}),
 	),
 	createPricingProfileMutation: createMutation(() =>
 		orpc.pricing.createProfile.mutationOptions({
@@ -72,7 +72,7 @@ export const createListingWorkspaceMutations = (
 					}),
 				});
 			},
-		})
+		}),
 	),
 	addPricingRuleMutation: createMutation(() =>
 		orpc.pricing.addRule.mutationOptions({
@@ -83,7 +83,7 @@ export const createListingWorkspaceMutations = (
 					}),
 				});
 			},
-		})
+		}),
 	),
 	addAvailabilityRuleMutation: createMutation(() =>
 		orpc.availability.addRule.mutationOptions({
@@ -94,7 +94,7 @@ export const createListingWorkspaceMutations = (
 					}),
 				});
 			},
-		})
+		}),
 	),
 	addAvailabilityBlockMutation: createMutation(() =>
 		orpc.availability.addBlock.mutationOptions({
@@ -105,7 +105,7 @@ export const createListingWorkspaceMutations = (
 					}),
 				});
 			},
-		})
+		}),
 	),
 	addAvailabilityExceptionMutation: createMutation(() =>
 		orpc.availability.addException.mutationOptions({
@@ -116,28 +116,28 @@ export const createListingWorkspaceMutations = (
 					}),
 				});
 			},
-		})
+		}),
 	),
 	refreshCalendarSourcesMutation: createMutation(() =>
 		orpc.calendar.refreshAccountSources.mutationOptions({
 			onSuccess: async () => {
 				await queryClient.invalidateQueries({ queryKey: orpc.calendar.key() });
 			},
-		})
+		}),
 	),
 	attachCalendarSourceMutation: createMutation(() =>
 		orpc.calendar.attachSource.mutationOptions({
 			onSuccess: async () => {
 				await queryClient.invalidateQueries({ queryKey: orpc.calendar.key() });
 			},
-		})
+		}),
 	),
 	disconnectConnectionMutation: createMutation(() =>
 		orpc.calendar.disconnect.mutationOptions({
 			onSuccess: async () => {
 				await queryClient.invalidateQueries({ queryKey: orpc.calendar.key() });
 			},
-		})
+		}),
 	),
 	approveListingMutation: createMutation(() =>
 		orpc.organization.approveListing.mutationOptions({
@@ -147,7 +147,7 @@ export const createListingWorkspaceMutations = (
 					queryClient.invalidateQueries({ queryKey: orpc.listing.key() }),
 				]);
 			},
-		})
+		}),
 	),
 	clearListingApprovalMutation: createMutation(() =>
 		orpc.organization.clearListingApproval.mutationOptions({
@@ -157,7 +157,7 @@ export const createListingWorkspaceMutations = (
 					queryClient.invalidateQueries({ queryKey: orpc.listing.key() }),
 				]);
 			},
-		})
+		}),
 	),
 	publishListingToChannelMutation: createMutation(() =>
 		orpc.organization.publishListingToChannel.mutationOptions({
@@ -167,7 +167,7 @@ export const createListingWorkspaceMutations = (
 					queryClient.invalidateQueries({ queryKey: orpc.listing.key() }),
 				]);
 			},
-		})
+		}),
 	),
 	unpublishListingMutation: createMutation(() =>
 		orpc.organization.unpublishListing.mutationOptions({
@@ -177,12 +177,12 @@ export const createListingWorkspaceMutations = (
 					queryClient.invalidateQueries({ queryKey: orpc.listing.key() }),
 				]);
 			},
-		})
+		}),
 	),
 });
 
 export const buildInitialServiceFamilyDetails = (
-	workspaceState: ListingWorkspaceState | undefined
+	workspaceState: ListingWorkspaceState | undefined,
 ): ListingWorkspaceInitialServiceFamilyDetails | undefined => {
 	if (!workspaceState) {
 		return undefined;
@@ -204,7 +204,7 @@ export const buildInitialServiceFamilyDetails = (
 };
 
 export const buildListingWorkspaceInitialValue = (
-	workspaceState: ListingWorkspaceState | undefined
+	workspaceState: ListingWorkspaceState | undefined,
 ): ListingWorkspaceInitialValue | undefined => {
 	if (!workspaceState) {
 		return undefined;
@@ -230,7 +230,7 @@ export const getGoogleCalendarConnectUrl = (returnTo?: string): string => {
 };
 
 export const buildCalendarWorkspaceNotice = (
-	searchParams: URLSearchParams
+	searchParams: URLSearchParams,
 ): {
 	calendarNoticeMessage: string | null;
 	calendarNoticeTone: "error" | "success";

@@ -17,7 +17,7 @@ function parseInteger(value: string, message: string): MutationResult<number> {
 
 export function buildCreatePricingRuleInput(
 	listingId: string,
-	values: CreatePricingRuleFormValues
+	values: CreatePricingRuleFormValues,
 ): MutationResult<CreatePricingRuleInput> {
 	const conditionResult = parseRuleConditionJson(values.conditionJsonText);
 	if (!conditionResult.ok) {
@@ -26,7 +26,7 @@ export function buildCreatePricingRuleInput(
 
 	const adjustmentValueResult = parseInteger(
 		values.adjustmentValue,
-		"Adjustment value must be a whole number."
+		"Adjustment value must be a whole number.",
 	);
 	if (!adjustmentValueResult.ok) {
 		return adjustmentValueResult;
@@ -34,7 +34,7 @@ export function buildCreatePricingRuleInput(
 
 	const priorityResult = parseInteger(
 		values.priority,
-		"Priority must be a whole number."
+		"Priority must be a whole number.",
 	);
 	if (!priorityResult.ok) {
 		return priorityResult;

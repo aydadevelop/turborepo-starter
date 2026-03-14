@@ -50,9 +50,9 @@ test("renders a loaded chat conversation with a screenshot", async () => {
 
 	await userEvent.fill(
 		page.getByPlaceholder(
-			"Ask about profile, todos, recurring reminders, or payments..."
+			"Ask about profile, todos, recurring reminders, or payments...",
 		),
-		"Create a new reminder"
+		"Create a new reminder",
 	);
 	await expect.element(page.getByTestId("send-message-button")).toBeEnabled();
 });

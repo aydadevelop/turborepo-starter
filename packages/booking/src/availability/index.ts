@@ -1,4 +1,3 @@
-// biome-ignore lint/performance/noBarrelFile: Availability entrypoint re-exports supported availability APIs.
 export {
 	assertSlotAvailable,
 	checkSlotAvailable,

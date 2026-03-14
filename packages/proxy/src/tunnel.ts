@@ -67,7 +67,7 @@ export function startTunnel(opts: TunnelOptions): Promise<string> {
 			JSON.stringify({
 				status: "ok",
 				routes: routes.map((r) => ({ path: r.prefix, upstream: r.target })),
-			})
+			}),
 		);
 	});
 

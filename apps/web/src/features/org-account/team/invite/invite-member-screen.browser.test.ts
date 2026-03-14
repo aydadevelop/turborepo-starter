@@ -52,7 +52,7 @@ test("submits an invite through the feature screen contract", async () => {
 
 	await userEvent.fill(
 		page.getByLabelText("Email address"),
-		"captain@example.com"
+		"captain@example.com",
 	);
 	await expect(document.body).toMatchScreenshot("invite-member-screen");
 	await userEvent.click(page.getByRole("button", { name: MANAGER_BUTTON }));
@@ -65,7 +65,7 @@ test("submits an invite through the feature screen contract", async () => {
 	});
 	await expect
 		.element(
-			page.getByText("Invitation sent to captain@example.com as manager.")
+			page.getByText("Invitation sent to captain@example.com as manager."),
 		)
 		.toBeInTheDocument();
 });
@@ -80,7 +80,7 @@ test("shows a friendly error when the organization context is unavailable", asyn
 
 	await userEvent.fill(
 		page.getByLabelText("Email address"),
-		"crew@example.com"
+		"crew@example.com",
 	);
 	await userEvent.click(page.getByRole("button", { name: "Send Invitation" }));
 

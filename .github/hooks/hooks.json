@@ -34,7 +34,7 @@
     "sessionEnd": [
       {
         "type": "command",
-        "bash": "echo '🏁 Session ended — running final lint + type check...' && bun ultracite fix && bun run check && echo '✅ Done.'",
+        "bash": "echo '🏁 Session ended — running final lint + type check...' && bunx oxfmt . && bunx oxlint --fix apps/ packages/ && bun run check && echo '✅ Done.'",
         "cwd": ".",
         "timeoutSec": 180
       }

@@ -281,7 +281,7 @@ const testDbState = bootstrapTestDatabase({
 const getDb = () => testDbState.db as unknown as Db;
 
 async function measureQueryCount<T>(
-	run: (db: Db) => Promise<T>
+	run: (db: Db) => Promise<T>,
 ): Promise<{ queryCount: number; result: T }> {
 	const db = getDb();
 	const client = (
@@ -319,7 +319,7 @@ describe("getPublicBookingSurface", () => {
 				passengers: 6,
 			},
 			getDb(),
-			{ now: new Date("2030-01-14T08:00:00.000Z") }
+			{ now: new Date("2030-01-14T08:00:00.000Z") },
 		);
 
 		expect(surface.serviceFamily).toBe("boat_rent");
@@ -337,7 +337,7 @@ describe("getPublicBookingSurface", () => {
 				start: slot.startsAtLabel,
 				status: slot.status,
 				reason: slot.blockReason,
-			}))
+			})),
 		).toEqual([
 			{ start: "09:00", status: "blocked", reason: "Already booked" },
 			{ start: "09:30", status: "blocked", reason: "Already booked" },
@@ -349,7 +349,7 @@ describe("getPublicBookingSurface", () => {
 		]);
 
 		expect(
-			surface.slots.find((slot) => slot.startsAtLabel === "10:00")?.quote
+			surface.slots.find((slot) => slot.startsAtLabel === "10:00")?.quote,
 		).toMatchObject({
 			currency: "RUB",
 			baseCents: 10_000,
@@ -367,14 +367,14 @@ describe("getPublicBookingSurface", () => {
 				durationMinutes: 60,
 			},
 			getDb(),
-			{ now: new Date("2030-01-15T08:45:00.000Z") }
+			{ now: new Date("2030-01-15T08:45:00.000Z") },
 		);
 
 		expect(
 			noticeSurface.slots.map((slot) => ({
 				start: slot.startsAtLabel,
 				status: slot.status,
-			}))
+			})),
 		).toEqual([
 			{ start: "09:00", status: "notice_too_short" },
 			{ start: "09:30", status: "notice_too_short" },
@@ -390,15 +390,15 @@ describe("getPublicBookingSurface", () => {
 				durationMinutes: 60,
 			},
 			getDb(),
-			{ now: new Date("2030-01-14T08:00:00.000Z") }
+			{ now: new Date("2030-01-14T08:00:00.000Z") },
 		);
 
 		expect(durationSurface.durationOptionsMinutes).toEqual([60, 120]);
 		expect(durationSurface.summary.minimumDurationSlotCount).toBeGreaterThan(0);
 		expect(
 			durationSurface.slots.every(
-				(slot) => slot.status === "minimum_duration_not_met"
-			)
+				(slot) => slot.status === "minimum_duration_not_met",
+			),
 		).toBe(true);
 		expect(durationSurface.slots[0]?.minimumDurationMinutes).toBe(120);
 	});
@@ -416,13 +416,13 @@ describe("getPublicBookingSurface", () => {
 			{
 				customerUserId: "surface-user",
 				now: new Date("2030-01-14T08:00:00.000Z"),
-			}
+			},
 		);
 
 		expect(surface.requestedDiscountCode).toBe("SURFACE10");
 
 		const discountedSlot = surface.slots.find(
-			(slot) => slot.startsAtLabel === "10:00"
+			(slot) => slot.startsAtLabel === "10:00",
 		);
 		expect(discountedSlot?.quote?.discountPreview).toMatchObject({
 			code: "SURFACE10",
@@ -443,8 +443,8 @@ describe("getPublicBookingSurface", () => {
 					passengers: 6,
 				},
 				db,
-				{ now: new Date("2030-01-14T08:00:00.000Z") }
-			)
+				{ now: new Date("2030-01-14T08:00:00.000Z") },
+			),
 		);
 
 		expect(withoutDiscount.result.summary.availableSlotCount).toBe(2);
@@ -463,8 +463,8 @@ describe("getPublicBookingSurface", () => {
 				{
 					customerUserId: "surface-user",
 					now: new Date("2030-01-14T08:00:00.000Z"),
-				}
-			)
+				},
+			),
 		);
 
 		expect(withDiscount.result.summary.availableSlotCount).toBe(2);
@@ -479,8 +479,8 @@ describe("getPublicBookingSurface", () => {
 					date: TARGET_DATE,
 					durationMinutes: 60,
 				},
-				getDb()
-			)
+				getDb(),
+			),
 		).rejects.toThrow("NOT_SUPPORTED");
 	});
 });

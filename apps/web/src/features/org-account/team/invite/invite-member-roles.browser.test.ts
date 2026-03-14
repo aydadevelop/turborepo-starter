@@ -73,7 +73,7 @@ for (const role of ORG_ROLE_OPTIONS.filter((r) => r.value !== "org_owner")) {
 
 		// Take screenshot of the role option
 		await expect(
-			page.getByRole("button", { name: new RegExp(role.label) })
+			page.getByRole("button", { name: new RegExp(role.label) }),
 		).toMatchScreenshot(`role-option-${role.value}`);
 	});
 }
@@ -83,7 +83,7 @@ test("selects manager role and submits invite", async () => {
 
 	await userEvent.fill(
 		page.getByLabelText("Email address"),
-		"captain@example.com"
+		"captain@example.com",
 	);
 
 	// Click manager role
@@ -91,7 +91,7 @@ test("selects manager role and submits invite", async () => {
 
 	// Take screenshot showing manager selected
 	await expect(
-		page.getByRole("button", { name: MANAGER_RE })
+		page.getByRole("button", { name: MANAGER_RE }),
 	).toMatchScreenshot("manager-role-selected");
 
 	await userEvent.click(page.getByRole("button", { name: "Send Invitation" }));
@@ -108,7 +108,7 @@ test("selects agent role and submits invite", async () => {
 
 	await userEvent.fill(
 		page.getByLabelText("Email address"),
-		"crew@example.com"
+		"crew@example.com",
 	);
 
 	// Click agent role (recommended for captains)
@@ -120,7 +120,7 @@ test("selects agent role and submits invite", async () => {
 
 	// Take screenshot showing agent selected with recommended label
 	await expect(page.getByRole("button", { name: AGENT_RE })).toMatchScreenshot(
-		"agent-role-selected-with-recommended"
+		"agent-role-selected-with-recommended",
 	);
 
 	await userEvent.click(page.getByRole("button", { name: "Send Invitation" }));
@@ -137,7 +137,7 @@ test("selects admin role and submits invite", async () => {
 
 	await userEvent.fill(
 		page.getByLabelText("Email address"),
-		"admin@example.com"
+		"admin@example.com",
 	);
 
 	// Click admin role
@@ -145,7 +145,7 @@ test("selects admin role and submits invite", async () => {
 
 	// Take screenshot showing admin selected
 	await expect(page.getByRole("button", { name: ADMIN_RE })).toMatchScreenshot(
-		"admin-role-selected"
+		"admin-role-selected",
 	);
 
 	await userEvent.click(page.getByRole("button", { name: "Send Invitation" }));
@@ -162,7 +162,7 @@ test("selects member role and submits invite", async () => {
 
 	await userEvent.fill(
 		page.getByLabelText("Email address"),
-		"member@example.com"
+		"member@example.com",
 	);
 
 	// Click member role
@@ -170,7 +170,7 @@ test("selects member role and submits invite", async () => {
 
 	// Take screenshot showing member selected
 	await expect(page.getByRole("button", { name: MEMBER_RE })).toMatchScreenshot(
-		"member-role-selected"
+		"member-role-selected",
 	);
 
 	await userEvent.click(page.getByRole("button", { name: "Send Invitation" }));
@@ -210,7 +210,7 @@ test("shows error when organization context is unavailable", async () => {
 
 	await userEvent.fill(
 		page.getByLabelText("Email address"),
-		"test@example.com"
+		"test@example.com",
 	);
 	await userEvent.click(page.getByRole("button", { name: MANAGER_RE }));
 	await userEvent.click(page.getByRole("button", { name: "Send Invitation" }));

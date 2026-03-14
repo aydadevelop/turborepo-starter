@@ -16,7 +16,7 @@ export const createOrganizationListingsQueries = () => ({
 	overlaySummaryQuery: createQuery(() =>
 		orpc.organization.getOverlaySummary.queryOptions({
 			input: {},
-		})
+		}),
 	),
 	listingsQuery: createQuery(() =>
 		orpc.listing.list.queryOptions({
@@ -26,7 +26,7 @@ export const createOrganizationListingsQueries = () => ({
 					offset: 0,
 				},
 			},
-		})
+		}),
 	),
 });
 
@@ -34,31 +34,31 @@ export const createOrganizationListingsMutations = () => ({
 	createManualOverride: createMutation(() =>
 		orpc.organization.createManualOverride.mutationOptions({
 			onSuccess: invalidateOrganizationListingViews,
-		})
+		}),
 	),
 	resolveManualOverride: createMutation(() =>
 		orpc.organization.resolveManualOverride.mutationOptions({
 			onSuccess: invalidateOrganizationListingViews,
-		})
+		}),
 	),
 	approveListing: createMutation(() =>
 		orpc.organization.approveListing.mutationOptions({
 			onSuccess: invalidateOrganizationListingViews,
-		})
+		}),
 	),
 	clearListingApproval: createMutation(() =>
 		orpc.organization.clearListingApproval.mutationOptions({
 			onSuccess: invalidateOrganizationListingViews,
-		})
+		}),
 	),
 	publishListingToChannel: createMutation(() =>
 		orpc.organization.publishListingToChannel.mutationOptions({
 			onSuccess: invalidateOrganizationListingViews,
-		})
+		}),
 	),
 	unpublishListing: createMutation(() =>
 		orpc.organization.unpublishListing.mutationOptions({
 			onSuccess: invalidateOrganizationListingViews,
-		})
+		}),
 	),
 });

@@ -11,7 +11,7 @@ import type { Db, OrganizationBlockerSummary } from "../types";
 
 export async function resolveOrganizationBlockerSummary(
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationBlockerSummary> {
 	const [
 		missingLocationRow,
@@ -25,8 +25,8 @@ export async function resolveOrganizationBlockerSummary(
 			.where(
 				and(
 					eq(listing.organizationId, organizationId),
-					sql`${listing.locationId} is null`
-				)
+					sql`${listing.locationId} is null`,
+				),
 			),
 		db
 			.select({ count: count() })
@@ -40,8 +40,8 @@ export async function resolveOrganizationBlockerSummary(
 							where ${listingAsset.listingId} = ${listing.id}
 								and ${listingAsset.kind} = 'image'
 								and ${listingAsset.isPrimary} = true
-						)`
-				)
+						)`,
+				),
 			),
 		db
 			.select({ count: count() })
@@ -56,8 +56,8 @@ export async function resolveOrganizationBlockerSummary(
 								and ${listingCalendarConnection.organizationId} = ${organizationId}
 								and ${listingCalendarConnection.isActive} = true
 								and ${listingCalendarConnection.externalCalendarId} is not null
-						)`
-				)
+						)`,
+				),
 			),
 		db
 			.select({ count: count() })
@@ -70,8 +70,8 @@ export async function resolveOrganizationBlockerSummary(
 							from ${listingPricingProfile}
 							where ${listingPricingProfile.listingId} = ${listing.id}
 								and ${listingPricingProfile.archivedAt} is null
-						)`
-				)
+						)`,
+				),
 			),
 	]);
 

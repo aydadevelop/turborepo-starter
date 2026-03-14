@@ -6,7 +6,7 @@ const parseJson = (value: string): unknown =>
 
 export const parseInput = (
 	input: HTMLInputElement,
-	defaults: MaskOptions = {}
+	defaults: MaskOptions = {},
 ): MaskOptions => {
 	const opts = { ...defaults };
 
@@ -30,7 +30,7 @@ export const parseInput = (
 };
 
 const parseBool = (value: string): boolean =>
-	value !== "" ? Boolean(JSON.parse(value)) : true;
+	value === "" ? true : Boolean(JSON.parse(value));
 
 const parseMask = (value: string): MaskType =>
 	value.startsWith("[") && value.endsWith("]")

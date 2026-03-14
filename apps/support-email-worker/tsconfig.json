@@ -1,12 +1,12 @@
 {
-  "extends": "@my-app/config/tsconfig.base.json",
-  "compilerOptions": {
-    "composite": true,
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "outDir": "dist",
-    "strictNullChecks": true,
-    "types": ["@cloudflare/workers-types", "node"]
-  },
-  "include": ["src"],
-  "exclude": ["dist", "node_modules"]
+	"extends": "@my-app/config/tsconfig.base.json",
+	"compilerOptions": {
+		"composite": true,
+		"lib": ["ESNext", "DOM", "DOM.Iterable"],
+		"outDir": "dist",
+		"strictNullChecks": true,
+		"types": ["@cloudflare/workers-types", "node"]
+	},
+	"include": ["src"],
+	"exclude": ["dist", "node_modules"]
 }

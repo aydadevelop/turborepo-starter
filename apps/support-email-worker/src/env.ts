@@ -9,7 +9,7 @@ const supportEmailWorkerEnvSchema = z.object({
 export type SupportEmailWorkerEnv = z.infer<typeof supportEmailWorkerEnvSchema>;
 
 export const parseSupportEmailWorkerEnv = (
-	env: unknown
+	env: unknown,
 ): SupportEmailWorkerEnv => supportEmailWorkerEnvSchema.parse(env);
 
 export const parseAllowedRecipients = (value: string): string[] =>

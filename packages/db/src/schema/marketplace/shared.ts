@@ -165,90 +165,90 @@ export const cancellationPolicyScopeValues = [
 export const listingStatusEnum = pgEnum("listing_status", listingStatusValues);
 export const publicationChannelTypeEnum = pgEnum(
 	"publication_channel_type",
-	publicationChannelTypeValues
+	publicationChannelTypeValues,
 );
 export const publicationVisibilityEnum = pgEnum(
 	"publication_visibility",
-	publicationVisibilityValues
+	publicationVisibilityValues,
 );
 export const merchantTypeEnum = pgEnum("merchant_type", merchantTypeValues);
 export const paymentProviderEnum = pgEnum(
 	"payment_provider",
-	paymentProviderValues
+	paymentProviderValues,
 );
 export const validationStatusEnum = pgEnum(
 	"validation_status",
-	validationStatusValues
+	validationStatusValues,
 );
 export const webhookTypeEnum = pgEnum("webhook_type", webhookTypeValues);
 export const webhookEventStatusEnum = pgEnum(
 	"webhook_event_status",
-	webhookEventStatusValues
+	webhookEventStatusValues,
 );
 export const bookingSourceEnum = pgEnum("booking_source", bookingSourceValues);
 export const bookingStatusEnum = pgEnum("booking_status", bookingStatusValues);
 export const bookingPaymentStatusEnum = pgEnum(
 	"booking_payment_status",
-	bookingPaymentStatusValues
+	bookingPaymentStatusValues,
 );
 export const calendarSyncStatusEnum = pgEnum(
 	"calendar_sync_status",
-	calendarSyncStatusValues
+	calendarSyncStatusValues,
 );
 export const discountTypeEnum = pgEnum("discount_type", discountTypeValues);
 export const bookingPaymentAttemptStatusEnum = pgEnum(
 	"booking_payment_attempt_status",
-	bookingPaymentAttemptStatusValues
+	bookingPaymentAttemptStatusValues,
 );
 export const shiftRequestInitiatorRoleEnum = pgEnum(
 	"shift_request_initiator_role",
-	shiftRequestInitiatorRoleValues
+	shiftRequestInitiatorRoleValues,
 );
 export const shiftRequestStatusEnum = pgEnum(
 	"shift_request_status",
-	shiftRequestStatusValues
+	shiftRequestStatusValues,
 );
 export const shiftRequestDecisionEnum = pgEnum(
 	"shift_request_decision",
-	shiftRequestDecisionValues
+	shiftRequestDecisionValues,
 );
 export const paymentAdjustmentStatusEnum = pgEnum(
 	"payment_adjustment_status",
-	paymentAdjustmentStatusValues
+	paymentAdjustmentStatusValues,
 );
 export const disputeStatusEnum = pgEnum("dispute_status", disputeStatusValues);
 export const refundStatusEnum = pgEnum("refund_status", refundStatusValues);
 export const reviewStatusEnum = pgEnum("review_status", reviewStatusValues);
 export const listingModerationActionEnum = pgEnum(
 	"listing_moderation_action",
-	listingModerationActionValues
+	listingModerationActionValues,
 );
 export const listingBoatRentCaptainModeEnum = pgEnum(
 	"listing_boat_rent_captain_mode",
-	listingBoatRentCaptainModeValues
+	listingBoatRentCaptainModeValues,
 );
 export const listingBoatRentFuelPolicyEnum = pgEnum(
 	"listing_boat_rent_fuel_policy",
-	listingBoatRentFuelPolicyValues
+	listingBoatRentFuelPolicyValues,
 );
 export const listingExcursionGroupFormatEnum = pgEnum(
 	"listing_excursion_group_format",
-	listingExcursionGroupFormatValues
+	listingExcursionGroupFormatValues,
 );
 export const listingAssetKindEnum = pgEnum(
 	"listing_asset_kind",
-	listingAssetKindValues
+	listingAssetKindValues,
 );
 export const storageAccessEnum = pgEnum("storage_access", storageAccessValues);
 export const cancellationRequestStatusEnum = pgEnum(
 	"cancellation_request_status",
-	cancellationRequestStatusValues
+	cancellationRequestStatusValues,
 );
 export const staffAssignmentRoleEnum = pgEnum(
 	"staff_assignment_role",
-	staffAssignmentRoleValues
+	staffAssignmentRoleValues,
 );
 export const cancellationPolicyScopeEnum = pgEnum(
 	"cancellation_policy_scope",
-	cancellationPolicyScopeValues
+	cancellationPolicyScopeValues,
 );

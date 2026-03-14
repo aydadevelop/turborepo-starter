@@ -19,7 +19,7 @@ function loadSupportedTimezones(): string[] {
 
 	if (typeof intl.supportedValuesOf === "function") {
 		return [...intl.supportedValuesOf("timeZone")].sort((left, right) =>
-			left.localeCompare(right)
+			left.localeCompare(right),
 		);
 	}
 

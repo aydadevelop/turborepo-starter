@@ -44,7 +44,7 @@ const getGoogleRedirectUri = (): string =>
 
 const encodeState = (payload: GoogleCalendarOAuthState): string => {
 	const encodedPayload = Buffer.from(JSON.stringify(payload)).toString(
-		"base64url"
+		"base64url",
 	);
 	const signature = createHmac("sha256", env.BETTER_AUTH_SECRET)
 		.update(encodedPayload)
@@ -53,7 +53,7 @@ const encodeState = (payload: GoogleCalendarOAuthState): string => {
 };
 
 const decodeState = (
-	value: string | undefined
+	value: string | undefined,
 ): GoogleCalendarOAuthState | null => {
 	if (!value) {
 		return null;
@@ -81,7 +81,7 @@ const decodeState = (
 
 	try {
 		const parsed = JSON.parse(
-			Buffer.from(encodedPayload, "base64url").toString("utf8")
+			Buffer.from(encodedPayload, "base64url").toString("utf8"),
 		) as GoogleCalendarOAuthState;
 		if (
 			typeof parsed.userId !== "string" ||
@@ -103,7 +103,7 @@ const decodeState = (
 
 const resolveReturnTo = (
 	hint: string | undefined,
-	referer: string | undefined
+	referer: string | undefined,
 ): string => {
 	const serverOrigin = getPublicServerBaseUrl();
 	const corsOrigins = parseCorsOrigins(env.CORS_ORIGIN);
@@ -151,7 +151,7 @@ const resolveReturnTo = (
 const buildReturnUrl = (
 	returnTo: string,
 	status: "connected" | "error",
-	syncStatus?: "error"
+	syncStatus?: "error",
 ): string => {
 	const url = new URL(returnTo);
 	url.searchParams.set("calendarConnect", status);
@@ -209,8 +209,8 @@ calendarOauthRoutes.get("/api/calendar/oauth/google/start", async (c) => {
 				clientId: env.GOOGLE_CLIENT_ID,
 				redirectUri: getGoogleRedirectUri(),
 			},
-			state
-		)
+			state,
+		),
 	);
 });
 
@@ -247,10 +247,10 @@ calendarOauthRoutes.get("/api/calendar/oauth/google/callback", async (c) => {
 				clientSecret: env.GOOGLE_CLIENT_SECRET,
 				redirectUri: getGoogleRedirectUri(),
 			},
-			code
+			code,
 		);
 		const profile = await fetchGoogleCalendarAccountProfile(
-			tokenSet.accessToken
+			tokenSet.accessToken,
 		);
 		const account = await connectOrganizationCalendarAccount(
 			{
@@ -276,14 +276,14 @@ calendarOauthRoutes.get("/api/calendar/oauth/google/callback", async (c) => {
 					},
 				},
 			},
-			db
+			db,
 		);
 
 		try {
 			await refreshOrganizationCalendarSources(
 				account.id,
 				state.organizationId,
-				db
+				db,
 			);
 			return c.redirect(buildReturnUrl(state.returnTo, "connected"));
 		} catch {

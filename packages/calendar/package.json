@@ -18,7 +18,6 @@
 		"drizzle-orm": "1.0.0-beta.16-2ffd1a5"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.4.7",
 		"@my-app/config": "workspace:*",
 		"@my-app/vitest-config": "workspace:*",
 		"typescript": "^5.7.3",

@@ -6,7 +6,7 @@ import { timestamps } from "./columns";
 export const assistantChatVisibility = ["public", "private"] as const;
 export const assistantChatVisibilityEnum = pgEnum(
 	"assistant_chat_visibility",
-	assistantChatVisibility
+	assistantChatVisibility,
 );
 export type AssistantChatVisibility = (typeof assistantChatVisibility)[number];
 
@@ -23,13 +23,13 @@ export const assistantChat = pgTable(
 			.default("private"),
 		...timestamps,
 	},
-	(table) => [index("assistant_chat_user_idx").on(table.userId)]
+	(table) => [index("assistant_chat_user_idx").on(table.userId)],
 );
 
 export const assistantMessageRole = ["user", "assistant"] as const;
 export const assistantMessageRoleEnum = pgEnum(
 	"assistant_message_role",
-	assistantMessageRole
+	assistantMessageRole,
 );
 export type AssistantMessageRole = (typeof assistantMessageRole)[number];
 
@@ -45,5 +45,5 @@ export const assistantMessage = pgTable(
 		attachments: jsonb("attachments").$type<unknown[]>().notNull().default([]),
 		...timestamps,
 	},
-	(table) => [index("assistant_message_chat_idx").on(table.chatId)]
+	(table) => [index("assistant_message_chat_idx").on(table.chatId)],
 );

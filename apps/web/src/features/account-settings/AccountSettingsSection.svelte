@@ -1,5 +1,4 @@
 <script lang="ts">
-	// biome-ignore lint/performance/noNamespaceImport: shadcn-style card namespace usage is intentional in this component.
 	import * as Card from "@my-app/ui/components/card";
 	import type { Snippet } from "svelte";
 

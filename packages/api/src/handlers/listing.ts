@@ -71,7 +71,7 @@ export const listingRouter = {
 					...input,
 					organizationId: context.activeMembership.organizationId,
 				},
-				db
+				db,
 			);
 			return formatListing(row);
 		} catch (error) {
@@ -88,7 +88,7 @@ export const listingRouter = {
 					...input,
 					organizationId: context.activeMembership.organizationId,
 				},
-				db
+				db,
 			);
 			return formatListing(row);
 		} catch (error) {
@@ -103,7 +103,7 @@ export const listingRouter = {
 			const row = await getListing(
 				input.id,
 				context.activeMembership.organizationId,
-				db
+				db,
 			);
 			return formatListing(row);
 		} catch (error) {
@@ -118,7 +118,7 @@ export const listingRouter = {
 			const state = await getListingWorkspaceState(
 				input.id,
 				context.activeMembership.organizationId,
-				db
+				db,
 			);
 
 			return {
@@ -141,7 +141,7 @@ export const listingRouter = {
 			return await getListingAssetWorkspaceState(
 				input.id,
 				context.activeMembership.organizationId,
-				db
+				db,
 			);
 		} catch (error) {
 			return throwListingRouterError(error);
@@ -159,7 +159,7 @@ export const listingRouter = {
 				search: input.search,
 				sort: input.sort,
 			},
-			db
+			db,
 		);
 		return {
 			items: result.items.map(formatListing),
@@ -177,7 +177,7 @@ export const listingRouter = {
 	}).listing.listAvailableTypes.handler(({ context }) => {
 		return listAvailableListingTypes(
 			context.activeMembership.organizationId,
-			db
+			db,
 		);
 	}),
 
@@ -186,7 +186,7 @@ export const listingRouter = {
 	}).listing.getCreateEditorState.handler(({ context }) => {
 		return getCreateListingEditorState(
 			context.activeMembership.organizationId,
-			db
+			db,
 		);
 	}),
 
@@ -200,7 +200,7 @@ export const listingRouter = {
 					organizationId: context.activeMembership.organizationId,
 					channelType: input.channelType ?? undefined,
 				},
-				buildWorkflowContext(context, `listing:publish:${input.id}`)
+				buildWorkflowContext(context, `listing:publish:${input.id}`),
 			);
 			if (!result.success) {
 				return throwListingRouterError(result.error);
@@ -222,7 +222,7 @@ export const listingRouter = {
 					listingId: input.id,
 					organizationId: context.activeMembership.organizationId,
 				},
-				buildWorkflowContext(context, `listing:unpublish:${input.id}`)
+				buildWorkflowContext(context, `listing:unpublish:${input.id}`),
 			);
 			if (!result.success) {
 				return throwListingRouterError(result.error);

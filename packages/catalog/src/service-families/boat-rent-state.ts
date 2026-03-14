@@ -10,7 +10,7 @@ import type {
 import { normalizeBoatRentProfileInput } from "./boat-rent";
 
 const toBoatRentProfileState = (
-	row: ListingBoatRentProfileRow
+	row: ListingBoatRentProfileRow,
 ): ListingBoatRentProfileState => ({
 	listingId: row.listingId,
 	capacity: row.capacity,
@@ -25,7 +25,7 @@ const toBoatRentProfileState = (
 export async function findBoatRentProfile(
 	listingId: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingBoatRentProfileState | null> {
 	const [row] = await db
 		.select()
@@ -33,8 +33,8 @@ export async function findBoatRentProfile(
 		.where(
 			and(
 				eq(listingBoatRentProfile.listingId, listingId),
-				eq(listingBoatRentProfile.organizationId, organizationId)
-			)
+				eq(listingBoatRentProfile.organizationId, organizationId),
+			),
 		)
 		.limit(1);
 
@@ -47,7 +47,7 @@ export async function upsertBoatRentProfile(
 		organizationId: string;
 		profile?: ListingBoatRentProfileInput | null;
 	},
-	db: Db
+	db: Db,
 ): Promise<ListingBoatRentProfileState> {
 	const normalized = normalizeBoatRentProfileInput(input.profile);
 	const [row] = await db

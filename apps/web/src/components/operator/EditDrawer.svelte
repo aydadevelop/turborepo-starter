@@ -59,7 +59,9 @@
 		</div>
 
 		{#if footer}
-			<div class="border-t pt-4 flex justify-end gap-2">{@render footer()}</div>
+			<div class="border-t pt-4 flex justify-end gap-2">
+				{@render footer()}
+			</div>
 		{/if}
 	</DialogContent>
 </DialogRoot>

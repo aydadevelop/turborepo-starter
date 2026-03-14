@@ -51,7 +51,7 @@ const makeOpenDisputeStep = (db: Db) =>
 			});
 
 			return { ...input, disputeId };
-		}
+		},
 	);
 
 const makeResolveDisputeStep = (db: Db) =>
@@ -78,7 +78,7 @@ const makeResolveDisputeStep = (db: Db) =>
 			});
 
 			return input;
-		}
+		},
 	);
 
 /**
@@ -96,11 +96,11 @@ export const processDisputeWorkflow = (db: Db) => {
 	return {
 		open: createWorkflow<OpenDisputeInput, WithDisputeId>(
 			"open-dispute",
-			async (input, ctx) => openDisputeStep(input, ctx)
+			async (input, ctx) => openDisputeStep(input, ctx),
 		),
 		resolve: createWorkflow<ResolveDisputeInput, ResolveDisputeInput>(
 			"resolve-dispute",
-			async (input, ctx) => resolveDisputeStep(input, ctx)
+			async (input, ctx) => resolveDisputeStep(input, ctx),
 		),
 	};
 };

@@ -27,7 +27,7 @@ const buildSignedUrl = (
 	publicBaseUrl: string,
 	key: string,
 	action: "download" | "upload",
-	expiresInSeconds: number
+	expiresInSeconds: number,
 ): string => {
 	const url = new URL(buildObjectUrl(publicBaseUrl, key));
 	url.searchParams.set("signature", "fake");
@@ -37,7 +37,7 @@ const buildSignedUrl = (
 };
 
 export const createFakeStorageProvider = (
-	options: FakeStorageProviderOptions
+	options: FakeStorageProviderOptions,
 ): FakeStorageProvider => {
 	const files = new Map<string, Buffer>();
 	const publicBaseUrl =
@@ -61,7 +61,7 @@ export const createFakeStorageProvider = (
 	};
 
 	const getSignedUploadUrl = (
-		input: StorageSignedUploadInput
+		input: StorageSignedUploadInput,
 	): Promise<StorageSignedUploadResult> => {
 		const expiresInSeconds = input.expiresInSeconds ?? 900;
 		const key = input.key
@@ -84,15 +84,15 @@ export const createFakeStorageProvider = (
 
 	const getSignedDownloadUrl = (
 		ref: StorageObjectRef,
-		options?: StorageSignedUrlOptions
+		options?: StorageSignedUrlOptions,
 	): Promise<string> => {
 		return Promise.resolve(
 			buildSignedUrl(
 				publicBaseUrl,
 				ref.key,
 				"download",
-				options?.expiresInSeconds ?? 900
-			)
+				options?.expiresInSeconds ?? 900,
+			),
 		);
 	};
 

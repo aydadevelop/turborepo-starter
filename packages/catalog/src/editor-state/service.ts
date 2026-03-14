@@ -13,7 +13,7 @@ import {
 
 export function getCreateListingEditorState(
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingCreateEditorState> {
 	return getListingCreateEditorState(organizationId, db);
 }
@@ -21,7 +21,7 @@ export function getCreateListingEditorState(
 export async function getListingWorkspaceState(
 	id: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingWorkspaceState> {
 	const state = await resolveListingWorkspaceState(id, organizationId, db);
 	if (!state) {
@@ -33,7 +33,7 @@ export async function getListingWorkspaceState(
 export async function getListingAssetWorkspaceState(
 	id: string,
 	organizationId: string,
-	db: Db
+	db: Db,
 ): Promise<ListingAssetWorkspaceState> {
 	const state = await resolveListingAssetWorkspaceState(id, organizationId, db);
 	if (!state) {

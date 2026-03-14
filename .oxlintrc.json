@@ -1,0 +1,36 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["typescript"],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "warn"
+	},
+	"rules": {
+		"no-unused-vars": [
+			"warn",
+			{
+				"argsIgnorePattern": "^_",
+				"varsIgnorePattern": "^_",
+				"caughtErrorsIgnorePattern": "^_"
+			}
+		],
+		"no-await-in-loop": "off",
+		"no-shadow": "off"
+	},
+	"env": {
+		"builtin": true
+	},
+	"ignorePatterns": [
+		"node_modules",
+		"dist",
+		".turbo",
+		".svelte-kit",
+		"legacy",
+		"docs",
+		"infra",
+		"scripts",
+		".agents",
+		".github",
+		"bun.lock"
+	]
+}

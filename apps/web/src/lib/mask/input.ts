@@ -107,7 +107,7 @@ export class MaskInput {
 	private fixCursor(
 		input: HTMLInputElement,
 		isDelete: boolean,
-		closure: () => void
+		closure: () => void,
 	): void {
 		const pos = input.selectionStart;
 		const value = input.value;

@@ -4,7 +4,7 @@ import { Hono } from "hono";
 
 export const supportEmailIntakeRoutes = new Hono();
 const processSupportEmailIntakeProcedureClient = createProcedureClient(
-	internalServerRouteProcedures.support.emailIntakeProcess
+	internalServerRouteProcedures.support.emailIntakeProcess,
 );
 
 supportEmailIntakeRoutes.post("/api/support/inbound/email", async (c) => {

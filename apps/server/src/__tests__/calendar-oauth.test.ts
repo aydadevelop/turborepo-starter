@@ -40,7 +40,7 @@ vi.mock("@my-app/db", () => {
 vi.mock("@my-app/calendar", async () => {
 	const actual =
 		await vi.importActual<typeof import("@my-app/calendar")>(
-			"@my-app/calendar"
+			"@my-app/calendar",
 		);
 	return {
 		...actual,
@@ -101,7 +101,7 @@ describe("calendarOauthRoutes", () => {
 				headers: new Headers({
 					referer: "http://localhost:5173/org/listings/listing-1",
 				}),
-			}
+			},
 		);
 
 		expect(response.status).toBe(302);
@@ -113,14 +113,14 @@ describe("calendarOauthRoutes", () => {
 		}
 		const redirectUrl = new URL(location);
 		expect(redirectUrl.searchParams.get("client_id")).toBe(
-			"test-google-client-id"
+			"test-google-client-id",
 		);
 		expect(redirectUrl.searchParams.get("redirect_uri")).toBe(
-			"http://localhost:3000/api/calendar/oauth/google/callback"
+			"http://localhost:3000/api/calendar/oauth/google/callback",
 		);
 		expect(redirectUrl.searchParams.get("state")).toBeTruthy();
 		expect(response.headers.get("set-cookie")).toContain(
-			"calendar_google_oauth_nonce="
+			"calendar_google_oauth_nonce=",
 		);
 	});
 
@@ -133,7 +133,7 @@ describe("calendarOauthRoutes", () => {
 				headers: new Headers({
 					referer: "http://localhost:5173/org/listings/listing-1",
 				}),
-			}
+			},
 		);
 
 		const startLocationHeader = startResponse.headers.get("location");
@@ -151,12 +151,12 @@ describe("calendarOauthRoutes", () => {
 				headers: new Headers({
 					cookie: cookieHeader ?? "",
 				}),
-			}
+			},
 		);
 
 		expect(response.status).toBe(302);
 		expect(response.headers.get("location")).toBe(
-			"http://localhost:5173/org/listings/listing-1?calendarConnect=connected"
+			"http://localhost:5173/org/listings/listing-1?calendarConnect=connected",
 		);
 		expect(exchangeGoogleCalendarOAuthCodeMock).toHaveBeenCalledWith(
 			{
@@ -164,7 +164,7 @@ describe("calendarOauthRoutes", () => {
 				clientSecret: "test-google-client-secret",
 				redirectUri: "http://localhost:3000/api/calendar/oauth/google/callback",
 			},
-			"test-code"
+			"test-code",
 		);
 		expect(connectOrganizationCalendarAccountMock).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -181,12 +181,12 @@ describe("calendarOauthRoutes", () => {
 					}),
 				}),
 			}),
-			expect.anything()
+			expect.anything(),
 		);
 		expect(refreshOrganizationCalendarSourcesMock).toHaveBeenCalledWith(
 			"account-1",
 			"org-1",
-			expect.anything()
+			expect.anything(),
 		);
 	});
 });

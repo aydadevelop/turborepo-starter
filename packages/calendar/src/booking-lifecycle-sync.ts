@@ -1,11 +1,11 @@
-import { eq } from "drizzle-orm";
 import {
 	bookingCalendarLink,
-	organizationCalendarAccount,
 	listingCalendarConnection,
+	organizationCalendarAccount,
 } from "@my-app/db/schema/availability";
 import { booking } from "@my-app/db/schema/marketplace";
 import { registerEventPusher } from "@my-app/events";
+import { eq } from "drizzle-orm";
 import { getCalendarAdapter } from "./adapter-registry";
 import type { Db } from "./types";
 
@@ -59,10 +59,14 @@ async function syncOnBookingConfirmed(
 	db: Db,
 ): Promise<void> {
 	const bookingRow = await fetchBooking(bookingId, db);
-	if (!bookingRow) return;
+	if (!bookingRow) {
+		return;
+	}
 
 	const connection = await fetchActiveConnection(bookingRow.listingId, db);
-	if (!connection || !connection.externalCalendarId) return;
+	if (!(connection && connection.externalCalendarId)) {
+		return;
+	}
 
 	const adapter = getCalendarAdapter(connection.provider);
 	const config = await buildConnectionConfig(connection, db);
@@ -122,7 +126,9 @@ async function syncOnBookingCancelled(
 		.limit(1);
 
 	const link = linkRows[0];
-	if (!link || !link.providerEventId || !link.calendarConnectionId) return;
+	if (!(link && link.providerEventId && link.calendarConnectionId)) {
+		return;
+	}
 
 	const connectionRows = await db
 		.select()
@@ -131,7 +137,9 @@ async function syncOnBookingCancelled(
 		.limit(1);
 
 	const connection = connectionRows[0];
-	if (!connection || !connection.externalCalendarId) return;
+	if (!(connection && connection.externalCalendarId)) {
+		return;
+	}
 
 	const adapter = getCalendarAdapter(connection.provider);
 	const config = await buildConnectionConfig(connection, db);
@@ -162,7 +170,9 @@ async function syncOnContactUpdated(
 		.limit(1);
 
 	const link = linkRows[0];
-	if (!link || !link.providerEventId || !link.calendarConnectionId) return;
+	if (!(link && link.providerEventId && link.calendarConnectionId)) {
+		return;
+	}
 
 	const connectionRows = await db
 		.select()
@@ -171,7 +181,9 @@ async function syncOnContactUpdated(
 		.limit(1);
 
 	const connection = connectionRows[0];
-	if (!connection || !connection.externalCalendarId) return;
+	if (!(connection && connection.externalCalendarId)) {
+		return;
+	}
 
 	const adapter = getCalendarAdapter(connection.provider);
 	const config = await buildConnectionConfig(connection, db);
@@ -207,7 +219,9 @@ async function syncOnBookingScheduleUpdated(
 		.limit(1);
 
 	const link = linkRows[0];
-	if (!link || !link.providerEventId || !link.calendarConnectionId) return;
+	if (!(link && link.providerEventId && link.calendarConnectionId)) {
+		return;
+	}
 
 	const connectionRows = await db
 		.select()
@@ -216,10 +230,14 @@ async function syncOnBookingScheduleUpdated(
 		.limit(1);
 
 	const connection = connectionRows[0];
-	if (!connection || !connection.externalCalendarId) return;
+	if (!(connection && connection.externalCalendarId)) {
+		return;
+	}
 
 	const bookingRow = await fetchBooking(bookingId, db);
-	if (!bookingRow) return;
+	if (!bookingRow) {
+		return;
+	}
 
 	const adapter = getCalendarAdapter(connection.provider);
 	const config = await buildConnectionConfig(connection, db);
@@ -253,10 +271,7 @@ async function syncOnBookingScheduleUpdated(
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-async function fetchBooking(
-	bookingId: string,
-	db: Db,
-) {
+async function fetchBooking(bookingId: string, db: Db) {
 	const rows = await db
 		.select()
 		.from(booking)
@@ -295,7 +310,8 @@ async function buildConnectionConfig(
 
 		const metadata = account?.providerMetadata;
 		if (metadata && typeof metadata === "object") {
-			const nestedCredentials = (metadata as { credentials?: unknown }).credentials;
+			const nestedCredentials = (metadata as { credentials?: unknown })
+				.credentials;
 			if (nestedCredentials && typeof nestedCredentials === "object") {
 				credentials = nestedCredentials as Record<string, unknown>;
 			} else {
@@ -314,11 +330,21 @@ async function buildConnectionConfig(
 function buildEventDescription(
 	bookingRow: Awaited<ReturnType<typeof fetchBooking>>,
 ): string {
-	if (!bookingRow) return "";
+	if (!bookingRow) {
+		return "";
+	}
 	const parts: string[] = [];
-	if (bookingRow.contactName) parts.push(`Guest: ${bookingRow.contactName}`);
-	if (bookingRow.contactEmail) parts.push(`Email: ${bookingRow.contactEmail}`);
-	if (bookingRow.contactPhone) parts.push(`Phone: ${bookingRow.contactPhone}`);
-	if (bookingRow.passengers) parts.push(`Passengers: ${bookingRow.passengers}`);
+	if (bookingRow.contactName) {
+		parts.push(`Guest: ${bookingRow.contactName}`);
+	}
+	if (bookingRow.contactEmail) {
+		parts.push(`Email: ${bookingRow.contactEmail}`);
+	}
+	if (bookingRow.contactPhone) {
+		parts.push(`Phone: ${bookingRow.contactPhone}`);
+	}
+	if (bookingRow.passengers) {
+		parts.push(`Passengers: ${bookingRow.passengers}`);
+	}
 	return parts.join("\n");
 }

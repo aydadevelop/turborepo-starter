@@ -40,7 +40,7 @@ describe("CloudPaymentsWebhookAdapter.authenticateWebhook", () => {
 		});
 
 		await expect(adapter.authenticateWebhook(request)).rejects.toThrow(
-			WebhookAuthError
+			WebhookAuthError,
 		);
 	});
 
@@ -56,7 +56,7 @@ describe("CloudPaymentsWebhookAdapter.authenticateWebhook", () => {
 		});
 
 		await expect(adapter.authenticateWebhook(request)).rejects.toThrow(
-			WebhookAuthError
+			WebhookAuthError,
 		);
 	});
 
@@ -73,7 +73,7 @@ describe("CloudPaymentsWebhookAdapter.authenticateWebhook", () => {
 
 		await expect(adapter.authenticateWebhook(request)).resolves.toBeUndefined();
 		await expect(adapter.parseWebhookBody(request)).resolves.toMatchObject(
-			sampleNotification
+			sampleNotification,
 		);
 	});
 
@@ -96,7 +96,7 @@ describe("CloudPaymentsWebhookAdapter.authenticateWebhook", () => {
 		const request = new Request("https://example.com/webhook");
 
 		await expect(adapter.authenticateWebhook(request)).rejects.toThrow(
-			WebhookAuthError
+			WebhookAuthError,
 		);
 	});
 });
@@ -143,7 +143,7 @@ describe("CloudPaymentsWebhookAdapter.parseWebhookBody", () => {
 		});
 
 		await expect(adapter.parseWebhookBody(request)).rejects.toThrow(
-			WebhookPayloadError
+			WebhookPayloadError,
 		);
 	});
 });

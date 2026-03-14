@@ -1,6 +1,4 @@
-// biome-ignore lint/performance/noNamespaceImport: Pulumi resources are clearer with provider namespaces.
 import * as cloudflare from "@pulumi/cloudflare";
-// biome-ignore lint/performance/noNamespaceImport: Pulumi helpers are used pervasively in this component.
 import * as pulumi from "@pulumi/pulumi";
 
 interface SupportEmailRoutingArgs {
@@ -17,7 +15,7 @@ export class SupportEmailRouting extends pulumi.ComponentResource {
 	constructor(
 		name: string,
 		args: SupportEmailRoutingArgs,
-		opts?: pulumi.ComponentResourceOptions
+		opts?: pulumi.ComponentResourceOptions,
 	) {
 		super("myapp:infra:SupportEmailRouting", name, {}, opts);
 
@@ -26,7 +24,7 @@ export class SupportEmailRouting extends pulumi.ComponentResource {
 			{
 				zoneId: args.zoneId,
 			},
-			{ parent: this }
+			{ parent: this },
 		);
 
 		this.address = pulumi.interpolate`${args.localPart}@${args.domain}`;
@@ -37,7 +35,7 @@ export class SupportEmailRouting extends pulumi.ComponentResource {
 				name: args.domain,
 				zoneId: args.zoneId,
 			},
-			{ dependsOn: [settings], parent: this }
+			{ dependsOn: [settings], parent: this },
 		);
 
 		new cloudflare.EmailRoutingRule(
@@ -61,7 +59,7 @@ export class SupportEmailRouting extends pulumi.ComponentResource {
 				priority: 0,
 				zoneId: args.zoneId,
 			},
-			{ dependsOn: [settings], parent: this }
+			{ dependsOn: [settings], parent: this },
 		);
 
 		this.dnsStatus = dns.status;

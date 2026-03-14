@@ -24,13 +24,11 @@ test.describe("Performance Guardrails", () => {
 		browserName,
 	}) => {
 		test.setTimeout(90_000);
-		// biome-ignore lint/suspicious/noSkippedTests: browser capability gate.
 		test.skip(browserName !== "chromium", "Heap metrics are chromium-only.");
 
 		await goto(page, "/");
 		const initialHeap = await readHeap(page);
 		if (initialHeap === null) {
-			// biome-ignore lint/suspicious/noSkippedTests: runtime capability gate.
 			test.skip(true, "performance.memory is unavailable.");
 			return;
 		}
@@ -49,7 +47,6 @@ test.describe("Performance Guardrails", () => {
 
 		const finalHeap = await readHeap(page);
 		if (finalHeap === null) {
-			// biome-ignore lint/suspicious/noSkippedTests: runtime capability gate.
 			test.skip(true, "performance.memory became unavailable.");
 			return;
 		}

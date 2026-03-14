@@ -41,7 +41,7 @@ const MAILBOX_PATTERN = /^(?:"?([^"]*)"?\s)?<([^>]+)>$/;
 const REFERENCES_PATTERN = /<([^>]+)>/g;
 
 export const buildSupportInboundEmailPayload = async (
-	message: SupportEmailWorkerMessage
+	message: SupportEmailWorkerMessage,
 ): Promise<SupportEmailIntakePayload> => {
 	const rawBytes = await new Response(message.raw).arrayBuffer();
 	const parser = new PostalMime();
@@ -93,7 +93,7 @@ export const buildSupportInboundEmailPayload = async (
 
 const toHeaderRecord = (
 	parsedHeaders: ParsedPostalMimeResult["headers"],
-	fallbackHeaders: Headers
+	fallbackHeaders: Headers,
 ): Record<string, string[]> => {
 	const headers: Record<string, string[]> = {};
 
@@ -126,7 +126,7 @@ const toHeaderRecord = (
 };
 
 const parseMailbox = (
-	address: ParsedPostalMimeAddress | undefined
+	address: ParsedPostalMimeAddress | undefined,
 ): ParsedMailbox | null => {
 	if (!address?.address?.trim()) {
 		return null;
@@ -159,7 +159,7 @@ const parseAddressList = (value: string): ParsedMailbox[] =>
 
 const firstHeaderValue = (
 	headers: Record<string, string[]>,
-	key: string
+	key: string,
 ): string | undefined => headers[key.toLowerCase()]?.[0];
 
 const normalizeMessageId = (value: string | undefined): string | null => {
@@ -198,7 +198,7 @@ const extractMessageIds = (value: string | undefined): string[] => {
 const hashFallbackIdentity = async (
 	rawBytes: ArrayBuffer,
 	from: string,
-	to: string
+	to: string,
 ): Promise<string> => {
 	const encoder = new TextEncoder();
 	const seed = `${from}\n${to}\n${arrayBufferToHex(rawBytes)}`;

@@ -205,7 +205,7 @@ test("renders the composed boat-rent booking surface with slot, pricing, and dis
 		.element(page.getByRole("button", { name: "Sign in to request booking" }))
 		.toBeVisible();
 	await expect(document.body).toMatchScreenshot(
-		"boat-rent-booking-surface-panel"
+		"boat-rent-booking-surface-panel",
 	);
 });
 
@@ -222,11 +222,11 @@ test("redirects to login when unauthenticated user clicks submit with selected s
 		.toBeVisible();
 
 	await userEvent.click(
-		page.getByRole("button", { name: "Sign in to request booking" })
+		page.getByRole("button", { name: "Sign in to request booking" }),
 	);
 
 	expect(mockState.goto).toHaveBeenCalledWith(
-		expect.stringContaining("/login?next=")
+		expect.stringContaining("/login?next="),
 	);
 });
 

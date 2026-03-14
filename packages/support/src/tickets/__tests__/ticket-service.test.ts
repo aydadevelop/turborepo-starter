@@ -41,7 +41,7 @@ describe("ticket service", () => {
 				description: "Need operator help",
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 
 		const assigned = await assignTicket(
@@ -51,7 +51,7 @@ describe("ticket service", () => {
 				assignedToUserId: AGENT_USER_ID,
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 
 		const reprioritized = await updateTicketPriority(
@@ -60,7 +60,7 @@ describe("ticket service", () => {
 				organizationId: ORG_ID,
 				priority: "urgent",
 			},
-			getDb()
+			getDb(),
 		);
 
 		const dueAt = new Date("2026-03-12T10:00:00.000Z");
@@ -70,7 +70,7 @@ describe("ticket service", () => {
 				organizationId: ORG_ID,
 				dueAt,
 			},
-			getDb()
+			getDb(),
 		);
 
 		expect(ticket.status).toBe("open");
@@ -91,7 +91,7 @@ describe("ticket service", () => {
 				subject: "Lifecycle ticket",
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 
 		const resolved = await updateTicketStatus(
@@ -101,7 +101,7 @@ describe("ticket service", () => {
 				status: "resolved",
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 		expect(resolved.resolvedAt).not.toBeNull();
 		expect(resolved.resolvedByUserId).toBeDefined();
@@ -114,7 +114,7 @@ describe("ticket service", () => {
 				status: "closed",
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 		expect(closed.closedAt).not.toBeNull();
 		expect(closed.closedByUserId).toBeDefined();
@@ -126,7 +126,7 @@ describe("ticket service", () => {
 				status: "open",
 			},
 			getDb(),
-			makeActorContext()
+			makeActorContext(),
 		);
 		expect(reopened.status).toBe("open");
 		expect(reopened.resolvedAt).toBeNull();

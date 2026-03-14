@@ -17,14 +17,14 @@ serve({ fetch: app.fetch, port }, (info) => {
 // Start queue worker in background (non-blocking)
 startBoss()
 	.then((boss) =>
-		registerWorker(boss, RECURRING_TASK_QUEUE, handleRecurringTaskJob)
+		registerWorker(boss, RECURRING_TASK_QUEUE, handleRecurringTaskJob),
 	)
 	.then(() => console.log("Queue worker started"))
 	.catch((err) =>
 		console.warn(
 			"Queue worker failed to start (DB may be unavailable):",
-			err.message
-		)
+			err.message,
+		),
 	);
 
 const shutdown = async () => {

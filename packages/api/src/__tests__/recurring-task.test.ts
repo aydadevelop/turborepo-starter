@@ -8,9 +8,8 @@ vi.mock("@my-app/notifications/pusher", () => ({
 
 const { createRecurringTaskTickMessage, recurringTaskTickMessageSchema } =
 	await import("@my-app/api-contract/contracts/recurring-task-queue");
-const { processRecurringTaskTick, scheduleRecurringTask } = await import(
-	"../tasks/recurring"
-);
+const { processRecurringTaskTick, scheduleRecurringTask } =
+	await import("../tasks/recurring");
 
 const createQueueMock = () => ({
 	send: vi.fn().mockResolvedValue(undefined),
@@ -51,7 +50,7 @@ describe("scheduleRecurringTask", () => {
 				intervalSeconds: 3600,
 				runCount: 3,
 			},
-			undefined
+			undefined,
 		);
 
 		expect(result).toEqual({ queued: false });
@@ -70,7 +69,7 @@ describe("scheduleRecurringTask", () => {
 				intervalSeconds: 3600,
 				runCount: 3,
 			},
-			queue
+			queue,
 		);
 
 		expect(result).toEqual({ queued: true });
@@ -81,7 +80,7 @@ describe("scheduleRecurringTask", () => {
 				runNumber: 1,
 				remainingRuns: 3,
 			}),
-			expect.objectContaining({ delaySeconds: 30 })
+			expect.objectContaining({ delaySeconds: 30 }),
 		);
 	});
 });
@@ -113,7 +112,7 @@ describe("processRecurringTaskTick", () => {
 				runNumber: 2,
 				remainingRuns: 1,
 			}),
-			expect.objectContaining({ delaySeconds: 120 })
+			expect.objectContaining({ delaySeconds: 120 }),
 		);
 	});
 

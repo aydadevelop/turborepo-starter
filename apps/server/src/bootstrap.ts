@@ -30,7 +30,7 @@ const parseGoogleServiceAccountKey = (): Record<string, unknown> => {
 		return JSON.parse(
 			env.GOOGLE_CALENDAR_CREDENTIALS_JSON ||
 				env.GOOGLE_SERVICE_ACCOUNT_KEY ||
-				"{}"
+				"{}",
 		) as Record<string, unknown>;
 	} catch {
 		return {};
@@ -50,7 +50,7 @@ const createListingPublicStorageProvider = () => {
 			throw new Error(
 				`Storage backend is configured as s3, but required env vars are missing: ${missing
 					.map(([key]) => key)
-					.join(", ")}`
+					.join(", ")}`,
 			);
 		}
 
@@ -86,7 +86,7 @@ export const registerServerIntegrations = (): void => {
 		new GoogleCalendarAdapter(parseGoogleServiceAccountKey(), {
 			clientId: env.GOOGLE_CLIENT_ID,
 			clientSecret: env.GOOGLE_CLIENT_SECRET,
-		})
+		}),
 	);
 	registerBookingLifecycleSync(db);
 	registerOrganizationOverlayProjector(db);

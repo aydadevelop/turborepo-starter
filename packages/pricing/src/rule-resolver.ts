@@ -16,7 +16,10 @@ export const PRICING_RULE_BEHAVIORS: Record<RuleType, PricingRuleBehavior> = {
 	hourRange: { conflictMode: "explicit", primaryCategory: "time" },
 	dayOfWeek: { conflictMode: "explicit", primaryCategory: "time" },
 	dateRange: { conflictMode: "explicitExclusive", primaryCategory: "date" },
-	passengerCount: { conflictMode: "stackable", primaryCategory: "bookingAttribute" },
+	passengerCount: {
+		conflictMode: "stackable",
+		primaryCategory: "bookingAttribute",
+	},
 	duration: { conflictMode: "stackable", primaryCategory: "bookingAttribute" },
 };
 
@@ -56,12 +59,16 @@ export function resolveApplicableRules<
 		const grouped: Record<string, T[]> = {};
 		for (const r of stackable) {
 			const cat = getRuleBehavior(r.ruleType).primaryCategory;
-			if (!grouped[cat]) grouped[cat] = [];
+			if (!grouped[cat]) {
+				grouped[cat] = [];
+			}
 			grouped[cat]!.push(r);
 		}
 		for (const group of Object.values(grouped)) {
 			const best = group.sort((a, b) => b.priority - a.priority)[0]!;
-			if (!result.includes(best)) result.push(best);
+			if (!result.includes(best)) {
+				result.push(best);
+			}
 		}
 		return result;
 	}
@@ -74,17 +81,23 @@ export function resolveApplicableRules<
 		.sort((a, b) => b.priority - a.priority);
 
 	const result: T[] = [];
-	if (explicit.length > 0) result.push(explicit[0]!);
+	if (explicit.length > 0) {
+		result.push(explicit[0]!);
+	}
 
 	const grouped: Record<string, T[]> = {};
 	for (const r of stackable) {
 		const cat = getRuleBehavior(r.ruleType).primaryCategory;
-		if (!grouped[cat]) grouped[cat] = [];
+		if (!grouped[cat]) {
+			grouped[cat] = [];
+		}
 		grouped[cat]!.push(r);
 	}
 	for (const group of Object.values(grouped)) {
 		const best = group.sort((a, b) => b.priority - a.priority)[0]!;
-		if (!result.includes(best)) result.push(best);
+		if (!result.includes(best)) {
+			result.push(best);
+		}
 	}
 
 	return result;

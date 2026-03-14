@@ -206,14 +206,14 @@ After restore:
 
 Managed automatically by `pulumi up` (synced via `gh secret set`).
 
-| Secret | Description |
-|---|---|
-| `SSH_HOST` | VPS IP address |
-| `SSH_USER` | SSH user (usually `root`) |
-| `SSH_PORT` | SSH port (443 via sslh) |
-| `SSH_PRIVATE_KEY` | ED25519 private key for SSH auth |
-| `SSH_PRIVATE_KEY_B64` | Base64-encoded private key |
-| `SSH_HOST_KEY` | VPS host key for known_hosts |
+| Secret                | Description                      |
+| --------------------- | -------------------------------- |
+| `SSH_HOST`            | VPS IP address                   |
+| `SSH_USER`            | SSH user (usually `root`)        |
+| `SSH_PORT`            | SSH port (443 via sslh)          |
+| `SSH_PRIVATE_KEY`     | ED25519 private key for SSH auth |
+| `SSH_PRIVATE_KEY_B64` | Base64-encoded private key       |
+| `SSH_HOST_KEY`        | VPS host key for known_hosts     |
 
 ## Observability
 

@@ -18,7 +18,7 @@ function resolveUrl(path: string): string {
 		return path;
 	}
 	const origin =
-		typeof window !== "undefined" ? window.location.origin : "http://localhost";
+		typeof window === "undefined" ? "http://localhost" : window.location.origin;
 	return `${origin}${path}`;
 }
 

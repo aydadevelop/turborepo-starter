@@ -9,37 +9,37 @@ scrape_configs:
   # Infrastructure
   - job_name: loki
     static_configs:
-      - targets: ['loki:3100']
+      - targets: ["loki:3100"]
     metrics_path: /metrics
 
   - job_name: tempo
     static_configs:
-      - targets: ['tempo:3200']
+      - targets: ["tempo:3200"]
     metrics_path: /metrics
 
   - job_name: prometheus
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ["localhost:9090"]
 
   # App services — running natively via `bun dev`, so use host.docker.internal
   - job_name: server
     static_configs:
-      - targets: ['host.docker.internal:3000']
+      - targets: ["host.docker.internal:3000"]
     metrics_path: /metrics
 
   - job_name: assistant
     static_configs:
-      - targets: ['host.docker.internal:3001']
+      - targets: ["host.docker.internal:3001"]
     metrics_path: /metrics
 
   - job_name: notifications
     static_configs:
-      - targets: ['host.docker.internal:3002']
+      - targets: ["host.docker.internal:3002"]
     metrics_path: /metrics
 
   # PostgreSQL — query latency, connections, table bloat, lock waits
   # Requires pg_stat_statements in postgres (see docker-compose.yml db.command)
   - job_name: postgres
     static_configs:
-      - targets: ['postgres-exporter:9187']
+      - targets: ["postgres-exporter:9187"]
     metrics_path: /metrics

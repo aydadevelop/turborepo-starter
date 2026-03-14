@@ -1,14 +1,8 @@
 import {
-	and,
-	asc,
-	desc,
-	eq,
-	sql,
-} from "drizzle-orm";
-import {
 	bookingDiscountApplication,
 	bookingDiscountCode,
 } from "@my-app/db/schema/marketplace";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import type { Db, DiscountCodeRow } from "./types";
 
@@ -91,10 +85,7 @@ export async function listOrganizationDiscountCodes(
 		.select()
 		.from(bookingDiscountCode)
 		.where(eq(bookingDiscountCode.organizationId, organizationId))
-		.orderBy(
-			desc(bookingDiscountCode.isActive),
-			asc(bookingDiscountCode.code),
-		);
+		.orderBy(desc(bookingDiscountCode.isActive), asc(bookingDiscountCode.code));
 }
 
 export async function createDiscountCode(

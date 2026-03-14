@@ -13,7 +13,7 @@ const REOPENED_STATUSES = new Set<SupportTicketStatus>([
 
 export const getFollowupStatusFromMessage = (
 	isInternal: boolean,
-	authorKind: "customer" | "inbound" | "operator"
+	authorKind: "customer" | "inbound" | "operator",
 ): SupportTicketStatus | null => {
 	if (isInternal) {
 		return null;
@@ -24,7 +24,7 @@ export const getFollowupStatusFromMessage = (
 
 export const buildTicketStatusPatch = (
 	status: SupportTicketStatus,
-	actorContext?: SupportActorContext
+	actorContext?: SupportActorContext,
 ): Partial<SupportTicketInsert> => {
 	const now = new Date();
 

@@ -91,6 +91,6 @@ export const consentRouter = {
 			return {
 				accepted: input.consentTypes,
 			};
-		}
+		},
 	),
 };

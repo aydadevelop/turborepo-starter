@@ -48,7 +48,7 @@ test("opens pricing actions in dialogs instead of stacking inline forms", async 
 		.element(page.getByRole("button", { name: "Add rule" }))
 		.toBeVisible();
 	await expect(document.body).toMatchScreenshot(
-		"listing-workspace-pricing-section"
+		"listing-workspace-pricing-section",
 	);
 
 	await userEvent.click(page.getByRole("button", { name: "Add profile" }));

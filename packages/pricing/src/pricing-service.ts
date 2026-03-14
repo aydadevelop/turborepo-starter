@@ -1,9 +1,9 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import {
 	listing,
 	listingPricingProfile,
 	listingPricingRule,
 } from "@my-app/db/schema/marketplace";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 
 import type {
 	CreatePricingProfileInput,
@@ -22,9 +22,16 @@ async function verifyListingOwnership(
 	const [row] = await db
 		.select({ id: listing.id })
 		.from(listing)
-		.where(and(eq(listing.id, listingId), eq(listing.organizationId, organizationId)))
+		.where(
+			and(
+				eq(listing.id, listingId),
+				eq(listing.organizationId, organizationId),
+			),
+		)
 		.limit(1);
-	if (!row) throw new Error("NOT_FOUND");
+	if (!row) {
+		throw new Error("NOT_FOUND");
+	}
 }
 
 export async function createPricingProfile(
@@ -57,7 +64,9 @@ export async function createPricingProfile(
 			isDefault: input.isDefault ?? false,
 		})
 		.returning();
-	if (!row) throw new Error("Insert failed");
+	if (!row) {
+		throw new Error("Insert failed");
+	}
 	return row;
 }
 
@@ -67,11 +76,16 @@ export async function updatePricingProfile(
 ): Promise<PricingProfileRow> {
 	// Find the profile and verify org ownership via listing
 	const [existing] = await db
-		.select({ id: listingPricingProfile.id, listingId: listingPricingProfile.listingId })
+		.select({
+			id: listingPricingProfile.id,
+			listingId: listingPricingProfile.listingId,
+		})
 		.from(listingPricingProfile)
 		.where(eq(listingPricingProfile.id, input.id))
 		.limit(1);
-	if (!existing) throw new Error("NOT_FOUND");
+	if (!existing) {
+		throw new Error("NOT_FOUND");
+	}
 	await verifyListingOwnership(existing.listingId, input.organizationId, db);
 
 	if (input.isDefault) {
@@ -87,18 +101,30 @@ export async function updatePricingProfile(
 	}
 
 	const updates: Partial<typeof listingPricingProfile.$inferInsert> = {};
-	if (input.name !== undefined) updates.name = input.name;
-	if (input.baseHourlyPriceCents !== undefined) updates.baseHourlyPriceCents = input.baseHourlyPriceCents;
-	if (input.serviceFeeBps !== undefined) updates.serviceFeeBps = input.serviceFeeBps;
-	if (input.taxBps !== undefined) updates.taxBps = input.taxBps;
-	if (input.isDefault !== undefined) updates.isDefault = input.isDefault;
+	if (input.name !== undefined) {
+		updates.name = input.name;
+	}
+	if (input.baseHourlyPriceCents !== undefined) {
+		updates.baseHourlyPriceCents = input.baseHourlyPriceCents;
+	}
+	if (input.serviceFeeBps !== undefined) {
+		updates.serviceFeeBps = input.serviceFeeBps;
+	}
+	if (input.taxBps !== undefined) {
+		updates.taxBps = input.taxBps;
+	}
+	if (input.isDefault !== undefined) {
+		updates.isDefault = input.isDefault;
+	}
 
 	const [row] = await db
 		.update(listingPricingProfile)
 		.set(updates)
 		.where(eq(listingPricingProfile.id, input.id))
 		.returning();
-	if (!row) throw new Error("NOT_FOUND");
+	if (!row) {
+		throw new Error("NOT_FOUND");
+	}
 	return row;
 }
 
@@ -117,7 +143,10 @@ export async function listPricingProfiles(
 				isNull(listingPricingProfile.archivedAt),
 			),
 		)
-		.orderBy(desc(listingPricingProfile.isDefault), asc(listingPricingProfile.createdAt));
+		.orderBy(
+			desc(listingPricingProfile.isDefault),
+			asc(listingPricingProfile.createdAt),
+		);
 }
 
 export async function createPricingRule(
@@ -140,7 +169,9 @@ export async function createPricingRule(
 			isActive: true,
 		})
 		.returning();
-	if (!row) throw new Error("Insert failed");
+	if (!row) {
+		throw new Error("Insert failed");
+	}
 	return row;
 }
 
@@ -150,11 +181,16 @@ export async function deletePricingRule(
 	db: Db,
 ): Promise<void> {
 	const [rule] = await db
-		.select({ id: listingPricingRule.id, listingId: listingPricingRule.listingId })
+		.select({
+			id: listingPricingRule.id,
+			listingId: listingPricingRule.listingId,
+		})
 		.from(listingPricingRule)
 		.where(eq(listingPricingRule.id, id))
 		.limit(1);
-	if (!rule) throw new Error("NOT_FOUND");
+	if (!rule) {
+		throw new Error("NOT_FOUND");
+	}
 	await verifyListingOwnership(rule.listingId, organizationId, db);
 	await db.delete(listingPricingRule).where(eq(listingPricingRule.id, id));
 }

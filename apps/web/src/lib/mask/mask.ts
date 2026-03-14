@@ -26,7 +26,9 @@ export class Mask {
 	constructor(defaults: MaskOptions = {}) {
 		const opts = { ...defaults };
 
-		if (opts.tokens != null) {
+		if (opts.tokens == null) {
+			opts.tokens = tokens;
+		} else {
 			opts.tokens = (opts.tokensReplace as boolean)
 				? { ...opts.tokens }
 				: { ...tokens, ...opts.tokens };
@@ -36,8 +38,6 @@ export class Mask {
 					token.pattern = new RegExp(token.pattern);
 				}
 			}
-		} else {
-			opts.tokens = tokens;
 		}
 
 		if (Array.isArray(opts.mask)) {
@@ -121,11 +121,10 @@ export class Mask {
 		return { mask: chars.join(""), escaped };
 	}
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: mask processing requires complex state machine
 	private process(
 		value: string,
 		maskRaw: string | null,
-		masked = true
+		masked = true,
 	): string {
 		if (this.opts.number != null) {
 			return processNumber(value, masked, this.opts);
@@ -167,9 +166,9 @@ export class Mask {
 			const maskChar = mask.charAt(m);
 			const token = tkns[maskChar];
 			const valueChar =
-				token?.transform != null
-					? token.transform(value.charAt(v))
-					: value.charAt(v);
+				token?.transform == null
+					? value.charAt(v)
+					: token.transform(value.charAt(v));
 
 			if (!escaped.includes(m) && token != null) {
 				if (valueChar.match(token.pattern) != null) {

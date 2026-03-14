@@ -14,7 +14,7 @@ export class DnsRecords extends pulumi.ComponentResource {
 	constructor(
 		name: string,
 		args: DnsRecordsArgs,
-		opts?: pulumi.ComponentResourceOptions
+		opts?: pulumi.ComponentResourceOptions,
 	) {
 		super("myapp:infra:DnsRecords", name, {}, opts);
 
@@ -42,7 +42,7 @@ export class DnsRecords extends pulumi.ComponentResource {
 					ttl: 300,
 					comment: sub.comment,
 				},
-				{ parent: this }
+				{ parent: this },
 			);
 		}
 

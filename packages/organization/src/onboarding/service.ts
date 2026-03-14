@@ -8,7 +8,7 @@ import {
 
 export const recalculateOrganizationOnboarding = async (
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationOnboardingRow> => {
 	const [existing, next] = await Promise.all([
 		findOrganizationOnboarding(organizationId, db),
@@ -33,13 +33,13 @@ export const recalculateOrganizationOnboarding = async (
 			createdAt: existing?.createdAt ?? now,
 			updatedAt: now,
 		},
-		db
+		db,
 	);
 };
 
 export const getOrganizationOnboardingStatus = async (
 	organizationId: string,
-	db: Db = defaultDb
+	db: Db = defaultDb,
 ): Promise<OrganizationOnboardingRow> => {
 	const row = await findOrganizationOnboarding(organizationId, db);
 	if (row) {

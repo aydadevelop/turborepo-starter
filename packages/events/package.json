@@ -1,23 +1,22 @@
 {
-  "name": "@my-app/events",
-  "type": "module",
-  "exports": {
-    ".": {
-      "default": "./src/index.ts"
-    }
-  },
-  "scripts": {
-    "check-types": "tsc --noEmit -p tsconfig.json",
-    "lint": "cd ../.. && biome check --config-path biome.json packages/events",
-    "lint:fix": "cd ../.. && biome check --config-path biome.json packages/events --write",
-    "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest --watch"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
-    "@my-app/config": "workspace:*",
-    "@my-app/vitest-config": "workspace:*",
-    "typescript": "^5",
-    "vitest": "^4.0.18"
-  }
+	"name": "@my-app/events",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./src/index.ts"
+		}
+	},
+	"scripts": {
+		"check-types": "tsc --noEmit -p tsconfig.json",
+		"lint": "cd ../.. && oxlint packages/events",
+		"lint:fix": "cd ../.. && oxlint --fix packages/events",
+		"test": "vitest run --passWithNoTests",
+		"test:watch": "vitest --watch"
+	},
+	"devDependencies": {
+		"@my-app/config": "workspace:*",
+		"@my-app/vitest-config": "workspace:*",
+		"typescript": "^5",
+		"vitest": "^4.0.18"
+	}
 }

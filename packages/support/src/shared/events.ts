@@ -8,7 +8,7 @@ import type {
 
 const emitWithContext = async (
 	actorContext: SupportActorContext | undefined,
-	input: Parameters<SupportActorContext["eventBus"]["emit"]>[0]
+	input: Parameters<SupportActorContext["eventBus"]["emit"]>[0],
 ): Promise<void> => {
 	if (!actorContext) {
 		return;
@@ -19,7 +19,7 @@ const emitWithContext = async (
 
 export const emitSupportTicketCreated = async (
 	actorContext: SupportActorContext | undefined,
-	ticket: SupportTicketRow
+	ticket: SupportTicketRow,
 ): Promise<void> =>
 	emitWithContext(actorContext, {
 		type: "support:ticket-created",
@@ -35,7 +35,7 @@ export const emitSupportTicketCreated = async (
 
 export const emitSupportTicketAssigned = async (
 	actorContext: SupportActorContext | undefined,
-	ticket: SupportTicketRow
+	ticket: SupportTicketRow,
 ): Promise<void> =>
 	emitWithContext(actorContext, {
 		type: "support:ticket-assigned",
@@ -55,7 +55,7 @@ export const emitSupportTicketStatusChanged = async (
 		previousStatus: SupportTicketStatus;
 		status: SupportTicketStatus;
 		ticketId: string;
-	}
+	},
 ): Promise<void> =>
 	emitWithContext(actorContext, {
 		type: "support:ticket-status-changed",
@@ -74,7 +74,7 @@ export const emitSupportMessageAdded = async (
 	input: {
 		message: SupportTicketMessageRow;
 		organizationId: string;
-	}
+	},
 ): Promise<void> =>
 	emitWithContext(actorContext, {
 		type: "support:message-added",
@@ -95,7 +95,7 @@ export const emitSupportInboundReceived = async (
 		channel: InboundMessageChannel;
 		inboundMessageId: string;
 		organizationId: string;
-	}
+	},
 ): Promise<void> =>
 	emitWithContext(actorContext, {
 		type: "support:inbound-received",
@@ -116,7 +116,7 @@ export const emitSupportInboundProcessed = async (
 		messageId: string;
 		organizationId: string;
 		ticketId: string;
-	}
+	},
 ): Promise<void> =>
 	emitWithContext(actorContext, {
 		type: "support:inbound-processed",

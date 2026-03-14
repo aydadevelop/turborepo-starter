@@ -1,4 +1,3 @@
-<!-- biome-ignore-all format: TanStack Form component member syntax not supported -->
 <script lang="ts">
 	import { Button } from "@my-app/ui/components/button";
 	import {
@@ -7,8 +6,8 @@
 	} from "@my-app/ui/components/native-select";
 	import { Textarea } from "@my-app/ui/components/textarea";
 	import { createForm } from "@tanstack/svelte-form";
-	import FormFieldShell from "../../../../components/operator/FormFieldShell.svelte";
 	import { z } from "zod";
+	import FormFieldShell from "../../../../components/operator/FormFieldShell.svelte";
 
 	const moderationActionSchema = z.object({
 		listingId: z.string().trim().min(1, "Select a listing."),

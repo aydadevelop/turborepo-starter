@@ -1,6 +1,6 @@
 import type {
-	CalendarAccountConfig,
 	BusySlot,
+	CalendarAccountConfig,
 	CalendarAdapter,
 	CalendarConnectionConfig,
 	CalendarEventInput,
@@ -9,11 +9,11 @@ import type {
 } from "./types";
 
 interface FakeEventRecord {
-	eventId: string;
 	calendarId: string;
+	eventId: string;
 	input: CalendarEventInput;
-	version: number;
 	syncedAt: Date;
+	version: number;
 }
 
 /**
@@ -112,7 +112,7 @@ export class FakeCalendarAdapter implements CalendarAdapter {
 					metadata:
 						(source as { metadata?: unknown }).metadata &&
 						typeof (source as { metadata?: unknown }).metadata === "object"
-							? ((source as { metadata: Record<string, unknown> }).metadata)
+							? (source as { metadata: Record<string, unknown> }).metadata
 							: null,
 				})),
 			);

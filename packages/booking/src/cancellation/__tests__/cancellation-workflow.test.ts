@@ -146,7 +146,7 @@ const dbState = bootstrapTestDatabase({
 const getDb = () => dbState.db as unknown as Db;
 
 const makeCtx = (
-	overrides: Partial<WorkflowContext> = {}
+	overrides: Partial<WorkflowContext> = {},
 ): WorkflowContext => ({
 	organizationId: ORG_ID,
 	actorUserId: USER_ID,
@@ -156,7 +156,7 @@ const makeCtx = (
 });
 
 const registerTestProvider = (
-	overrides: Partial<PaymentProvider> = {}
+	overrides: Partial<PaymentProvider> = {},
 ): PaymentProvider => {
 	const provider: PaymentProvider = {
 		providerId: "cloudpayments",
@@ -172,7 +172,7 @@ const registerTestProvider = (
 
 const insertCancellationRequest = async (
 	db: Db,
-	overrides: Partial<typeof bookingCancellationRequest.$inferInsert> = {}
+	overrides: Partial<typeof bookingCancellationRequest.$inferInsert> = {},
 ): Promise<void> => {
 	await db.insert(bookingCancellationRequest).values({
 		id: REQUEST_ID,
@@ -196,7 +196,7 @@ const insertCancellationRequest = async (
 
 const insertCapturedAttempt = async (
 	db: Db,
-	overrides: Partial<typeof bookingPaymentAttempt.$inferInsert> = {}
+	overrides: Partial<typeof bookingPaymentAttempt.$inferInsert> = {},
 ): Promise<void> => {
 	await db.insert(bookingPaymentAttempt).values({
 		id: "disp-payment-attempt-1",
@@ -237,7 +237,7 @@ describe("processCancellationWorkflow", () => {
 				organizationId: ORG_ID,
 				appliedByUserId: USER_ID,
 			},
-			makeCtx()
+			makeCtx(),
 		);
 
 		expect(result.success).toBe(true);
@@ -255,7 +255,7 @@ describe("processCancellationWorkflow", () => {
 				providerId: "cloudpayments",
 				publicKey: "pk_live_test",
 				credentials: expect.objectContaining({ apiSecret: "secret_live_test" }),
-			})
+			}),
 		);
 
 		const [refund] = await db
@@ -303,7 +303,7 @@ describe("processCancellationWorkflow", () => {
 					refundAmountKopeks: 5000,
 				}),
 			}),
-			undefined
+			undefined,
 		);
 		expect(pusher).toHaveBeenCalledTimes(1);
 	});
@@ -326,7 +326,7 @@ describe("processCancellationWorkflow", () => {
 				organizationId: ORG_ID,
 				appliedByUserId: USER_ID,
 			},
-			makeCtx()
+			makeCtx(),
 		);
 
 		expect(result.success).toBe(true);
@@ -377,7 +377,7 @@ describe("processCancellationWorkflow", () => {
 				organizationId: ORG_ID,
 				appliedByUserId: USER_ID,
 			},
-			makeCtx({ eventBus: failingBus })
+			makeCtx({ eventBus: failingBus }),
 		);
 
 		expect(result.success).toBe(false);
@@ -444,13 +444,13 @@ describe("processCancellationWorkflow", () => {
 				organizationId: ORG_ID,
 				appliedByUserId: USER_ID,
 			},
-			makeCtx()
+			makeCtx(),
 		);
 
 		expect(result.success).toBe(true);
 		expect(provider.refundPayment).toHaveBeenCalledWith(
 			expect.objectContaining({ amountCents: 2500 }),
-			expect.anything()
+			expect.anything(),
 		);
 
 		const [refund] = await db
@@ -459,8 +459,8 @@ describe("processCancellationWorkflow", () => {
 			.where(
 				and(
 					eq(bookingRefund.bookingId, BOOKING_ID),
-					eq(bookingRefund.status, "processed")
-				)
+					eq(bookingRefund.status, "processed"),
+				),
 			)
 			.limit(1);
 		expect(refund?.amountCents).toBe(2500);

@@ -7,14 +7,14 @@ const TRAILING_SLASHES_RE = /\/+$/;
 export function resolveServerBaseUrl(): string {
 	const raw = (env.PUBLIC_SERVER_URL ?? DEFAULT_SERVER_URL).replace(
 		TRAILING_SLASHES_RE,
-		""
+		"",
 	);
 	if (ABSOLUTE_URL_RE.test(raw)) {
 		return raw;
 	}
 
 	const origin =
-		typeof window !== "undefined" ? window.location.origin : "http://localhost";
+		typeof window === "undefined" ? "http://localhost" : window.location.origin;
 	return `${origin}${raw}`;
 }
 

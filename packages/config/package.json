@@ -1,9 +1,6 @@
 {
-  "name": "@my-app/config",
-  "version": "0.0.0",
-  "private": true,
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
-    "ultracite": "^7.2.3"
-  }
+	"name": "@my-app/config",
+	"version": "0.0.0",
+	"private": true,
+	"devDependencies": {}
 }
