@@ -23,6 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 9: Operator Catalog & Booking Intake Wiring** - Wire the missing operator publish flow and customer quote-to-booking intake path through the live web and API surfaces. (completed 2026-03-10)
 - [x] **Phase 10: Payment Webhook & Cancellation Live Path** - Put live payment reconciliation and cancellation/refund orchestration onto the production request path. (completed 2026-03-10)
 - [x] **Phase 11: Events, Notifications, Calendar & Support Integration** - Converge live booking side effects onto typed events and complete the customer-facing support follow-up flow. (completed 2026-03-10)
+- [ ] **Phase 12: Operator Booking Notification Fan-out** - Close the remaining milestone blocker by delivering operator-facing booking confirmation and cancellation notifications on the live typed notification path.
 
 ## Phase Details
 
@@ -125,7 +126,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -140,6 +141,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 9. Operator Catalog & Booking Intake Wiring | 3/3 | Complete | 2026-03-10 |
 | 10. Payment Webhook & Cancellation Live Path | 4/4 | Complete   | 2026-03-10 |
 | 11. Events, Notifications, Calendar & Support Integration | 0/0 | Complete    | 2026-03-10 |
+| 12. Operator Booking Notification Fan-out | 0/0 | Not started | - |
 
 ### Phase 7: review missing extractions
 
@@ -222,3 +224,16 @@ Plans:
 Plans:
 - [ ] 11-01-PLAN.md — OPER-03 + BOOK-04: Emit typed domain events from booking.updateStatus + notification events-bridge recipient resolution at startup
 - [ ] 11-02-PLAN.md — AUTH-02 + OPER-02: listCustomerTickets domain function, customer-scoped API endpoint, /dashboard/bookings web page
+
+### Phase 12: Operator Booking Notification Fan-out
+
+**Goal**: Close the last milestone-blocking notification gap by faning booking confirmation and cancellation events out to operator recipients as well as customers on the live typed notification path.
+**Depends on:** Phase 11
+**Requirements**: BOOK-04
+**Gap Closure:** Closes the refreshed milestone audit requirement gap, integration gap, and broken notification-delivery flow caused by customer-only recipient resolution in the notifications event bridge.
+**Success Criteria** (what must be TRUE):
+  1. `booking:confirmed` and `booking:cancelled` notifications resolve at least one operator recipient in addition to the customer when an operator-facing org context exists.
+  2. Operator recipients receive valid notification payloads through the same typed events → notifications bridge → queue/processor path used for customer delivery.
+  3. Automated coverage proves mixed recipient fan-out is idempotent and does not regress existing customer delivery behavior.
+  4. Re-running `/gsd-audit-milestone` no longer reports `BOOK-04` as partial.
+**Plans**: 0 plans

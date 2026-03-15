@@ -111,7 +111,7 @@
 | BOOK-01 | Phase 9 | Complete |
 | BOOK-02 | Phase 8 | Satisfied |
 | BOOK-03 | Phase 10 | Complete |
-| BOOK-04 | Phase 11 | Pending |
+| BOOK-04 | Phase 12 | Pending |
 | BOOK-05 | Phase 10 | Complete |
 | OPER-01 | Phase 10 | Complete |
 | OPER-02 | Phase 11 | Pending |
@@ -124,4 +124,4 @@
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-10 after Phase 10 completion and human verification approval*
+*Last updated: 2026-03-15 after refreshed milestone audit and Phase 12 gap-closure planning*
