@@ -14,10 +14,10 @@
 	const sessionQuery = authClient.useSession();
 	const initialSession = $derived(getPageInitialSessionData(page.data));
 	const sessionData = $derived(
-		resolveSessionData($sessionQuery, initialSession)
+		resolveSessionData($sessionQuery, initialSession),
 	);
 	const sessionPending = $derived(
-		isSessionPending($sessionQuery, initialSession)
+		isSessionPending($sessionQuery, initialSession),
 	);
 
 	$effect(() => {
@@ -25,7 +25,7 @@
 		const user = sessionData?.user;
 		if (!hasAuthenticatedSession(sessionData)) {
 			goto(
-				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`,
 			);
 			return;
 		}
@@ -51,7 +51,7 @@
 	<div class="flex items-center justify-center min-h-[50vh]">
 		<p class="text-muted-foreground">Loading...</p>
 	</div>
-{:else if ((sessionData?.user as { role?: string } | undefined)?.role !== "admin")}
+{:else if (sessionData?.user as { role?: string } | undefined)?.role !== "admin"}
 	<div class="flex items-center justify-center min-h-[50vh]">
 		<p class="text-muted-foreground">Access denied</p>
 	</div>

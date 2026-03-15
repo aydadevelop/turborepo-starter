@@ -23,15 +23,15 @@
 	} = $props();
 
 	const sessionData = $derived(
-		resolveSessionData($sessionQuery, initialSession)
+		resolveSessionData($sessionQuery, initialSession),
 	);
-	const sessionPending = $derived(isSessionPending($sessionQuery, initialSession));
+	const sessionPending = $derived(
+		isSessionPending($sessionQuery, initialSession),
+	);
 	const hasSessionUser = $derived(
-		Boolean(sessionData?.session && sessionData?.user?.id)
+		Boolean(sessionData?.session && sessionData?.user?.id),
 	);
-	const isFullyAuthenticated = $derived(
-		hasAuthenticatedSession(sessionData)
-	);
+	const isFullyAuthenticated = $derived(hasAuthenticatedSession(sessionData));
 
 	async function handleSignOut() {
 		await authClient.signOut({
@@ -48,7 +48,7 @@
 	}
 
 	const loginHref = $derived(
-		`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+		`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`,
 	);
 </script>
 
@@ -62,7 +62,7 @@
 				class="text-sm text-muted-foreground hidden sm:inline"
 				title={user?.email}
 			>
-				{user?.name || user?.email?.split('@')[0] || 'Anonymous'}
+				{user?.name || user?.email?.split("@")[0] || "Anonymous"}
 			</span>
 			{#if isFullyAuthenticated}
 				<a
@@ -91,7 +91,11 @@
 		</div>
 	{:else}
 		<div class="flex items-center gap-2">
-			<Button size="sm" href={loginHref} data-testid="header-sign-in-button">
+			<Button
+				size="sm"
+				href={loginHref}
+				data-testid="header-sign-in-button"
+			>
 				Sign In
 			</Button>
 		</div>

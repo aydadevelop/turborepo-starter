@@ -18,28 +18,28 @@
 	const sessionQuery = authClient.useSession();
 	const initialSession = $derived(getPageInitialSessionData(page.data));
 	const sessionData = $derived(
-		resolveSessionData($sessionQuery, initialSession)
+		resolveSessionData($sessionQuery, initialSession),
 	);
 	const sessionPending = $derived(
-		isSessionPending($sessionQuery, initialSession)
+		isSessionPending($sessionQuery, initialSession),
 	);
 
 	$effect(() => {
 		if (sessionPending) return;
 		if (!hasAuthenticatedSession(sessionData)) {
 			goto(
-				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`,
 			);
 		}
 	});
 
 	const user = $derived(sessionData?.user);
 	const phoneNumber = $derived(
-		(user as { phoneNumber?: string } | undefined)?.phoneNumber ?? null
+		(user as { phoneNumber?: string } | undefined)?.phoneNumber ?? null,
 	);
 	const telegramUsername = $derived(
 		(user as { telegramUsername?: string } | undefined)?.telegramUsername ??
-			null
+			null,
 	);
 </script>
 

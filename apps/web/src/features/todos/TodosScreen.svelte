@@ -26,10 +26,10 @@
 	const sessionQuery = authClient.useSession();
 	const initialSession = $derived(getPageInitialSessionData(page.data));
 	const sessionData = $derived(
-		resolveSessionData($sessionQuery, initialSession)
+		resolveSessionData($sessionQuery, initialSession),
 	);
 	const sessionPending = $derived(
-		isSessionPending($sessionQuery, initialSession)
+		isSessionPending($sessionQuery, initialSession),
 	);
 	const queryClient = useQueryClient();
 
@@ -40,7 +40,7 @@
 		if (sessionPending) return;
 		if (!hasAuthenticatedSession(sessionData)) {
 			goto(
-				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`,
 			);
 		}
 	});
@@ -52,57 +52,74 @@
 				newTodoText = "";
 			},
 			onError: (error) => {
-				console.error("Failed to create todo:", error?.message ?? error);
+				console.error(
+					"Failed to create todo:",
+					error?.message ?? error,
+				);
 			},
-		})
+		}),
 	);
 
 	const toggleMutation = createMutation(() =>
 		orpc.todo.toggle.mutationOptions({
 			onMutate: async (input) => {
 				await queryClient.cancelQueries({ queryKey: todosQueryKey });
-				const previous = queryClient.getQueryData<TodoList>(todosQueryKey);
+				const previous =
+					queryClient.getQueryData<TodoList>(todosQueryKey);
 				queryClient.setQueryData<TodoList>(todosQueryKey, (old) =>
 					old?.map((todo) =>
 						todo.id === input.id
 							? { ...todo, completed: input.completed }
-							: todo
-					)
+							: todo,
+					),
 				);
 				return { previous };
 			},
 			onError: (error, _input, context) => {
 				if (context?.previous) {
-					queryClient.setQueryData<TodoList>(todosQueryKey, context.previous);
+					queryClient.setQueryData<TodoList>(
+						todosQueryKey,
+						context.previous,
+					);
 				}
-				console.error("Failed to toggle todo:", error?.message ?? error);
+				console.error(
+					"Failed to toggle todo:",
+					error?.message ?? error,
+				);
 			},
 			onSettled: () => {
 				queryClient.invalidateQueries({ queryKey: orpc.todo.key() });
 			},
-		})
+		}),
 	);
 
 	const deleteMutation = createMutation(() =>
 		orpc.todo.delete.mutationOptions({
 			onMutate: async (input) => {
 				await queryClient.cancelQueries({ queryKey: todosQueryKey });
-				const previous = queryClient.getQueryData<TodoList>(todosQueryKey);
+				const previous =
+					queryClient.getQueryData<TodoList>(todosQueryKey);
 				queryClient.setQueryData<TodoList>(todosQueryKey, (old) =>
-					old?.filter((todo) => todo.id !== input.id)
+					old?.filter((todo) => todo.id !== input.id),
 				);
 				return { previous };
 			},
 			onError: (error, _input, context) => {
 				if (context?.previous) {
-					queryClient.setQueryData<TodoList>(todosQueryKey, context.previous);
+					queryClient.setQueryData<TodoList>(
+						todosQueryKey,
+						context.previous,
+					);
 				}
-				console.error("Failed to delete todo:", error?.message ?? error);
+				console.error(
+					"Failed to delete todo:",
+					error?.message ?? error,
+				);
 			},
 			onSettled: () => {
 				queryClient.invalidateQueries({ queryKey: orpc.todo.key() });
 			},
-		})
+		}),
 	);
 
 	function handleAddTodo(event: SubmitEvent) {
@@ -164,7 +181,7 @@
 		</Card.Root>
 
 		<Card.Root>
-			<Card.Header> <Card.Title>Your Tasks</Card.Title> </Card.Header>
+			<Card.Header><Card.Title>Your Tasks</Card.Title></Card.Header>
 			<Card.Content>
 				{#if isLoadingTodos}
 					<p class="text-muted-foreground">Loading...</p>
@@ -173,8 +190,12 @@
 				{:else}
 					<ul class="space-y-2">
 						{#each todos as todo (todo.id)}
-							{@const isToggling = toggleMutation.isPending && toggleMutation.variables?.id === todo.id}
-							{@const isDeleting = deleteMutation.isPending && deleteMutation.variables?.id === todo.id}
+							{@const isToggling =
+								toggleMutation.isPending &&
+								toggleMutation.variables?.id === todo.id}
+							{@const isDeleting =
+								deleteMutation.isPending &&
+								deleteMutation.variables?.id === todo.id}
 							{@const isDisabled = isToggling || isDeleting}
 							<li
 								class="flex items-center justify-between rounded-md border p-3"
@@ -185,10 +206,14 @@
 										type="checkbox"
 										id={`todo-${todo.id}`}
 										checked={todo.completed}
-										onchange={() => handleToggleTodo(todo.id, todo.completed)}
+										onchange={() =>
+											handleToggleTodo(
+												todo.id,
+												todo.completed,
+											)}
 										disabled={isDisabled}
 										class="h-4 w-4 rounded border-input"
-									>
+									/>
 									<label
 										for={`todo-${todo.id}`}
 										class:line-through={todo.completed}
@@ -218,12 +243,14 @@
 				<Card.Content class="pt-6">
 					{#if todosQuery.isError}
 						<p class="text-destructive">
-							Error loading: {todosQuery.error?.message ?? "Unknown error"}
+							Error loading: {todosQuery.error?.message ??
+								"Unknown error"}
 						</p>
 					{/if}
 					{#if addMutation.isError}
 						<p class="text-destructive">
-							Error adding: {addMutation.error?.message ?? "Unknown error"}
+							Error adding: {addMutation.error?.message ??
+								"Unknown error"}
 						</p>
 					{/if}
 					{#if toggleMutation.isError}

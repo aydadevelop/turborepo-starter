@@ -22,16 +22,16 @@
 	const sessionQuery = authClient.useSession();
 	const initialSession = $derived(getPageInitialSessionData(page.data));
 	const sessionData = $derived(
-		resolveSessionData($sessionQuery, initialSession)
+		resolveSessionData($sessionQuery, initialSession),
 	);
 	const sessionPending = $derived(
-		isSessionPending($sessionQuery, initialSession)
+		isSessionPending($sessionQuery, initialSession),
 	);
 
 	const orgsQuery = createQuery(() =>
 		userOrganizationsQueryOptions({
 			enabled: hasAuthenticatedSession(sessionData),
-		})
+		}),
 	);
 
 	const canManageQuery = createQuery(() => ({
@@ -42,25 +42,25 @@
 	const invitationsQuery = createQuery(() =>
 		userInvitationsQueryOptions({
 			enabled: hasAuthenticatedSession(sessionData),
-		})
+		}),
 	);
 
 	$effect(() => {
 		if (sessionPending) return;
 		if (!hasAuthenticatedSession(sessionData)) {
 			goto(
-				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`,
 			);
 		}
 	});
 
 	const hasOrg = $derived((orgsQuery.data?.length ?? 0) > 0);
 	const canManage = $derived(
-		canManageQuery.data?.canManageOrganization ?? false
+		canManageQuery.data?.canManageOrganization ?? false,
 	);
 	const pendingInviteCount = $derived(
 		(invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
-			.length
+			.length,
 	);
 
 	const isActive = (href: string) => page.url.pathname === href;
@@ -74,7 +74,9 @@
 {:else if hasAuthenticatedSession(sessionData)}
 	<div class="mx-auto max-w-6xl px-6 py-6 space-y-4">
 		<div>
-			<h1 class="text-2xl font-bold" data-testid="org-heading">Organization</h1>
+			<h1 class="text-2xl font-bold" data-testid="org-heading">
+				Organization
+			</h1>
 			<nav class="mt-3 flex gap-1 border-b">
 				{#if hasOrg && canManage}
 					<a
@@ -142,7 +144,10 @@
 				>
 					Invitations
 					{#if pendingInviteCount > 0}
-						<Badge variant="secondary" class="ml-1 h-4 px-1 text-[10px]">
+						<Badge
+							variant="secondary"
+							class="ml-1 h-4 px-1 text-[10px]"
+						>
 							{pendingInviteCount}
 						</Badge>
 					{/if}

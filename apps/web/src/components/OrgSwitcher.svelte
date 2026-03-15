@@ -29,18 +29,18 @@
 	} = $props();
 
 	const sessionData = $derived(
-		resolveSessionData($sessionQuery, initialSession)
+		resolveSessionData($sessionQuery, initialSession),
 	);
 
 	const orgsQuery = createQuery(() =>
 		userOrganizationsQueryOptions({
 			enabled: hasAuthenticatedSession(sessionData),
-		})
+		}),
 	);
 
 	const activeOrgId = $derived(
 		(sessionData?.session as { activeOrganizationId?: string } | undefined)
-			?.activeOrganizationId ?? undefined
+			?.activeOrganizationId ?? undefined,
 	);
 
 	const switchOrganization = createMutation(() => ({
@@ -49,9 +49,12 @@
 				{
 					setActiveOrganization: authClient.organization.setActive,
 					invalidateOrgSwitcher: () =>
-						invalidateQueryKeys(queryClient, getOrgSwitcherInvalidationKeys()),
+						invalidateQueryKeys(
+							queryClient,
+							getOrgSwitcherInvalidationKeys(),
+						),
 				},
-				organizationId
+				organizationId,
 			);
 
 			if (!result.ok) {

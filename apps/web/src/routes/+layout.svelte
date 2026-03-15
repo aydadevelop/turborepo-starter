@@ -12,7 +12,7 @@
 	const PUBLIC_HEADER_PATHS = new Set(["/", "/login"]);
 
 	const isPublicHeaderPath = $derived(
-		PUBLIC_HEADER_PATHS.has(page.url.pathname)
+		PUBLIC_HEADER_PATHS.has(page.url.pathname),
 	);
 
 	let PublicAppHeader = $state<

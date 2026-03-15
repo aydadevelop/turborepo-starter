@@ -29,24 +29,24 @@
 
 	const sessionQuery = authClient.useSession();
 	const pageInitialSession = $derived(
-		initialSession ?? getPageInitialSessionData(page.data)
+		initialSession ?? getPageInitialSessionData(page.data),
 	);
 	const sessionData = $derived(
-		resolveSessionData($sessionQuery, pageInitialSession)
+		resolveSessionData($sessionQuery, pageInitialSession),
 	);
 	const sessionPending = $derived(
-		isSessionPending($sessionQuery, pageInitialSession)
+		isSessionPending($sessionQuery, pageInitialSession),
 	);
 
 	const orgsQuery = createQuery(() =>
 		userOrganizationsQueryOptions({
 			enabled: hasAuthenticatedSession(sessionData),
-		})
+		}),
 	);
 
 	$effect(() => {
 		const onProtectedPath = ORG_REQUIRED_PREFIXES.some((prefix) =>
-			page.url.pathname.startsWith(prefix)
+			page.url.pathname.startsWith(prefix),
 		);
 
 		// Wait for session to settle.
@@ -55,10 +55,9 @@
 			if (!onProtectedPath) return;
 
 			const nextPath = `${page.url.pathname}${page.url.search}`;
-			goto(
-				`${resolve("/login")}?next=${encodeURIComponent(nextPath)}`,
-				{ replaceState: true }
-			);
+			goto(`${resolve("/login")}?next=${encodeURIComponent(nextPath)}`, {
+				replaceState: true,
+			});
 			return;
 		}
 		// Orgs haven't loaded yet or errored — don't redirect on error to avoid
@@ -71,7 +70,7 @@
 			const nextPath = `${page.url.pathname}${page.url.search}`;
 			goto(
 				`${resolve("/org/create")}?reason=required&next=${encodeURIComponent(nextPath)}`,
-				{ replaceState: true }
+				{ replaceState: true },
 			);
 		}
 	});

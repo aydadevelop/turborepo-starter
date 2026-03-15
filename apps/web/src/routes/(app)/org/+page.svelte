@@ -18,26 +18,26 @@
 	const sessionQuery = authClient.useSession();
 	const initialSession = $derived(getPageInitialSessionData(page.data));
 	const sessionData = $derived(
-		resolveSessionData($sessionQuery, initialSession)
+		resolveSessionData($sessionQuery, initialSession),
 	);
 	const sessionPending = $derived(
-		isSessionPending($sessionQuery, initialSession)
+		isSessionPending($sessionQuery, initialSession),
 	);
 
 	const orgsQuery = createQuery(() =>
 		userOrganizationsQueryOptions({
 			enabled: hasAuthenticatedSession(sessionData),
-		})
+		}),
 	);
 
 	const invitationsQuery = createQuery(() =>
 		userInvitationsQueryOptions({
 			enabled: hasAuthenticatedSession(sessionData),
-		})
+		}),
 	);
 
 	const isLoading = $derived(
-		sessionPending || orgsQuery.isPending || invitationsQuery.isPending
+		sessionPending || orgsQuery.isPending || invitationsQuery.isPending,
 	);
 
 	$effect(() => {
@@ -45,7 +45,7 @@
 		if (!hasAuthenticatedSession(sessionData)) return; // parent layout handles login redirect
 
 		const hasPendingInvites = (invitationsQuery.data ?? []).some(
-			(inv) => inv.status === "pending"
+			(inv) => inv.status === "pending",
 		);
 		const hasOrg = (orgsQuery.data?.length ?? 0) > 0;
 

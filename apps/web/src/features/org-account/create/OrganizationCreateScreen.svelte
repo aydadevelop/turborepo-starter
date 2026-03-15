@@ -28,14 +28,16 @@
 	const sessionQuery = authClient.useSession();
 	const initialSession = $derived(getPageInitialSessionData(page.data));
 	const sessionData = $derived(
-		resolveSessionData($sessionQuery, initialSession)
+		resolveSessionData($sessionQuery, initialSession),
 	);
 	const sessionPending = $derived(
-		isSessionPending($sessionQuery, initialSession)
+		isSessionPending($sessionQuery, initialSession),
 	);
 	const defaultPostCreatePath = resolve("/dashboard/settings");
 
-	const resolvePostCreateRedirect = (candidatePath: string | null): string => {
+	const resolvePostCreateRedirect = (
+		candidatePath: string | null,
+	): string => {
 		if (!candidatePath) return defaultPostCreatePath;
 		if (!candidatePath.startsWith("/") || candidatePath.startsWith("//")) {
 			return defaultPostCreatePath;
@@ -47,7 +49,7 @@
 	};
 
 	const postCreateRedirectPath = $derived(
-		resolvePostCreateRedirect(page.url.searchParams.get("next"))
+		resolvePostCreateRedirect(page.url.searchParams.get("next")),
 	);
 
 	const extractErrorMessage = (error: unknown, fallback: string): string => {
@@ -96,7 +98,7 @@
 	const orgsQuery = createQuery(() =>
 		userOrganizationsQueryOptions({
 			enabled: hasAuthenticatedSession(sessionData),
-		})
+		}),
 	);
 
 	const hasExistingOrg = $derived((orgsQuery.data?.length ?? 0) > 0);
@@ -105,7 +107,7 @@
 		if (sessionPending) return;
 		if (!hasAuthenticatedSession(sessionData)) {
 			goto(
-				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
+				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`,
 			);
 		}
 	});
@@ -158,7 +160,10 @@
 
 			if (error) {
 				errorMessage = toFriendlyOrgCreateError(
-					extractErrorMessage(error, "Failed to create organization.")
+					extractErrorMessage(
+						error,
+						"Failed to create organization.",
+					),
 				);
 				pending = false;
 				return;
@@ -182,7 +187,7 @@
 						}
 
 						return createdOrganization ? [createdOrganization] : [];
-					}
+					},
 				);
 			}
 
@@ -203,7 +208,7 @@
 					? orgsResult.data
 					: createdOrganization
 						? [createdOrganization]
-						: []
+						: [],
 			);
 
 			goto(postCreateRedirectPath, { replaceState: true });
@@ -211,8 +216,8 @@
 			errorMessage = toFriendlyOrgCreateError(
 				extractErrorMessage(
 					error,
-					"An error occurred while creating the organization."
-				)
+					"An error occurred while creating the organization.",
+				),
 			);
 			pending = false;
 		}
@@ -223,7 +228,8 @@
 	<div class="text-center">
 		<h1 class="text-3xl font-bold">Create Organization</h1>
 		<p class="mt-2 text-muted-foreground">
-			Create an organization to manage your workspace settings and team access
+			Create an organization to manage your workspace settings and team
+			access
 		</p>
 	</div>
 
@@ -231,16 +237,16 @@
 		<Alert.Root>
 			<Alert.Title>Welcome! One more step</Alert.Title>
 			<Alert.Description>
-				Your account is ready. Create an organization to start managing your
-				workspace.
+				Your account is ready. Create an organization to start managing
+				your workspace.
 			</Alert.Description>
 		</Alert.Root>
 	{:else if page.url.searchParams.get("reason") === "required"}
 		<Alert.Root>
 			<Alert.Title>Organization required</Alert.Title>
 			<Alert.Description>
-				You need an organization to access this area. Create one below to
-				continue.
+				You need an organization to access this area. Create one below
+				to continue.
 			</Alert.Description>
 		</Alert.Root>
 	{/if}
@@ -272,7 +278,8 @@
 					placeholder="My game"
 					data-testid="org-create-name-input"
 					value={orgName}
-					oninput={(event: Event) => (orgName = (event.target as HTMLInputElement).value)}
+					oninput={(event: Event) =>
+						(orgName = (event.target as HTMLInputElement).value)}
 				/>
 			</div>
 		{/snippet}
@@ -292,81 +299,93 @@
 				>
 					<p class="mb-4 font-bold">Terms of Service Agreement</p>
 					<p class="mb-3">
-						This Agreement governs the relationship between the User and the
-						Service Provider in connection with the provision of workspace
-						management services.
+						This Agreement governs the relationship between the User
+						and the Service Provider in connection with the
+						provision of workspace management services.
 					</p>
 					<p class="mb-3">
-						The platform facilitates organization-level collaboration and
-						workflow management on behalf of registered organizations.
+						The platform facilitates organization-level
+						collaboration and workflow management on behalf of
+						registered organizations.
 					</p>
 					<p class="mb-3">
-						By creating an organization, the User agrees to the terms set forth
-						in this Agreement and the platform's Privacy Policy.
+						By creating an organization, the User agrees to the
+						terms set forth in this Agreement and the platform's
+						Privacy Policy.
 					</p>
 					<p class="mb-4 font-semibold">1. Acceptance</p>
 					<p class="mb-3">
-						1.1. Before creating an organization, the User must carefully read
-						the terms of this Agreement. The User may not proceed if they do not
-						agree to these terms.
+						1.1. Before creating an organization, the User must
+						carefully read the terms of this Agreement. The User may
+						not proceed if they do not agree to these terms.
 					</p>
 					<p class="mb-3">
-						1.2. This Agreement is considered accepted at the moment the User
-						submits the organization creation form.
+						1.2. This Agreement is considered accepted at the moment
+						the User submits the organization creation form.
 					</p>
 					<p class="mb-4 font-semibold">2. Subject Matter</p>
 					<p class="mb-3">
-						2.1. The Service Provider grants the User access to tools for
-						managing tasks, reminders, notifications, and related operational
-						workflows within the platform.
+						2.1. The Service Provider grants the User access to
+						tools for managing tasks, reminders, notifications, and
+						related operational workflows within the platform.
 					</p>
 					<p class="mb-4 font-semibold">3. Financial Terms</p>
 					<p class="mb-3">
 						3.1. Subscription pricing is listed on the Pricing page.
 					</p>
 					<p class="mb-3">
-						3.2. Payment is required in full before access is granted.
+						3.2. Payment is required in full before access is
+						granted.
 					</p>
-					<p class="mb-4 font-semibold">4. Cancellation and Refunds</p>
-					<p class="mb-3">
-						4.1. The User may cancel their subscription at any time. Access
-						continues until the end of the current billing period.
+					<p class="mb-4 font-semibold">
+						4. Cancellation and Refunds
 					</p>
 					<p class="mb-3">
-						4.2. Refunds are handled on a case-by-case basis within 10 business
-						days of the request.
+						4.1. The User may cancel their subscription at any time.
+						Access continues until the end of the current billing
+						period.
+					</p>
+					<p class="mb-3">
+						4.2. Refunds are handled on a case-by-case basis within
+						10 business days of the request.
 					</p>
 					<p class="mb-4 font-semibold">5. Liability</p>
 					<p class="mb-3">
-						5.1. Each party is responsible for fulfilling their obligations
-						under this Agreement in accordance with applicable law.
+						5.1. Each party is responsible for fulfilling their
+						obligations under this Agreement in accordance with
+						applicable law.
 					</p>
 					<p class="mb-4 font-semibold">6. Personal Data</p>
 					<p class="mb-3">
-						6.1. Personal data is processed in accordance with the Privacy
-						Policy and applicable data protection regulations.
+						6.1. Personal data is processed in accordance with the
+						Privacy Policy and applicable data protection
+						regulations.
 					</p>
 					<p class="mb-4 font-semibold">7. Governing Law</p>
 					<p class="mb-3">
-						7.1. Disputes shall first be resolved through negotiation. If no
-						agreement is reached, disputes will be submitted to the competent
-						court of jurisdiction.
+						7.1. Disputes shall first be resolved through
+						negotiation. If no agreement is reached, disputes will
+						be submitted to the competent court of jurisdiction.
 					</p>
 					<p class="mt-6 text-xs text-muted-foreground">
-						Full agreement text available upon request. Document version:
-						2026-02-14.
+						Full agreement text available upon request. Document
+						version: 2026-02-14.
 					</p>
 				</div>
 
-				<label class="flex cursor-pointer select-none items-start gap-3">
+				<label
+					class="flex cursor-pointer select-none items-start gap-3"
+				>
 					<input
 						type="checkbox"
 						data-testid="org-create-consent-checkbox"
 						class="mt-0.5 h-4 w-4 shrink-0 rounded border border-input accent-primary"
 						checked={consentChecked}
 						disabled={!scrolledToBottom}
-						onchange={(event) => (consentChecked = (event.target as HTMLInputElement).checked)}
-					>
+						onchange={(event) =>
+							(consentChecked = (event.target as HTMLInputElement)
+								.checked)}
+					/>
 					<span class="text-sm">
 						{#if !scrolledToBottom}
 							<span class="text-muted-foreground"
@@ -374,7 +393,9 @@
 							>
 						{:else}
 							I have read and agree to the
-							<span class="font-medium">Terms of Service Agreement</span>
+							<span class="font-medium"
+								>Terms of Service Agreement</span
+							>
 						{/if}
 					</span>
 				</label>

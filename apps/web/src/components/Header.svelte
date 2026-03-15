@@ -27,14 +27,14 @@
 
 	const sessionQuery = authClient.useSession();
 	const sessionData = $derived(
-		resolveSessionData($sessionQuery, initialSession)
+		resolveSessionData($sessionQuery, initialSession),
 	);
 
 	const isImpersonating = $derived(
 		Boolean(
 			(sessionData?.session as { impersonatedBy?: string } | undefined)
-				?.impersonatedBy
-		)
+				?.impersonatedBy,
+		),
 	);
 
 	const handleStopImpersonating = async () => {
@@ -52,19 +52,18 @@
 	const invitationsQuery = createQuery(() =>
 		userInvitationsQueryOptions({
 			enabled: hasAuthenticatedSession(sessionData),
-		})
+		}),
 	);
 
 	const isAdmin = $derived(
-		(sessionData?.user as { role?: string } | undefined)?.role ===
-			"admin"
+		(sessionData?.user as { role?: string } | undefined)?.role === "admin",
 	);
 	const hasOrgAccess = $derived(
-		Boolean(canManageQuery.data?.canManageOrganization)
+		Boolean(canManageQuery.data?.canManageOrganization),
 	);
 	const pendingInvitationCount = $derived(
 		(invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
-			.length
+			.length,
 	);
 </script>
 
@@ -95,8 +94,10 @@
 		class="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4"
 	>
 		<a href={resolve("/")} class="flex items-center gap-3">
-			<img src="/icon6.svg" alt="Starter" class="h-9 w-9 rounded-full">
-			<span class="text-sm font-semibold text-muted-foreground"> Starter </span>
+			<img src="/icon6.svg" alt="Starter" class="h-9 w-9 rounded-full" />
+			<span class="text-sm font-semibold text-muted-foreground">
+				Starter
+			</span>
 		</a>
 		<nav
 			class="hidden items-center gap-6 text-sm text-muted-foreground md:flex"
@@ -114,16 +115,14 @@
 				<a
 					href={resolve("/org/team")}
 					class="transition hover:text-foreground"
-					data-testid="nav-link-team"
-					>Team</a
+					data-testid="nav-link-team">Team</a
 				>
 			{/if}
 			{#if isAdmin}
 				<a
 					href={resolve("/admin")}
 					class="font-medium text-primary transition hover:text-primary/80"
-					data-testid="nav-link-admin"
-					>Admin</a
+					data-testid="nav-link-admin">Admin</a
 				>
 			{/if}
 		</nav>
@@ -132,7 +131,11 @@
 			<!-- Pass the already-fetched session down so NotificationCenter
 			     doesn't create a second independent subscription. -->
 			<NotificationCenter {sessionQuery} />
-			<UserMenu {pendingInvitationCount} {sessionQuery} {initialSession} />
+			<UserMenu
+				{pendingInvitationCount}
+				{sessionQuery}
+				{initialSession}
+			/>
 		</div>
 	</div>
 </header>

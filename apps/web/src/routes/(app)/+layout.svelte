@@ -5,7 +5,8 @@
 
 	const { children: pageChildren, data } = $props();
 	let QueryDevtools = $state<
-		null | typeof import("@tanstack/svelte-query-devtools").SvelteQueryDevtools
+		| null
+		| typeof import("@tanstack/svelte-query-devtools").SvelteQueryDevtools
 	>(null);
 
 	const loadQueryDevtools = async (): Promise<void> => {

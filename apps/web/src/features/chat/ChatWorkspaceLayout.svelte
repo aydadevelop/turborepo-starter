@@ -26,10 +26,10 @@
 	const sessionQuery = authClient.useSession();
 	const initialSession = $derived(getPageInitialSessionData(page.data));
 	const sessionData = $derived(
-		resolveSessionData($sessionQuery, initialSession)
+		resolveSessionData($sessionQuery, initialSession),
 	);
 	const sessionPending = $derived(
-		isSessionPending($sessionQuery, initialSession)
+		isSessionPending($sessionQuery, initialSession),
 	);
 	const queryClient = useQueryClient();
 
@@ -99,12 +99,16 @@
 		async mutationFn(title: string) {
 			const hasSession = await ensureSession();
 			if (!hasSession) {
-				throw new Error("Unable to create chat without an active session");
+				throw new Error(
+					"Unable to create chat without an active session",
+				);
 			}
 			return assistantClient.createChat({ title });
 		},
 		onSuccess(data) {
-			queryClient.invalidateQueries({ queryKey: queryKeys.assistant.chats });
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.assistant.chats,
+			});
 			goto(resolve(`/chat/${data.id}`));
 		},
 	}));
@@ -112,7 +116,9 @@
 	const deleteChat = createMutation(() => ({
 		mutationFn: (chatId: string) => assistantClient.deleteChat({ chatId }),
 		onSuccess() {
-			queryClient.invalidateQueries({ queryKey: queryKeys.assistant.chats });
+			queryClient.invalidateQueries({
+				queryKey: queryKeys.assistant.chats,
+			});
 			if (page.params.id) {
 				goto(resolve("/chat"));
 			}
@@ -125,8 +131,12 @@
 </script>
 
 <div class="flex h-[calc(100svh-6rem)]">
-	<aside class="flex w-64 shrink-0 flex-col border-r border-border bg-muted/30">
-		<div class="flex items-center justify-between border-b border-border p-3">
+	<aside
+		class="flex w-64 shrink-0 flex-col border-r border-border bg-muted/30"
+	>
+		<div
+			class="flex items-center justify-between border-b border-border p-3"
+		>
 			<h2 class="text-sm font-semibold">Chats</h2>
 			<Button
 				data-testid="new-chat-button-sidebar"
