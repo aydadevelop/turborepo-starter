@@ -154,6 +154,8 @@ const apps = new DokkuApps(
 			OPEN_ROUTER_API_KEY: optionalSecret("openRouterApiKey"),
 			OPENAI_API_KEY: optionalSecret("openaiApiKey"),
 			AI_MODEL: appConfig.get("aiModel") ?? "openai/gpt-5-nano:nitro",
+			SEED_DEMO_DATA: appConfig.get("seedDemoData") ?? "0",
+			SEED_ANCHOR_DATE: appConfig.get("seedAnchorDate") ?? "",
 			EMAIL_BACKEND: appConfig.get("emailBackend") ?? "smtp",
 			EMAIL_FROM_ADDRESS: appConfig.get("smtpFrom") ?? `noreply@${domain}`,
 			EMAIL_FROM_NAME: appConfig.get("smtpFromName") ?? "Ayda Studio",

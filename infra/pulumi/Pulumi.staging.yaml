@@ -16,6 +16,8 @@ config:
     secure: v1:HNZjttXvly3Zm07q:2vs3r4V9bb/CRszwdazL2ABQCefAJ8ow/LdGZ6T6ha8wdvIVHoZpBCgQXmpVSwXh9g80V+CGG2g=
   # ── App config ─────────────────────────────────────────────────────────
   app:aiModel: "openai/gpt-5-nano:nitro"
+  app:seedDemoData: "1"
+  app:seedAnchorDate: "2026-03-15"
   app:emailBackend: "fake"
   app:smtpFrom: "mav.aurel@yandex.ru"
   app:smtpFromName: "Ayda Studio"

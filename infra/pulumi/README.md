@@ -53,3 +53,12 @@ If a change affects any of the following, update Pulumi code or this README in t
 - Dokku app shape, ports, domains, plugins, env vars, or attached services
 - deploy workflow assumptions about the VPS
 - GitHub secret/runner/server coordination
+
+## Staging demo seed
+
+- The server image supports an idempotent demo seed on startup.
+- Pulumi controls this through Dokku env vars:
+  - `SEED_DEMO_DATA`
+  - `SEED_ANCHOR_DATE`
+- Staging currently enables demo seeding so a freshly reset or empty database is repopulated automatically on the next `server` start.
+- The seed path uses `packages/db/scripts/seed-local.mjs --append --skip-if-present`, so restarts are safe and do not duplicate the seed namespace once it exists.
