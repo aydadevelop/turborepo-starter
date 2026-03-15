@@ -18,6 +18,9 @@ config:
   app:aiModel: "openai/gpt-5-nano:nitro"
   app:seedDemoData: "1"
   app:seedAnchorDate: "2026-03-15"
+  # ── One-shot operational flags (set to a fresh token, then pulumi up) ──
+  # ops:resetDatabase: "20260315T120000Z"
+  # ops:seedData: "20260315T120500Z"
   app:emailBackend: "fake"
   app:smtpFrom: "mav.aurel@yandex.ru"
   app:smtpFromName: "Ayda Studio"

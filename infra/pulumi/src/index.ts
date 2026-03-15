@@ -11,6 +11,7 @@ import { VpsBootstrap } from "./vps-bootstrap";
 const config = new pulumi.Config();
 const vpsConfig = new pulumi.Config("vps");
 const appConfig = new pulumi.Config("app");
+const opsConfig = new pulumi.Config("ops");
 const ghcrConfig = new pulumi.Config("ghcr");
 const dnsConfig = new pulumi.Config("dns");
 const storageConfig = new pulumi.Config("storage");
@@ -77,6 +78,8 @@ const supportEmailWorkerScriptName = supportEmailEnabled
 		)
 	: (supportEmailConfig.get("workerScriptName") ?? "");
 const supportEmailLocalPart = supportEmailConfig.get("localPart") ?? "support";
+const resetDatabaseToken = opsConfig.get("resetDatabase") ?? "";
+const seedDataToken = opsConfig.get("seedData") ?? "";
 
 // Helper: return secret or empty string for optional config
 const optionalSecret = (key: string) =>
@@ -192,6 +195,91 @@ const apps = new DokkuApps(
 		},
 	},
 	{ dependsOn: [bootstrap] },
+);
+
+const seedAnchorDate = appConfig.get("seedAnchorDate") ?? "";
+
+const resetDatabaseScript = pulumi.interpolate`
+set -eu
+
+if [ -z "${resetDatabaseToken}" ]; then
+	echo "db-reset-skip"
+	exit 0
+fi
+
+echo "Running database reset request: ${resetDatabaseToken}"
+
+for app in assistant notifications web server; do
+	if dokku apps:exists "$app" >/dev/null 2>&1; then
+		dokku ps:stop "$app" || true
+	fi
+done
+
+dokku postgres:connect myapp-db <<'SQL'
+DROP SCHEMA IF EXISTS public CASCADE;
+DROP SCHEMA IF EXISTS drizzle CASCADE;
+CREATE SCHEMA public;
+GRANT ALL ON SCHEMA public TO postgres;
+GRANT ALL ON SCHEMA public TO public;
+SQL
+
+if dokku apps:exists server >/dev/null 2>&1; then
+	dokku ps:start server || true
+	if dokku run server node dist/migrate.mjs; then
+		echo "database-reset-migrations-complete"
+	else
+		echo "database-reset-migrations-failed" >&2
+		exit 1
+	fi
+	for app in assistant notifications web; do
+		if dokku apps:exists "$app" >/dev/null 2>&1; then
+			dokku ps:start "$app" || true
+		fi
+		done
+fi
+
+echo "database-reset-complete"
+`;
+
+const resetDatabase = new command.remote.Command(
+	"ops-reset-database",
+	{
+		connection,
+		create: resetDatabaseScript,
+		update: resetDatabaseScript,
+		triggers: [resetDatabaseToken],
+	},
+	{ dependsOn: [apps] },
+);
+
+const seedDataScript = pulumi.interpolate`
+set -eu
+
+if [ -z "${seedDataToken}" ]; then
+	echo "seed-data-skip"
+	exit 0
+fi
+
+echo "Running seed data request: ${seedDataToken}"
+
+if [ -n "${seedAnchorDate}" ]; then
+	dokku run server bun ./seed-local.mjs --append --skip-if-present --anchor-date "${seedAnchorDate}"
+else
+	dokku run server bun ./seed-local.mjs --append --skip-if-present
+fi
+
+echo "seed-data-complete"
+`;
+
+const seedData = new command.remote.Command(
+	"ops-seed-data",
+	{
+		connection,
+		create: seedDataScript,
+		update: seedDataScript,
+		triggers: [seedDataToken, seedAnchorDate],
+	},
+	{ dependsOn: [apps, resetDatabase] },
 );
 
 // ── Step 3: DNS records (Cloudflare) ────────────────────────────────────────

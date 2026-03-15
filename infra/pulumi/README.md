@@ -62,3 +62,49 @@ If a change affects any of the following, update Pulumi code or this README in t
   - `SEED_ANCHOR_DATE`
 - Staging currently enables demo seeding so a freshly reset or empty database is repopulated automatically on the next `server` start.
 - The seed path uses `packages/db/scripts/seed-local.mjs --append --skip-if-present`, so restarts are safe and do not duplicate the seed namespace once it exists.
+
+## Operational Pulumi flags
+
+Pulumi also supports one-shot operational triggers for destructive/reset-style work.
+
+- `ops:resetDatabase`
+  - set this to a fresh token value to run a remote schema reset on the next `pulumi up`
+  - the operation:
+    - stops the Dokku apps
+    - drops and recreates the `public` and `drizzle` schemas
+    - starts `server`
+    - runs `dokku run server node dist/migrate.mjs`
+    - starts dependent apps again
+- `ops:seedData`
+  - set this to a fresh token value to run the demo seed immediately on the next `pulumi up`
+  - it executes `dokku run server bun ./seed-local.mjs --append --skip-if-present`
+  - if `app:seedAnchorDate` is configured, that value is passed through automatically
+
+Recommended usage:
+
+1. set a fresh request token
+2. run `pulumi up`
+3. clear the request token from stack config
+
+Example:
+
+- `pulumi config set ops:resetDatabase 20260315T120000Z`
+- `pulumi up`
+- `pulumi config rm ops:resetDatabase`
+
+and:
+
+- `pulumi config set ops:seedData 20260315T120500Z`
+- `pulumi up`
+- `pulumi config rm ops:seedData`
+
+### Important note about reset + auto-seed
+
+`ops:resetDatabase` only resets the database schemas and reapplies migrations.
+
+If the stack also has:
+
+- `app:seedDemoData: "1"`
+
+then the next `server` start may repopulate the demo dataset automatically.
+That is useful for staging, but if you want a truly empty post-reset database, disable `app:seedDemoData` before triggering the reset.
