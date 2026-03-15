@@ -5,7 +5,12 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
-	import { hasAuthenticatedSession } from "$lib/auth-session";
+	import {
+		getPageInitialSessionData,
+		hasAuthenticatedSession,
+		isSessionPending,
+		resolveSessionData,
+	} from "$lib/auth-session";
 	import { orpc } from "$lib/orpc";
 	import {
 		userInvitationsQueryOptions,
@@ -15,10 +20,17 @@
 	const { children } = $props();
 
 	const sessionQuery = authClient.useSession();
+	const initialSession = $derived(getPageInitialSessionData(page.data));
+	const sessionData = $derived(
+		resolveSessionData($sessionQuery, initialSession)
+	);
+	const sessionPending = $derived(
+		isSessionPending($sessionQuery, initialSession)
+	);
 
 	const orgsQuery = createQuery(() =>
 		userOrganizationsQueryOptions({
-			enabled: hasAuthenticatedSession($sessionQuery.data),
+			enabled: hasAuthenticatedSession(sessionData),
 		})
 	);
 
@@ -29,13 +41,13 @@
 
 	const invitationsQuery = createQuery(() =>
 		userInvitationsQueryOptions({
-			enabled: hasAuthenticatedSession($sessionQuery.data),
+			enabled: hasAuthenticatedSession(sessionData),
 		})
 	);
 
 	$effect(() => {
-		if ($sessionQuery.isPending) return;
-		if (!hasAuthenticatedSession($sessionQuery.data)) {
+		if (sessionPending) return;
+		if (!hasAuthenticatedSession(sessionData)) {
 			goto(
 				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
 			);
@@ -55,11 +67,11 @@
 	const isActivePrefix = (href: string) => page.url.pathname.startsWith(href);
 </script>
 
-{#if $sessionQuery.isPending}
+{#if sessionPending}
 	<div class="flex items-center justify-center min-h-[50vh]">
 		<p class="text-muted-foreground">Loading...</p>
 	</div>
-{:else if hasAuthenticatedSession($sessionQuery.data)}
+{:else if hasAuthenticatedSession(sessionData)}
 	<div class="mx-auto max-w-6xl px-6 py-6 space-y-4">
 		<div>
 			<h1 class="text-2xl font-bold" data-testid="org-heading">Organization</h1>

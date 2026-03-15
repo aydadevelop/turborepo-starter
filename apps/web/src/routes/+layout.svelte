@@ -3,10 +3,11 @@
 	import { QueryClientProvider } from "@tanstack/svelte-query";
 	import { browser } from "$app/environment";
 	import { page } from "$app/state";
+	import { hydrateSessionStore } from "$lib/auth-session";
 	import { queryClient } from "$lib/orpc";
 	import "../app.css";
 
-	const { children } = $props();
+	const { children, data } = $props();
 
 	const PUBLIC_HEADER_PATHS = new Set(["/", "/login"]);
 
@@ -17,6 +18,12 @@
 	let PublicAppHeader = $state<
 		null | typeof import("../components/PublicAppHeader.svelte").default
 	>(null);
+
+	$effect(() => {
+		if (browser) {
+			hydrateSessionStore(data.initialSession);
+		}
+	});
 
 	$effect(() => {
 		if (isPublicHeaderPath) {

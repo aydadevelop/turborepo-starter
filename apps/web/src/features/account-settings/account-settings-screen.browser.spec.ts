@@ -53,6 +53,9 @@ vi.mock("$lib/auth-client", () => ({
 }));
 vi.mock("$lib/auth-session", () => ({
 	hasAuthenticatedSession: () => mockState.session,
+	getPageInitialSessionData: () => mockState.session,
+	isSessionPending: () => false,
+	resolveSessionData: (query: { data?: unknown }) => query.data,
 }));
 vi.mock("$lib/orpc", () => ({
 	orpc: {

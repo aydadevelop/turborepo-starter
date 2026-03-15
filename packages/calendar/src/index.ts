@@ -36,9 +36,11 @@ export type {
 	CalendarSourceRow,
 } from "./types";
 export {
+	addOrganizationManualCalendarSource,
 	attachCalendarSourceToListing,
 	connectCalendar,
 	connectOrganizationCalendarAccount,
+	deleteOrganizationCalendarSource,
 	disableCalendarConnection,
 	disconnectCalendar,
 	disconnectOrganizationCalendarAccount,
@@ -50,6 +52,7 @@ export {
 	listCalendarConnections,
 	listOrganizationCalendarAccounts,
 	listOrganizationCalendarSources,
+	renameOrganizationCalendarSource,
 	refreshOrganizationCalendarSources,
 	renewGoogleWatches,
 	retryFailedGoogleSyncs,

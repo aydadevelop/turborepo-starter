@@ -154,6 +154,18 @@ export class FakeCalendarAdapter implements CalendarAdapter {
 		]);
 	}
 
+	async getCalendarSource(
+		calendarId: string,
+		config: CalendarAccountConfig,
+	): Promise<CalendarSourcePresentation | null> {
+		const calendars = await this.listCalendars(config);
+		return (
+			calendars.find(
+				(source) => source.externalCalendarId === calendarId,
+			) ?? null
+		);
+	}
+
 	listBusySlots(
 		calendarId: string,
 		from: Date,

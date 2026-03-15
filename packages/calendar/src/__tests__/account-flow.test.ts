@@ -9,13 +9,16 @@ import { bootstrapTestDatabase, type TestDatabase } from "@my-app/db/test";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+	addOrganizationManualCalendarSource,
 	attachCalendarSourceToListing,
 	clearCalendarAdapterRegistry,
 	connectOrganizationCalendarAccount,
+	deleteOrganizationCalendarSource,
 	disconnectOrganizationCalendarAccount,
 	FakeCalendarAdapter,
 	getCalendarWorkspaceState,
 	listOrganizationCalendarAccounts,
+	renameOrganizationCalendarSource,
 	refreshOrganizationCalendarSources,
 	registerCalendarAdapter,
 } from "../index";
@@ -183,7 +186,7 @@ describe("organization calendar account flow", () => {
 		expect(credentials?.refreshToken).toBe("refresh-token-1");
 	});
 
-	it("marks accounts disconnected without deleting the record", async () => {
+	it("marks accounts disconnected while disabling attached connections and hiding sources", async () => {
 		const db = dbState.db;
 
 		const account = await connectOrganizationCalendarAccount(
@@ -192,6 +195,34 @@ describe("organization calendar account flow", () => {
 				provider: "google",
 				externalAccountId: "google-account-2",
 				accountEmail: "ops@example.com",
+				providerMetadata: {
+					credentials: {
+						sources: [
+							{
+								externalCalendarId: "ops-calendar-primary",
+								name: "Ops primary calendar",
+								timezone: "UTC",
+								isPrimary: true,
+							},
+						],
+					},
+				},
+			},
+			db,
+		);
+
+		const [source] = await refreshOrganizationCalendarSources(account.id, ORG_ID, db);
+		expect(source).toBeDefined();
+		if (!source) {
+			throw new Error("Expected a discovered calendar source");
+		}
+
+		const connection = await attachCalendarSourceToListing(
+			{
+				listingId: LISTING_ID,
+				organizationId: ORG_ID,
+				sourceId: source.id,
+				createdByUserId: USER_ID,
 			},
 			db,
 		);
@@ -211,6 +242,28 @@ describe("organization calendar account flow", () => {
 			.limit(1);
 
 		expect(persisted?.status).toBe("disconnected");
+
+		const [persistedSource] = await db
+			.select()
+			.from(organizationCalendarSource)
+			.where(eq(organizationCalendarSource.id, source.id))
+			.limit(1);
+
+		expect(persistedSource?.isActive).toBe(false);
+		expect(persistedSource?.isHidden).toBe(true);
+
+		const [persistedConnection] = await db
+			.select()
+			.from(listingCalendarConnection)
+			.where(eq(listingCalendarConnection.id, connection.id))
+			.limit(1);
+
+		expect(persistedConnection?.isActive).toBe(false);
+		expect(persistedConnection?.syncStatus).toBe("disabled");
+
+		const workspace = await getCalendarWorkspaceState(LISTING_ID, ORG_ID, db);
+		expect(workspace.activeSourceCount).toBe(0);
+		expect(workspace.activeConnectionCount).toBe(0);
 	});
 
 	it("refreshes account sources and attaches them to a listing through the account-first flow", async () => {
@@ -303,5 +356,311 @@ describe("organization calendar account flow", () => {
 			"Primary fleet calendar",
 		);
 		expect(workspace.connections[0]?.calendarSourceId).toBe(sources[0]!.id);
+	});
+
+	it("adds manual calendar ids as sources and keeps them active across refreshes", async () => {
+		const db = dbState.db;
+
+		const account = await connectOrganizationCalendarAccount(
+			{
+				organizationId: ORG_ID,
+				provider: "google",
+				externalAccountId: "google-account-manual",
+				accountEmail: "legacy@example.com",
+				providerMetadata: {
+					credentials: {
+						sources: [
+							{
+								externalCalendarId: "calendar-primary",
+								name: "Primary fleet calendar",
+								timezone: "Europe/Moscow",
+								isPrimary: true,
+							},
+						],
+					},
+				},
+			},
+			db,
+		);
+
+		const manualSource = await addOrganizationManualCalendarSource(
+			{
+				accountId: account.id,
+				calendarId: "legacy-google-calendar@group.calendar.google.com",
+				createdByUserId: USER_ID,
+				organizationId: ORG_ID,
+			},
+			db,
+		);
+
+		expect(manualSource.externalCalendarId).toBe(
+			"legacy-google-calendar@group.calendar.google.com",
+		);
+		expect(manualSource.name).toBe(
+			"legacy-google-calendar@group.calendar.google.com",
+		);
+		expect(manualSource.isActive).toBe(true);
+
+		const refreshedSources = await refreshOrganizationCalendarSources(
+			account.id,
+			ORG_ID,
+			db,
+		);
+
+		expect(
+			refreshedSources.some(
+				(source) => source.externalCalendarId === manualSource.externalCalendarId,
+			),
+		).toBe(true);
+
+		const attachedConnection = await attachCalendarSourceToListing(
+			{
+				listingId: LISTING_ID,
+				organizationId: ORG_ID,
+				sourceId: manualSource.id,
+				createdByUserId: USER_ID,
+			},
+			db,
+		);
+
+		expect(attachedConnection.externalCalendarId).toBe(
+			manualSource.externalCalendarId,
+		);
+		expect(attachedConnection.calendarSourceId).toBe(manualSource.id);
+	});
+
+	it("stores friendly manual names and preserves renamed discovered source labels across refreshes", async () => {
+		const db = dbState.db;
+
+		const account = await connectOrganizationCalendarAccount(
+			{
+				organizationId: ORG_ID,
+				provider: "google",
+				externalAccountId: "google-account-custom-name",
+				accountEmail: "friendly@example.com",
+				providerMetadata: {
+					credentials: {
+						sources: [
+							{
+								externalCalendarId: "ops@group.calendar.google.com",
+								name: "Ops Calendar",
+								timezone: "UTC",
+								isPrimary: false,
+							},
+						],
+					},
+				},
+			},
+			db,
+		);
+
+		const [discoveredSource] = await refreshOrganizationCalendarSources(
+			account.id,
+			ORG_ID,
+			db,
+		);
+		if (!discoveredSource) {
+			throw new Error("Expected discovered source");
+		}
+
+		const renamedSource = await renameOrganizationCalendarSource(
+			discoveredSource.id,
+			ORG_ID,
+			"Ops Team Board",
+			db,
+		);
+
+		expect(renamedSource.name).toBe("Ops Team Board");
+
+		const refreshedDiscoveredSources = await refreshOrganizationCalendarSources(
+			account.id,
+			ORG_ID,
+			db,
+		);
+		expect(
+			refreshedDiscoveredSources.find(
+				(source) => source.id === discoveredSource.id,
+			)?.name,
+		).toBe("Ops Team Board");
+
+		const manualSource = await addOrganizationManualCalendarSource(
+			{
+				accountId: account.id,
+				calendarId: "ops-manual@group.calendar.google.com",
+				name: "Owner Blockouts",
+				createdByUserId: USER_ID,
+				organizationId: ORG_ID,
+			},
+			db,
+		);
+
+		expect(manualSource.name).toBe("Owner Blockouts");
+	});
+
+	it("deletes an organization calendar source and disables attached active connections", async () => {
+		const db = dbState.db;
+
+		const account = await connectOrganizationCalendarAccount(
+			{
+				organizationId: ORG_ID,
+				provider: "google",
+				externalAccountId: "google-account-delete-source",
+				accountEmail: "delete-source@example.com",
+			},
+			db,
+		);
+
+		const source = await addOrganizationManualCalendarSource(
+			{
+				accountId: account.id,
+				calendarId: "delete-me@group.calendar.google.com",
+				createdByUserId: USER_ID,
+				organizationId: ORG_ID,
+			},
+			db,
+		);
+
+		const connection = await attachCalendarSourceToListing(
+			{
+				listingId: LISTING_ID,
+				organizationId: ORG_ID,
+				sourceId: source.id,
+				createdByUserId: USER_ID,
+			},
+			db,
+		);
+
+		const deleted = await deleteOrganizationCalendarSource(
+			source.id,
+			ORG_ID,
+			db,
+		);
+
+		expect(deleted).toEqual({
+			sourceId: source.id,
+			disabledConnectionIds: [connection.id],
+		});
+
+		const [persistedSource] = await db
+			.select()
+			.from(organizationCalendarSource)
+			.where(eq(organizationCalendarSource.id, source.id))
+			.limit(1);
+
+		expect(persistedSource).toBeUndefined();
+
+		const [persistedConnection] = await db
+			.select()
+			.from(listingCalendarConnection)
+			.where(eq(listingCalendarConnection.id, connection.id))
+			.limit(1);
+
+		expect(persistedConnection?.isActive).toBe(false);
+		expect(persistedConnection?.syncStatus).toBe("disabled");
+		expect(persistedConnection?.calendarSourceId).toBeNull();
+
+		const workspace = await getCalendarWorkspaceState(LISTING_ID, ORG_ID, db);
+		expect(workspace.sources).toEqual([]);
+		expect(workspace.activeConnectionCount).toBe(0);
+	});
+
+	it("reuses an existing discovered google source when the same calendar id is added manually", async () => {
+		const db = dbState.db;
+
+		const account = await connectOrganizationCalendarAccount(
+			{
+				organizationId: ORG_ID,
+				provider: "google",
+				externalAccountId: "google-account-existing-source",
+				accountEmail: "existing-source@example.com",
+				providerMetadata: {
+					credentials: {
+						sources: [
+							{
+								externalCalendarId: "existing-calendar@group.calendar.google.com",
+								name: "Existing Google Calendar",
+								timezone: "UTC",
+								isPrimary: false,
+							},
+						],
+					},
+				},
+			},
+			db,
+		);
+
+		const [existingSource] = await refreshOrganizationCalendarSources(
+			account.id,
+			ORG_ID,
+			db,
+		);
+		expect(existingSource).toBeDefined();
+		if (!existingSource) {
+			throw new Error("Expected an existing discovered source");
+		}
+
+		const manualResult = await addOrganizationManualCalendarSource(
+			{
+				calendarId: "existing-calendar@group.calendar.google.com",
+				organizationId: ORG_ID,
+			},
+			db,
+		);
+
+		expect(manualResult.id).toBe(existingSource.id);
+
+		const matchingSources = await db
+			.select()
+			.from(organizationCalendarSource)
+			.where(
+				eq(
+					organizationCalendarSource.externalCalendarId,
+					"existing-calendar@group.calendar.google.com",
+				),
+			);
+
+		expect(matchingSources).toHaveLength(1);
+	});
+
+	it("adds manual calendar ids through the shared service-account fallback", async () => {
+		const db = dbState.db;
+
+		const manualSource = await addOrganizationManualCalendarSource(
+			{
+				calendarId: "service-account-calendar@group.calendar.google.com",
+				createdByUserId: USER_ID,
+				organizationId: ORG_ID,
+			},
+			db,
+		);
+
+		expect(manualSource.externalCalendarId).toBe(
+			"service-account-calendar@group.calendar.google.com",
+		);
+
+		const accounts = await listOrganizationCalendarAccounts(ORG_ID, db);
+		expect(accounts).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					displayName: "Google service account",
+					externalAccountId: "google-service-account",
+					provider: "google",
+				}),
+			]),
+		);
+
+		const attachedConnection = await attachCalendarSourceToListing(
+			{
+				listingId: LISTING_ID,
+				organizationId: ORG_ID,
+				sourceId: manualSource.id,
+				createdByUserId: USER_ID,
+			},
+			db,
+		);
+
+		expect(attachedConnection.externalCalendarId).toBe(
+			manualSource.externalCalendarId,
+		);
 	});
 });

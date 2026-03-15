@@ -94,6 +94,13 @@ interface GoogleCalendarListResponse {
 	}>;
 }
 
+interface GoogleCalendarResponse {
+	id: string;
+	summary?: string;
+	timeZone?: string;
+	description?: string;
+}
+
 export class GoogleCalendarApiError extends Error {
 	readonly status: number;
 	readonly statusText: string;
@@ -257,6 +264,33 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 			isHidden: item.hidden ?? false,
 			metadata: item.description ? { description: item.description } : null,
 		}));
+	}
+
+	async getCalendarSource(
+		calendarId: string,
+		config: CalendarAccountConfig,
+	): Promise<CalendarSourcePresentation | null> {
+		const credentials = this.resolveCredentials(config);
+		const encodedCalendarId = encodeURIComponent(calendarId);
+		const response =
+			await this.requestGoogleWithCredentials<GoogleCalendarResponse>(
+				{
+					url: `https://www.googleapis.com/calendar/v3/calendars/${encodedCalendarId}`,
+					method: "GET",
+				},
+				credentials,
+			);
+
+		return {
+			externalCalendarId: response.id,
+			name: response.summary?.trim() || response.id,
+			timezone: response.timeZone ?? null,
+			isPrimary: false,
+			isHidden: false,
+			metadata: response.description
+				? { description: response.description }
+				: null,
+		};
 	}
 
 	async listBusySlots(
@@ -655,6 +689,10 @@ export class GoogleCalendarAdapter implements CalendarAdapter {
 	): Promise<string> {
 		if (this.isOAuthCredentials(credentials)) {
 			return this.getOAuthAccessToken(scope, credentials);
+		}
+
+		if (!(credentials.client_email && credentials.private_key)) {
+			throw new Error("GOOGLE_CALENDAR_SERVICE_ACCOUNT_NOT_CONFIGURED");
 		}
 
 		const cacheKey = `${credentials.client_email}:${scope}`;

@@ -6,9 +6,12 @@
 		Trigger as SelectTrigger,
 	} from "@my-app/ui/components/select";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
-	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
-	import { hasAuthenticatedSession } from "$lib/auth-session";
+	import {
+		hasAuthenticatedSession,
+		resolveSessionData,
+		type AuthSessionData,
+	} from "$lib/auth-session";
 	import { queryClient } from "$lib/orpc";
 	import { userOrganizationsQueryOptions } from "$lib/query-options";
 	import {
@@ -17,16 +20,26 @@
 	} from "../features/org-account/shared/invalidations";
 	import { switchActiveOrganization } from "../features/org-account/switcher/mutations";
 
-	const sessionQuery = authClient.useSession();
+	let {
+		sessionQuery,
+		initialSession = undefined,
+	}: {
+		sessionQuery: ReturnType<typeof authClient.useSession>;
+		initialSession?: AuthSessionData | null;
+	} = $props();
+
+	const sessionData = $derived(
+		resolveSessionData($sessionQuery, initialSession)
+	);
 
 	const orgsQuery = createQuery(() =>
 		userOrganizationsQueryOptions({
-			enabled: hasAuthenticatedSession($sessionQuery.data),
+			enabled: hasAuthenticatedSession(sessionData),
 		})
 	);
 
 	const activeOrgId = $derived(
-		($sessionQuery.data?.session as { activeOrganizationId?: string })
+		(sessionData?.session as { activeOrganizationId?: string } | undefined)
 			?.activeOrganizationId ?? undefined
 	);
 

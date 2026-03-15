@@ -188,6 +188,11 @@ export interface CalendarAdapter {
 		config: CalendarAccountConfig,
 	): Promise<CalendarSourcePresentation[]>;
 
+	getCalendarSource?(
+		calendarId: string,
+		config: CalendarAccountConfig,
+	): Promise<CalendarSourcePresentation | null>;
+
 	listEvents?(
 		query: CalendarEventsQuery,
 		config: CalendarConnectionConfig,

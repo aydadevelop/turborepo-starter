@@ -2,34 +2,47 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
-	import { hasAuthenticatedSession } from "$lib/auth-session";
+	import {
+		getPageInitialSessionData,
+		hasAuthenticatedSession,
+		isSessionPending,
+		resolveSessionData,
+	} from "$lib/auth-session";
 	import {
 		userInvitationsQueryOptions,
 		userOrganizationsQueryOptions,
 	} from "$lib/query-options";
 
 	const sessionQuery = authClient.useSession();
+	const initialSession = $derived(getPageInitialSessionData(page.data));
+	const sessionData = $derived(
+		resolveSessionData($sessionQuery, initialSession)
+	);
+	const sessionPending = $derived(
+		isSessionPending($sessionQuery, initialSession)
+	);
 
 	const orgsQuery = createQuery(() =>
 		userOrganizationsQueryOptions({
-			enabled: hasAuthenticatedSession($sessionQuery.data),
+			enabled: hasAuthenticatedSession(sessionData),
 		})
 	);
 
 	const invitationsQuery = createQuery(() =>
 		userInvitationsQueryOptions({
-			enabled: hasAuthenticatedSession($sessionQuery.data),
+			enabled: hasAuthenticatedSession(sessionData),
 		})
 	);
 
 	const isLoading = $derived(
-		$sessionQuery.isPending || orgsQuery.isPending || invitationsQuery.isPending
+		sessionPending || orgsQuery.isPending || invitationsQuery.isPending
 	);
 
 	$effect(() => {
 		if (isLoading) return;
-		if (!hasAuthenticatedSession($sessionQuery.data)) return; // parent layout handles login redirect
+		if (!hasAuthenticatedSession(sessionData)) return; // parent layout handles login redirect
 
 		const hasPendingInvites = (invitationsQuery.data ?? []).some(
 			(inv) => inv.status === "pending"

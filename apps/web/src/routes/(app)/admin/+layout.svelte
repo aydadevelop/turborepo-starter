@@ -3,15 +3,27 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
-	import { hasAuthenticatedSession } from "$lib/auth-session";
+	import {
+		getPageInitialSessionData,
+		hasAuthenticatedSession,
+		isSessionPending,
+		resolveSessionData,
+	} from "$lib/auth-session";
 
 	const { children } = $props();
 	const sessionQuery = authClient.useSession();
+	const initialSession = $derived(getPageInitialSessionData(page.data));
+	const sessionData = $derived(
+		resolveSessionData($sessionQuery, initialSession)
+	);
+	const sessionPending = $derived(
+		isSessionPending($sessionQuery, initialSession)
+	);
 
 	$effect(() => {
-		if ($sessionQuery.isPending) return;
-		const user = $sessionQuery.data?.user;
-		if (!hasAuthenticatedSession($sessionQuery.data)) {
+		if (sessionPending) return;
+		const user = sessionData?.user;
+		if (!hasAuthenticatedSession(sessionData)) {
 			goto(
 				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
 			);
@@ -35,11 +47,11 @@
 	};
 </script>
 
-{#if $sessionQuery.isPending}
+{#if sessionPending}
 	<div class="flex items-center justify-center min-h-[50vh]">
 		<p class="text-muted-foreground">Loading...</p>
 	</div>
-{:else if (($sessionQuery.data?.user as { role?: string })?.role !== "admin")}
+{:else if ((sessionData?.user as { role?: string } | undefined)?.role !== "admin")}
 	<div class="flex items-center justify-center min-h-[50vh]">
 		<p class="text-muted-foreground">Access denied</p>
 	</div>

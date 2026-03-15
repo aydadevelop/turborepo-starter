@@ -14,6 +14,7 @@ import { phoneNumber } from "better-auth/plugins/phone-number";
 import { telegram } from "better-auth-telegram";
 import { asc, eq } from "drizzle-orm";
 
+import { derivePasskeyRpId, deriveSharedCookieDomain } from "./cookie-domain";
 import {
 	organizationAccessControl,
 	organizationRoles,
@@ -26,7 +27,6 @@ const parseCorsOrigins = (value: string | undefined) =>
 		.filter(Boolean);
 
 const TRAILING_SLASH_RE = /\/+$/;
-const WORKERS_DEV_RE = /\.([^.]+\.workers\.dev)$/;
 const SESSION_COOKIE_CACHE_MAX_AGE_SECONDS = 5 * 60;
 
 const initAuth = () => {
@@ -39,27 +39,17 @@ const initAuth = () => {
 	const authBaseUrl = env.BETTER_AUTH_URL.replace(TRAILING_SLASH_RE, "");
 	const authUrl = new URL(authBaseUrl);
 
-	// For *.workers.dev deployments, use the workers subdomain (e.g. "smartcache.workers.dev")
-	// so passkey and cookies work across server/web/assistant subdomains.
-	const workersDevMatch = authUrl.hostname.match(WORKERS_DEV_RE);
-
-	// For custom multi-subdomain deployments (e.g. api.staging.ayda.studio → staging.ayda.studio),
-	// strip the first segment to derive the shared parent domain for cross-subdomain cookies.
-	// Better Auth expects no leading dot (e.g. "staging.ayda.studio", not ".staging.ayda.studio").
-	const hostParts = authUrl.hostname.split(".");
-	const cookieDomain: string | null =
-		workersDevMatch?.[1] ??
-		(!workersDevMatch && hostParts.length >= 3
-			? hostParts.slice(1).join(".")
-			: null);
+	// Only enable cross-subdomain cookies when BETTER_AUTH_URL is hosted on a known
+	// app subdomain (e.g. api.staging.ayda.studio -> staging.ayda.studio).
+	// Public tunnel hosts like *.ngrok-free.app are single-host path-based setups, and
+	// forcing a parent-domain cookie there produces an invalid/public-suffix cookie that
+	// browsers reject. In those cases we intentionally fall back to host-only cookies.
+	const cookieDomain = deriveSharedCookieDomain(authUrl.hostname);
 	const crossSubDomainCookiesConfig = cookieDomain
 		? { crossSubDomainCookies: { enabled: true, domain: cookieDomain } }
 		: {};
 
-	const passkeyRpId =
-		authUrl.hostname === "localhost"
-			? "localhost"
-			: (workersDevMatch?.[1] ?? authUrl.hostname);
+	const passkeyRpId = derivePasskeyRpId(authUrl.hostname);
 
 	const plugins: BetterAuthPlugin[] = [
 		admin(),

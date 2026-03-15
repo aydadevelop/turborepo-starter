@@ -27,15 +27,41 @@
 		calendar?: CalendarWorkspaceState | null;
 	} & ListingWorkspaceCalendarActions = $props();
 
+	const compareCalendarLabels = (left: string, right: string): number =>
+		left.localeCompare(right, undefined, {
+			sensitivity: "base",
+			numeric: true,
+		});
+
+	const getConnectionLabel = (
+		connection: NonNullable<CalendarWorkspaceState>["connections"][number],
+	): string =>
+		sourceNameById.get(connection.calendarSourceId ?? "") ??
+		connection.externalCalendarId ??
+		connection.provider;
+
+	const activeConnections = $derived(
+		[...(calendar?.connections ?? [])]
+			.filter((connection) => connection.isActive)
+			.sort((left, right) =>
+				compareCalendarLabels(
+					getConnectionLabel(left),
+					getConnectionLabel(right),
+				),
+			),
+	);
+
 	const attachedSourceIds = $derived(
 		new Set(
-			(calendar?.connections ?? [])
+			activeConnections
 				.map((connection) => connection.calendarSourceId)
-				.filter((sourceId): sourceId is string => Boolean(sourceId))
-		)
+				.filter((sourceId): sourceId is string => Boolean(sourceId)),
+		),
 	);
 	const sourceNameById = $derived(
-		new Map((calendar?.sources ?? []).map((source) => [source.id, source.name]))
+		new Map(
+			(calendar?.sources ?? []).map((source) => [source.id, source.name]),
+		),
 	);
 
 	const ACCOUNT_STATUS_VARIANT: Record<
@@ -63,14 +89,41 @@
 		error: "destructive",
 		disabled: "secondary",
 	};
+
+	const getAccountSources = (
+		accountId: string,
+	): CalendarWorkspaceState["sources"] =>
+		[...(calendar?.sources ?? [])]
+			.filter(
+				(source) =>
+					source.calendarAccountId === accountId &&
+					source.isActive &&
+					!source.isHidden,
+			)
+			.sort((left, right) => {
+				const attachedDelta =
+					Number(attachedSourceIds.has(right.id)) -
+					Number(attachedSourceIds.has(left.id));
+				if (attachedDelta !== 0) {
+					return attachedDelta;
+				}
+
+				const primaryDelta =
+					Number(right.isPrimary) - Number(left.isPrimary);
+				if (primaryDelta !== 0) {
+					return primaryDelta;
+				}
+
+				return compareCalendarLabels(left.name, right.name);
+			});
 </script>
 
 <Card>
 	<CardHeader>
 		<CardTitle class="text-base">Calendar sync</CardTitle>
 		<CardDescription>
-			Connect provider accounts at the organization level, then attach calendars
-			to this listing to block availability.
+			Connect provider accounts at the organization level, then attach
+			calendars to this listing to block availability.
 		</CardDescription>
 	</CardHeader>
 	<CardContent class="space-y-6">
@@ -81,8 +134,8 @@
 			<div class="space-y-1">
 				<p class="text-sm font-medium">Connect provider account</p>
 				<p class="text-sm text-muted-foreground">
-					Connect Google once, then choose which discovered calendars block
-					availability for this listing.
+					Connect Google once, then choose which discovered calendars
+					block availability for this listing.
 				</p>
 			</div>
 			{#if googleCalendarConnectUrl}
@@ -114,20 +167,26 @@
 									<span>{account.provider}</span>
 									{#if account.accountEmail}
 										<span>·</span>
-										<span class="truncate">{account.accountEmail}</span>
+										<span class="truncate"
+											>{account.accountEmail}</span
+										>
 									{/if}
 								</div>
 							</div>
 							<div class="flex shrink-0 items-center gap-2">
 								<Badge
-									variant={ACCOUNT_STATUS_VARIANT[account.status] ?? "secondary"}
+									variant={ACCOUNT_STATUS_VARIANT[
+										account.status
+									] ?? "secondary"}
 								>
 									{account.status}
 								</Badge>
 							</div>
 						</div>
 						{#if account.lastError && account.status === "error"}
-							<p class="mt-2 text-xs text-destructive">{account.lastError}</p>
+							<p class="mt-2 text-xs text-destructive">
+								{account.lastError}
+							</p>
 						{/if}
 						<div class="mt-3 flex flex-wrap items-center gap-2">
 							<CalendarAccountSourcesDialog
@@ -135,7 +194,7 @@
 								accountLabel={account.displayName ??
 									account.accountEmail ??
 									account.externalAccountId}
-								sources={calendar.sources.filter((source) => source.calendarAccountId === account.id)}
+								sources={getAccountSources(account.id)}
 								{attachedSourceIds}
 								{attachingSourceId}
 								{onRefreshCalendarAccountSources}
@@ -158,33 +217,38 @@
 			<p class="text-xs text-muted-foreground">
 				Calendars attached to this listing for availability blocking.
 			</p>
-			{#if calendar?.connections.length}
-				{#each calendar.connections as connection (connection.id)}
+			{#if activeConnections.length}
+				{#each activeConnections as connection (connection.id)}
 					<div class="rounded-lg border p-3">
 						<div class="flex items-center justify-between gap-3">
 							<div class="min-w-0 space-y-0.5">
 								<p class="truncate font-medium">
-									{sourceNameById.get(connection.calendarSourceId ?? "") ??
-										connection.externalCalendarId ??
-										connection.provider}
+									{getConnectionLabel(connection)}
 								</p>
 								<p class="text-sm text-muted-foreground">
 									{connection.provider}
 								</p>
 							</div>
-							<div class="flex shrink-0 flex-wrap items-center gap-1.5">
-								{#if !connection.isActive}
-									<Badge variant="secondary">Inactive</Badge>
-								{:else if connection.syncStatus === "error"}
-									<Badge variant={SYNC_STATUS_VARIANT[connection.syncStatus]}>
-										{SYNC_STATUS_LABEL[connection.syncStatus] ?? connection.syncStatus}
+							<div
+								class="flex shrink-0 flex-wrap items-center gap-1.5"
+							>
+								{#if connection.syncStatus === "error"}
+									<Badge
+										variant={SYNC_STATUS_VARIANT[
+											connection.syncStatus
+										]}
+									>
+										{SYNC_STATUS_LABEL[
+											connection.syncStatus
+										] ?? connection.syncStatus}
 									</Badge>
 								{/if}
 								{#if onDetachConnection}
 									<Button
 										variant="ghost"
 										size="sm"
-										onclick={() => onDetachConnection(connection.id)}
+										onclick={() =>
+											onDetachConnection(connection.id)}
 									>
 										Detach
 									</Button>

@@ -1,13 +1,26 @@
 <script lang="ts">
 	import { createQuery } from "@tanstack/svelte-query";
+	import { type Snippet } from "svelte";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
-	import { hasAuthenticatedSession } from "$lib/auth-session";
+	import {
+		getPageInitialSessionData,
+		hasAuthenticatedSession,
+		isSessionPending,
+		resolveSessionData,
+		type AuthSessionData,
+	} from "$lib/auth-session";
 	import { userOrganizationsQueryOptions } from "$lib/query-options";
 
-	const { children } = $props();
+	let {
+		children,
+		initialSession = undefined,
+	}: {
+		children: Snippet;
+		initialSession?: AuthSessionData | null;
+	} = $props();
 
 	// Paths that require an active organization. The root /, /login,
 	// /org/*, and /invitations are intentionally excluded so users can
@@ -15,10 +28,19 @@
 	const ORG_REQUIRED_PREFIXES = ["/chat", "/dashboard"];
 
 	const sessionQuery = authClient.useSession();
+	const pageInitialSession = $derived(
+		initialSession ?? getPageInitialSessionData(page.data)
+	);
+	const sessionData = $derived(
+		resolveSessionData($sessionQuery, pageInitialSession)
+	);
+	const sessionPending = $derived(
+		isSessionPending($sessionQuery, pageInitialSession)
+	);
 
 	const orgsQuery = createQuery(() =>
 		userOrganizationsQueryOptions({
-			enabled: hasAuthenticatedSession($sessionQuery.data),
+			enabled: hasAuthenticatedSession(sessionData),
 		})
 	);
 
@@ -28,8 +50,8 @@
 		);
 
 		// Wait for session to settle.
-		if ($sessionQuery.isPending) return;
-		if (!hasAuthenticatedSession($sessionQuery.data)) {
+		if (sessionPending) return;
+		if (!hasAuthenticatedSession(sessionData)) {
 			if (!onProtectedPath) return;
 
 			const nextPath = `${page.url.pathname}${page.url.search}`;

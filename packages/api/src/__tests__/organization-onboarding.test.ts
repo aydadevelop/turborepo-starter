@@ -464,6 +464,333 @@ describe("organization onboarding + calendar routes", () => {
 		expect(persistedConnection?.calendarAccountId).toBe("calendar-account-1");
 	});
 
+	it("disconnects provider accounts by hiding active sources and attached org connections", async () => {
+		const db = getDb();
+
+		await db.insert(organizationCalendarAccount).values({
+			id: "calendar-account-disconnect",
+			organizationId: ORG_ID,
+			provider: "google",
+			externalAccountId: "google-account-disconnect",
+			accountEmail: "disconnect@example.com",
+			displayName: "Disconnect Me",
+			status: "connected",
+			providerMetadata: {
+				credentials: {
+					sources: [
+						{
+							externalCalendarId: "disconnect-calendar-primary",
+							name: "Disconnect calendar",
+							timezone: "UTC",
+							isPrimary: true,
+						},
+					],
+				},
+			},
+			createdAt: NOW,
+			updatedAt: NOW,
+		});
+
+		const refreshed = await callRpc("/rpc/calendar/refreshAccountSources", {
+			accountId: "calendar-account-disconnect",
+		});
+		expect(refreshed.status).toBe(200);
+		const [firstSource] = refreshed.body as Array<{ id: string }>;
+		expect(firstSource).toBeDefined();
+		if (!firstSource) {
+			throw new Error("Expected a refreshed source to disconnect later");
+		}
+
+		const attached = await callRpc("/rpc/calendar/attachSource", {
+			listingId: LISTING_ID,
+			sourceId: firstSource.id,
+		});
+		expect(attached.status).toBe(200);
+
+		const workspaceBeforeDisconnect = await callRpc(
+			"/rpc/calendar/getOrgWorkspaceState",
+			{},
+		);
+		expect(workspaceBeforeDisconnect.status).toBe(200);
+		expect(workspaceBeforeDisconnect.body).toMatchObject({
+			sources: [
+				{
+					id: firstSource.id,
+					externalCalendarId: "disconnect-calendar-primary",
+				},
+			],
+			connections: [
+				{
+					calendarSourceId: firstSource.id,
+					listingId: LISTING_ID,
+				},
+			],
+		});
+
+		const disconnected = await callRpc("/rpc/calendar/disconnectAccount", {
+			accountId: "calendar-account-disconnect",
+		});
+		expect(disconnected.status).toBe(200);
+		expect(disconnected.body).toEqual({ success: true });
+
+		const workspaceAfterDisconnect = await callRpc(
+			"/rpc/calendar/getOrgWorkspaceState",
+			{},
+		);
+		expect(workspaceAfterDisconnect.status).toBe(200);
+		expect(workspaceAfterDisconnect.body).toMatchObject({
+			accounts: [
+				{
+					id: "calendar-account-disconnect",
+					status: "disconnected",
+				},
+			],
+			sources: [],
+			connections: [],
+		});
+	});
+
+	it("adds manual google calendar ids and exposes them through org workspace", async () => {
+		const connectedAccount = await callRpc("/rpc/calendar/connectAccount", {
+			provider: "google",
+			externalAccountId: "google-account-manual-rpc",
+			accountEmail: "manual-rpc@example.com",
+			displayName: "Manual RPC",
+		});
+		expect(connectedAccount.status).toBe(200);
+		const account = connectedAccount.body as { id: string };
+
+		const manualSource = await callRpc("/rpc/calendar/addManualSource", {
+			accountId: account.id,
+			calendarId: "legacy-rpc-calendar@group.calendar.google.com",
+		});
+		expect(manualSource.status).toBe(200);
+		expect(manualSource.body).toMatchObject({
+			calendarAccountId: account.id,
+			externalCalendarId: "legacy-rpc-calendar@group.calendar.google.com",
+			name: "legacy-rpc-calendar@group.calendar.google.com",
+			provider: "google",
+		});
+
+		const orgWorkspace = await callRpc("/rpc/calendar/getOrgWorkspaceState", {});
+		expect(orgWorkspace.status).toBe(200);
+		expect(orgWorkspace.body).toMatchObject({
+			sources: [
+				{
+					calendarAccountId: account.id,
+					externalCalendarId: "legacy-rpc-calendar@group.calendar.google.com",
+				},
+			],
+		});
+	});
+
+	it("adds manual google calendar ids through the shared service account fallback", async () => {
+		const manualSource = await callRpc("/rpc/calendar/addManualSource", {
+			accountId: "",
+			calendarId: "shared-service-calendar@group.calendar.google.com",
+		});
+		expect(manualSource.status).toBe(200);
+		expect(manualSource.body).toMatchObject({
+			externalCalendarId: "shared-service-calendar@group.calendar.google.com",
+			name: "shared-service-calendar@group.calendar.google.com",
+			provider: "google",
+		});
+
+		const orgWorkspace = await callRpc("/rpc/calendar/getOrgWorkspaceState", {});
+		expect(orgWorkspace.status).toBe(200);
+		expect(orgWorkspace.body).toMatchObject({
+			accounts: [
+				{
+					externalAccountId: "google-service-account",
+					displayName: "Google service account",
+				},
+			],
+			sources: [
+				{
+					externalCalendarId: "shared-service-calendar@group.calendar.google.com",
+				},
+			],
+		});
+	});
+
+	it("reuses the same org source when a manual add matches an already discovered oauth calendar", async () => {
+		const db = getDb();
+
+		await db.insert(organizationCalendarAccount).values({
+			id: "calendar-account-existing-manual-match",
+			organizationId: ORG_ID,
+			provider: "google",
+			externalAccountId: "google-account-existing-manual-match",
+			accountEmail: "existing-manual-match@example.com",
+			status: "connected",
+			providerMetadata: {
+				credentials: {
+					sources: [
+						{
+							externalCalendarId: "existing-manual-match@group.calendar.google.com",
+							name: "Existing match",
+							timezone: "UTC",
+							isPrimary: false,
+						},
+					],
+				},
+			},
+			createdAt: NOW,
+			updatedAt: NOW,
+		});
+
+		const refreshed = await callRpc("/rpc/calendar/refreshAccountSources", {
+			accountId: "calendar-account-existing-manual-match",
+		});
+		expect(refreshed.status).toBe(200);
+		const [existingSource] = refreshed.body as Array<{ id: string }>;
+		expect(existingSource).toBeDefined();
+		if (!existingSource) {
+			throw new Error("Expected an existing source to be reused");
+		}
+
+		const manualSource = await callRpc("/rpc/calendar/addManualSource", {
+			accountId: "",
+			calendarId: "existing-manual-match@group.calendar.google.com",
+		});
+		expect(manualSource.status).toBe(200);
+		expect(manualSource.body).toMatchObject({
+			id: existingSource.id,
+			externalCalendarId: "existing-manual-match@group.calendar.google.com",
+		});
+
+		const matchingSources = await db
+			.select()
+			.from(organizationCalendarSource)
+			.where(
+				eq(
+					organizationCalendarSource.externalCalendarId,
+					"existing-manual-match@group.calendar.google.com",
+				),
+			);
+
+		expect(matchingSources).toHaveLength(1);
+	});
+
+	it("renames a discovered calendar source through the rpc handler", async () => {
+		await getDb().insert(organizationCalendarAccount).values({
+			id: "calendar-account-rename-source",
+			organizationId: ORG_ID,
+			provider: "google",
+			externalAccountId: "google-account-rename-source",
+			accountEmail: "rename-source@example.com",
+			status: "connected",
+			providerMetadata: {
+				credentials: {
+					sources: [
+						{
+							externalCalendarId: "rename-source@group.calendar.google.com",
+							name: "Original Source Name",
+							timezone: "UTC",
+							isPrimary: false,
+						},
+					],
+				},
+			},
+			createdAt: NOW,
+			updatedAt: NOW,
+		});
+
+		const refreshed = await callRpc("/rpc/calendar/refreshAccountSources", {
+			accountId: "calendar-account-rename-source",
+		});
+		expect(refreshed.status).toBe(200);
+		const [source] = refreshed.body as Array<{ id: string; name: string }>;
+		expect(source).toBeDefined();
+		if (!source) {
+			throw new Error("Expected source to rename");
+		}
+
+		const renamed = await callRpc("/rpc/calendar/renameSource", {
+			sourceId: source.id,
+			name: "Harbor Ops",
+		});
+
+		expect(renamed.status).toBe(200);
+		expect(renamed.body).toMatchObject({
+			id: source.id,
+			name: "Harbor Ops",
+		});
+
+		const refreshedAgain = await callRpc(
+			"/rpc/calendar/refreshAccountSources",
+			{
+				accountId: "calendar-account-rename-source",
+			},
+		);
+		expect(refreshedAgain.status).toBe(200);
+		expect(refreshedAgain.body).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: source.id,
+					name: "Harbor Ops",
+				}),
+			]),
+		);
+	});
+
+	it("deletes a calendar source through the rpc handler and removes active org connections", async () => {
+		const connectedAccount = await callRpc("/rpc/calendar/connectAccount", {
+			provider: "google",
+			externalAccountId: "google-account-delete-source-rpc",
+			accountEmail: "delete-source-rpc@example.com",
+			displayName: "Delete Source RPC",
+		});
+		expect(connectedAccount.status).toBe(200);
+		const account = connectedAccount.body as { id: string };
+
+		const manualSource = await callRpc("/rpc/calendar/addManualSource", {
+			accountId: account.id,
+			calendarId: "delete-source-rpc@group.calendar.google.com",
+		});
+		expect(manualSource.status).toBe(200);
+		const source = manualSource.body as { id: string };
+
+		const attached = await callRpc("/rpc/calendar/attachSource", {
+			listingId: LISTING_ID,
+			sourceId: source.id,
+		});
+		expect(attached.status).toBe(200);
+		const connection = attached.body as { id: string };
+
+		const deleted = await callRpc("/rpc/calendar/deleteSource", {
+			sourceId: source.id,
+		});
+		expect(deleted.status).toBe(200);
+		expect(deleted.body).toEqual({
+			success: true,
+			sourceId: source.id,
+			disabledConnectionIds: [connection.id],
+		});
+
+		const orgWorkspace = await callRpc("/rpc/calendar/getOrgWorkspaceState", {});
+		expect(orgWorkspace.status).toBe(200);
+		expect(orgWorkspace.body).toMatchObject({
+			sources: [],
+			connections: [],
+		});
+
+		const [persistedSource] = await getDb()
+			.select()
+			.from(organizationCalendarSource)
+			.where(eq(organizationCalendarSource.id, source.id))
+			.limit(1);
+		expect(persistedSource).toBeUndefined();
+
+		const [persistedConnection] = await getDb()
+			.select()
+			.from(listingCalendarConnection)
+			.where(eq(listingCalendarConnection.id, connection.id))
+			.limit(1);
+		expect(persistedConnection?.calendarSourceId).toBeNull();
+		expect(persistedConnection?.isActive).toBe(false);
+	});
+
 	it("creates the expected publication row when onboarding completes", async () => {
 		await callRpc("/rpc/listing/publish", { id: LISTING_ID });
 

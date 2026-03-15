@@ -52,3 +52,11 @@ applyTo: "**/*.{ts,tsx,js,jsx,svelte,mjs,cjs,sh,yml,yaml,dockerfile,Dockerfile}"
 - Treat `/gsd-...` or `gsd-...` as command invocations and load the matching file from `.github/skills/gsd-*`.
 - When a command says to spawn a subagent, prefer a matching custom agent from `.github/agents`.
 - Do not apply GSD workflows unless the user explicitly asks for them.
+
+# Main Project Skills
+
+- Use `domain-packages` for domain extraction, repository/service boundaries, and thin oRPC wiring in `packages/api`.
+- Use `workflows` for multi-step orchestration, rollback/compensation, and idempotent cross-boundary write flows.
+- Use `domain-events` for typed event emission/subscription via `packages/events`, including `DomainEventMap`, `registerEventPusher`, and event-bus tests.
+- Use `provider-adapters` for external integrations behind registries/interfaces such as payments, calendars, and messaging channels.
+- When a task spans several of these concerns, prefer this order: `domain-packages` → `workflows` → `domain-events` → `provider-adapters`.

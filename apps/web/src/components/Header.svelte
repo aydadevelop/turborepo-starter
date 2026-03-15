@@ -2,12 +2,20 @@
 	import { createQuery } from "@tanstack/svelte-query";
 	import { resolve } from "$app/paths";
 	import { authClient } from "$lib/auth-client";
-	import { hasAuthenticatedSession } from "$lib/auth-session";
+	import {
+		hasAuthenticatedSession,
+		resolveSessionData,
+		type AuthSessionData,
+	} from "$lib/auth-session";
 	import { orpc, queryClient } from "$lib/orpc";
 	import { userInvitationsQueryOptions } from "$lib/query-options";
 	import NotificationCenter from "./NotificationCenter.svelte";
 	import OrgSwitcher from "./OrgSwitcher.svelte";
 	import UserMenu from "./UserMenu.svelte";
+
+	let {
+		initialSession = undefined,
+	}: { initialSession?: AuthSessionData | null } = $props();
 
 	// Stable constant — resolve() depends only on BASE_PATH (build-time),
 	// so these never need to be recreated. Hoisting out of $derived avoids
@@ -18,10 +26,13 @@
 	] as const;
 
 	const sessionQuery = authClient.useSession();
+	const sessionData = $derived(
+		resolveSessionData($sessionQuery, initialSession)
+	);
 
 	const isImpersonating = $derived(
 		Boolean(
-			($sessionQuery.data?.session as { impersonatedBy?: string } | undefined)
+			(sessionData?.session as { impersonatedBy?: string } | undefined)
 				?.impersonatedBy
 		)
 	);
@@ -35,17 +46,17 @@
 	const canManageQuery = createQuery(() => ({
 		...orpc.canManageOrganization.queryOptions(),
 		retry: false,
-		enabled: hasAuthenticatedSession($sessionQuery.data),
+		enabled: hasAuthenticatedSession(sessionData),
 	}));
 
 	const invitationsQuery = createQuery(() =>
 		userInvitationsQueryOptions({
-			enabled: hasAuthenticatedSession($sessionQuery.data),
+			enabled: hasAuthenticatedSession(sessionData),
 		})
 	);
 
 	const isAdmin = $derived(
-		($sessionQuery.data?.user as { role?: string } | undefined)?.role ===
+		(sessionData?.user as { role?: string } | undefined)?.role ===
 			"admin"
 	);
 	const hasOrgAccess = $derived(
@@ -68,7 +79,7 @@
 		>
 			You are impersonating
 			<strong data-testid="impersonated-user-name"
-				>{$sessionQuery.data?.user?.name ?? $sessionQuery.data?.user?.email}</strong
+				>{sessionData?.user?.name ?? sessionData?.user?.email}</strong
 			>
 			<button
 				type="button"
@@ -117,11 +128,11 @@
 			{/if}
 		</nav>
 		<div class="flex items-center gap-2">
-			<OrgSwitcher />
+			<OrgSwitcher {sessionQuery} {initialSession} />
 			<!-- Pass the already-fetched session down so NotificationCenter
 			     doesn't create a second independent subscription. -->
 			<NotificationCenter {sessionQuery} />
-			<UserMenu {pendingInvitationCount} />
+			<UserMenu {pendingInvitationCount} {sessionQuery} {initialSession} />
 		</div>
 	</div>
 </header>

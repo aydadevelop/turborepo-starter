@@ -61,7 +61,9 @@ export async function getOrgCalendarWorkspaceState(
 	db: Db,
 ): Promise<OrgCalendarWorkspaceState> {
 	const accounts = await listOrganizationCalendarAccounts(organizationId, db);
-	const sources = await listOrganizationCalendarSources(organizationId, db);
+	const sources = (await listOrganizationCalendarSources(organizationId, db)).filter(
+		(source) => source.isActive,
+	);
 	const allConnections = await listAllOrgConnections(organizationId, db);
 	const connections = allConnections.filter((c) => c.isActive);
 

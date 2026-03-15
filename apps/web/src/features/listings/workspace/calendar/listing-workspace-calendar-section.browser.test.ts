@@ -56,6 +56,36 @@ const calendar: CalendarWorkspaceState = {
 			createdAt: "2026-03-12T00:00:00.000Z",
 			updatedAt: "2026-03-12T00:00:00.000Z",
 		},
+		{
+			id: "source-3",
+			organizationId: "org-1",
+			calendarAccountId: "account-1",
+			provider: "google",
+			externalCalendarId: "calendar-hidden",
+			name: "Hidden Fleet Calendar",
+			timezone: "Europe/Moscow",
+			isPrimary: false,
+			isHidden: true,
+			isActive: true,
+			lastDiscoveredAt: "2026-03-12T00:00:00.000Z",
+			createdAt: "2026-03-12T00:00:00.000Z",
+			updatedAt: "2026-03-12T00:00:00.000Z",
+		},
+		{
+			id: "source-4",
+			organizationId: "org-1",
+			calendarAccountId: "account-1",
+			provider: "google",
+			externalCalendarId: "calendar-inactive",
+			name: "Inactive Fleet Calendar",
+			timezone: "Europe/Moscow",
+			isPrimary: false,
+			isHidden: false,
+			isActive: false,
+			lastDiscoveredAt: "2026-03-12T00:00:00.000Z",
+			createdAt: "2026-03-12T00:00:00.000Z",
+			updatedAt: "2026-03-12T00:00:00.000Z",
+		},
 	],
 	hasConnectedCalendar: true,
 	providers: ["google", "manual"],
@@ -74,6 +104,23 @@ const calendar: CalendarWorkspaceState = {
 			lastError: null,
 			watchExpiration: null,
 			isActive: true,
+			createdAt: "2026-03-12T00:00:00.000Z",
+			updatedAt: "2026-03-12T00:00:00.000Z",
+		},
+		{
+			id: "connection-2",
+			listingId: "listing-1",
+			organizationId: "org-1",
+			calendarAccountId: "account-1",
+			calendarSourceId: "source-4",
+			provider: "google",
+			externalCalendarId: "calendar-inactive",
+			syncStatus: "disabled",
+			syncRetryCount: 0,
+			lastSyncedAt: null,
+			lastError: null,
+			watchExpiration: null,
+			isActive: false,
 			createdAt: "2026-03-12T00:00:00.000Z",
 			updatedAt: "2026-03-12T00:00:00.000Z",
 		},
@@ -98,9 +145,9 @@ test("opens calendar discovery actions in a manage dialog", async () => {
 	await expect
 		.element(page.getByRole("button", { name: "Manage calendars" }))
 		.toBeVisible();
-	await expect(document.body).toMatchScreenshot(
-		"listing-workspace-calendar-section",
-	);
+	await expect.element(page.getByText("Fleet Primary").first()).toBeVisible();
+	await expect.element(page.getByText("Inactive Fleet Calendar")).not.toBeInTheDocument();
+	await expect.element(page.getByText("No calendar connections yet.")).not.toBeInTheDocument();
 
 	await userEvent.click(page.getByRole("button", { name: "Manage calendars" }));
 	await expect
@@ -108,6 +155,9 @@ test("opens calendar discovery actions in a manage dialog", async () => {
 		.toBeVisible();
 	await expect.element(page.getByText("Fleet Primary").first()).toBeVisible();
 	await expect.element(page.getByText("Fleet Backup").first()).toBeVisible();
+	await expect.element(page.getByText("Hidden Fleet Calendar")).not.toBeInTheDocument();
+	await expect.element(page.getByText("Inactive Fleet Calendar")).not.toBeInTheDocument();
+	await expect.element(page.getByText("Inactive")).not.toBeInTheDocument();
 
 	await userEvent.click(
 		page.getByRole("button", { name: "Refresh calendars" }),

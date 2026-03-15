@@ -12,6 +12,9 @@ import { resolveServerPath } from "./server-url";
 export const authClient = createAuthClient({
 	baseURL: resolveServerPath("/api/auth"),
 	basePath: "/",
+	sessionOptions: {
+		refetchOnWindowFocus: false,
+	},
 	plugins: [
 		adminClient(),
 		anonymousClient(),

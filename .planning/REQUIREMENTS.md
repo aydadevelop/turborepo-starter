@@ -56,13 +56,13 @@
 - [ ] **EXTR-03**: CalendarAdapter interface with GoogleCalendarAdapter implementation and BookingLifecycleSync subscriber reacts to booking domain events to create, update, and delete external calendar entries via packages/calendar
 - [ ] **EXTR-04**: Cancellation policy evaluation (CancellationPolicyService) and dispute/refund orchestration (processCancellationWorkflow, processDisputeWorkflow) are encapsulated in packages/disputes, separate from basic booking status transitions in packages/booking
 
-### Discovery and AI
+### Discovery and AI - postpone
 
 - **DISC-01**: Customer can use advanced semantic, BM25-ranked, or image-based search to discover listings
 - **DISC-02**: Customer can use an AI assistant to narrow options, ask questions, and prepare a booking flow
 - **DISC-03**: Operator can use an AI assistant for marketplace operations and content workflows
 
-### Integrations and Distribution
+### Integrations and Distribution 
 
 - **INTG-01**: Operator can sync bookings with external calendars through richer provider coverage and bidirectional workflows
 - **INTG-02**: Operator can publish inventory to partner, widget, or white-label storefront channels beyond the marketplace baseline
@@ -74,6 +74,12 @@
 - **TRST-02**: Marketplace can attribute affiliate referrals and automate payout handling
 - **TRST-03**: Team can automate advanced dispute and chargeback management workflows
 - **TRST-04**: Operator and customer can use advanced reschedule / dual-approval shift workflows
+
+### Platform Oversight
+
+- [ ] **PADM-01**: Platform admin can review cross-org readiness and moderation queues with explicit blocker reasons and audit history
+- [ ] **PADM-02**: Platform admin can triage, assign, and escalate booking-linked support tickets across organizations from a dedicated oversight surface
+- [ ] **PADM-03**: Platform admin can apply publication gating, moderation, or pause decisions without entering provider-scoped operator flows
 
 ## Out of Scope
 
@@ -124,4 +130,4 @@
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-15 after refreshed milestone audit and Phase 12 gap-closure planning*
+*Last updated: 2026-03-15 after refreshed milestone audit, Phase 12 gap-closure planning, and Phase 13 platform-admin oversight follow-up*

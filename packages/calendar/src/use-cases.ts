@@ -6,7 +6,7 @@ import {
 } from "@my-app/db/schema/availability";
 import { listing } from "@my-app/db/schema/marketplace";
 import type { EventBus } from "@my-app/events";
-import { and, asc, desc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, or } from "drizzle-orm";
 import { getCalendarAdapter } from "./adapter-registry";
 import {
 	listCalendarWebhookDeadLetters,
@@ -100,6 +100,14 @@ export interface AttachCalendarSourceInput {
 	sourceId: string;
 }
 
+export interface AddOrganizationManualCalendarSourceInput {
+	accountId?: string;
+	calendarId: string;
+	createdByUserId?: string;
+	name?: string;
+	organizationId: string;
+}
+
 interface CalendarMutationContext {
 	actorUserId?: string;
 	eventBus?: EventBus;
@@ -138,6 +146,29 @@ const mergeProviderMetadata = (
 			: {}),
 	};
 };
+
+const MANUAL_SOURCE_METADATA_KEY = "manuallyAdded";
+const CUSTOM_SOURCE_NAME_METADATA_KEY = "customName";
+const SERVICE_ACCOUNT_EXTERNAL_ACCOUNT_ID = "google-service-account";
+const SERVICE_ACCOUNT_DISPLAY_NAME = "Google service account";
+
+const isManuallyAddedSource = (
+	source: Pick<CalendarSourceRow, "sourceMetadata">,
+): boolean => {
+	const metadata = source.sourceMetadata as Record<string, unknown> | null;
+	return metadata?.[MANUAL_SOURCE_METADATA_KEY] === true;
+};
+
+const getCustomSourceName = (
+	source: Pick<CalendarSourceRow, "sourceMetadata">,
+): string | null => {
+	const metadata = source.sourceMetadata as Record<string, unknown> | null;
+	const customName = metadata?.[CUSTOM_SOURCE_NAME_METADATA_KEY];
+	return typeof customName === "string" && customName.trim().length > 0
+		? customName.trim()
+		: null;
+};
+
 const emitCalendarReadinessChanged = async (
 	organizationId: string,
 	connectionId: string,
@@ -458,10 +489,310 @@ export async function connectOrganizationCalendarAccount(
 	return row;
 }
 
+export async function addOrganizationManualCalendarSource(
+	input: AddOrganizationManualCalendarSourceInput,
+	db: Db,
+): Promise<CalendarSourceRow> {
+	const customName = input.name?.trim() || null;
+	let account: CalendarAccountRow | undefined;
+	if (input.accountId) {
+		const [existingAccount] = await db
+			.select()
+			.from(organizationCalendarAccount)
+			.where(
+				and(
+					eq(organizationCalendarAccount.id, input.accountId),
+					eq(organizationCalendarAccount.organizationId, input.organizationId),
+				),
+			)
+			.limit(1);
+
+		if (!existingAccount) {
+			throw new Error("NOT_FOUND");
+		}
+
+		account = existingAccount;
+	}
+
+	const provider = account?.provider ?? "google";
+	const adapter = getCalendarAdapter(provider);
+	const credentials = account ? getAccountCredentials(account) : {};
+	const now = new Date();
+
+	let matchedSource: import("./types").CalendarSourcePresentation | undefined;
+	if (account) {
+		try {
+			const discovered = await adapter.listCalendars({
+				provider: account.provider,
+				credentials,
+			});
+			matchedSource = discovered.find(
+				(source) => source.externalCalendarId === input.calendarId,
+			);
+		} catch {
+			// Fall back to direct validation below. Account-level discovery can fail even
+			// when a specific calendar is reachable by ID.
+		}
+	}
+
+	if (!(matchedSource || !adapter.getCalendarSource)) {
+		matchedSource =
+			(await adapter.getCalendarSource(input.calendarId, {
+				provider,
+				credentials,
+			})) ?? undefined;
+	}
+
+	await adapter.listBusySlots(input.calendarId, now, new Date(now.getTime() + 60_000), {
+		provider,
+		credentials,
+		calendarId: input.calendarId,
+	});
+
+	if (!account) {
+		account = await connectOrganizationCalendarAccount(
+			{
+				organizationId: input.organizationId,
+				provider: "google",
+				externalAccountId: SERVICE_ACCOUNT_EXTERNAL_ACCOUNT_ID,
+				displayName: SERVICE_ACCOUNT_DISPLAY_NAME,
+				createdByUserId: input.createdByUserId,
+			},
+			db,
+		);
+	}
+
+	const [existingSource] = await db
+		.select()
+		.from(organizationCalendarSource)
+		.where(
+			and(
+				eq(organizationCalendarSource.organizationId, input.organizationId),
+				eq(organizationCalendarSource.provider, account.provider),
+				eq(organizationCalendarSource.externalCalendarId, input.calendarId),
+			),
+		)
+		.limit(1);
+
+	if (existingSource) {
+		const currentMetadata =
+			(existingSource.sourceMetadata as Record<string, unknown> | null) ?? {};
+		const [updated] = await db
+			.update(organizationCalendarSource)
+			.set({
+				calendarAccountId: account.id,
+				name:
+					customName ??
+					getCustomSourceName(existingSource) ??
+					matchedSource?.name ??
+					existingSource.name ??
+					input.calendarId,
+				timezone:
+					matchedSource?.timezone ?? existingSource.timezone ?? null,
+				isPrimary: matchedSource?.isPrimary ?? existingSource.isPrimary,
+				isHidden: false,
+				isActive: true,
+				sourceMetadata: {
+					...currentMetadata,
+					...(matchedSource?.metadata ?? {}),
+					[MANUAL_SOURCE_METADATA_KEY]: true,
+					...(customName
+						? { [CUSTOM_SOURCE_NAME_METADATA_KEY]: customName }
+						: {}),
+				},
+				lastDiscoveredAt: now,
+				updatedAt: now,
+			})
+			.where(eq(organizationCalendarSource.id, existingSource.id))
+			.returning();
+
+		if (!updated) {
+			throw new Error("Update failed");
+		}
+
+		await db
+			.update(organizationCalendarAccount)
+			.set({
+				lastSyncedAt: now,
+				lastError: null,
+				status: "connected",
+				updatedAt: now,
+			})
+			.where(eq(organizationCalendarAccount.id, account.id));
+
+		return updated;
+	}
+
+	const [row] = await db
+		.insert(organizationCalendarSource)
+		.values({
+			id: crypto.randomUUID(),
+			organizationId: input.organizationId,
+			calendarAccountId: account.id,
+			provider: account.provider,
+			externalCalendarId: input.calendarId,
+			name: customName ?? matchedSource?.name ?? input.calendarId,
+			timezone: matchedSource?.timezone ?? null,
+			isPrimary: matchedSource?.isPrimary ?? false,
+			isHidden: false,
+			isActive: true,
+			sourceMetadata: {
+				...(matchedSource?.metadata ?? {}),
+				[MANUAL_SOURCE_METADATA_KEY]: true,
+				...(customName
+					? { [CUSTOM_SOURCE_NAME_METADATA_KEY]: customName }
+					: {}),
+			},
+			lastDiscoveredAt: now,
+		})
+		.onConflictDoUpdate({
+			target: [
+				organizationCalendarSource.calendarAccountId,
+				organizationCalendarSource.externalCalendarId,
+			],
+			set: {
+				name: customName ?? matchedSource?.name ?? input.calendarId,
+				timezone: matchedSource?.timezone ?? null,
+				isPrimary: matchedSource?.isPrimary ?? false,
+				isHidden: false,
+				isActive: true,
+				sourceMetadata: {
+					...(matchedSource?.metadata ?? {}),
+					[MANUAL_SOURCE_METADATA_KEY]: true,
+					...(customName
+						? { [CUSTOM_SOURCE_NAME_METADATA_KEY]: customName }
+						: {}),
+				},
+				lastDiscoveredAt: now,
+				updatedAt: now,
+			},
+		})
+		.returning();
+
+	if (!row) {
+		throw new Error("Insert failed");
+	}
+
+	await db
+		.update(organizationCalendarAccount)
+		.set({
+			lastSyncedAt: now,
+			lastError: null,
+			status: "connected",
+			updatedAt: now,
+		})
+		.where(eq(organizationCalendarAccount.id, account.id));
+
+	return row;
+}
+
+export async function renameOrganizationCalendarSource(
+	sourceId: string,
+	organizationId: string,
+	name: string,
+	db: Db,
+): Promise<CalendarSourceRow> {
+	const trimmedName = name.trim();
+	if (trimmedName.length === 0) {
+		throw new Error("BAD_REQUEST");
+	}
+
+	const [source] = await db
+		.select()
+		.from(organizationCalendarSource)
+		.where(
+			and(
+				eq(organizationCalendarSource.id, sourceId),
+				eq(organizationCalendarSource.organizationId, organizationId),
+			),
+		)
+		.limit(1);
+
+	if (!source) {
+		throw new Error("NOT_FOUND");
+	}
+
+	const [updated] = await db
+		.update(organizationCalendarSource)
+		.set({
+			name: trimmedName,
+			sourceMetadata: {
+				...((source.sourceMetadata as Record<string, unknown> | null) ?? {}),
+				[CUSTOM_SOURCE_NAME_METADATA_KEY]: trimmedName,
+			},
+			updatedAt: new Date(),
+		})
+		.where(eq(organizationCalendarSource.id, source.id))
+		.returning();
+
+	if (!updated) {
+		throw new Error("Update failed");
+	}
+
+	return updated;
+}
+
+export interface DeleteOrganizationCalendarSourceResult {
+	disabledConnectionIds: string[];
+	sourceId: string;
+}
+
+export async function deleteOrganizationCalendarSource(
+	sourceId: string,
+	organizationId: string,
+	db: Db,
+	context?: CalendarMutationContext,
+): Promise<DeleteOrganizationCalendarSourceResult> {
+	const [source] = await db
+		.select()
+		.from(organizationCalendarSource)
+		.where(
+			and(
+				eq(organizationCalendarSource.id, sourceId),
+				eq(organizationCalendarSource.organizationId, organizationId),
+			),
+		)
+		.limit(1);
+
+	if (!source) {
+		throw new Error("NOT_FOUND");
+	}
+
+	const activeConnections = await db
+		.select({ id: listingCalendarConnection.id })
+		.from(listingCalendarConnection)
+		.where(
+			and(
+				eq(listingCalendarConnection.organizationId, organizationId),
+				eq(listingCalendarConnection.calendarSourceId, source.id),
+				eq(listingCalendarConnection.isActive, true),
+			),
+		);
+
+	for (const connection of activeConnections) {
+		await disableCalendarConnection(connection.id, organizationId, db, context);
+	}
+
+	await db
+		.delete(organizationCalendarSource)
+		.where(
+			and(
+				eq(organizationCalendarSource.id, source.id),
+				eq(organizationCalendarSource.organizationId, organizationId),
+			),
+		);
+
+	return {
+		disabledConnectionIds: activeConnections.map((connection) => connection.id),
+		sourceId: source.id,
+	};
+}
+
 export async function disconnectOrganizationCalendarAccount(
 	accountId: string,
 	organizationId: string,
 	db: Db,
+ 	context?: CalendarMutationContext,
 ): Promise<CalendarAccountRow> {
 	const [account] = await db
 		.select()
@@ -478,10 +809,45 @@ export async function disconnectOrganizationCalendarAccount(
 		throw new Error("NOT_FOUND");
 	}
 
+	const sources = await db
+		.select()
+		.from(organizationCalendarSource)
+		.where(eq(organizationCalendarSource.calendarAccountId, account.id));
+	const sourceIds = sources.map((source) => source.id);
+	const activeConnections = await db
+		.select()
+		.from(listingCalendarConnection)
+		.where(
+			and(
+				eq(listingCalendarConnection.organizationId, organizationId),
+				eq(listingCalendarConnection.isActive, true),
+				sourceIds.length > 0
+					? or(
+							eq(listingCalendarConnection.calendarAccountId, account.id),
+							inArray(listingCalendarConnection.calendarSourceId, sourceIds),
+						)
+					: eq(listingCalendarConnection.calendarAccountId, account.id),
+			),
+		);
+
+	for (const connection of activeConnections) {
+		await disableCalendarConnection(connection.id, organizationId, db, context);
+	}
+
+	await db
+		.update(organizationCalendarSource)
+		.set({
+			isActive: false,
+			isHidden: true,
+			updatedAt: new Date(),
+		})
+		.where(eq(organizationCalendarSource.calendarAccountId, account.id));
+
 	const [row] = await db
 		.update(organizationCalendarAccount)
 		.set({
 			status: "disconnected",
+			lastError: null,
 			updatedAt: new Date(),
 		})
 		.where(eq(organizationCalendarAccount.id, accountId))
@@ -573,20 +939,46 @@ export async function refreshOrganizationCalendarSources(
 	const now = new Date();
 
 	try {
+		const existingSources = await listOrganizationCalendarSources(
+			organizationId,
+			db,
+			account.id,
+		);
+		const existingSourceByExternalId = new Map(
+			existingSources.map((source) => [source.externalCalendarId, source]),
+		);
 		const discovered = await adapter.listCalendars({
 			provider: account.provider,
 			credentials: getAccountCredentials(account),
 		});
+		const discoveredIds = new Set(
+			discovered.map((source) => source.externalCalendarId),
+		);
 
-		await db
-			.update(organizationCalendarSource)
-			.set({
-				isActive: false,
-				updatedAt: now,
-			})
-			.where(eq(organizationCalendarSource.calendarAccountId, account.id));
+		for (const source of existingSources) {
+			if (
+				isManuallyAddedSource(source) ||
+				discoveredIds.has(source.externalCalendarId)
+			) {
+				continue;
+			}
+
+			await db
+				.update(organizationCalendarSource)
+				.set({
+					isActive: false,
+					updatedAt: now,
+				})
+				.where(eq(organizationCalendarSource.id, source.id));
+		}
 
 		for (const source of discovered) {
+			const existingSource = existingSourceByExternalId.get(
+				source.externalCalendarId,
+			);
+			const customName = existingSource
+				? getCustomSourceName(existingSource)
+				: null;
 			await db
 				.insert(organizationCalendarSource)
 				.values({
@@ -595,12 +987,17 @@ export async function refreshOrganizationCalendarSources(
 					calendarAccountId: account.id,
 					provider: account.provider,
 					externalCalendarId: source.externalCalendarId,
-					name: source.name,
+					name: customName ?? source.name,
 					timezone: source.timezone ?? null,
 					isPrimary: source.isPrimary ?? false,
 					isHidden: source.isHidden ?? false,
 					isActive: true,
-					sourceMetadata: source.metadata ?? null,
+					sourceMetadata: {
+						...(source.metadata ?? {}),
+						...(customName
+							? { [CUSTOM_SOURCE_NAME_METADATA_KEY]: customName }
+							: {}),
+					},
 					lastDiscoveredAt: now,
 				})
 				.onConflictDoUpdate({
@@ -609,12 +1006,17 @@ export async function refreshOrganizationCalendarSources(
 						organizationCalendarSource.externalCalendarId,
 					],
 					set: {
-						name: source.name,
+						name: customName ?? source.name,
 						timezone: source.timezone ?? null,
 						isPrimary: source.isPrimary ?? false,
 						isHidden: source.isHidden ?? false,
 						isActive: true,
-						sourceMetadata: source.metadata ?? null,
+						sourceMetadata: {
+							...(source.metadata ?? {}),
+							...(customName
+								? { [CUSTOM_SOURCE_NAME_METADATA_KEY]: customName }
+								: {}),
+						},
 						lastDiscoveredAt: now,
 						updatedAt: now,
 					},

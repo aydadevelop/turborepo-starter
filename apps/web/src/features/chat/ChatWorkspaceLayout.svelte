@@ -13,12 +13,24 @@
 	import { page } from "$app/state";
 	import { assistantClient } from "$lib/assistant";
 	import { authClient } from "$lib/auth-client";
-	import { hasSessionUser } from "$lib/auth-session";
+	import {
+		getPageInitialSessionData,
+		hasSessionUser,
+		isSessionPending,
+		resolveSessionData,
+	} from "$lib/auth-session";
 	import { queryKeys } from "$lib/query-keys";
 
 	let { children }: { children?: Snippet } = $props();
 
 	const sessionQuery = authClient.useSession();
+	const initialSession = $derived(getPageInitialSessionData(page.data));
+	const sessionData = $derived(
+		resolveSessionData($sessionQuery, initialSession)
+	);
+	const sessionPending = $derived(
+		isSessionPending($sessionQuery, initialSession)
+	);
 	const queryClient = useQueryClient();
 
 	let isSigningIn = $state(false);
@@ -26,7 +38,7 @@
 	let retryAutoSessionTimer: ReturnType<typeof setTimeout> | null = null;
 
 	async function ensureSession(): Promise<boolean> {
-		if (hasSessionUser($sessionQuery.data)) return true;
+		if (hasSessionUser(sessionData)) return true;
 		if (isSigningIn) return false;
 		isSigningIn = true;
 		try {
@@ -48,11 +60,11 @@
 	});
 
 	$effect(() => {
-		if ($sessionQuery.isPending) {
+		if (sessionPending) {
 			return;
 		}
 
-		if (hasSessionUser($sessionQuery.data)) {
+		if (hasSessionUser(sessionData)) {
 			attemptedAutoSession = false;
 			return;
 		}
@@ -80,7 +92,7 @@
 	const chatsQuery = createQuery(() => ({
 		queryKey: queryKeys.assistant.chats,
 		queryFn: () => assistantClient.listChats({}),
-		enabled: hasSessionUser($sessionQuery.data),
+		enabled: hasSessionUser(sessionData),
 	}));
 
 	const createChat = createMutation(() => ({

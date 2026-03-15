@@ -115,6 +115,53 @@ export const calendarContract = {
 		.input(z.object({ accountId: z.string() }))
 		.output(z.array(calendarSourceOutputSchema)),
 
+	addManualSource: oc
+		.route({
+			tags: ["Calendar"],
+			summary:
+				"Register a manually entered calendar ID under a connected provider account",
+		})
+		.input(
+			z.object({
+				accountId: z.string().trim(),
+				calendarId: z.string().trim().min(1),
+				name: z.string().trim().optional(),
+			}),
+		)
+		.output(calendarSourceOutputSchema),
+
+	renameSource: oc
+		.route({
+			tags: ["Calendar"],
+			summary: "Rename a discovered calendar source",
+		})
+		.input(
+			z.object({
+				sourceId: z.string(),
+				name: z.string().trim().min(1),
+			}),
+		)
+		.output(calendarSourceOutputSchema),
+
+	deleteSource: oc
+		.route({
+			tags: ["Calendar"],
+			summary:
+				"Delete a calendar source from the organization and detach active listing connections",
+		})
+		.input(
+			z.object({
+				sourceId: z.string(),
+			}),
+		)
+		.output(
+			z.object({
+				success: z.boolean(),
+				sourceId: z.string(),
+				disabledConnectionIds: z.array(z.string()),
+			}),
+		),
+
 	listSources: oc
 		.route({
 			tags: ["Calendar"],

@@ -1,10 +1,12 @@
 import {
+	addOrganizationManualCalendarSource,
 	attachCalendarSourceToListing,
 	type CalendarAccountRow,
 	type CalendarConnectionRow,
 	type CalendarSourceRow,
 	connectCalendar,
 	connectOrganizationCalendarAccount,
+	deleteOrganizationCalendarSource,
 	disableCalendarConnection,
 	disconnectCalendar,
 	disconnectOrganizationCalendarAccount,
@@ -14,6 +16,7 @@ import {
 	listCalendarConnections,
 	listOrganizationCalendarAccounts,
 	listOrganizationCalendarSources,
+	renameOrganizationCalendarSource,
 	refreshOrganizationCalendarSources,
 	setSourceVisibility,
 } from "@my-app/calendar";
@@ -96,6 +99,10 @@ export const calendarRouter = {
 				input.accountId,
 				context.activeMembership.organizationId,
 				db,
+				{
+					actorUserId: context.session?.user?.id ?? undefined,
+					eventBus: context.eventBus,
+				},
 			);
 			return { success: true };
 		} catch (error) {
@@ -115,6 +122,78 @@ export const calendarRouter = {
 		);
 
 		return rows.map(formatAccount);
+	}),
+
+	addManualSource: organizationPermissionProcedure({
+		availability: ["create"],
+	}).calendar.addManualSource.handler(async ({ context, input }) => {
+		try {
+			const row = await addOrganizationManualCalendarSource(
+				{
+					accountId: input.accountId || undefined,
+					calendarId: input.calendarId,
+					name: input.name,
+					createdByUserId: context.session?.user?.id,
+					organizationId: context.activeMembership.organizationId,
+				},
+				db,
+			);
+			return formatSource(row);
+		} catch (error) {
+			if (error instanceof Error && error.message === "NOT_FOUND") {
+				throw new ORPCError("NOT_FOUND");
+			}
+			throw error;
+		}
+	}),
+
+	renameSource: organizationPermissionProcedure({
+		availability: ["update"],
+	}).calendar.renameSource.handler(async ({ context, input }) => {
+		try {
+			const row = await renameOrganizationCalendarSource(
+				input.sourceId,
+				context.activeMembership.organizationId,
+				input.name,
+				db,
+			);
+			return formatSource(row);
+		} catch (error) {
+			if (error instanceof Error) {
+				if (error.message === "NOT_FOUND") {
+					throw new ORPCError("NOT_FOUND");
+				}
+				if (error.message === "BAD_REQUEST") {
+					throw new ORPCError("BAD_REQUEST");
+				}
+			}
+			throw error;
+		}
+	}),
+
+	deleteSource: organizationPermissionProcedure({
+		availability: ["update"],
+	}).calendar.deleteSource.handler(async ({ context, input }) => {
+		try {
+			const result = await deleteOrganizationCalendarSource(
+				input.sourceId,
+				context.activeMembership.organizationId,
+				db,
+				{
+					actorUserId: context.session?.user?.id ?? undefined,
+					eventBus: context.eventBus,
+				},
+			);
+			return {
+				success: true,
+				...result,
+			};
+		} catch (error) {
+			if (error instanceof Error && error.message === "NOT_FOUND") {
+				throw new ORPCError("NOT_FOUND");
+			}
+			throw error;
+		}
 	}),
 
 	refreshAccountSources: organizationPermissionProcedure({

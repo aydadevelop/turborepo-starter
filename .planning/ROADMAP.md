@@ -24,6 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 10: Payment Webhook & Cancellation Live Path** - Put live payment reconciliation and cancellation/refund orchestration onto the production request path. (completed 2026-03-10)
 - [x] **Phase 11: Events, Notifications, Calendar & Support Integration** - Converge live booking side effects onto typed events and complete the customer-facing support follow-up flow. (completed 2026-03-10)
 - [ ] **Phase 12: Operator Booking Notification Fan-out** - Close the remaining milestone blocker by delivering operator-facing booking confirmation and cancellation notifications on the live typed notification path.
+- [ ] **Phase 13: Platform Admin Oversight Surface** - Add the cross-org platform-admin workspace for readiness gating, support ticket triage, and moderation actions that should not live inside provider operator flows.
 
 ## Phase Details
 
@@ -126,7 +127,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -142,6 +143,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 10. Payment Webhook & Cancellation Live Path | 4/4 | Complete   | 2026-03-10 |
 | 11. Events, Notifications, Calendar & Support Integration | 0/0 | Complete    | 2026-03-10 |
 | 12. Operator Booking Notification Fan-out | 0/0 | Not started | - |
+| 13. Platform Admin Oversight Surface | 0/0 | Not started | - |
 
 ### Phase 7: review missing extractions
 
@@ -236,4 +238,17 @@ Plans:
   2. Operator recipients receive valid notification payloads through the same typed events → notifications bridge → queue/processor path used for customer delivery.
   3. Automated coverage proves mixed recipient fan-out is idempotent and does not regress existing customer delivery behavior.
   4. Re-running `/gsd-audit-milestone` no longer reports `BOOK-04` as partial.
+**Plans**: 0 plans
+
+### Phase 13: Platform Admin Oversight Surface
+
+**Goal**: Give platform admins a dedicated cross-org operations surface for publish gating, support ticket triage, and moderation decisions so marketplace quality controls live in one accountable place instead of being scattered across provider-only flows.
+**Depends on:** Phase 12
+**Requirements**: PADM-01, PADM-02, PADM-03
+**Gap Closure:** Closes the planning gap around platform-admin readiness, moderation, and ticketing responsibilities called out in discovery and ADR documents but not yet represented in the roadmap.
+**Success Criteria** (what must be TRUE):
+  1. Platform admins can review cross-org readiness and moderation queues with explicit blocker reasons, audit history, and actionable next steps.
+  2. Platform admins can triage, assign, or escalate booking-linked support tickets without impersonating a provider organization.
+  3. Platform admins can apply publication gating, moderation, or pause decisions through backend-governed actions that keep readiness and moderation surfaces aligned.
+  4. The admin oversight surface reflects the same source of truth as operator-facing readiness and support flows rather than maintaining a second contradictory state model.
 **Plans**: 0 plans

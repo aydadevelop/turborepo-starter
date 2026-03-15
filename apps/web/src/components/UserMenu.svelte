@@ -4,19 +4,34 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
-	import { hasAuthenticatedSession } from "$lib/auth-session";
+	import {
+		hasAuthenticatedSession,
+		isSessionPending,
+		resolveSessionData,
+		type AuthSessionData,
+	} from "$lib/auth-session";
 	import { queryClient } from "$lib/orpc";
 
-	const sessionQuery = authClient.useSession();
+	let {
+		pendingInvitationCount = 0,
+		sessionQuery,
+		initialSession = undefined,
+	}: {
+		pendingInvitationCount?: number;
+		sessionQuery: ReturnType<typeof authClient.useSession>;
+		initialSession?: AuthSessionData | null;
+	} = $props();
+
+	const sessionData = $derived(
+		resolveSessionData($sessionQuery, initialSession)
+	);
+	const sessionPending = $derived(isSessionPending($sessionQuery, initialSession));
 	const hasSessionUser = $derived(
-		Boolean($sessionQuery.data?.session && $sessionQuery.data?.user?.id)
+		Boolean(sessionData?.session && sessionData?.user?.id)
 	);
 	const isFullyAuthenticated = $derived(
-		hasAuthenticatedSession($sessionQuery.data)
+		hasAuthenticatedSession(sessionData)
 	);
-
-	let { pendingInvitationCount = 0 }: { pendingInvitationCount?: number } =
-		$props();
 
 	async function handleSignOut() {
 		await authClient.signOut({
@@ -38,10 +53,10 @@
 </script>
 
 <div class="relative">
-	{#if $sessionQuery.isPending}
+	{#if sessionPending}
 		<div class="h-8 w-24 animate-pulse rounded bg-muted"></div>
 	{:else if hasSessionUser}
-		{@const user = $sessionQuery.data?.user}
+		{@const user = sessionData?.user}
 		<div class="flex items-center gap-3">
 			<span
 				class="text-sm text-muted-foreground hidden sm:inline"

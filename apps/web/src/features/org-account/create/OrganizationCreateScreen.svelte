@@ -8,7 +8,12 @@
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import { authClient } from "$lib/auth-client";
-	import { hasAuthenticatedSession } from "$lib/auth-session";
+	import {
+		getPageInitialSessionData,
+		hasAuthenticatedSession,
+		isSessionPending,
+		resolveSessionData,
+	} from "$lib/auth-session";
 	import { orpc, queryClient } from "$lib/orpc";
 	import { queryKeys } from "$lib/query-keys";
 	import { userOrganizationsQueryOptions } from "$lib/query-options";
@@ -21,6 +26,13 @@
 	let scrolledToBottom = $state(false);
 
 	const sessionQuery = authClient.useSession();
+	const initialSession = $derived(getPageInitialSessionData(page.data));
+	const sessionData = $derived(
+		resolveSessionData($sessionQuery, initialSession)
+	);
+	const sessionPending = $derived(
+		isSessionPending($sessionQuery, initialSession)
+	);
 	const defaultPostCreatePath = resolve("/dashboard/settings");
 
 	const resolvePostCreateRedirect = (candidatePath: string | null): string => {
@@ -75,7 +87,7 @@
 	};
 
 	$effect(() => {
-		const user = $sessionQuery.data?.user;
+		const user = sessionData?.user;
 		if (user && !orgName) {
 			orgName = user.name || user.email?.split("@")[0] || "";
 		}
@@ -83,15 +95,15 @@
 
 	const orgsQuery = createQuery(() =>
 		userOrganizationsQueryOptions({
-			enabled: hasAuthenticatedSession($sessionQuery.data),
+			enabled: hasAuthenticatedSession(sessionData),
 		})
 	);
 
 	const hasExistingOrg = $derived((orgsQuery.data?.length ?? 0) > 0);
 
 	$effect(() => {
-		if ($sessionQuery.isPending) return;
-		if (!hasAuthenticatedSession($sessionQuery.data)) {
+		if (sessionPending) return;
+		if (!hasAuthenticatedSession(sessionData)) {
 			goto(
 				`${resolve("/login")}?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
 			);
@@ -110,7 +122,7 @@
 	};
 
 	const handleSubmit = async () => {
-		if (!hasAuthenticatedSession($sessionQuery.data)) {
+		if (!hasAuthenticatedSession(sessionData)) {
 			errorMessage =
 				"You need to sign in with an email account before creating an organization.";
 			return;

@@ -1,6 +1,20 @@
-import type { authClient } from "./auth-client";
+import { authClient } from "./auth-client";
 
-type SessionData = typeof authClient.$Infer.Session;
+export type AuthSessionData = typeof authClient.$Infer.Session;
+export type AuthSessionStoreState = ReturnType<
+	typeof authClient.useSession
+> extends {
+	get(): infer T;
+}
+	? T
+	: never;
+
+type SessionData = AuthSessionData;
+
+type SessionStoreAtom = {
+	get(): AuthSessionStoreState;
+	set(value: AuthSessionStoreState): void;
+};
 
 const isAnonymousUser = (
 	user: SessionData["user"] | null | undefined,
@@ -42,4 +56,47 @@ export function getAuthenticatedUserId(
 	}
 
 	return data.user.id;
+}
+
+export function getPageInitialSessionData(
+	pageData: unknown,
+): AuthSessionData | null | undefined {
+	return (pageData as { initialSession?: AuthSessionData | null } | undefined)
+		?.initialSession;
+}
+
+export function resolveSessionData(
+	queryState: AuthSessionStoreState,
+	initialData: AuthSessionData | null | undefined,
+): AuthSessionData | null {
+	return queryState.data ?? initialData ?? null;
+}
+
+export function isSessionPending(
+	queryState: AuthSessionStoreState,
+	initialData: AuthSessionData | null | undefined,
+): boolean {
+	return queryState.isPending && initialData === undefined;
+}
+
+export function hydrateSessionStore(
+	initialData: AuthSessionData | null | undefined,
+): void {
+	if (typeof window === "undefined" || initialData === undefined) {
+		return;
+	}
+
+	const sessionAtom = authClient.$store.atoms.session as SessionStoreAtom;
+	const current = sessionAtom.get();
+	if (!current.isPending) {
+		return;
+	}
+
+	sessionAtom.set({
+		...current,
+		data: initialData,
+		error: null,
+		isPending: false,
+		isRefetching: false,
+	});
 }
