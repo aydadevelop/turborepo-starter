@@ -21,7 +21,10 @@ const webServerTimeout = isCi ? 240_000 : 180_000;
 
 export default defineConfig({
 	testDir: "./e2e",
-	testIgnore: ["**/perf/**"],
+	// Visual snapshot tests use platform-specific baselines and run via the
+	// dedicated playwright.snapshots.config.ts workflow/hook. Keeping them out of
+	// the main deployment-gate suite avoids cross-OS baseline churn on CI.
+	testIgnore: ["**/perf/**", "**/ui-snapshots.spec.ts"],
 	globalSetup: "./e2e/global-setup.ts",
 	fullyParallel: false,
 	forbidOnly: isCi,
