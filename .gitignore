@@ -19,6 +19,8 @@ build
 __screenshots__/
 .vitest-attachments
 output/
+.tmp
+
 # Environment variables
 .env
 .env.*
